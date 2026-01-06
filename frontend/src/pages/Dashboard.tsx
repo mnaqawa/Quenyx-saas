@@ -1,0 +1,10 @@
+function Dashboard() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <p>Welcome to PortShield SaaS Dashboard</p>
+    </div>
+  )
+}
+
+export default Dashboard
