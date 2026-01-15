@@ -23,7 +23,7 @@ interface MeResponse {
 }
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string): Promise<LoginResponse['data']> {
     const response = await apiClient.post<LoginResponse>('/api/auth/login', {
       email,
       password,
