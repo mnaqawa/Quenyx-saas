@@ -14,7 +14,7 @@ function AppLayout() {
     <div className="flex min-h-screen bg-[#0b0f14] text-slate-100">
       <aside className="w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white">
         <div className="border-b border-white/10 px-6 py-6">
-          <h1 className="text-lg font-semibold leading-6">QynCore</h1>
+          <h1 className="text-lg font-semibold leading-6">PortShield SaaS</h1>
           <p className="mt-1 text-xs text-white/50">Control Center</p>
         </div>
         <nav className="flex flex-col gap-1 px-4 py-4">
@@ -69,17 +69,17 @@ function AppLayout() {
             Modules
           </span>
           {[
-            'QynSight',
-            'QynAsset',
-            'QynCore',
-            'QynReact',
-            'QynShield',
-            'QynNotify',
-            'QynVA',
-            'QynKnow',
-            'QynRun',
-            'QynBalance',
-            'QynSupport',
+            'ShieldCore',
+            'ShieldObserve',
+            'ShieldInventory',
+            'ShieldRespond',
+            'ShieldSecure',
+            'ShieldNotify',
+            'ShieldVoice',
+            'ShieldKnowledge',
+            'ShieldAutomate',
+            'ShieldBalance',
+            'ShieldDesk',
           ].map((label) => (
             <button
               key={label}

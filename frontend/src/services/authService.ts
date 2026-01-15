@@ -4,6 +4,9 @@ export interface AuthUser {
   id: number
   name: string
   email: string
+  last_login_at?: string | null
+  api_calls_30d?: number
+  created_at?: string | null
 }
 
 interface LoginResponse {

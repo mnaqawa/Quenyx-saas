@@ -19,10 +19,10 @@ const toPercent = (value: number): string => `${Math.round(value * 10) / 10}%`
 const buildAlerts = (modules: Module[]) => {
   if (modules.length === 0) {
     return [
-      { label: 'QynSight', primary: 6, secondary: 2 },
-      { label: 'QynReact', primary: 4, secondary: 1 },
-      { label: 'QynShield', primary: 5, secondary: 2 },
-      { label: 'QynNotify', primary: 6, secondary: 2 },
+      { label: 'ShieldObserve', primary: 6, secondary: 2 },
+      { label: 'ShieldRespond', primary: 4, secondary: 1 },
+      { label: 'ShieldSecure', primary: 5, secondary: 2 },
+      { label: 'ShieldNotify', primary: 6, secondary: 2 },
       { label: 'Others', primary: 5, secondary: 1 },
     ]
   }
@@ -179,7 +179,7 @@ function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-white">
-            Dashboard - QynCore Control Center
+            Dashboard - PortShield SaaS
           </h1>
           <p className="text-sm text-white/60">Core system management and orchestration platform</p>
         </div>
@@ -194,7 +194,7 @@ function Dashboard() {
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-white">QynCore</div>
+            <div className="text-sm font-semibold text-white">PortShield SaaS</div>
             <p className="mt-1 text-xs text-white/60">
               Your central virtual operations control center. Unified oversight, real-time status, and configurable
               dashboards.
@@ -338,7 +338,7 @@ function Dashboard() {
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-center">
         <h3 className="text-sm font-semibold text-white">No Additional Modules Integrated</h3>
         <p className="mt-2 text-xs text-white/60">
-          Subscribe to additional Qynyx modules to expand your operational capabilities.
+          Subscribe to additional PortShield modules to expand your operational capabilities.
         </p>
         <button
           type="button"

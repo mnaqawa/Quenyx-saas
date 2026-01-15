@@ -21,4 +21,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected $casts = [
+        'last_login_at' => 'datetime',
+    ];
 }

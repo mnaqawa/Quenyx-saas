@@ -25,6 +25,7 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('api')->plainTextToken;
+        $user->forceFill(['last_login_at' => now()])->save();
 
         return response()->json([
             'success' => true,
@@ -60,6 +61,9 @@ class AuthController extends Controller
                 'id' => $user?->id,
                 'name' => $user?->name,
                 'email' => $user?->email,
+                'last_login_at' => $user?->last_login_at,
+                'api_calls_30d' => $user?->api_calls_30d ?? 0,
+                'created_at' => $user?->created_at,
             ],
         ]);
     }

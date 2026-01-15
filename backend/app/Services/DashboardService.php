@@ -3,16 +3,18 @@
 namespace App\Services;
 
 use App\Repositories\DashboardRepository;
+use App\Repositories\ModuleRepository;
 
 class DashboardService
 {
     public function __construct(
-        private DashboardRepository $dashboardRepository
+        private DashboardRepository $dashboardRepository,
+        private ModuleRepository $moduleRepository
     ) {}
 
     public function getDashboardData(): array
     {
-        $modules = $this->dashboardRepository->getModulesWithSubscriptions();
+        $modules = $this->moduleRepository->getModulesWithSubscriptions();
 
         return [
             'platform_health' => $this->dashboardRepository->getPlatformHealth(),

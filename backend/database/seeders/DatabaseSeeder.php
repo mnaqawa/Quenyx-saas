@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ModuleSeeder::class,
             ModuleSubscriptionSeeder::class,
+            IntegrationSeeder::class,
+            IntegrationConfigurationSeeder::class,
         ]);
     }
 }

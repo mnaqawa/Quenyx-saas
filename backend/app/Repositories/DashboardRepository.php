@@ -2,9 +2,6 @@
 
 namespace App\Repositories;
 
-use App\Module;
-use App\ModuleSubscription;
-
 class DashboardRepository
 {
     private const PERFORMANCE_LABELS = ['CPU', 'Memory', 'Network'];
@@ -13,19 +10,6 @@ class DashboardRepository
     {
         // For simplicity, return 'ok' as platform health
         return 'ok';
-    }
-
-    public function getModulesWithSubscriptions(): array
-    {
-        return Module::with('subscriptions')->get()->map(function ($module) {
-            return [
-                'id' => $module->id,
-                'name' => $module->name,
-                'description' => $module->description,
-                'status' => $module->status,
-                'subscription_state' => $module->subscriptions->first()?->subscription_state ?? 'inactive',
-            ];
-        })->toArray();
     }
 
     public function getPerformanceSeries(array $modules): array
@@ -68,10 +52,10 @@ class DashboardRepository
     {
         if (count($modules) === 0) {
             return [
-                ['label' => 'QynSight', 'primary' => 6, 'secondary' => 2],
-                ['label' => 'QynReact', 'primary' => 4, 'secondary' => 1],
-                ['label' => 'QynShield', 'primary' => 5, 'secondary' => 2],
-                ['label' => 'QynNotify', 'primary' => 6, 'secondary' => 2],
+                ['label' => 'ShieldObserve', 'primary' => 6, 'secondary' => 2],
+                ['label' => 'ShieldRespond', 'primary' => 4, 'secondary' => 1],
+                ['label' => 'ShieldSecure', 'primary' => 5, 'secondary' => 2],
+                ['label' => 'ShieldNotify', 'primary' => 6, 'secondary' => 2],
                 ['label' => 'Others', 'primary' => 5, 'secondary' => 1],
             ];
         }
