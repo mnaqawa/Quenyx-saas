@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Module } from '../services/dashboardService'
 import { moduleService } from '../services/moduleService'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -9,6 +9,19 @@ const statusLabels: Record<Module['subscription_state'], string> = {
   trial: 'Trial',
   expired: 'Expired',
 }
+
+const subscriptionOrder = [
+  'ShieldObserve',
+  'ShieldInventory',
+  'ShieldRespond',
+  'ShieldSecure',
+  'ShieldNotify',
+  'ShieldVoice',
+  'ShieldKnowledge',
+  'ShieldAutomate',
+  'ShieldBalance',
+  'ShieldDesk',
+]
 
 function Subscriptions() {
   const { t } = useLanguage()
@@ -43,6 +56,15 @@ function Subscriptions() {
     )
   }
 
+  const { orderedModules, coreModule } = useMemo(() => {
+    const map = new Map(modules.map((module) => [module.name, module]))
+    const core = map.get('ShieldCore') ?? null
+    const ordered = subscriptionOrder
+      .map((name) => map.get(name))
+      .filter((module): module is Module => Boolean(module))
+    return { orderedModules: ordered, coreModule: core }
+  }, [modules])
+
   return (
     <div className="space-y-6">
       <div className="space-y-1 text-center">
@@ -50,8 +72,40 @@ function Subscriptions() {
         <p className="text-sm text-white/60">{t('subscriptions.subtitle')}</p>
       </div>
 
+      {coreModule ? (
+        <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-r from-sky-500/10 via-slate-900/40 to-slate-900/10 p-5 text-white">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500/20">
+                <span className="text-xs font-semibold text-sky-100">SC</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">{coreModule.name}</h3>
+                <p className="text-xs text-sky-200">{statusLabels[coreModule.subscription_state]}</p>
+              </div>
+            </div>
+            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold text-sky-100">
+              Core Module
+            </span>
+          </div>
+          <p className="mt-4 text-sm text-white/70">
+            {coreModule.description || t('subscriptions.noDescription')}
+          </p>
+          <div className="mt-4 flex items-center gap-3 text-xs text-white/60">
+            <span>Status: {coreModule.status}</span>
+            <span>Subscription: {statusLabels[coreModule.subscription_state]}</span>
+          </div>
+          <button
+            type="button"
+            className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+          >
+            {t('subscriptions.viewPlans')}
+          </button>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {modules.map((module) => (
+        {orderedModules.map((module) => (
           <div
             key={module.id}
             className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white"

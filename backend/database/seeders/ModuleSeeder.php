@@ -15,67 +15,67 @@ class ModuleSeeder extends Seeder
     {
         Module::create([
             'name' => 'ShieldCore',
-            'description' => 'Central configuration and governance hub.',
+            'description' => 'Central configuration and governance hub for platform control and policy management.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldObserve',
-            'description' => 'Monitoring and visibility across infrastructure.',
+            'description' => 'Real-time infrastructure monitoring and performance insights across your environment.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldInventory',
-            'description' => 'Asset and CMDB management for systems.',
+            'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.',
             'status' => 'maintenance',
         ]);
 
         Module::create([
             'name' => 'ShieldRespond',
-            'description' => 'Incident response and orchestration workflows.',
+            'description' => 'Automated incident response and orchestration for rapid recovery and resolution.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldSecure',
-            'description' => 'Security operations and threat management.',
+            'description' => 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldNotify',
-            'description' => 'Alerting and communications hub.',
+            'description' => 'Alert and notification management across email, SMS, and in-app channels.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldVoice',
-            'description' => 'AI voice and IVR agent operations.',
+            'description' => 'AI voice and IVR operations for automated customer support and service analytics.',
             'status' => 'inactive',
         ]);
 
         Module::create([
             'name' => 'ShieldKnowledge',
-            'description' => 'Documentation and runbook management.',
+            'description' => 'Knowledge management for documentation, playbooks, and operational procedures.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldAutomate',
-            'description' => 'Workflow automation and orchestration.',
+            'description' => 'Workflow automation and process orchestration across systems and teams.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldBalance',
-            'description' => 'Load balancing and traffic control.',
+            'description' => 'Load balancing and traffic management for optimal resource distribution.',
             'status' => 'active',
         ]);
 
         Module::create([
             'name' => 'ShieldDesk',
-            'description' => 'Ticketing and support operations.',
+            'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
             'status' => 'active',
         ]);
     }
