@@ -3,10 +3,12 @@ import { authService, AuthUser } from '../services/authService'
 import { moduleService } from '../services/moduleService'
 import { integrationService } from '../services/integrationService'
 import { profileService, ProfileStats } from '../services/profileService'
+import { useLanguage } from '../i18n/LanguageContext'
 import type { Module } from '../services/dashboardService'
 import type { Integration } from '../services/integrationService'
 
 function Profile() {
+  const { t } = useLanguage()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [modules, setModules] = useState<Module[]>([])
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -48,7 +50,7 @@ function Profile() {
   }, [modules, integrations, stats])
 
   if (loading) {
-    return <div className="text-sm text-white/60">Loading profile...</div>
+    return <div className="text-sm text-white/60">{t('common.loadingProfile')}</div>
   }
 
   if (error) {
@@ -62,8 +64,8 @@ function Profile() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-white">User Profile</h1>
-        <p className="text-sm text-white/60">Manage your account settings and preferences</p>
+        <h1 className="text-2xl font-semibold text-white">{t('profile.title')}</h1>
+        <p className="text-sm text-white/60">{t('profile.subtitle')}</p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[2fr,1fr]">
@@ -71,8 +73,8 @@ function Profile() {
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-sm font-semibold">Profile Information</h2>
-                <p className="text-xs text-white/60">Update your personal information and contact details</p>
+                <h2 className="text-sm font-semibold">{t('profile.infoTitle')}</h2>
+                <p className="text-xs text-white/60">{t('profile.infoDesc')}</p>
               </div>
               <button
                 type="button"
@@ -83,13 +85,13 @@ function Profile() {
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-white/40">Full Name</p>
+                <p className="text-[10px] uppercase tracking-wide text-white/40">{t('profile.fullName')}</p>
                 <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs">
                   {user?.name ?? '—'}
                 </div>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-white/40">Email</p>
+                <p className="text-[10px] uppercase tracking-wide text-white/40">{t('profile.email')}</p>
                 <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs">
                   {user?.email ?? '—'}
                 </div>
@@ -99,41 +101,41 @@ function Profile() {
 
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <div>
-              <h2 className="text-sm font-semibold">Account Security</h2>
-              <p className="text-xs text-white/60">Manage your account security settings</p>
+              <h2 className="text-sm font-semibold">{t('profile.accountSecurity')}</h2>
+              <p className="text-xs text-white/60">{t('profile.accountSecurityDesc')}</p>
             </div>
             <div className="mt-4 space-y-4 text-xs text-white/70">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Password</p>
-                  <p className="text-xs text-white/50">Last updated 30 days ago</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.password')}</p>
+                  <p className="text-xs text-white/50">{t('profile.passwordUpdated')}</p>
                 </div>
                 <button
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
                 >
-                  Change Password
+                  {t('profile.changePassword')}
                 </button>
               </div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Two-Factor Authentication</p>
-                  <p className="text-xs text-white/50">Add an extra layer of security to your account</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.twoFactor')}</p>
+                  <p className="text-xs text-white/50">{t('profile.twoFactorDesc')}</p>
                 </div>
                 <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/60">
-                  Not Enabled
+                  {t('profile.notEnabled')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">API Keys</p>
-                  <p className="text-xs text-white/50">Manage your API access keys</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.apiKeys')}</p>
+                  <p className="text-xs text-white/50">{t('profile.apiKeysDesc')}</p>
                 </div>
                 <button
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
                 >
-                  Manage Keys
+                  {t('profile.manageKeys')}
                 </button>
               </div>
             </div>
@@ -141,38 +143,38 @@ function Profile() {
 
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <div>
-              <h2 className="text-sm font-semibold">Preferences</h2>
-              <p className="text-xs text-white/60">Customize your PortShield SaaS experience</p>
+              <h2 className="text-sm font-semibold">{t('profile.preferences')}</h2>
+              <p className="text-xs text-white/60">{t('profile.preferencesDesc')}</p>
             </div>
             <div className="mt-4 space-y-4 text-xs text-white/70">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Theme</p>
-                  <p className="text-xs text-white/50">Choose your preferred theme</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.theme')}</p>
+                  <p className="text-xs text-white/50">{t('profile.themeDesc')}</p>
                 </div>
                 <span className="rounded-full bg-sky-500/20 px-3 py-1 text-[10px] text-sky-200">
-                  System Default
+                  {t('profile.systemDefault')}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-sm font-semibold text-white">Language</p>
-                  <p className="text-xs text-white/50">Select your preferred language</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.language')}</p>
+                  <p className="text-xs text-white/50">{t('profile.languageDesc')}</p>
                 </div>
                 <span className="rounded-full bg-sky-500/20 px-3 py-1 text-[10px] text-sky-200">
-                  English
+                  {t('language.english')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">Notifications</p>
-                  <p className="text-xs text-white/50">Configure your notification preferences</p>
+                  <p className="text-sm font-semibold text-white">{t('profile.notifications')}</p>
+                  <p className="text-xs text-white/50">{t('profile.notificationsDesc')}</p>
                 </div>
                 <button
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
                 >
-                  Configure
+                  {t('profile.configure')}
                 </button>
               </div>
             </div>
@@ -181,7 +183,7 @@ function Profile() {
 
         <div className="space-y-4">
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-            <h2 className="text-sm font-semibold">Account Summary</h2>
+            <h2 className="text-sm font-semibold">{t('profile.accountSummary')}</h2>
             <div className="mt-4 flex flex-col items-center gap-3 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/5 text-xl">
                 <span className="text-white/80">👤</span>
@@ -196,7 +198,7 @@ function Profile() {
                   <span className="text-white/70">{user?.email ?? '—'}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span>Joined</span>
+                  <span>{t('profile.joined')}</span>
                   <span className="text-white/70">
                     {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
                   </span>
@@ -206,13 +208,13 @@ function Profile() {
           </section>
 
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-            <h2 className="text-sm font-semibold">Account Stats</h2>
+            <h2 className="text-sm font-semibold">{t('profile.accountStats')}</h2>
             <div className="mt-4 space-y-3 text-xs text-white/70">
               {[
-                { label: 'Active Modules', value: String(summary.activeModules) },
-                { label: 'Integrations', value: String(summary.integrations) },
-                { label: 'API Calls (30d)', value: String(summary.apiCalls) },
-                { label: 'Last Login', value: summary.lastLogin },
+                { label: t('profile.activeModules'), value: String(summary.activeModules) },
+                { label: t('profile.integrations'), value: String(summary.integrations) },
+                { label: t('profile.apiCalls'), value: String(summary.apiCalls) },
+                { label: t('profile.lastLogin'), value: summary.lastLogin },
               ].map((stat) => (
                 <div key={stat.label} className="flex items-center justify-between">
                   <span>{stat.label}</span>

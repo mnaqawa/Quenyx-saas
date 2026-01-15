@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAuthToken } from '../services/apiClient'
 import { authService } from '../services/authService'
+import { useLanguage } from '../i18n/LanguageContext'
 
 function Login() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,7 +27,7 @@ function Login() {
       await authService.login(email, password)
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : t('common.errorGeneric'))
     } finally {
       setLoading(false)
     }
@@ -35,14 +37,14 @@ function Login() {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
       <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
-          <p className="text-sm text-slate-600">Use your PortShield credentials to continue.</p>
+          <h1 className="text-2xl font-semibold text-slate-900">{t('login.title')}</h1>
+          <p className="text-sm text-slate-600">{t('login.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700" htmlFor="email">
-              Email
+              {t('login.email')}
             </label>
             <input
               id="email"
@@ -57,7 +59,7 @@ function Login() {
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700" htmlFor="password">
-              Password
+              {t('login.password')}
             </label>
             <input
               id="password"
@@ -81,7 +83,7 @@ function Login() {
             disabled={loading}
             className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
       </div>

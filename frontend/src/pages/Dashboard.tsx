@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
+import { useLanguage } from '../i18n/LanguageContext'
 
 const MODULE_CAPACITY = 10
 
@@ -75,6 +76,7 @@ const buildWeeklyUptime = (modules: Module[]): number[] => {
 }
 
 function Dashboard() {
+  const { t } = useLanguage()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -160,7 +162,7 @@ function Dashboard() {
   }
 
   if (loading) {
-    return <div className="text-sm text-white/60">Loading dashboard...</div>
+    return <div className="text-sm text-white/60">{t('common.loadingDashboard')}</div>
   }
 
   if (error) {
@@ -176,25 +178,24 @@ function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-white">
-            Dashboard - PortShield SaaS
+            {t('dashboard.title')}
           </h1>
-          <p className="text-sm text-white/60">Core system management and orchestration platform</p>
+          <p className="text-sm text-white/60">{t('dashboard.subtitle')}</p>
         </div>
         <button
           type="button"
           className="inline-flex items-center justify-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
         >
-          Customize Dashboard
+          {t('common.customizeDashboard')}
         </button>
       </div>
 
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-white">PortShield SaaS</div>
+            <div className="text-sm font-semibold text-white">{t('dashboard.summaryTitle')}</div>
             <p className="mt-1 text-xs text-white/60">
-              Your central virtual operations control center. Unified oversight, real-time status, and configurable
-              dashboards.
+              {t('dashboard.summaryDesc')}
             </p>
           </div>
           <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200">
@@ -203,12 +204,12 @@ function Dashboard() {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { label: 'Control Center Status', value: metrics.statusLabel },
-            { label: 'Connected Modules', value: `${metrics.total}/${MODULE_CAPACITY}` },
-            { label: 'Real-time Updates', value: metrics.activeRatio >= 0.5 ? 'Active' : 'Monitoring' },
-            { label: 'Dashboard Widgets', value: `${metrics.total * 3} Active` },
-            { label: 'Data Synchronization', value: toPercent(metrics.dataSync) },
-            { label: 'System Health', value: metrics.healthLabel },
+            { label: t('dashboard.statusLabel'), value: metrics.statusLabel },
+            { label: t('dashboard.connectedModules'), value: `${metrics.total}/${MODULE_CAPACITY}` },
+            { label: t('dashboard.realtimeUpdates'), value: metrics.activeRatio >= 0.5 ? 'Active' : 'Monitoring' },
+            { label: t('dashboard.widgets'), value: `${metrics.total * 3} Active` },
+            { label: t('dashboard.sync'), value: toPercent(metrics.dataSync) },
+            { label: t('dashboard.health'), value: metrics.healthLabel },
           ].map((metric) => (
             <div key={metric.label} className="rounded-xl border border-white/10 bg-[#0b1118] p-4">
               <p className="text-xs text-white/60">{metric.label}</p>
@@ -221,8 +222,8 @@ function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-white">System Performance (24h)</h2>
-            <p className="text-xs text-white/60">CPU, Memory, and Network utilization trends</p>
+            <h2 className="text-sm font-semibold text-white">{t('dashboard.systemPerformance')}</h2>
+            <p className="text-xs text-white/60">{t('dashboard.performanceDesc')}</p>
           </div>
           <div className="mt-4">
             <svg viewBox="0 0 260 110" className="h-40 w-full">
@@ -260,8 +261,8 @@ function Dashboard() {
 
         <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-white">Module Status Distribution</h2>
-            <p className="text-xs text-white/60">Current operational status across all modules</p>
+            <h2 className="text-sm font-semibold text-white">{t('dashboard.moduleStatus')}</h2>
+            <p className="text-xs text-white/60">{t('dashboard.moduleStatusDesc')}</p>
           </div>
           <div className="mt-6 flex items-center gap-6">
             <div
@@ -297,8 +298,8 @@ function Dashboard() {
 
         <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-white">Weekly Uptime</h2>
-            <p className="text-xs text-white/60">System availability over the past 7 days</p>
+            <h2 className="text-sm font-semibold text-white">{t('dashboard.weeklyUptime')}</h2>
+            <p className="text-xs text-white/60">{t('dashboard.weeklyUptimeDesc')}</p>
           </div>
           <div className="mt-4">
             <svg viewBox="0 0 260 110" className="h-40 w-full">
@@ -318,8 +319,8 @@ function Dashboard() {
 
         <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-white">Alerts by Module</h2>
-            <p className="text-xs text-white/60">Alert distribution across all integrated modules</p>
+            <h2 className="text-sm font-semibold text-white">{t('dashboard.alertsByModule')}</h2>
+            <p className="text-xs text-white/60">{t('dashboard.alertsByModuleDesc')}</p>
           </div>
           <div className="mt-4 flex h-36 items-end gap-3">
             {alertsByModule.map((bar) => (
@@ -336,15 +337,15 @@ function Dashboard() {
       </div>
 
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-center">
-        <h3 className="text-sm font-semibold text-white">No Additional Modules Integrated</h3>
+        <h3 className="text-sm font-semibold text-white">{t('dashboard.noModulesTitle')}</h3>
         <p className="mt-2 text-xs text-white/60">
-          Subscribe to additional PortShield modules to expand your operational capabilities.
+          {t('dashboard.noModulesDesc')}
         </p>
         <button
           type="button"
           className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
         >
-          Browse Available Modules
+          {t('dashboard.browseModules')}
         </button>
       </section>
     </div>
