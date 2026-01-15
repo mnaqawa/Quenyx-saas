@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Faker\Generator;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -13,14 +12,25 @@ class ProjectSeeder extends Seeder
     {
         $statuses = ['active', 'paused', 'archived'];
 
-        $faker = app(Generator::class);
+        $namePool = [
+            'Core Monitoring',
+            'Security Upgrade',
+            'Automation Rollout',
+            'Incident Readiness',
+            'Ops Visibility',
+            'Service Optimization',
+            'Alert Modernization',
+            'Compliance Review',
+            'Infrastructure Audit',
+            'Workflow Revamp',
+        ];
 
-        User::query()->each(function (User $user) use ($statuses, $faker) {
+        User::query()->each(function (User $user) use ($statuses, $namePool) {
             $count = rand(2, 5);
             for ($i = 0; $i < $count; $i++) {
                 Project::create([
                     'owner_id' => $user->id,
-                    'name' => $faker->sentence(2),
+                    'name' => $namePool[array_rand($namePool)] . ' #' . rand(1, 99),
                     'status' => $statuses[array_rand($statuses)],
                 ]);
             }
