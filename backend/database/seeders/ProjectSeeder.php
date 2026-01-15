@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Faker\Generator;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -12,7 +13,7 @@ class ProjectSeeder extends Seeder
     {
         $statuses = ['active', 'paused', 'archived'];
 
-        $faker = \Faker\Factory::create();
+        $faker = app(Generator::class);
 
         User::query()->each(function (User $user) use ($statuses, $faker) {
             $count = rand(2, 5);
