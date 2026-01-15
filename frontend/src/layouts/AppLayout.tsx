@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 
 function AppLayout() {
   const location = useLocation()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
 
   const isActive = (path: string): boolean => {
@@ -14,7 +16,8 @@ function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#0b0f14] text-slate-100">
-      <aside className="w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white">
+      {isSidebarOpen ? (
+        <aside className="w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white">
         <div className="border-b border-white/10 px-6 py-6">
           <h1 className="text-lg font-semibold leading-6">{t('app.name')}</h1>
           <p className="mt-1 text-xs text-white/50">{t('app.controlCenter')}</p>
@@ -92,32 +95,64 @@ function AppLayout() {
             </button>
           ))}
         </nav>
-        <div className="border-t border-white/10 px-4 py-4">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">{t('language.switch')}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setLanguage('en')}
-              className={`rounded-full px-3 py-1 text-xs ${
-                language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {t('language.english')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage('ar')}
-              className={`rounded-full px-3 py-1 text-xs ${
-                language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {t('language.arabic')}
-            </button>
-          </div>
-        </div>
       </aside>
+      ) : null}
 
       <main className="min-w-0 flex-1 bg-[#0b0f14] text-slate-100">
+        <div className="border-b border-white/5 px-6 py-4">
+          <div className="mx-auto flex max-w-6xl items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="inline-flex items-center justify-center rounded-md border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+              aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6h16M4 12h16M4 18h10"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 text-xs text-white/70">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 2a10 10 0 100 20 10 10 0 000-20z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M2 12h20M12 2c3 3 3 15 0 20M12 2c-3 3-3 15 0 20"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                </svg>
+                {t('language.switch')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {t('language.english')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('ar')}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {t('language.arabic')}
+              </button>
+            </div>
+          </div>
+        </div>
         <div className="mx-auto max-w-6xl px-6 py-8">
           <Outlet />
         </div>
