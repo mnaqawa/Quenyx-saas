@@ -43,6 +43,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'dashboard.noModulesTitle': 'No Additional Modules Integrated',
     'dashboard.noModulesDesc': 'Subscribe to additional PortShield modules to expand your operational capabilities.',
     'dashboard.browseModules': 'Browse Available Modules',
+    'dashboard.footerTitle': 'ShieldCore Control Center • Virtual IT Operations Platform • v2.1.0',
+    'dashboard.footerSubtitle':
+      'Unified monitoring and control for all your integrated PortShield SaaS modules',
     'subscriptions.title': 'Module Subscriptions',
     'subscriptions.subtitle': 'Manage your PortShield SaaS module subscriptions and access levels',
     'subscriptions.viewPlans': 'View Plans',
@@ -141,6 +144,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'dashboard.noModulesTitle': 'لا توجد وحدات إضافية مدمجة',
     'dashboard.noModulesDesc': 'اشترك في وحدات PortShield إضافية لتوسيع القدرات التشغيلية.',
     'dashboard.browseModules': 'تصفح الوحدات المتاحة',
+    'dashboard.footerTitle': 'مركز ShieldCore • منصة عمليات تقنية المعلومات الافتراضية • v2.1.0',
+    'dashboard.footerSubtitle': 'مراقبة وتحكم موحدان لجميع وحدات PortShield SaaS المدمجة',
     'subscriptions.title': 'اشتراكات الوحدات',
     'subscriptions.subtitle': 'إدارة اشتراكات وحدات PortShield SaaS ومستويات الوصول',
     'subscriptions.viewPlans': 'عرض الخطط',
