@@ -4,22 +4,30 @@ function AppLayout() {
   const location = useLocation()
 
   const isActive = (path: string): boolean => {
+    if (path === '/dashboard') {
+      return location.pathname === '/' || location.pathname.startsWith('/dashboard')
+    }
     return location.pathname === path
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      {/* Keep sidebar theme (dark) */}
-      <aside className="w-64 shrink-0 bg-[#1a1a1a] text-white">
+    <div className="flex min-h-screen bg-[#0b0f14] text-slate-100">
+      <aside className="w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white">
         <div className="border-b border-white/10 px-6 py-6">
-          <h1 className="text-lg font-semibold leading-6">PortShield</h1>
+          <h1 className="text-lg font-semibold leading-6">QynCore</h1>
+          <p className="mt-1 text-xs text-white/50">Control Center</p>
         </div>
         <nav className="flex flex-col gap-1 px-4 py-4">
+          <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
+            Dashboard
+          </span>
           <Link
-            to="/"
+            to="/dashboard"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/') ? 'bg-indigo-500 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white',
+              isActive('/dashboard')
+                ? 'bg-white/10 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
             Dashboard
@@ -29,7 +37,7 @@ function AppLayout() {
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
               isActive('/subscriptions')
-                ? 'bg-indigo-500 text-white'
+                ? 'bg-white/10 text-white'
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
@@ -40,7 +48,7 @@ function AppLayout() {
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
               isActive('/integrations')
-                ? 'bg-indigo-500 text-white'
+                ? 'bg-white/10 text-white'
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
@@ -50,18 +58,43 @@ function AppLayout() {
             to="/profile"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/profile') ? 'bg-indigo-500 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white',
+              isActive('/profile') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
             Profile
           </Link>
         </nav>
+        <nav className="flex flex-col gap-1 px-4 pb-6">
+          <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
+            Modules
+          </span>
+          {[
+            'QynSight',
+            'QynAsset',
+            'QynCore',
+            'QynReact',
+            'QynShield',
+            'QynNotify',
+            'QynVA',
+            'QynKnow',
+            'QynRun',
+            'QynBalance',
+            'QynSupport',
+          ].map((label) => (
+            <button
+              key={label}
+              type="button"
+              className="rounded-md px-3 py-2 text-left text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       </aside>
 
-      {/* Main content: force readable typography on light background */}
-      <main className="min-w-0 flex-1 bg-white text-slate-900">
-        <div className="mx-auto max-w-6xl px-6 py-6">
-        <Outlet />
+      <main className="min-w-0 flex-1 bg-[#0b0f14] text-slate-100">
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <Outlet />
         </div>
       </main>
     </div>
