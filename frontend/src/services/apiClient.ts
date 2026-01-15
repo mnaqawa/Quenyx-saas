@@ -1,4 +1,17 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const TOKEN_STORAGE_KEY = 'portshield.auth.token'
+
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem(TOKEN_STORAGE_KEY)
+}
+
+export const setAuthToken = (token: string): void => {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token)
+}
+
+export const clearAuthToken = (): void => {
+  localStorage.removeItem(TOKEN_STORAGE_KEY)
+}
 
 export interface ApiError {
   success: false
@@ -26,12 +39,23 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`
     
+    const defaultHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+
+    const mergedHeaders = {
+      ...defaultHeaders,
+      ...(options.headers as Record<string, string> | undefined),
+    }
+
+    const token = getAuthToken()
+    if (token && !mergedHeaders.Authorization) {
+      mergedHeaders.Authorization = `Bearer ${token}`
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      },
+      headers: mergedHeaders,
       ...options,
     }
 
@@ -40,6 +64,9 @@ class ApiClient {
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 401) {
+          clearAuthToken()
+        }
         // Handle Laravel error format
         if (data.success === false) {
           return {
