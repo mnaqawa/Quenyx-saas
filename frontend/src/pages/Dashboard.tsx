@@ -351,10 +351,10 @@ function Dashboard() {
 
       <section className="px-6 py-6 text-center text-white/70">
         <p className="text-sm font-semibold text-white/80">
-          QynCore Control Center • Virtual IT Operations Platform • v2.1.0
+          ShieldCore Control Center • Virtual IT Operations Platform • v2.1.0
         </p>
         <p className="mt-2 text-xs text-white/50">
-          Unified monitoring and control for all your integrated Quenyx modules
+          Unified monitoring and control for all your integrated PortShield SaaS modules
         </p>
       </section>
     </div>
