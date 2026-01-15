@@ -46,6 +46,12 @@ const buildAlerts = (modules: Module[]) => {
   })
 }
 
+const getSeriesColor = (label: string): string => {
+  if (label === 'CPU') return '#38bdf8'
+  if (label === 'Memory') return '#22d3ee'
+  return '#5eead4'
+}
+
 const buildPerformanceSeries = (modules: Module[]): PerformanceSeries[] => {
   const activeRatio = modules.length ? modules.filter((module) => module.status === 'active').length / modules.length : 0.55
   const base = activeRatio * 100 || 55
@@ -112,16 +118,7 @@ function Dashboard() {
 
   const performanceSeries = useMemo(() => {
     if (data?.performance_series?.length) {
-      return data.performance_series.map((series) => ({
-        label: series.label,
-        color:
-          series.label === 'CPU'
-            ? '#38bdf8'
-            : series.label === 'Memory'
-            ? '#22d3ee'
-            : '#5eead4',
-        values: series.values,
-      }))
+      return data.performance_series
     }
     return buildPerformanceSeries(metrics.modules)
   }, [data?.performance_series, metrics.modules])
@@ -240,7 +237,7 @@ function Dashboard() {
                 <polyline
                   key={series.label}
                   fill="none"
-                  stroke={series.color}
+                  stroke={getSeriesColor(series.label)}
                   strokeWidth="2"
                   points={toPoints(series.values)}
                   opacity="0.9"
@@ -250,7 +247,10 @@ function Dashboard() {
             <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/70">
               {performanceSeries.map((series) => (
                 <span key={series.label} className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: getSeriesColor(series.label) }}
+                  />
                   {series.label}
                 </span>
               ))}

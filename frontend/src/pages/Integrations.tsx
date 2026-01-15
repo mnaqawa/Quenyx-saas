@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   integrationService,
   Integration,
@@ -44,8 +44,6 @@ function Integrations() {
 
   const apiKeys = configuration?.api_keys
   const webhookEndpoints = configuration?.webhook_endpoints
-  const hasData = integrations.length > 0
-
   if (loading) {
     return <div className="text-sm text-white/60">Loading integrations...</div>
   }
