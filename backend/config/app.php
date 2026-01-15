@@ -19,6 +19,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
     'providers' => ServiceProvider::defaultProviders()->merge([
+        App\Providers\AuthServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
     ])->toArray(),
