@@ -349,7 +349,7 @@ function Dashboard() {
         </button>
       </section>
 
-      <section className="rounded-2xl border border-white/5 bg-[#0b1118] px-6 py-10 text-center text-white/70">
+      <section className="px-6 py-6 text-center text-white/70">
         <p className="text-sm font-semibold text-white/80">
           QynCore Control Center • Virtual IT Operations Platform • v2.1.0
         </p>

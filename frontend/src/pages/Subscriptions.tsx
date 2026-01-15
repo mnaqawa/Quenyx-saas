@@ -28,6 +28,14 @@ function Subscriptions() {
   const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { orderedModules, coreModule } = useMemo(() => {
+    const map = new Map(modules.map((module) => [module.name, module]))
+    const core = map.get('ShieldCore') ?? null
+    const ordered = subscriptionOrder
+      .map((name) => map.get(name))
+      .filter((module): module is Module => Boolean(module))
+    return { orderedModules: ordered, coreModule: core }
+  }, [modules])
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -55,15 +63,6 @@ function Subscriptions() {
       </div>
     )
   }
-
-  const { orderedModules, coreModule } = useMemo(() => {
-    const map = new Map(modules.map((module) => [module.name, module]))
-    const core = map.get('ShieldCore') ?? null
-    const ordered = subscriptionOrder
-      .map((name) => map.get(name))
-      .filter((module): module is Module => Boolean(module))
-    return { orderedModules: ordered, coreModule: core }
-  }, [modules])
 
   return (
     <div className="space-y-6">
