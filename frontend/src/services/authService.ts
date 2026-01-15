@@ -10,12 +10,16 @@ export interface AuthUser {
 }
 
 interface LoginResponse {
-  token: string
-  user: AuthUser
+  data: {
+    token: string
+    user: AuthUser
+  }
 }
 
 interface MeResponse {
-  user: AuthUser
+  data: {
+    user: AuthUser
+  }
 }
 
 export const authService = {
@@ -29,8 +33,8 @@ export const authService = {
       throw new Error(response.message)
     }
 
-    setAuthToken(response.data.token)
-    return response.data
+    setAuthToken(response.data.data.token)
+    return response.data.data
   },
 
   async me(): Promise<AuthUser> {
@@ -39,7 +43,7 @@ export const authService = {
       throw new Error(response.message)
     }
 
-    return response.data.user
+    return response.data.data.user
   },
 
   async logout(): Promise<void> {

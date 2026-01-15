@@ -13,6 +13,9 @@ class DashboardController extends Controller
 
     public function index(): JsonResponse
     {
-        return response()->json($this->dashboardService->getDashboardData());
+        return response()->json([
+            'success' => true,
+            'data' => $this->dashboardService->getDashboardData(),
+        ]);
     }
 }

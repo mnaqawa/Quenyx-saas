@@ -3,7 +3,7 @@ import { apiClient } from './apiClient'
 export type IntegrationStatus = 'connected' | 'configured' | 'disconnected'
 
 export interface Integration {
-  id: string
+  id: number
   name: string
   description: string
   status: IntegrationStatus

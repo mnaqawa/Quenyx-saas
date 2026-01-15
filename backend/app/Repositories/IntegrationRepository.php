@@ -14,7 +14,7 @@ class IntegrationRepository
             ->get()
             ->map(function (Integration $integration) {
                 return [
-                    'id' => (string) $integration->id,
+                    'id' => $integration->id,
                     'name' => $integration->name,
                     'description' => $integration->description,
                     'status' => $integration->status,

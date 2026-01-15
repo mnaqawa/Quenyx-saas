@@ -20,6 +20,7 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
+                'success' => false,
                 'message' => 'Invalid credentials.',
             ], 401);
         }
@@ -29,11 +30,13 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
+            'data' => [
+                'token' => $token,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
             ],
         ]);
     }
@@ -47,7 +50,9 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Logged out.',
+            'data' => [
+                'message' => 'Logged out.',
+            ],
         ]);
     }
 
@@ -57,13 +62,15 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'user' => [
-                'id' => $user?->id,
-                'name' => $user?->name,
-                'email' => $user?->email,
-                'last_login_at' => $user?->last_login_at,
-                'api_calls_30d' => $user?->api_calls_30d ?? 0,
-                'created_at' => $user?->created_at,
+            'data' => [
+                'user' => [
+                    'id' => $user?->id,
+                    'name' => $user?->name,
+                    'email' => $user?->email,
+                    'last_login_at' => $user?->last_login_at,
+                    'api_calls_30d' => $user?->api_calls_30d ?? 0,
+                    'created_at' => $user?->created_at,
+                ],
             ],
         ]);
     }

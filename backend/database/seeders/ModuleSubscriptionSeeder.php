@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Module;
-use App\ModuleSubscription;
+use App\Models\Module;
+use App\Models\ModuleSubscription;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 

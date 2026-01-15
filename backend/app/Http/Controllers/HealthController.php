@@ -9,7 +9,10 @@ class HealthController extends Controller
     public function index(): JsonResponse
     {
         return response()->json([
-            'status' => 'ok',
+            'success' => true,
+            'data' => [
+                'status' => 'ok',
+            ],
         ]);
     }
 }

@@ -4,12 +4,16 @@ export interface HealthResponse {
   status: string
 }
 
+interface HealthEnvelope {
+  data: HealthResponse
+}
+
 export const healthService = {
   async check(): Promise<HealthResponse> {
-    const response = await apiClient.get<HealthResponse>('/api/health')
+    const response = await apiClient.get<HealthEnvelope>('/api/health')
     if (!response.success) {
       throw new Error(response.message)
     }
-    return response.data
+    return response.data.data
   },
 }
