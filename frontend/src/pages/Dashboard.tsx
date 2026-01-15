@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { dashboardService, DashboardData, Module } from '../services/dashboardService'
+import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
 
 const MODULE_CAPACITY = 10
 
@@ -46,6 +46,28 @@ const buildAlerts = (modules: Module[]) => {
   })
 }
 
+const buildPerformanceSeries = (modules: Module[]): PerformanceSeries[] => {
+  const activeRatio = modules.length ? modules.filter((module) => module.status === 'active').length / modules.length : 0.55
+  const base = activeRatio * 100 || 55
+  const series = [
+    { label: 'CPU', color: '#38bdf8', values: [base - 15, base - 4, base + 10, base + 16, base + 6, base - 8] },
+    { label: 'Memory', color: '#22d3ee', values: [base - 22, base - 10, base + 2, base + 9, base + 1, base - 12] },
+    { label: 'Network', color: '#5eead4', values: [base - 30, base - 18, base - 6, base + 2, base - 3, base - 20] },
+  ]
+  return series.map((entry) => ({
+    label: entry.label,
+    values: entry.values.map((value) => Math.max(10, Math.min(90, Math.round(value)))),
+  }))
+}
+
+const buildWeeklyUptime = (modules: Module[]): number[] => {
+  const activeRatio = modules.length ? modules.filter((module) => module.status === 'active').length / modules.length : 0.5
+  const base = 98.8 + activeRatio * 1.1
+  return [base - 0.4, base - 0.6, base - 0.3, base + 0.1, base - 0.7, base - 0.2, base].map((value) =>
+    Math.round(value * 10) / 10
+  )
+}
+
 function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -89,21 +111,34 @@ function Dashboard() {
   }, [data])
 
   const performanceSeries = useMemo(() => {
-    const base = metrics.activeRatio * 100 || 50
-    return [
-      { label: 'CPU', color: '#38bdf8', values: [base - 15, base - 5, base + 8, base + 15, base + 4, base - 6] },
-      { label: 'Memory', color: '#22d3ee', values: [base - 22, base - 8, base + 4, base + 10, base + 2, base - 12] },
-      { label: 'Network', color: '#5eead4', values: [base - 30, base - 18, base - 6, base + 2, base - 3, base - 20] },
-    ].map((series) => ({
-      ...series,
-      values: series.values.map((value) => Math.max(10, Math.min(90, value))),
-    }))
-  }, [metrics.activeRatio])
+    if (data?.performance_series?.length) {
+      return data.performance_series.map((series) => ({
+        label: series.label,
+        color:
+          series.label === 'CPU'
+            ? '#38bdf8'
+            : series.label === 'Memory'
+            ? '#22d3ee'
+            : '#5eead4',
+        values: series.values,
+      }))
+    }
+    return buildPerformanceSeries(metrics.modules)
+  }, [data?.performance_series, metrics.modules])
 
   const weeklyUptime = useMemo(() => {
-    const base = 98.8 + metrics.activeRatio * 1.1
-    return [base - 0.4, base - 0.6, base - 0.3, base + 0.1, base - 0.7, base - 0.2, base]
-  }, [metrics.activeRatio])
+    if (data?.weekly_uptime?.length) {
+      return data.weekly_uptime
+    }
+    return buildWeeklyUptime(metrics.modules)
+  }, [data?.weekly_uptime, metrics.modules])
+
+  const alertsByModule: AlertsByModule[] = useMemo(() => {
+    if (data?.alerts_by_module?.length) {
+      return data.alerts_by_module
+    }
+    return buildAlerts(metrics.modules)
+  }, [data?.alerts_by_module, metrics.modules])
 
   const toPoints = (values: number[]) => {
     if (values.length === 1) {
@@ -287,7 +322,7 @@ function Dashboard() {
             <p className="text-xs text-white/60">Alert distribution across all integrated modules</p>
           </div>
           <div className="mt-4 flex h-36 items-end gap-3">
-            {buildAlerts(metrics.modules).map((bar) => (
+            {alertsByModule.map((bar) => (
               <div key={bar.label} className="flex flex-1 flex-col items-center gap-2 text-[10px] text-white/60">
                 <div className="flex h-24 w-full items-end gap-1">
                   <div className="flex-1 rounded-sm bg-sky-500/80" style={{ height: `${bar.primary * 10}%` }} />
