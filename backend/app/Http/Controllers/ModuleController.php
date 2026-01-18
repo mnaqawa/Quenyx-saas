@@ -13,9 +13,10 @@ class ModuleController extends Controller
 
     public function index(): JsonResponse
     {
+        // Return catalog (all modules with key, name, description, status)
         return response()->json([
             'success' => true,
-            'data' => $this->moduleService->getModules(),
+            'data' => $this->moduleService->getModulesCatalog(),
         ]);
     }
 }

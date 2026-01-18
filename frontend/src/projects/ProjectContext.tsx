@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { Project } from '../types/project'
 import { ProjectEntitlements } from '../types/subscription'
+import { ModuleWithAccess } from '../types/module'
 import { projectService } from '../services/projectService'
 import { subscriptionService } from '../services/subscriptionService'
+import { moduleService } from '../services/moduleService'
 import { getAuthToken } from '../services/apiClient'
 
 interface ProjectContextValue {
@@ -14,6 +16,10 @@ interface ProjectContextValue {
   entitlements: ProjectEntitlements | null
   isLoadingEntitlements: boolean
   refreshEntitlements: () => Promise<void>
+  modulesWithAccess: ModuleWithAccess[] | null
+  isLoadingModules: boolean
+  refreshModules: () => Promise<void>
+  allowedByKey: Record<string, boolean>
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined)
@@ -25,6 +31,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(null)
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
+  const [modulesWithAccess, setModulesWithAccess] = useState<ModuleWithAccess[] | null>(null)
+  const [isLoadingModules, setIsLoadingModules] = useState(false)
 
   const refreshProjects = async () => {
     if (!getAuthToken()) {
@@ -73,14 +81,46 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     refreshProjects()
   }, [])
 
+  const refreshModules = useCallback(async () => {
+    if (!getAuthToken() || !selectedProjectId) {
+      setModulesWithAccess(null)
+      return
+    }
+
+    setIsLoadingModules(true)
+    try {
+      const response = await moduleService.getProjectModules(selectedProjectId)
+      if (response.success) {
+        setModulesWithAccess(response.data)
+      } else {
+        setModulesWithAccess(null)
+      }
+    } catch (err) {
+      setModulesWithAccess(null)
+    } finally {
+      setIsLoadingModules(false)
+    }
+  }, [selectedProjectId])
+
   useEffect(() => {
     refreshEntitlements()
-  }, [refreshEntitlements])
+    refreshModules()
+  }, [refreshEntitlements, refreshModules])
 
   const setSelectedProjectId = (projectId: number) => {
     setSelectedProjectIdState(projectId)
     localStorage.setItem(STORAGE_KEY, String(projectId))
   }
+
+  const allowedByKey = useMemo(() => {
+    const lookup: Record<string, boolean> = {}
+    if (modulesWithAccess) {
+      modulesWithAccess.forEach((module) => {
+        lookup[module.key] = module.allowed
+      })
+    }
+    return lookup
+  }, [modulesWithAccess])
 
   const value = useMemo<ProjectContextValue>(() => {
     const selectedProject =
@@ -94,8 +134,22 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       entitlements,
       isLoadingEntitlements,
       refreshEntitlements,
+      modulesWithAccess,
+      isLoadingModules,
+      refreshModules,
+      allowedByKey,
     }
-  }, [projects, selectedProjectId, entitlements, isLoadingEntitlements, refreshEntitlements])
+  }, [
+    projects,
+    selectedProjectId,
+    entitlements,
+    isLoadingEntitlements,
+    refreshEntitlements,
+    modulesWithAccess,
+    isLoadingModules,
+    refreshModules,
+    allowedByKey,
+  ])
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
 }

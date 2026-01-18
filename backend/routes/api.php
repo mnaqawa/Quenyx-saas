@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectIntegrationController;
 use App\Http\Controllers\ProjectSubscriptionController;
+use App\Http\Controllers\ProjectModuleController;
 
 Route::get('/health', [HealthController::class, 'index']);
 
@@ -34,4 +35,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/subscription', [ProjectSubscriptionController::class, 'show']);
     Route::put('/projects/{project}/subscription', [ProjectSubscriptionController::class, 'update']);
     Route::get('/projects/{project}/entitlements', [ProjectSubscriptionController::class, 'entitlements']);
+    Route::get('/projects/{project}/modules/access', [ProjectModuleController::class, 'access']);
+    Route::get('/projects/{project}/modules', [ProjectModuleController::class, 'index']);
 });

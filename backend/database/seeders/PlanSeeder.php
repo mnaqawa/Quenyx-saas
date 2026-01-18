@@ -38,6 +38,7 @@ class PlanSeeder extends Seeder
                     'shieldinventory',
                     'shieldnotify',
                     'shieldknowledge',
+                    'shieldintegrations',
                 ],
                 'limits' => [
                     'api_calls_per_month' => 10000,
@@ -64,6 +65,7 @@ class PlanSeeder extends Seeder
                     'shieldautomate',
                     'shieldbalance',
                     'shielddesk',
+                    'shieldintegrations',
                 ],
                 'limits' => [
                     'api_calls_per_month' => 100000,

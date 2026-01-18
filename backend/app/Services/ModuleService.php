@@ -14,4 +14,12 @@ class ModuleService
     {
         return $this->moduleRepository->getModulesWithSubscriptions();
     }
+
+    /**
+     * Get all modules (catalog) without subscription info
+     */
+    public function getModulesCatalog(): array
+    {
+        return $this->moduleRepository->getAllModules();
+    }
 }

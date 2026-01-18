@@ -1,63 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Module } from '../services/dashboardService'
-import { moduleService } from '../services/moduleService'
 import { subscriptionService } from '../services/subscriptionService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
 import { PlanKey } from '../types/subscription'
 
-const statusLabels: Record<Module['subscription_state'], string> = {
-  active: 'Subscribed',
-  inactive: 'Not Subscribed',
-  trial: 'Trial',
-  expired: 'Expired',
-}
-
-const subscriptionOrder = [
-  'ShieldObserve',
-  'ShieldInventory',
-  'ShieldRespond',
-  'ShieldSecure',
-  'ShieldNotify',
-  'ShieldVoice',
-  'ShieldKnowledge',
-  'ShieldAutomate',
-  'ShieldBalance',
-  'ShieldDesk',
-]
-
 function Subscriptions() {
   const { t } = useLanguage()
-  const { selectedProjectId, entitlements, refreshEntitlements } = useProjectContext()
-  const [modules, setModules] = useState<Module[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { selectedProjectId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, refreshModules } = useProjectContext()
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
-  const { orderedModules, coreModule } = useMemo(() => {
-    const map = new Map(modules.map((module) => [module.name, module]))
-    const core = map.get('ShieldCore') ?? null
-    const ordered = subscriptionOrder
-      .map((name) => map.get(name))
-      .filter((module): module is Module => Boolean(module))
-    return { orderedModules: ordered, coreModule: core }
-  }, [modules])
 
-  useEffect(() => {
-    const fetchModules = async () => {
-      try {
-        const data = await moduleService.getModules()
-        setModules(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load subscriptions')
-      } finally {
-        setLoading(false)
-      }
+  const { coreModule, otherModules } = useMemo(() => {
+    if (!modulesWithAccess) {
+      return { coreModule: null, otherModules: [] }
     }
+    const core = modulesWithAccess.find((m) => m.key === 'shieldcore') ?? null
+    const others = modulesWithAccess.filter((m) => m.key !== 'shieldcore')
+    return { coreModule: core, otherModules: others }
+  }, [modulesWithAccess])
 
-    fetchModules()
-  }, [])
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -90,6 +52,7 @@ function Subscriptions() {
       if (response.success) {
         setSubscription(response.data)
         await refreshEntitlements()
+        await refreshModules()
       }
     } catch (err) {
       // Handle error
@@ -98,16 +61,8 @@ function Subscriptions() {
     }
   }
 
-  if (loading) {
+  if (isLoadingModules) {
     return <div className="text-sm text-white/60">{t('common.loadingSubscriptions')}</div>
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-        {error}
-      </div>
-    )
   }
 
   return (
@@ -176,7 +131,9 @@ function Subscriptions() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold">{coreModule.name}</h3>
-                <p className="text-xs text-sky-200">{statusLabels[coreModule.subscription_state]}</p>
+                <p className={`text-xs ${coreModule.allowed ? 'text-sky-200' : 'text-white/50'}`}>
+                  {coreModule.allowed ? 'Included' : 'Not Included'}
+                </p>
               </div>
             </div>
             <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold text-sky-100">
@@ -188,22 +145,28 @@ function Subscriptions() {
           </p>
           <div className="mt-4 flex items-center gap-3 text-xs text-white/60">
             <span>Status: {coreModule.status}</span>
-            <span>Subscription: {statusLabels[coreModule.subscription_state]}</span>
+            <span>Access: {coreModule.allowed ? 'Included' : 'Not Included'}</span>
           </div>
-          <button
-            type="button"
-            className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
-          >
-            {t('subscriptions.viewPlans')}
-          </button>
+          {!coreModule.allowed && (
+            <button
+              type="button"
+              className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+            >
+              Upgrade Plan
+            </button>
+          )}
         </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {orderedModules.map((module) => (
+        {otherModules.map((module) => (
           <div
-            key={module.id}
-            className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white"
+            key={module.key}
+            className={`rounded-2xl border p-5 text-white ${
+              module.allowed
+                ? 'border-white/10 bg-[#0f151d]'
+                : 'border-white/5 bg-[#0f151d] opacity-60'
+            }`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -214,25 +177,46 @@ function Subscriptions() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold">{module.name}</h3>
-                  <p className="text-xs text-white/50">{statusLabels[module.subscription_state]}</p>
+                  <p className={`text-xs ${module.allowed ? 'text-emerald-200' : 'text-white/50'}`}>
+                    {module.allowed ? 'Included' : 'Not Included'}
+                  </p>
                 </div>
               </div>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/60">
-                {statusLabels[module.subscription_state]}
+              <span
+                className={`rounded-full border px-3 py-1 text-[10px] ${
+                  module.allowed
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                    : 'border-white/10 text-white/40'
+                }`}
+              >
+                {module.allowed ? 'Included' : 'Not Included'}
               </span>
             </div>
 
             <p className="mt-4 text-xs leading-relaxed text-white/60">
               {module.description || t('subscriptions.noDescription')}
             </p>
-            <p className="mt-4 text-[11px] text-white/40">Subscribe to access module insights and features</p>
+            {!module.allowed && (
+              <p className="mt-4 text-[11px] text-white/40">
+                Upgrade your plan to access this module
+              </p>
+            )}
 
-            <button
-              type="button"
-              className="mt-5 inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
-            >
-              {t('subscriptions.viewPlans')}
-            </button>
+            {!module.allowed ? (
+              <button
+                type="button"
+                className="mt-5 inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+              >
+                Upgrade Plan
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="mt-5 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10"
+              >
+                {t('subscriptions.viewPlans')}
+              </button>
+            )}
           </div>
         ))}
       </div>

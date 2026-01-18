@@ -3,16 +3,11 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
 
-// Map module display names to entitlement keys
-const moduleNameToKey = (name: string): string => {
-  return name.toLowerCase().replace(/\s+/g, '')
-}
-
 function AppLayout() {
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
-  const { projects, selectedProjectId, setSelectedProjectId, entitlements, isLoadingEntitlements } = useProjectContext()
+  const { projects, selectedProjectId, setSelectedProjectId, modulesWithAccess, isLoadingModules, allowedByKey } = useProjectContext()
   const [tooltipModule, setTooltipModule] = useState<string | null>(null)
 
   const isActive = (path: string): boolean => {
@@ -107,68 +102,61 @@ function AppLayout() {
           <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
             {t('nav.modules')}
           </span>
-          {[
-            'ShieldCore',
-            'ShieldObserve',
-            'ShieldInventory',
-            'ShieldRespond',
-            'ShieldSecure',
-            'ShieldNotify',
-            'ShieldVoice',
-            'ShieldKnowledge',
-            'ShieldAutomate',
-            'ShieldBalance',
-            'ShieldDesk',
-          ].map((label) => {
-            const moduleKey = moduleNameToKey(label)
-            const isAllowed = entitlements?.modules_allowed.includes(moduleKey) ?? false
-            const isDisabled = !isLoadingEntitlements && !isAllowed
+          {isLoadingModules ? (
+            <div className="px-3 py-2 text-xs text-white/40">Loading modules...</div>
+          ) : modulesWithAccess && modulesWithAccess.length > 0 ? (
+            modulesWithAccess.map((module) => {
+              const isAllowed = allowedByKey[module.key] ?? false
+              const isDisabled = !isLoadingModules && !isAllowed
 
-            return (
-              <div key={label} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isDisabled) {
-                      setTooltipModule(label)
-                      setTimeout(() => setTooltipModule(null), 2000)
-                    }
-                  }}
-                  disabled={isDisabled}
-                  className={`
-                    rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
-                    ${
-                      isDisabled
-                        ? 'text-white/30 cursor-not-allowed opacity-50'
-                        : 'text-white/60 hover:bg-white/5 hover:text-white'
-                    }
-                  `}
-                >
-                  <span>{label}</span>
-                  {isDisabled && (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-white/30"
-                    >
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
+              return (
+                <div key={module.key} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isDisabled) {
+                        setTooltipModule(module.key)
+                        setTimeout(() => setTooltipModule(null), 2000)
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={`
+                      rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
+                      ${
+                        isDisabled
+                          ? 'text-white/30 cursor-not-allowed opacity-50'
+                          : 'text-white/60 hover:bg-white/5 hover:text-white'
+                      }
+                    `}
+                  >
+                    <span>{module.name}</span>
+                    {isDisabled && (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="text-white/30"
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    )}
+                  </button>
+                  {tooltipModule === module.key && (
+                    <div className="absolute left-full ml-2 top-0 z-50 rounded-md bg-rose-500 px-3 py-2 text-xs text-white shadow-lg">
+                      Upgrade plan to access this module
+                      <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 bg-rose-500"></div>
+                    </div>
                   )}
-                </button>
-                {tooltipModule === label && (
-                  <div className="absolute left-full ml-2 top-0 z-50 rounded-md bg-rose-500 px-3 py-2 text-xs text-white shadow-lg">
-                    Upgrade plan to access this module
-                    <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 bg-rose-500"></div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })
+          ) : (
+            <div className="px-3 py-2 text-xs text-white/40">No modules available</div>
+          )}
         </nav>
       </aside>
 
