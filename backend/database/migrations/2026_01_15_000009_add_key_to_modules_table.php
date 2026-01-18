@@ -42,12 +42,28 @@ return new class extends Migration
         ];
 
         foreach ($moduleKeys as $name => $key) {
-            // Only update modules that don't have a key yet (where key is NULL)
-            // This prevents duplicate key errors if modules already have keys from seeders
-            \DB::table('modules')
+            // Check if a module with this key already exists
+            $existingWithKey = \DB::table('modules')
+                ->where('key', $key)
+                ->first();
+
+            if ($existingWithKey) {
+                // Key already exists, skip to avoid duplicate
+                continue;
+            }
+
+            // Only update the first module with this name that doesn't have a key
+            // This prevents duplicate key errors
+            $moduleWithoutKey = \DB::table('modules')
                 ->where('name', $name)
                 ->whereNull('key')
-                ->update(['key' => $key]);
+                ->first();
+
+            if ($moduleWithoutKey) {
+                \DB::table('modules')
+                    ->where('id', $moduleWithoutKey->id)
+                    ->update(['key' => $key]);
+            }
         }
     }
 };
