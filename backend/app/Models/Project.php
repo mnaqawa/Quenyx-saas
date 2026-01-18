@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -19,5 +20,18 @@ class Project extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(ProjectSubscription::class);
+    }
+
+    /**
+     * Get the plan through the subscription (helper accessor)
+     */
+    public function getPlanAttribute(): ?Plan
+    {
+        return $this->subscription?->plan;
     }
 }

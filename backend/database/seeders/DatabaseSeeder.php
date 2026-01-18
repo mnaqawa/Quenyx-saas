@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
             ModuleSubscriptionSeeder::class,
             IntegrationSeeder::class,
             IntegrationConfigurationSeeder::class,
+            PlanSeeder::class,
             ProjectSeeder::class,
+            ProjectSubscriptionSeeder::class,
             ProjectIntegrationConfigurationSeeder::class,
         ]);
     }
