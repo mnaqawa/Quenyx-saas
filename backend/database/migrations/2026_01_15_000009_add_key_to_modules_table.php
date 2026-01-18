@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('modules', function (Blueprint $table) {
-            $table->string('key')->unique()->nullable()->after('id');
+            if (!Schema::hasColumn('modules', 'key')) {
+                $table->string('key')->unique()->nullable()->after('id');
+            }
         });
 
         // Backfill keys for existing modules
