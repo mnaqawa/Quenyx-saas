@@ -22,10 +22,14 @@ function Subscriptions() {
     if (!modulesWithAccess) {
       return { coreModule: null, otherModules: [], recommendedPlan: null }
     }
-    // Deduplicate modules by key first
-    const uniqueModules = modulesWithAccess.filter((module, index, self) => 
-      module.key && index === self.findIndex((m) => m.key === module.key)
-    )
+    // Deduplicate modules by key first (use Map for guaranteed uniqueness)
+    const moduleMap = new Map<string, typeof modulesWithAccess[0]>()
+    modulesWithAccess.forEach((module) => {
+      if (module.key && !moduleMap.has(module.key)) {
+        moduleMap.set(module.key, module)
+      }
+    })
+    const uniqueModules = Array.from(moduleMap.values())
     const core = uniqueModules.find((m) => m.key === 'shieldcore') ?? null
     const others = uniqueModules.filter((m) => m.key !== 'shieldcore')
 
@@ -295,10 +299,10 @@ function Subscriptions() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {otherModules.map((module) => (
+        {otherModules.map((module, index) => (
           <div
             id={`module-card-${module.key}`}
-            key={module.key}
+            key={`${module.key}-${index}`}
             className={`rounded-2xl border p-5 text-white transition-all duration-300 ${
               module.allowed
                 ? 'border-white/10 bg-[#0f151d]'

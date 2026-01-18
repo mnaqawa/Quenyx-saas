@@ -96,9 +96,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       const response = await moduleService.getProjectModules(selectedProjectId)
       if (response.success) {
         // Deduplicate modules by key (defensive filter)
-        const uniqueModules = response.data.filter((module, index, self) => 
-          module.key && index === self.findIndex((m) => m.key === module.key)
-        )
+        // Use Map to ensure true uniqueness
+        const moduleMap = new Map<string, typeof response.data[0]>()
+        response.data.forEach((module) => {
+          if (module.key && !moduleMap.has(module.key)) {
+            moduleMap.set(module.key, module)
+          }
+        })
+        const uniqueModules = Array.from(moduleMap.values())
         setModulesWithAccess(uniqueModules)
         setModulesError(null)
       } else {

@@ -110,9 +110,9 @@ function ProjectAccessSettings() {
                 // Deduplicate by key (defensive filter)
                 module.key && index === self.findIndex((m) => m.key === module.key)
               )
-              .map((module) => (
+              .map((module, index) => (
               <div
-                key={module.key}
+                key={`${module.key}-${index}`}
                 className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-white/5 p-4"
               >
                 <div className="flex-1">
