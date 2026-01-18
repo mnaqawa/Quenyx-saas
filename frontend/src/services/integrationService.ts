@@ -10,6 +10,7 @@ export interface Integration {
   endpoint: string
   primary_action: string
   secondary_action: string | null
+  configured?: boolean
 }
 
 export interface IntegrationConfiguration {
@@ -41,6 +42,40 @@ export const integrationService = {
   },
   async getConfiguration(): Promise<IntegrationConfiguration> {
     const response = await apiClient.get<ConfigurationResponse>('/api/integrations/configuration')
+    if (!response.success) {
+      throw new Error(response.message)
+    }
+    return response.data.data
+  },
+  async listProjectIntegrations(projectId: number): Promise<Integration[]> {
+    const response = await apiClient.get<IntegrationsResponse>(`/api/projects/${projectId}/integrations`)
+    if (!response.success) {
+      throw new Error(response.message)
+    }
+    return response.data.data
+  },
+  async getProjectIntegrationConfiguration(
+    projectId: number,
+    integrationId: number
+  ): Promise<{ settings: Record<string, unknown> | null }> {
+    const response = await apiClient.get<{
+      data: { settings: Record<string, unknown> | null }
+    }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`)
+    if (!response.success) {
+      throw new Error(response.message)
+    }
+    return response.data.data
+  },
+  async updateProjectIntegrationConfiguration(
+    projectId: number,
+    integrationId: number,
+    settings: Record<string, unknown>
+  ): Promise<{ settings: Record<string, unknown> | null }> {
+    const response = await apiClient.put<{
+      data: { settings: Record<string, unknown> | null }
+    }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`, {
+      settings,
+    })
     if (!response.success) {
       throw new Error(response.message)
     }
