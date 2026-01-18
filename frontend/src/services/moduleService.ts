@@ -72,4 +72,29 @@ export const moduleService = {
       data,
     }
   },
+
+  /**
+   * Update module override for a project
+   */
+  async updateModuleOverride(
+    projectId: number,
+    moduleKey: string,
+    mode: 'allow' | 'deny' | null
+  ): Promise<ApiResponse<ModuleWithAccess>> {
+    const response = await apiClient.put<ModuleWithAccess | { data: ModuleWithAccess }>(
+      `/api/projects/${projectId}/modules/${moduleKey}/override`,
+      { mode }
+    )
+    if (!response.success) {
+      return response
+    }
+    // Normalize response
+    const data = 'data' in response.data && response.data.data
+      ? response.data.data
+      : response.data as ModuleWithAccess
+    return {
+      success: true,
+      data,
+    }
+  },
 }

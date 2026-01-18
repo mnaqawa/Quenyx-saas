@@ -7,6 +7,8 @@ export interface ModuleCatalog {
 
 export interface ModuleWithAccess extends ModuleCatalog {
   allowed: boolean
+  allowed_by_plan?: boolean
+  override?: 'allow' | 'deny' | null
 }
 
 export interface ProjectModuleAccess {

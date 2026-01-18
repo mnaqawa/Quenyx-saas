@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Module;
 use App\Models\Project;
+use App\Models\ProjectModuleOverride;
 use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -81,14 +82,34 @@ class ProjectModuleController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            // Merge catalog with access flags
-            $modulesWithAccess = $allModules->map(function (Module $module) use ($allowedModules) {
+            // Get plan modules
+            $plan = $this->entitlementService->getEffectivePlan($project);
+            $planModules = $plan->features['modules'] ?? [];
+
+            // Get overrides
+            $overrides = ProjectModuleOverride::query()
+                ->where('project_id', $project->id)
+                ->with('module')
+                ->get()
+                ->keyBy(function ($override) {
+                    return $override->module->key;
+                });
+
+            // Merge catalog with access flags and override info
+            $modulesWithAccess = $allModules->map(function (Module $module) use ($allowedModules, $planModules, $overrides) {
+                $moduleKey = $module->key;
+                $allowedByPlan = in_array($moduleKey, $planModules, true);
+                $override = $overrides->get($moduleKey);
+                $overrideMode = $override ? $override->mode : null;
+
                 return [
-                    'key' => $module->key,
+                    'key' => $moduleKey,
                     'name' => $module->name,
                     'description' => $module->description,
                     'status' => $module->status,
-                    'allowed' => in_array($module->key, $allowedModules, true),
+                    'allowed_by_plan' => $allowedByPlan,
+                    'override' => $overrideMode,
+                    'allowed' => in_array($moduleKey, $allowedModules, true),
                 ];
             })->values();
 

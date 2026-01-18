@@ -11,6 +11,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectIntegrationController;
 use App\Http\Controllers\ProjectSubscriptionController;
 use App\Http\Controllers\ProjectModuleController;
+use App\Http\Controllers\ProjectModuleOverrideController;
 use App\Http\Controllers\PlanController;
 
 Route::get('/health', [HealthController::class, 'index']);
@@ -39,4 +40,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/entitlements', [ProjectSubscriptionController::class, 'entitlements']);
     Route::get('/projects/{project}/modules/access', [ProjectModuleController::class, 'access']);
     Route::get('/projects/{project}/modules', [ProjectModuleController::class, 'index']);
+    Route::put('/projects/{project}/modules/{moduleKey}/override', [ProjectModuleOverrideController::class, 'update']);
 });

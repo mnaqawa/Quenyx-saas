@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Module;
 use App\Models\Plan;
 use App\Models\Project;
+use App\Models\ProjectModuleOverride;
 use App\Models\ProjectSubscription;
 
 class EntitlementService
 {
     /**
-     * Get entitlements for a project based on its current plan
+     * Get entitlements for a project based on its current plan + overrides
      *
      * @param Project $project
      * @return array{plan: array{key: string, name: string}, modules_allowed: array<string>, limits: array}
@@ -17,15 +19,90 @@ class EntitlementService
     public function getEntitlements(Project $project): array
     {
         $plan = $this->getEffectivePlan($project);
+        $planModules = $plan->features['modules'] ?? [];
+
+        // Get effective modules (plan + overrides)
+        $effectiveModules = $this->getEffectiveModules($project, $planModules);
 
         return [
             'plan' => [
                 'key' => $plan->key,
                 'name' => $plan->name,
             ],
-            'modules_allowed' => $plan->features['modules'] ?? [],
+            'modules_allowed' => $effectiveModules,
             'limits' => $plan->features['limits'] ?? [],
         ];
+    }
+
+    /**
+     * Get effective module access (plan + overrides)
+     *
+     * @param Project $project
+     * @param array<string> $planModules
+     * @return array<string>
+     */
+    public function getEffectiveModules(Project $project, array $planModules): array
+    {
+        // Get all overrides for this project
+        $overrides = ProjectModuleOverride::query()
+            ->where('project_id', $project->id)
+            ->with('module')
+            ->get()
+            ->keyBy(function ($override) {
+                return $override->module->key;
+            });
+
+        // Get all modules to check
+        $allModules = Module::query()->get()->keyBy('key');
+
+        $effectiveModules = [];
+
+        foreach ($allModules as $moduleKey => $module) {
+            $override = $overrides->get($moduleKey);
+
+            if ($override) {
+                // Override exists
+                if ($override->mode === 'allow') {
+                    $effectiveModules[] = $moduleKey;
+                }
+                // If mode is 'deny', don't add (explicitly denied)
+            } else {
+                // No override, use plan entitlement
+                if (in_array($moduleKey, $planModules, true)) {
+                    $effectiveModules[] = $moduleKey;
+                }
+            }
+        }
+
+        return $effectiveModules;
+    }
+
+    /**
+     * Check if a project has effective access to a module (plan + overrides)
+     *
+     * @param Project $project
+     * @param string $moduleKey
+     * @return bool
+     */
+    public function hasEffectiveModuleAccess(Project $project, string $moduleKey): bool
+    {
+        $plan = $this->getEffectivePlan($project);
+        $planModules = $plan->features['modules'] ?? [];
+
+        // Check for override
+        $override = ProjectModuleOverride::query()
+            ->where('project_id', $project->id)
+            ->whereHas('module', function ($query) use ($moduleKey) {
+                $query->where('key', $moduleKey);
+            })
+            ->first();
+
+        if ($override) {
+            return $override->mode === 'allow';
+        }
+
+        // No override, use plan
+        return in_array($moduleKey, $planModules, true);
     }
 
     /**

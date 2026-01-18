@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { subscriptionService, Plan } from '../services/subscriptionService'
+import { moduleService } from '../services/moduleService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
 import { PlanKey } from '../types/subscription'
@@ -24,11 +25,11 @@ function Subscriptions() {
     const core = modulesWithAccess.find((m) => m.key === 'shieldcore') ?? null
     const others = modulesWithAccess.filter((m) => m.key !== 'shieldcore')
 
-    // Determine recommended plan for target module
+    // Determine recommended plan for target module (based on allowed_by_plan, not override)
     let recommended: PlanKey | null = null
     if (targetModuleKey && plans.length > 0) {
       const targetModule = modulesWithAccess.find((m) => m.key === targetModuleKey)
-      if (targetModule && !targetModule.allowed) {
+      if (targetModule && !targetModule.allowed_by_plan) {
         // Find the lowest plan that includes this module
         const planOrder: PlanKey[] = ['free', 'pro', 'enterprise']
         for (const planKey of planOrder) {
@@ -122,6 +123,32 @@ function Subscriptions() {
     } finally {
       setSavingPlan(false)
     }
+  }
+
+  const handleOverrideChange = async (moduleKey: string, mode: 'allow' | 'deny' | null) => {
+    if (!selectedProjectId) return
+
+    try {
+      await moduleService.updateModuleOverride(selectedProjectId, moduleKey, mode)
+      await refreshModules()
+      await refreshEntitlements()
+    } catch (err) {
+      // Handle error
+    }
+  }
+
+  if (!selectedProjectId) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1 text-center">
+          <h1 className="text-2xl font-semibold text-white">{t('subscriptions.title')}</h1>
+          <p className="text-sm text-white/60">{t('subscriptions.subtitle')}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
+          <p className="text-sm text-white/60">Select a project to view module subscriptions</p>
+        </div>
+      </div>
+    )
   }
 
   if (isLoadingModules) {
@@ -220,16 +247,40 @@ function Subscriptions() {
           </p>
           <div className="mt-4 flex items-center gap-3 text-xs text-white/60">
             <span>Status: {coreModule.status}</span>
-            <span>Access: {coreModule.allowed ? 'Included' : 'Not Included'}</span>
+            <span className={`font-semibold ${coreModule.allowed ? 'text-emerald-200' : 'text-white/50'}`}>
+              Access: {coreModule.allowed ? 'Included' : 'Not Included'}
+            </span>
+            {coreModule.allowed_by_plan && !coreModule.override && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                Included (Plan)
+              </span>
+            )}
+            {coreModule.override === 'allow' && (
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-200">
+                Override: Enabled
+              </span>
+            )}
+            {coreModule.override === 'deny' && (
+              <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
+                Override: Disabled
+              </span>
+            )}
           </div>
-          {!coreModule.allowed && (
-            <button
-              type="button"
-              className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-xs text-white/60">Override:</label>
+            <select
+              value={coreModule.override || ''}
+              onChange={(e) => {
+                const value = e.target.value
+                handleOverrideChange(coreModule.key, value === '' ? null : value as 'allow' | 'deny')
+              }}
+              className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
             >
-              Upgrade Plan
-            </button>
-          )}
+              <option value="">Default (Plan)</option>
+              <option value="allow">Force Enable</option>
+              <option value="deny">Force Disable</option>
+            </select>
+          </div>
         </div>
       ) : null}
 
@@ -260,41 +311,53 @@ function Subscriptions() {
                   </p>
                 </div>
               </div>
-              <span
-                className={`rounded-full border px-3 py-1 text-[10px] ${
-                  module.allowed
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-                    : 'border-white/10 text-white/40'
-                }`}
-              >
-                {module.allowed ? 'Included' : 'Not Included'}
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span
+                  className={`rounded-full border px-3 py-1 text-[10px] ${
+                    module.allowed
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                      : 'border-white/10 text-white/40'
+                  }`}
+                >
+                  {module.allowed ? 'Included' : 'Not Included'}
+                </span>
+                {module.allowed_by_plan && !module.override && (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                    Included (Plan)
+                  </span>
+                )}
+                {module.override === 'allow' && (
+                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-200">
+                    Override: Enabled
+                  </span>
+                )}
+                {module.override === 'deny' && (
+                  <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
+                    Override: Disabled
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="mt-4 text-xs leading-relaxed text-white/60">
               {module.description || t('subscriptions.noDescription')}
             </p>
-            {!module.allowed && (
-              <p className="mt-4 text-[11px] text-white/40">
-                Upgrade your plan to access this module
-              </p>
-            )}
 
-            {!module.allowed ? (
-              <button
-                type="button"
-                className="mt-5 inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+            <div className="mt-4 flex items-center gap-3">
+              <label className="text-xs text-white/60">Override:</label>
+              <select
+                value={module.override || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  handleOverrideChange(module.key, value === '' ? null : value as 'allow' | 'deny')
+                }}
+                className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
               >
-                Upgrade Plan
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="mt-5 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10"
-              >
-                {t('subscriptions.viewPlans')}
-              </button>
-            )}
+                <option value="">Default (Plan)</option>
+                <option value="allow">Force Enable</option>
+                <option value="deny">Force Disable</option>
+              </select>
+            </div>
           </div>
         ))}
       </div>
