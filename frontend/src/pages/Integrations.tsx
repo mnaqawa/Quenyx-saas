@@ -30,16 +30,22 @@ function Integrations() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true)
+      setError(null)
       try {
         if (!selectedProjectId) {
           setIntegrations([])
+          setLoading(false)
           return
         }
         const integrationData = await integrationService.listProjectIntegrations(selectedProjectId)
         setIntegrations(integrationData)
         setSelectedIntegrationId(integrationData[0]?.id ?? null)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load integrations')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load integrations'
+        setError(errorMessage.includes('404') || errorMessage.includes('not found')
+          ? `Project integrations not available. Please ensure the project exists and you have access.`
+          : errorMessage)
       } finally {
         setLoading(false)
       }

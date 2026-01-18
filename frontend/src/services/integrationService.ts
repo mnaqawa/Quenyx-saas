@@ -32,39 +32,61 @@ interface ConfigurationResponse {
   data: IntegrationConfiguration
 }
 
+/**
+ * Normalizes response data that may be wrapped in a nested `data` property.
+ */
+function normalizeResponseData<T>(payload: unknown): T {
+  if (Array.isArray(payload)) {
+    return payload as T
+  }
+  
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    const wrapped = payload as { data: unknown }
+    if (Array.isArray(wrapped.data)) {
+      return wrapped.data as T
+    }
+    return wrapped.data as T
+  }
+  
+  return payload as T
+}
+
 export const integrationService = {
   async getIntegrations(): Promise<Integration[]> {
-    const response = await apiClient.get<IntegrationsResponse>('/api/integrations')
+    const response = await apiClient.get<Integration[] | IntegrationsResponse>('/api/integrations')
     if (!response.success) {
       throw new Error(response.message)
     }
-    return response.data.data
+    return normalizeResponseData<Integration[]>(response.data)
   },
   async getConfiguration(): Promise<IntegrationConfiguration> {
-    const response = await apiClient.get<ConfigurationResponse>('/api/integrations/configuration')
+    const response = await apiClient.get<IntegrationConfiguration | ConfigurationResponse>('/api/integrations/configuration')
     if (!response.success) {
       throw new Error(response.message)
     }
-    return response.data.data
+    return normalizeResponseData<IntegrationConfiguration>(response.data)
   },
   async listProjectIntegrations(projectId: number): Promise<Integration[]> {
-    const response = await apiClient.get<IntegrationsResponse>(`/api/projects/${projectId}/integrations`)
+    const response = await apiClient.get<Integration[] | IntegrationsResponse>(`/api/projects/${projectId}/integrations`)
     if (!response.success) {
-      throw new Error(response.message)
+      throw new Error(response.message || `Failed to load integrations for project ${projectId}`)
     }
-    return response.data.data
+    return normalizeResponseData<Integration[]>(response.data)
   },
   async getProjectIntegrationConfiguration(
     projectId: number,
     integrationId: number
   ): Promise<{ settings: Record<string, unknown> | null }> {
     const response = await apiClient.get<{
+      settings: Record<string, unknown> | null
+    } | {
       data: { settings: Record<string, unknown> | null }
     }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`)
     if (!response.success) {
-      throw new Error(response.message)
+      throw new Error(response.message || `Failed to load configuration for integration ${integrationId}`)
     }
-    return response.data.data
+    const normalized = normalizeResponseData<{ settings: Record<string, unknown> | null }>(response.data)
+    return normalized
   },
   async updateProjectIntegrationConfiguration(
     projectId: number,
@@ -72,13 +94,16 @@ export const integrationService = {
     settings: Record<string, unknown>
   ): Promise<{ settings: Record<string, unknown> | null }> {
     const response = await apiClient.put<{
+      settings: Record<string, unknown> | null
+    } | {
       data: { settings: Record<string, unknown> | null }
     }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`, {
       settings,
     })
     if (!response.success) {
-      throw new Error(response.message)
+      throw new Error(response.message || `Failed to update configuration for integration ${integrationId}`)
     }
-    return response.data.data
+    const normalized = normalizeResponseData<{ settings: Record<string, unknown> | null }>(response.data)
+    return normalized
   },
 }
