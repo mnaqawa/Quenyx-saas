@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useProjectContext } from '../projects/ProjectContext'
 
 function AppLayout() {
   const location = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
+  const { projects, selectedProjectId, setSelectedProjectId } = useProjectContext()
 
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
@@ -142,6 +144,24 @@ function AppLayout() {
               </svg>
             </button>
             <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-xs text-white/70">
+                <span>{t('nav.projects')}</span>
+                <select
+                  value={selectedProjectId ?? ''}
+                  onChange={(event) => setSelectedProjectId(Number(event.target.value))}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
+                >
+                  {projects.length === 0 ? (
+                    <option value="">No projects</option>
+                  ) : (
+                    projects.map((project) => (
+                      <option key={project.id} value={project.id} className="text-slate-900">
+                        {project.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
               <span className="inline-flex items-center gap-2 text-xs text-white/70">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path

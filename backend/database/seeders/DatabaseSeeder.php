@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             IntegrationSeeder::class,
             IntegrationConfigurationSeeder::class,
             ProjectSeeder::class,
+            ProjectIntegrationConfigurationSeeder::class,
         ]);
     }
 }

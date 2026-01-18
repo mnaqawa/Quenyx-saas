@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   integrationService,
   Integration,
   IntegrationConfiguration,
 } from '../services/integrationService'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useProjectContext } from '../projects/ProjectContext'
 
 const statusStyles: Record<string, string> = {
   connected: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30',
@@ -20,20 +21,27 @@ const statusLabels: Record<string, string> = {
 
 function Integrations() {
   const { t } = useLanguage()
+  const { selectedProjectId } = useProjectContext()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [configuration, setConfiguration] = useState<IntegrationConfiguration | null>(null)
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState<number | null>(null)
+  const [configSettings, setConfigSettings] = useState<Record<string, string>>({})
+  const [savingConfig, setSavingConfig] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [integrationData, configData] = await Promise.all([
-          integrationService.getIntegrations(),
-          integrationService.getConfiguration(),
-        ])
+        if (!selectedProjectId) {
+          setIntegrations([])
+          setConfiguration(null)
+          return
+        }
+        const integrationData = await integrationService.listProjectIntegrations(selectedProjectId)
         setIntegrations(integrationData)
-        setConfiguration(configData)
+        setConfiguration(null)
+        setSelectedIntegrationId(integrationData[0]?.id ?? null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load integrations')
       } finally {
@@ -42,10 +50,33 @@ function Integrations() {
     }
 
     fetchData()
-  }, [])
+  }, [selectedProjectId])
 
-  const apiKeys = configuration?.api_keys
-  const webhookEndpoints = configuration?.webhook_endpoints
+  useEffect(() => {
+    const fetchConfiguration = async () => {
+      if (!selectedProjectId || !selectedIntegrationId) {
+        return
+      }
+      const data = await integrationService.getProjectIntegrationConfiguration(
+        selectedProjectId,
+        selectedIntegrationId
+      )
+      const settings = (data.settings ?? {}) as Record<string, string>
+      setConfigSettings({
+        endpoint: settings.endpoint ?? '',
+        api_key: settings.api_key ?? '',
+        webhook_url: settings.webhook_url ?? '',
+        primary_webhook: settings.primary_webhook ?? '',
+        backup_webhook: settings.backup_webhook ?? '',
+      })
+    }
+    fetchConfiguration()
+  }, [selectedProjectId, selectedIntegrationId])
+
+  const activeIntegration = useMemo(() => {
+    return integrations.find((integration) => integration.id === selectedIntegrationId) ?? null
+  }, [integrations, selectedIntegrationId])
+
   if (loading) {
     return <div className="text-sm text-white/60">{t('common.loadingIntegrations')}</div>
   }
@@ -78,17 +109,19 @@ function Integrations() {
               </div>
               <span
                 className={`rounded-full border px-3 py-1 text-[10px] font-semibold ${
-                  statusStyles[integration.status]
+                  statusStyles[integration.configured ? 'configured' : integration.status]
                 }`}
               >
-                {statusLabels[integration.status]}
+                {integration.configured ? statusLabels.configured : statusLabels[integration.status]}
               </span>
             </div>
 
             <div className="mt-4 space-y-2 text-xs text-white/70">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-wide text-white/40">{t('integrations.status')}</span>
-                <span className="text-white/70">{statusLabels[integration.status]}</span>
+                <span className="text-white/70">
+                  {integration.configured ? statusLabels.configured : statusLabels[integration.status]}
+                </span>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">{t('integrations.endpoint')}</p>
@@ -101,6 +134,7 @@ function Integrations() {
             <div className="mt-4 flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => setSelectedIntegrationId(integration.id)}
                 className="flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
               >
                 {integration.primary_action}
@@ -140,25 +174,46 @@ function Integrations() {
           <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <h3 className="text-sm font-semibold">{t('integrations.apiKeys')}</h3>
             <p className="mt-1 text-xs text-white/60">{t('integrations.apiKeysDesc')}</p>
+            <div className="mt-3 text-xs text-white/60">
+              {activeIntegration ? `Integration: ${activeIntegration.name}` : 'Select an integration'}
+            </div>
             <div className="mt-4 space-y-3 text-xs text-white/70">
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-white/40">GitHub Personal Access Token</p>
-                <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                  {apiKeys?.github_pat ?? 'Not configured'}
-                </div>
+                <p className="text-[10px] uppercase tracking-wide text-white/40">API Key</p>
+                <input
+                  value={configSettings.api_key ?? ''}
+                  onChange={(event) =>
+                    setConfigSettings((prev) => ({ ...prev, api_key: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                />
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-white/40">Slack Webhook URL</p>
-                <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                  {apiKeys?.slack_webhook_url ?? 'Not configured'}
-                </div>
+                <p className="text-[10px] uppercase tracking-wide text-white/40">Webhook URL</p>
+                <input
+                  value={configSettings.webhook_url ?? ''}
+                  onChange={(event) =>
+                    setConfigSettings((prev) => ({ ...prev, webhook_url: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                />
               </div>
             </div>
             <button
               type="button"
+              onClick={async () => {
+                if (!selectedProjectId || !selectedIntegrationId) return
+                setSavingConfig(true)
+                await integrationService.updateProjectIntegrationConfiguration(
+                  selectedProjectId,
+                  selectedIntegrationId,
+                  configSettings
+                )
+                setSavingConfig(false)
+              }}
               className="mt-4 w-full rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
             >
-              {t('integrations.updateKeys')}
+              {savingConfig ? t('integrations.saving') : t('integrations.updateKeys')}
             </button>
           </div>
 
@@ -168,22 +223,40 @@ function Integrations() {
             <div className="mt-4 space-y-3 text-xs text-white/70">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">Primary Webhook URL</p>
-                <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                  {webhookEndpoints?.primary ?? 'Not configured'}
-                </div>
+                <input
+                  value={configSettings.primary_webhook ?? ''}
+                  onChange={(event) =>
+                    setConfigSettings((prev) => ({ ...prev, primary_webhook: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">Backup Webhook URL</p>
-                <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                  {webhookEndpoints?.backup ?? 'Not configured'}
-                </div>
+                <input
+                  value={configSettings.backup_webhook ?? ''}
+                  onChange={(event) =>
+                    setConfigSettings((prev) => ({ ...prev, backup_webhook: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                />
               </div>
             </div>
             <button
               type="button"
+              onClick={async () => {
+                if (!selectedProjectId || !selectedIntegrationId) return
+                setSavingConfig(true)
+                await integrationService.updateProjectIntegrationConfiguration(
+                  selectedProjectId,
+                  selectedIntegrationId,
+                  configSettings
+                )
+                setSavingConfig(false)
+              }}
               className="mt-4 w-full rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
             >
-              {t('integrations.saveWebhooks')}
+              {savingConfig ? t('integrations.saving') : t('integrations.saveWebhooks')}
             </button>
           </div>
         </div>

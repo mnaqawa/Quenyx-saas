@@ -8,6 +8,7 @@ use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectIntegrationController;
 
 Route::get('/health', [HealthController::class, 'index']);
 
@@ -26,4 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/integrations/configuration', [IntegrationController::class, 'configuration']);
     Route::get('/profile/stats', [ProfileController::class, 'stats']);
     Route::apiResource('projects', ProjectController::class);
+    Route::get('/projects/{project}/integrations', [ProjectIntegrationController::class, 'index']);
+    Route::get('/projects/{project}/integrations/{integration}/configuration', [ProjectIntegrationController::class, 'showConfiguration']);
+    Route::put('/projects/{project}/integrations/{integration}/configuration', [ProjectIntegrationController::class, 'upsertConfiguration']);
 });
