@@ -1,24 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
-import { subscriptionService } from '../services/subscriptionService'
+import { useSearchParams } from 'react-router-dom'
+import { subscriptionService, Plan } from '../services/subscriptionService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
 import { PlanKey } from '../types/subscription'
 
 function Subscriptions() {
   const { t } = useLanguage()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { selectedProjectId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, refreshModules } = useProjectContext()
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [highlightedModule, setHighlightedModule] = useState<string | null>(null)
 
-  const { coreModule, otherModules } = useMemo(() => {
+  const targetModuleKey = searchParams.get('module')
+
+  const { coreModule, otherModules, recommendedPlan } = useMemo(() => {
     if (!modulesWithAccess) {
-      return { coreModule: null, otherModules: [] }
+      return { coreModule: null, otherModules: [], recommendedPlan: null }
     }
     const core = modulesWithAccess.find((m) => m.key === 'shieldcore') ?? null
     const others = modulesWithAccess.filter((m) => m.key !== 'shieldcore')
-    return { coreModule: core, otherModules: others }
-  }, [modulesWithAccess])
+
+    // Determine recommended plan for target module
+    let recommended: PlanKey | null = null
+    if (targetModuleKey && plans.length > 0) {
+      const targetModule = modulesWithAccess.find((m) => m.key === targetModuleKey)
+      if (targetModule && !targetModule.allowed) {
+        // Find the lowest plan that includes this module
+        const planOrder: PlanKey[] = ['free', 'pro', 'enterprise']
+        for (const planKey of planOrder) {
+          const plan = plans.find((p) => p.key === planKey)
+          if (plan && plan.features.modules.includes(targetModuleKey)) {
+            recommended = planKey
+            break
+          }
+        }
+      }
+    }
+
+    return { coreModule: core, otherModules: others, recommendedPlan: recommended }
+  }, [modulesWithAccess, targetModuleKey, plans])
 
 
   useEffect(() => {
@@ -42,6 +66,45 @@ function Subscriptions() {
 
     fetchSubscription()
   }, [selectedProjectId])
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await subscriptionService.getPlans()
+        if (response.success) {
+          setPlans(response.data)
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+
+    fetchPlans()
+  }, [])
+
+  // Scroll to and highlight target module
+  useEffect(() => {
+    if (targetModuleKey && modulesWithAccess && !isLoadingModules) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const element = document.getElementById(`module-card-${targetModuleKey}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setHighlightedModule(targetModuleKey)
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedModule(null)
+            // Remove query param after highlighting
+            setSearchParams((prev) => {
+              const newParams = new URLSearchParams(prev)
+              newParams.delete('module')
+              return newParams
+            })
+          }, 3000)
+        }
+      }, 100)
+    }
+  }, [targetModuleKey, modulesWithAccess, isLoadingModules, setSearchParams])
 
   const handlePlanChange = async (planKey: PlanKey) => {
     if (!selectedProjectId || savingPlan) return
@@ -94,6 +157,11 @@ function Subscriptions() {
               </div>
               <div>
                 <p className="text-xs text-white/50 mb-2">Switch Plan</p>
+                {targetModuleKey && recommendedPlan && (
+                  <div className="mb-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                    Recommended plan: <span className="font-semibold">{recommendedPlan.charAt(0).toUpperCase() + recommendedPlan.slice(1)}</span> (unlocks {modulesWithAccess?.find((m) => m.key === targetModuleKey)?.name || targetModuleKey})
+                  </div>
+                )}
                 <div className="flex gap-2">
                   {(['free', 'pro', 'enterprise'] as PlanKey[]).map((planKey) => (
                     <button
@@ -104,6 +172,8 @@ function Subscriptions() {
                       className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                         subscription.plan.key === planKey
                           ? 'bg-sky-500 text-white'
+                          : recommendedPlan === planKey
+                          ? 'border-2 border-sky-400 bg-sky-500/20 text-sky-200'
                           : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
@@ -123,7 +193,12 @@ function Subscriptions() {
       )}
 
       {coreModule ? (
-        <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-r from-sky-500/10 via-slate-900/40 to-slate-900/10 p-5 text-white">
+        <div
+          id={`module-card-${coreModule.key}`}
+          className={`rounded-2xl border border-sky-500/40 bg-gradient-to-r from-sky-500/10 via-slate-900/40 to-slate-900/10 p-5 text-white transition-all duration-300 ${
+            highlightedModule === coreModule.key ? 'ring-4 ring-sky-400 ring-opacity-50 shadow-lg shadow-sky-500/20' : ''
+          }`}
+        >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500/20">
@@ -161,11 +236,14 @@ function Subscriptions() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {otherModules.map((module) => (
           <div
+            id={`module-card-${module.key}`}
             key={module.key}
-            className={`rounded-2xl border p-5 text-white ${
+            className={`rounded-2xl border p-5 text-white transition-all duration-300 ${
               module.allowed
                 ? 'border-white/10 bg-[#0f151d]'
                 : 'border-white/5 bg-[#0f151d] opacity-60'
+            } ${
+              highlightedModule === module.key ? 'ring-4 ring-sky-400 ring-opacity-50 shadow-lg shadow-sky-500/20' : ''
             }`}
           >
             <div className="flex items-start justify-between gap-4">

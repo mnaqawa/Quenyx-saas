@@ -11,6 +11,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectIntegrationController;
 use App\Http\Controllers\ProjectSubscriptionController;
 use App\Http\Controllers\ProjectModuleController;
+use App\Http\Controllers\PlanController;
 
 Route::get('/health', [HealthController::class, 'index']);
 
@@ -25,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/modules', [ModuleController::class, 'index']);
+    Route::get('/plans', [PlanController::class, 'index']);
     Route::get('/integrations', [IntegrationController::class, 'index']);
     Route::get('/integrations/configuration', [IntegrationController::class, 'configuration']);
     Route::get('/profile/stats', [ProfileController::class, 'stats']);

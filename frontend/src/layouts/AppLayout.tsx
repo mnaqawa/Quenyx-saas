@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
 
 function AppLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
   const { projects, selectedProjectId, setSelectedProjectId, modulesWithAccess, isLoadingModules, allowedByKey } = useProjectContext()
-  const [tooltipModule, setTooltipModule] = useState<string | null>(null)
 
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
@@ -115,8 +115,8 @@ function AppLayout() {
                     type="button"
                     onClick={() => {
                       if (isDisabled) {
-                        setTooltipModule(module.key)
-                        setTimeout(() => setTooltipModule(null), 2000)
+                        // Navigate to subscriptions page with module query param
+                        navigate(`/subscriptions?module=${module.key}`)
                       }
                     }}
                     disabled={isDisabled}
@@ -145,12 +145,6 @@ function AppLayout() {
                       </svg>
                     )}
                   </button>
-                  {tooltipModule === module.key && (
-                    <div className="absolute left-full ml-2 top-0 z-50 rounded-md bg-rose-500 px-3 py-2 text-xs text-white shadow-lg">
-                      Upgrade plan to access this module
-                      <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 bg-rose-500"></div>
-                    </div>
-                  )}
                 </div>
               )
             })

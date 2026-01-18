@@ -1,6 +1,17 @@
 import { apiClient, ApiResponse } from './apiClient'
 import { PlanKey, ProjectEntitlements, ProjectSubscription } from '../types/subscription'
 
+export interface Plan {
+  key: PlanKey
+  name: string
+  price_cents: number
+  interval: string | null
+  features: {
+    modules: string[]
+    limits: Record<string, any>
+  }
+}
+
 interface SubscriptionResponse {
   plan: {
     key: string
@@ -68,5 +79,21 @@ export const subscriptionService = {
       return response
     }
     return response
+  },
+
+  /**
+   * Get all plans catalog
+   */
+  async getPlans(): Promise<ApiResponse<Plan[]>> {
+    const response = await apiClient.get<Plan[] | { data: Plan[] }>('/api/plans')
+    if (!response.success) {
+      return response
+    }
+    // Normalize response
+    const data = Array.isArray(response.data) ? response.data : (response.data as { data: Plan[] }).data
+    return {
+      success: true,
+      data,
+    }
   },
 }
