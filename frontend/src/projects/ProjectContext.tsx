@@ -95,7 +95,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await moduleService.getProjectModules(selectedProjectId)
       if (response.success) {
-        setModulesWithAccess(response.data)
+        // Deduplicate modules by key (defensive filter)
+        const uniqueModules = response.data.filter((module, index, self) => 
+          module.key && index === self.findIndex((m) => m.key === module.key)
+        )
+        setModulesWithAccess(uniqueModules)
         setModulesError(null)
       } else {
         setModulesWithAccess(null)

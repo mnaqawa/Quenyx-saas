@@ -22,13 +22,17 @@ function Subscriptions() {
     if (!modulesWithAccess) {
       return { coreModule: null, otherModules: [], recommendedPlan: null }
     }
-    const core = modulesWithAccess.find((m) => m.key === 'shieldcore') ?? null
-    const others = modulesWithAccess.filter((m) => m.key !== 'shieldcore')
+    // Deduplicate modules by key first
+    const uniqueModules = modulesWithAccess.filter((module, index, self) => 
+      module.key && index === self.findIndex((m) => m.key === module.key)
+    )
+    const core = uniqueModules.find((m) => m.key === 'shieldcore') ?? null
+    const others = uniqueModules.filter((m) => m.key !== 'shieldcore')
 
     // Determine recommended plan for target module (based on allowed_by_plan, not override)
     let recommended: PlanKey | null = null
     if (targetModuleKey && plans.length > 0) {
-      const targetModule = modulesWithAccess.find((m) => m.key === targetModuleKey)
+      const targetModule = uniqueModules.find((m) => m.key === targetModuleKey)
       if (targetModule && !targetModule.allowed_by_plan) {
         // Find the lowest plan that includes this module
         const planOrder: PlanKey[] = ['free', 'pro', 'enterprise']
@@ -291,12 +295,7 @@ function Subscriptions() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {otherModules
-          .filter((module, index, self) => 
-            // Deduplicate by key (defensive filter)
-            module.key && index === self.findIndex((m) => m.key === module.key)
-          )
-          .map((module) => (
+        {otherModules.map((module) => (
           <div
             id={`module-card-${module.key}`}
             key={module.key}
