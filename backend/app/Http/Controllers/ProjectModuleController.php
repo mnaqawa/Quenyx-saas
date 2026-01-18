@@ -110,14 +110,16 @@ class ProjectModuleController extends Controller
                 });
 
             // Merge catalog with access flags and override info
-            $modulesWithAccess = $allModules
-                ->map(function (Module $module) use ($allowedModules, $planModules, $overrides) {
-                    $moduleKey = $module->key;
+            // Use array with key-based deduplication to ensure absolute uniqueness
+            $modulesMap = [];
+            foreach ($allModules as $module) {
+                $moduleKey = $module->key;
+                if ($moduleKey && !isset($modulesMap[$moduleKey])) {
                     $allowedByPlan = in_array($moduleKey, $planModules, true);
                     $override = $overrides->get($moduleKey);
                     $overrideMode = $override ? $override->mode : null;
 
-                    return [
+                    $modulesMap[$moduleKey] = [
                         'key' => $moduleKey,
                         'name' => $module->name,
                         'description' => $module->description,
@@ -126,12 +128,12 @@ class ProjectModuleController extends Controller
                         'override' => $overrideMode,
                         'allowed' => in_array($moduleKey, $allowedModules, true),
                     ];
-                })
-                ->values();
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'data' => $modulesWithAccess,
+                'data' => array_values($modulesMap), // Convert to indexed array
             ]);
         } catch (\Exception $e) {
             Log::error('ProjectModuleController@index failed', [

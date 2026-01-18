@@ -96,15 +96,31 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       const response = await moduleService.getProjectModules(selectedProjectId)
       if (response.success) {
         // Deduplicate modules by key (defensive filter)
-        // Use Map to ensure true uniqueness
+        // Use Map to ensure true uniqueness - only first occurrence of each key is kept
         const moduleMap = new Map<string, typeof response.data[0]>()
         response.data.forEach((module) => {
-          if (module.key && !moduleMap.has(module.key)) {
+          if (module?.key && !moduleMap.has(module.key)) {
             moduleMap.set(module.key, module)
+          } else if (module?.key && moduleMap.has(module.key)) {
+            // Log duplicate detection for debugging
+            console.warn(`Duplicate module key detected: ${module.key}`, module)
           }
         })
         const uniqueModules = Array.from(moduleMap.values())
-        setModulesWithAccess(uniqueModules)
+        
+        // Final verification: ensure no duplicates in final array
+        const finalKeys = new Set<string>()
+        const verifiedModules = uniqueModules.filter((module) => {
+          if (!module.key) return false
+          if (finalKeys.has(module.key)) {
+            console.error(`Duplicate module key in final array: ${module.key}`)
+            return false
+          }
+          finalKeys.add(module.key)
+          return true
+        })
+        
+        setModulesWithAccess(verifiedModules)
         setModulesError(null)
       } else {
         setModulesWithAccess(null)

@@ -299,10 +299,10 @@ function Subscriptions() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {otherModules.map((module, index) => (
+        {otherModules.map((module) => (
           <div
             id={`module-card-${module.key}`}
-            key={`${module.key}-${index}`}
+            key={module.key}
             className={`rounded-2xl border p-5 text-white transition-all duration-300 ${
               module.allowed
                 ? 'border-white/10 bg-[#0f151d]'
