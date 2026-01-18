@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   integrationService,
   Integration,
-  IntegrationConfiguration,
 } from '../services/integrationService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useProjectContext } from '../projects/ProjectContext'
@@ -23,7 +22,6 @@ function Integrations() {
   const { t } = useLanguage()
   const { selectedProjectId } = useProjectContext()
   const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [configuration, setConfiguration] = useState<IntegrationConfiguration | null>(null)
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<number | null>(null)
   const [configSettings, setConfigSettings] = useState<Record<string, string>>({})
   const [savingConfig, setSavingConfig] = useState(false)
@@ -35,12 +33,10 @@ function Integrations() {
       try {
         if (!selectedProjectId) {
           setIntegrations([])
-          setConfiguration(null)
           return
         }
         const integrationData = await integrationService.listProjectIntegrations(selectedProjectId)
         setIntegrations(integrationData)
-        setConfiguration(null)
         setSelectedIntegrationId(integrationData[0]?.id ?? null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load integrations')
