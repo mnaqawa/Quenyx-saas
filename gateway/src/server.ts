@@ -6,10 +6,7 @@ import { clearCache } from './cache'
 const app = express()
 const PORT = process.env.GATEWAY_PORT || 4000
 
-// Middleware to parse JSON bodies
-app.use(express.json())
-
-// Request logging middleware
+// Request logging middleware (before body parsing to avoid consuming stream)
 app.use((req: Request, res: Response, next) => {
   const startTime = Date.now()
   
@@ -25,13 +22,13 @@ app.use((req: Request, res: Response, next) => {
   next()
 })
 
-// Apply entitlement enforcement before proxying
+// Apply entitlement enforcement before proxying (doesn't need body)
 app.use(enforceEntitlements)
 
-// Proxy all /api/* requests to backend
+// Proxy all /api/* requests to backend (BEFORE any body parsing middleware)
 app.use('/api', createBackendProxy())
 
-// Health check endpoint
+// Health check endpoint (no body parsing needed for GET)
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'gateway' })
 })
