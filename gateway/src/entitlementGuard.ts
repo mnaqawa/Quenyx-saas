@@ -78,6 +78,16 @@ async function checkEntitlement(
 
 /**
  * Entitlement enforcement middleware
+ * 
+ * ENFORCED ROUTES (require shieldintegrations module):
+ * - /api/projects/:projectId/integrations*
+ * 
+ * ALLOWED ROUTES (no enforcement, pass through):
+ * - /api/projects/:projectId/modules
+ * - /api/projects/:projectId/modules/access
+ * - /api/projects/:projectId/entitlements
+ * - /api/projects/:projectId/subscription
+ * - All other /api/* routes
  */
 export async function enforceEntitlements(
   req: Request,
@@ -86,7 +96,9 @@ export async function enforceEntitlements(
 ): Promise<void> {
   const path = req.path
   
-  // Check if this is a project-scoped integrations route
+  // ONLY enforce on project-scoped integrations routes
+  // Pattern: /api/projects/:projectId/integrations*
+  // Examples: /api/projects/1/integrations, /api/projects/1/integrations/2/configuration
   if (path.match(/^\/api\/projects\/\d+\/integrations/)) {
     const projectId = extractProjectId(path)
     const authHeader = req.headers.authorization

@@ -9,7 +9,7 @@ import { PlanKey } from '../types/subscription'
 function Subscriptions() {
   const { t } = useLanguage()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { selectedProjectId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, refreshModules } = useProjectContext()
+  const { selectedProjectId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useProjectContext()
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
@@ -161,6 +161,12 @@ function Subscriptions() {
         <h1 className="text-2xl font-semibold text-white">{t('subscriptions.title')}</h1>
         <p className="text-sm text-white/60">{t('subscriptions.subtitle')}</p>
       </div>
+
+      {modulesError && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          Failed to load modules: {modulesError}
+        </div>
+      )}
 
       {selectedProjectId && (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">

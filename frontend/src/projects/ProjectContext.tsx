@@ -18,6 +18,7 @@ interface ProjectContextValue {
   refreshEntitlements: () => Promise<void>
   modulesWithAccess: ModuleWithAccess[] | null
   isLoadingModules: boolean
+  modulesError: string | null
   refreshModules: () => Promise<void>
   allowedByKey: Record<string, boolean>
 }
@@ -33,6 +34,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
   const [modulesWithAccess, setModulesWithAccess] = useState<ModuleWithAccess[] | null>(null)
   const [isLoadingModules, setIsLoadingModules] = useState(false)
+  const [modulesError, setModulesError] = useState<string | null>(null)
 
   const refreshProjects = async () => {
     if (!getAuthToken()) {
@@ -84,19 +86,26 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const refreshModules = useCallback(async () => {
     if (!getAuthToken() || !selectedProjectId) {
       setModulesWithAccess(null)
+      setModulesError(null)
       return
     }
 
     setIsLoadingModules(true)
+    setModulesError(null)
     try {
       const response = await moduleService.getProjectModules(selectedProjectId)
       if (response.success) {
         setModulesWithAccess(response.data)
+        setModulesError(null)
       } else {
         setModulesWithAccess(null)
+        setModulesError(response.message || 'Failed to load modules')
       }
     } catch (err) {
       setModulesWithAccess(null)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load modules'
+      setModulesError(errorMessage)
+      console.error('Failed to load modules:', err)
     } finally {
       setIsLoadingModules(false)
     }
@@ -136,6 +145,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       refreshEntitlements,
       modulesWithAccess,
       isLoadingModules,
+      modulesError,
       refreshModules,
       allowedByKey,
     }
@@ -147,6 +157,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     refreshEntitlements,
     modulesWithAccess,
     isLoadingModules,
+    modulesError,
     refreshModules,
     allowedByKey,
   ])

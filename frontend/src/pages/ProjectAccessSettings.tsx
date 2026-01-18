@@ -3,7 +3,7 @@ import { useProjectContext } from '../projects/ProjectContext'
 import { moduleService, AuditLog } from '../services/moduleService'
 
 function ProjectAccessSettings() {
-  const { selectedProjectId, modulesWithAccess, isLoadingModules, refreshModules, refreshEntitlements } = useProjectContext()
+  const { selectedProjectId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useProjectContext()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
   const [overrideError, setOverrideError] = useState<string | null>(null)
@@ -85,6 +85,12 @@ function ProjectAccessSettings() {
         <h1 className="text-2xl font-semibold text-white">Project Access</h1>
         <p className="text-sm text-white/60">Manage module access for your project</p>
       </div>
+
+      {modulesError && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          Failed to load modules: {modulesError}
+        </div>
+      )}
 
       {overrideError && (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">

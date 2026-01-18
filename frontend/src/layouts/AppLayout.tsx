@@ -8,7 +8,7 @@ function AppLayout() {
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
-  const { projects, selectedProjectId, setSelectedProjectId, modulesWithAccess, isLoadingModules, allowedByKey } = useProjectContext()
+  const { projects, selectedProjectId, setSelectedProjectId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useProjectContext()
 
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
@@ -115,7 +115,15 @@ function AppLayout() {
           </span>
           {isLoadingModules ? (
             <div className="px-3 py-2 text-xs text-white/40">Loading modules...</div>
-          ) : modulesWithAccess && modulesWithAccess.length > 0 ? (
+          ) : modulesError ? (
+            <div className="px-3 py-2 text-xs text-rose-300">
+              Error: {modulesError}
+            </div>
+          ) : !modulesWithAccess || modulesWithAccess.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-white/40">
+              {selectedProjectId ? 'No modules available' : 'Select a project'}
+            </div>
+          ) : (
             modulesWithAccess.map((module) => {
               const isAllowed = allowedByKey[module.key] ?? false
               const isDisabled = !isLoadingModules && !isAllowed
@@ -159,8 +167,6 @@ function AppLayout() {
                 </div>
               )
             })
-          ) : (
-            <div className="px-3 py-2 text-xs text-white/40">No modules available</div>
           )}
         </nav>
       </aside>
