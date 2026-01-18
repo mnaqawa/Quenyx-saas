@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Module;
 use App\Models\Project;
 use App\Models\ProjectModuleOverride;
@@ -23,8 +24,18 @@ class ProjectModuleOverrideController extends Controller
     public function update(Request $request, Project $project, string $moduleKey): JsonResponse
     {
         try {
-            // Authorize: user must own the project
-            $this->authorize('view', $project);
+            $user = $request->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+            }
+
+            // Authorize: user must own the project (only owners can change overrides)
+            if ($project->owner_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only project owners can change module access settings',
+                ], 403);
+            }
 
             // Find module by key
             $module = Module::where('key', $moduleKey)->firstOrFail();
@@ -34,6 +45,18 @@ class ProjectModuleOverrideController extends Controller
             ]);
 
             $mode = $validated['mode'] ?? null;
+
+            // Get plan info before update
+            $plan = $this->entitlementService->getEffectivePlan($project);
+            $planModules = $plan->features['modules'] ?? [];
+            $allowedByPlan = in_array($moduleKey, $planModules, true);
+
+            // Capture existing override (for audit)
+            $existingOverride = ProjectModuleOverride::query()
+                ->where('project_id', $project->id)
+                ->where('module_id', $module->id)
+                ->first();
+            $oldMode = $existingOverride?->mode;
 
             if ($mode === null) {
                 // Remove override
@@ -55,10 +78,6 @@ class ProjectModuleOverrideController extends Controller
             }
 
             // Get updated module info
-            $plan = $this->entitlementService->getEffectivePlan($project);
-            $planModules = $plan->features['modules'] ?? [];
-            $allowedByPlan = in_array($moduleKey, $planModules, true);
-
             $override = ProjectModuleOverride::query()
                 ->where('project_id', $project->id)
                 ->where('module_id', $module->id)
@@ -66,6 +85,21 @@ class ProjectModuleOverrideController extends Controller
 
             $effectiveModules = $this->entitlementService->getEffectiveModules($project, $planModules);
             $allowed = in_array($moduleKey, $effectiveModules, true);
+
+            // Write audit log
+            AuditLog::create([
+                'user_id' => $user->id,
+                'project_id' => $project->id,
+                'action' => 'module_override_updated',
+                'metadata' => [
+                    'module_key' => $moduleKey,
+                    'module_name' => $module->name,
+                    'old_mode' => $oldMode,
+                    'new_mode' => $mode,
+                    'allowed_by_plan' => $allowedByPlan,
+                ],
+                'timestamp' => now(),
+            ]);
 
             return response()->json([
                 'success' => true,

@@ -97,4 +97,44 @@ export const moduleService = {
       data,
     }
   },
+
+  /**
+   * Get audit logs for a project
+   */
+  async getProjectAuditLogs(projectId: number): Promise<ApiResponse<AuditLog[]>> {
+    const response = await apiClient.get<AuditLog[] | { data: AuditLog[] }>(
+      `/api/projects/${projectId}/audit-logs`
+    )
+    if (!response.success) {
+      return response
+    }
+    // Normalize response
+    const data = Array.isArray(response.data)
+      ? response.data
+      : (response.data as { data: AuditLog[] }).data
+    return {
+      success: true,
+      data,
+    }
+  },
+}
+
+export interface AuditLog {
+  id: number
+  action: string
+  metadata: {
+    module_key?: string
+    module_name?: string
+    old_mode?: string | null
+    new_mode?: string | null
+    allowed_by_plan?: boolean
+    [key: string]: any
+  }
+  timestamp: string
+  created_at: string
+  user: {
+    id: number
+    name: string
+    email: string
+  } | null
 }
