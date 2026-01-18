@@ -22,14 +22,25 @@ function ProjectsPage() {
   const loadProjects = async () => {
     setLoading(true)
     setError(null)
-    const response = await projectService.listProjects()
-    if (!response.success) {
-      setError(response.message)
+    try {
+      const response = await projectService.listProjects()
+      if (!response.success) {
+        setError(response.message || 'An unexpected error occurred')
+        setLoading(false)
+        return
+      }
+      // Ensure data is an array (normalization should handle this, but be defensive)
+      if (!Array.isArray(response.data)) {
+        setError('Invalid response format: expected array of projects')
+        setLoading(false)
+        return
+      }
+      setProjects(response.data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
       setLoading(false)
-      return
     }
-    setProjects(response.data)
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -40,19 +51,25 @@ function ProjectsPage() {
     event.preventDefault()
     setCreating(true)
     setSuccess(null)
-    const response = await projectService.createProject({
-      name: form.name.trim(),
-      status: form.status,
-    })
-    if (!response.success) {
-      setError(response.message)
+    setError(null)
+    try {
+      const response = await projectService.createProject({
+        name: form.name.trim(),
+        status: form.status,
+      })
+      if (!response.success) {
+        setError(response.message || 'Failed to create project')
+        setCreating(false)
+        return
+      }
+      setForm({ name: '', status: 'active' })
+      setSuccess(t('projects.createTitle'))
+      await loadProjects()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
       setCreating(false)
-      return
     }
-    setForm({ name: '', status: 'active' })
-    setSuccess(t('projects.createTitle'))
-    await loadProjects()
-    setCreating(false)
   }
 
   const orderedProjects = useMemo(() => {

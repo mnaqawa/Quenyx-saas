@@ -29,15 +29,26 @@ function ProjectDetailsPage() {
       return
     }
     setLoading(true)
-    const response = await projectService.getProject(projectId)
-    if (!response.success) {
-      setError(response.message)
+    setError(null)
+    try {
+      const response = await projectService.getProject(projectId)
+      if (!response.success) {
+        setError(response.message || 'Failed to load project')
+        setLoading(false)
+        return
+      }
+      if (!response.data || typeof response.data !== 'object') {
+        setError('Invalid response format: expected project object')
+        setLoading(false)
+        return
+      }
+      setProject(response.data)
+      setForm({ name: response.data.name, status: response.data.status })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
       setLoading(false)
-      return
     }
-    setProject(response.data)
-    setForm({ name: response.data.name, status: response.data.status })
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -47,32 +58,44 @@ function ProjectDetailsPage() {
   const handleSave = async () => {
     if (!project) return
     setSaving(true)
-    const payload: UpdateProjectInput = {
-      name: form.name?.trim() || project.name,
-      status: form.status ?? project.status,
-    }
-    const response = await projectService.updateProject(project.id, payload)
-    if (!response.success) {
-      setError(response.message)
+    setError(null)
+    try {
+      const payload: UpdateProjectInput = {
+        name: form.name?.trim() || project.name,
+        status: form.status ?? project.status,
+      }
+      const response = await projectService.updateProject(project.id, payload)
+      if (!response.success) {
+        setError(response.message || 'Failed to update project')
+        setSaving(false)
+        return
+      }
+      setProject(response.data)
+      setEditing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
       setSaving(false)
-      return
     }
-    setProject(response.data)
-    setEditing(false)
-    setSaving(false)
   }
 
   const handleDelete = async () => {
     if (!project) return
     if (!window.confirm('Delete this project?')) return
     setDeleting(true)
-    const response = await projectService.deleteProject(project.id)
-    if (!response.success) {
-      setError(response.message)
+    setError(null)
+    try {
+      const response = await projectService.deleteProject(project.id)
+      if (!response.success) {
+        setError(response.message || 'Failed to delete project')
+        setDeleting(false)
+        return
+      }
+      navigate('/app/projects')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setDeleting(false)
-      return
     }
-    navigate('/app/projects')
   }
 
   if (loading) {
