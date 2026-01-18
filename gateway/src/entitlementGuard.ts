@@ -11,6 +11,13 @@ export function extractProjectId(path: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
+interface EntitlementsResponse {
+  success: boolean
+  data?: {
+    modules_allowed?: string[]
+  }
+}
+
 /**
  * Fetch entitlements from backend
  */
@@ -35,13 +42,13 @@ async function fetchEntitlements(token: string, projectId: number): Promise<stri
     throw new Error(`Backend returned ${response.status}`)
   }
   
-  const data = await response.json()
+  const data = (await response.json()) as EntitlementsResponse
   
   if (!data.success || !data.data || !Array.isArray(data.data.modules_allowed)) {
     throw new Error('Invalid entitlements response format')
   }
   
-  return data.data.modules_allowed as string[]
+  return data.data.modules_allowed
 }
 
 /**
