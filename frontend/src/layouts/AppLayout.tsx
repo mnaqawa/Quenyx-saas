@@ -18,9 +18,21 @@ function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0b0f14] text-slate-100">
+    <div className="relative flex min-h-screen bg-[#0b0f14] text-slate-100">
       {isSidebarOpen ? (
-        <aside className="w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white">
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          aria-label="Close sidebar"
+        />
+      ) : null}
+      <aside
+        className={[
+          'fixed left-0 top-0 z-40 h-full w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white transition-transform md:static md:translate-x-0',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+      >
         <div className="border-b border-white/10 px-6 py-6">
           <h1 className="text-lg font-semibold leading-6">{t('app.name')}</h1>
           <p className="mt-1 text-xs text-white/50">{t('app.controlCenter')}</p>
@@ -110,11 +122,10 @@ function AppLayout() {
           ))}
         </nav>
       </aside>
-      ) : null}
 
-      <main className="min-w-0 flex-1 bg-[#0b0f14] text-slate-100">
-        <div className="border-b border-white/5 px-6 py-4">
-          <div className="mx-auto flex max-w-6xl items-center justify-between">
+      <main className="min-h-screen min-w-0 flex-1 bg-[#0b0f14] text-slate-100 md:ml-64">
+        <div className="border-b border-white/5 px-4 py-4 md:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
@@ -130,7 +141,7 @@ function AppLayout() {
                 />
               </svg>
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 text-xs text-white/70">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path
@@ -167,7 +178,7 @@ function AppLayout() {
             </div>
           </div>
         </div>
-        <div className="mx-auto max-w-6xl px-6 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
           <Outlet />
         </div>
       </main>
