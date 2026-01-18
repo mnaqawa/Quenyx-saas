@@ -38,12 +38,11 @@ class ProjectModuleController extends Controller
                 })
                 ->orderBy('name')
                 ->get()
-                ->unique('key'); // Ensure no duplicates
+                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
+                ->values(); // Convert back to indexed collection
 
             // Build access overlay
-            // Use keyBy to ensure uniqueness by key
             $modulesAccess = $allModules
-                ->keyBy('key') // Ensures unique by key
                 ->map(function (Module $module) use ($allowedModules) {
                     return [
                         'key' => $module->key,
@@ -94,7 +93,8 @@ class ProjectModuleController extends Controller
                 })
                 ->orderBy('name')
                 ->get()
-                ->unique('key'); // Ensure no duplicates
+                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
+                ->values(); // Convert back to indexed collection
 
             // Get plan modules
             $plan = $this->entitlementService->getEffectivePlan($project);
@@ -110,9 +110,7 @@ class ProjectModuleController extends Controller
                 });
 
             // Merge catalog with access flags and override info
-            // Use keyBy to ensure uniqueness by key, then values() to get array
             $modulesWithAccess = $allModules
-                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
                 ->map(function (Module $module) use ($allowedModules, $planModules, $overrides) {
                     $moduleKey = $module->key;
                     $allowedByPlan = in_array($moduleKey, $planModules, true);
