@@ -9,10 +9,100 @@ use Illuminate\Database\Seeder;
 class ModuleSeeder extends Seeder
 {
     /**
+     * Authoritative list of allowed Shield modules
+     * This is the source of truth - only these modules should exist
+     */
+    private const SHIELD_MODULES = [
+        [
+            'key' => 'shieldcore',
+            'name' => 'ShieldCore',
+            'description' => 'Central configuration and governance hub for platform control and policy management.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldobserve',
+            'name' => 'ShieldObserve',
+            'description' => 'Real-time infrastructure monitoring and performance insights across your environment.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldinventory',
+            'name' => 'ShieldInventory',
+            'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.',
+            'status' => 'maintenance',
+        ],
+        [
+            'key' => 'shieldrespond',
+            'name' => 'ShieldRespond',
+            'description' => 'Automated incident response and orchestration for rapid recovery and resolution.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldsecure',
+            'name' => 'ShieldSecure',
+            'description' => 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldnotify',
+            'name' => 'ShieldNotify',
+            'description' => 'Alert and notification management across email, SMS, and in-app channels.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldvoice',
+            'name' => 'ShieldVoice',
+            'description' => 'AI voice and IVR operations for automated customer support and service analytics.',
+            'status' => 'inactive',
+        ],
+        [
+            'key' => 'shieldknowledge',
+            'name' => 'ShieldKnowledge',
+            'description' => 'Knowledge management for documentation, playbooks, and operational procedures.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldautomate',
+            'name' => 'ShieldAutomate',
+            'description' => 'Workflow automation and process orchestration across systems and teams.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldbalance',
+            'name' => 'ShieldBalance',
+            'description' => 'Load balancing and traffic management for optimal resource distribution.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shielddesk',
+            'name' => 'ShieldDesk',
+            'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
+            'status' => 'active',
+        ],
+        [
+            'key' => 'shieldintegrations',
+            'name' => 'ShieldIntegrations',
+            'description' => 'Third-party integrations and API connections for external services.',
+            'status' => 'active',
+        ],
+    ];
+
+    /**
      * Run the database seeds.
+     * Idempotent: uses updateOrCreate to prevent duplicates
      */
     public function run(): void
     {
+        foreach (self::SHIELD_MODULES as $moduleData) {
+            Module::updateOrCreate(
+                ['key' => $moduleData['key']],
+                [
+                    'name' => $moduleData['name'],
+                    'description' => $moduleData['description'],
+                    'status' => $moduleData['status'],
+                ]
+            );
+        }
         // Use updateOrCreate to handle existing modules
         Module::updateOrCreate(
             ['key' => 'shieldcore'],

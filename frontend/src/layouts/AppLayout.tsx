@@ -124,9 +124,11 @@ function AppLayout() {
               {selectedProjectId ? 'No modules available' : 'Select a project'}
             </div>
           ) : (
-            modulesWithAccess.map((module) => {
-              const isAllowed = allowedByKey[module.key] ?? false
-              const isDisabled = !isLoadingModules && !isAllowed
+            modulesWithAccess
+              .filter((module) => module.key?.toLowerCase().startsWith('shield')) // Defensive filter
+              .map((module) => {
+                const isAllowed = allowedByKey[module.key] ?? false
+                const isDisabled = !isLoadingModules && !isAllowed
 
               return (
                 <div key={module.key} className="relative">

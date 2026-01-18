@@ -30,10 +30,15 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog
+            // Get all modules from catalog (only Shield modules)
             $allModules = Module::query()
+                ->where(function ($query) {
+                    $query->where('key', 'like', 'shield%')
+                        ->orWhere('name', 'like', 'Shield%');
+                })
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->unique('key'); // Ensure no duplicates
 
             // Build access overlay
             $modulesAccess = $allModules->map(function (Module $module) use ($allowedModules) {
@@ -77,10 +82,15 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog
+            // Get all modules from catalog (only Shield modules)
             $allModules = Module::query()
+                ->where(function ($query) {
+                    $query->where('key', 'like', 'shield%')
+                        ->orWhere('name', 'like', 'Shield%');
+                })
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->unique('key'); // Ensure no duplicates
 
             // Get plan modules
             $plan = $this->entitlementService->getEffectivePlan($project);
