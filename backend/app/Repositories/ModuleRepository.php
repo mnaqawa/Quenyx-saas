@@ -15,7 +15,7 @@ class ModuleRepository
             })
             ->with('subscriptions')
             ->get()
-            ->unique('key') // Ensure no duplicates
+            ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
             ->map(function ($module) {
                 return [
                     'id' => $module->id,
@@ -43,7 +43,7 @@ class ModuleRepository
             })
             ->orderBy('name')
             ->get()
-            ->unique('key') // Ensure no duplicates
+            ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
             ->map(function ($module) {
                 return [
                     'key' => $module->key,

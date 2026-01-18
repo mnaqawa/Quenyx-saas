@@ -126,6 +126,10 @@ function AppLayout() {
           ) : (
             modulesWithAccess
               .filter((module) => module.key?.toLowerCase().startsWith('shield')) // Defensive filter
+              .filter((module, index, self) => 
+                // Deduplicate by key (defensive filter)
+                module.key && index === self.findIndex((m) => m.key === module.key)
+              )
               .map((module) => {
                 const isAllowed = allowedByKey[module.key] ?? false
                 const isDisabled = !isLoadingModules && !isAllowed

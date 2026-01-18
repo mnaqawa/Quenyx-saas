@@ -105,7 +105,12 @@ function ProjectAccessSettings() {
 
         {modulesWithAccess && modulesWithAccess.length > 0 ? (
           <div className="space-y-4">
-            {modulesWithAccess.map((module) => (
+            {modulesWithAccess
+              .filter((module, index, self) => 
+                // Deduplicate by key (defensive filter)
+                module.key && index === self.findIndex((m) => m.key === module.key)
+              )
+              .map((module) => (
               <div
                 key={module.key}
                 className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-white/5 p-4"

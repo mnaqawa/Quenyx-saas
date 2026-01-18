@@ -291,7 +291,12 @@ function Subscriptions() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {otherModules.map((module) => (
+        {otherModules
+          .filter((module, index, self) => 
+            // Deduplicate by key (defensive filter)
+            module.key && index === self.findIndex((m) => m.key === module.key)
+          )
+          .map((module) => (
           <div
             id={`module-card-${module.key}`}
             key={module.key}

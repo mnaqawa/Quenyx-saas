@@ -41,12 +41,16 @@ class ProjectModuleController extends Controller
                 ->unique('key'); // Ensure no duplicates
 
             // Build access overlay
-            $modulesAccess = $allModules->map(function (Module $module) use ($allowedModules) {
-                return [
-                    'key' => $module->key,
-                    'allowed' => in_array($module->key, $allowedModules, true),
-                ];
-            })->values();
+            // Use keyBy to ensure uniqueness by key
+            $modulesAccess = $allModules
+                ->keyBy('key') // Ensures unique by key
+                ->map(function (Module $module) use ($allowedModules) {
+                    return [
+                        'key' => $module->key,
+                        'allowed' => in_array($module->key, $allowedModules, true),
+                    ];
+                })
+                ->values();
 
             return response()->json([
                 'success' => true,
@@ -106,22 +110,26 @@ class ProjectModuleController extends Controller
                 });
 
             // Merge catalog with access flags and override info
-            $modulesWithAccess = $allModules->map(function (Module $module) use ($allowedModules, $planModules, $overrides) {
-                $moduleKey = $module->key;
-                $allowedByPlan = in_array($moduleKey, $planModules, true);
-                $override = $overrides->get($moduleKey);
-                $overrideMode = $override ? $override->mode : null;
+            // Use keyBy to ensure uniqueness by key, then values() to get array
+            $modulesWithAccess = $allModules
+                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
+                ->map(function (Module $module) use ($allowedModules, $planModules, $overrides) {
+                    $moduleKey = $module->key;
+                    $allowedByPlan = in_array($moduleKey, $planModules, true);
+                    $override = $overrides->get($moduleKey);
+                    $overrideMode = $override ? $override->mode : null;
 
-                return [
-                    'key' => $moduleKey,
-                    'name' => $module->name,
-                    'description' => $module->description,
-                    'status' => $module->status,
-                    'allowed_by_plan' => $allowedByPlan,
-                    'override' => $overrideMode,
-                    'allowed' => in_array($moduleKey, $allowedModules, true),
-                ];
-            })->values();
+                    return [
+                        'key' => $moduleKey,
+                        'name' => $module->name,
+                        'description' => $module->description,
+                        'status' => $module->status,
+                        'allowed_by_plan' => $allowedByPlan,
+                        'override' => $overrideMode,
+                        'allowed' => in_array($moduleKey, $allowedModules, true),
+                    ];
+                })
+                ->values();
 
             return response()->json([
                 'success' => true,
