@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { Project } from '../types/project'
+import { ProjectEntitlements } from '../types/subscription'
 import { projectService } from '../services/projectService'
+import { subscriptionService } from '../services/subscriptionService'
 import { getAuthToken } from '../services/apiClient'
 
 interface ProjectContextValue {
@@ -9,6 +11,9 @@ interface ProjectContextValue {
   selectedProjectId: number | null
   setSelectedProjectId: (projectId: number) => void
   refreshProjects: () => Promise<void>
+  entitlements: ProjectEntitlements | null
+  isLoadingEntitlements: boolean
+  refreshEntitlements: () => Promise<void>
 }
 
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined)
@@ -18,6 +23,8 @@ const STORAGE_KEY = 'portshield.selected_project_id'
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(null)
+  const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
+  const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
 
   const refreshProjects = async () => {
     if (!getAuthToken()) {
@@ -41,9 +48,34 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshEntitlements = useCallback(async () => {
+    if (!getAuthToken() || !selectedProjectId) {
+      setEntitlements(null)
+      return
+    }
+
+    setIsLoadingEntitlements(true)
+    try {
+      const response = await subscriptionService.getProjectEntitlements(selectedProjectId)
+      if (response.success) {
+        setEntitlements(response.data)
+      } else {
+        setEntitlements(null)
+      }
+    } catch (err) {
+      setEntitlements(null)
+    } finally {
+      setIsLoadingEntitlements(false)
+    }
+  }, [selectedProjectId])
+
   useEffect(() => {
     refreshProjects()
   }, [])
+
+  useEffect(() => {
+    refreshEntitlements()
+  }, [refreshEntitlements])
 
   const setSelectedProjectId = (projectId: number) => {
     setSelectedProjectIdState(projectId)
@@ -59,8 +91,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       selectedProjectId,
       setSelectedProjectId,
       refreshProjects,
+      entitlements,
+      isLoadingEntitlements,
+      refreshEntitlements,
     }
-  }, [projects, selectedProjectId])
+  }, [projects, selectedProjectId, entitlements, isLoadingEntitlements, refreshEntitlements])
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
 }

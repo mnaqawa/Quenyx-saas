@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Module } from '../services/dashboardService'
 import { moduleService } from '../services/moduleService'
+import { subscriptionService } from '../services/subscriptionService'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useProjectContext } from '../projects/ProjectContext'
+import { PlanKey } from '../types/subscription'
 
 const statusLabels: Record<Module['subscription_state'], string> = {
   active: 'Subscribed',
@@ -25,9 +28,13 @@ const subscriptionOrder = [
 
 function Subscriptions() {
   const { t } = useLanguage()
+  const { selectedProjectId, entitlements, refreshEntitlements } = useProjectContext()
   const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [loadingSubscription, setLoadingSubscription] = useState(false)
+  const [savingPlan, setSavingPlan] = useState(false)
   const { orderedModules, coreModule } = useMemo(() => {
     const map = new Map(modules.map((module) => [module.name, module]))
     const core = map.get('ShieldCore') ?? null
@@ -52,6 +59,45 @@ function Subscriptions() {
     fetchModules()
   }, [])
 
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!selectedProjectId) {
+        setSubscription(null)
+        return
+      }
+      setLoadingSubscription(true)
+      try {
+        const response = await subscriptionService.getProjectSubscription(selectedProjectId)
+        if (response.success) {
+          setSubscription(response.data)
+        }
+      } catch (err) {
+        // Ignore errors for now
+      } finally {
+        setLoadingSubscription(false)
+      }
+    }
+
+    fetchSubscription()
+  }, [selectedProjectId])
+
+  const handlePlanChange = async (planKey: PlanKey) => {
+    if (!selectedProjectId || savingPlan) return
+
+    setSavingPlan(true)
+    try {
+      const response = await subscriptionService.updateProjectSubscription(selectedProjectId, planKey)
+      if (response.success) {
+        setSubscription(response.data)
+        await refreshEntitlements()
+      }
+    } catch (err) {
+      // Handle error
+    } finally {
+      setSavingPlan(false)
+    }
+  }
+
   if (loading) {
     return <div className="text-sm text-white/60">{t('common.loadingSubscriptions')}</div>
   }
@@ -70,6 +116,56 @@ function Subscriptions() {
         <h1 className="text-2xl font-semibold text-white">{t('subscriptions.title')}</h1>
         <p className="text-sm text-white/60">{t('subscriptions.subtitle')}</p>
       </div>
+
+      {selectedProjectId && (
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+          <h2 className="text-sm font-semibold mb-4">Project Subscription</h2>
+          {loadingSubscription ? (
+            <div className="text-sm text-white/60">Loading...</div>
+          ) : subscription ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-white/50">Current Plan</p>
+                  <p className="text-lg font-semibold">{subscription.plan.name}</p>
+                  <p className="text-xs text-white/60">Status: {subscription.status}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/50">Allowed Modules</p>
+                  <p className="text-lg font-semibold">
+                    {entitlements?.modules_allowed.length ?? 0}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-white/50 mb-2">Switch Plan</p>
+                <div className="flex gap-2">
+                  {(['free', 'pro', 'enterprise'] as PlanKey[]).map((planKey) => (
+                    <button
+                      key={planKey}
+                      type="button"
+                      onClick={() => handlePlanChange(planKey)}
+                      disabled={savingPlan || subscription.plan.key === planKey}
+                      className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                        subscription.plan.key === planKey
+                          ? 'bg-sky-500 text-white'
+                          : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {planKey.charAt(0).toUpperCase() + planKey.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                {savingPlan && (
+                  <p className="mt-2 text-xs text-white/60">Saving...</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-white/60">No subscription found</div>
+          )}
+        </div>
+      )}
 
       {coreModule ? (
         <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-r from-sky-500/10 via-slate-900/40 to-slate-900/10 p-5 text-white">
