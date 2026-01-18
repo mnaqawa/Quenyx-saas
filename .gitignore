@@ -17,6 +17,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Frontend build output
+frontend/node_modules/
 frontend/dist/
 frontend/.env
 
@@ -26,10 +27,7 @@ frontend/.vite/
 
 # Laravel caches / runtime
 backend/bootstrap/cache/*.php
-backend/storage/*.log
-backend/storage/framework/
-backend/storage/app/
-backend/storage/debugbar/
+backend/storage/*
 backend/public/storage
 
 # Keep placeholders
