@@ -6,13 +6,12 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\IntegrationController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectIntegrationController;
 use App\Http\Controllers\ProjectSubscriptionController;
 use App\Http\Controllers\ProjectModuleController;
 use App\Http\Controllers\ProjectModuleOverrideController;
-use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectMembershipController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\PlanController;
 
@@ -30,15 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/modules', [ModuleController::class, 'index']);
     Route::get('/plans', [PlanController::class, 'index']);
-    Route::post('/plans', [PlanController::class, 'store']);
-    Route::put('/plans/{plan}', [PlanController::class, 'update']);
-    Route::delete('/plans/{plan}', [PlanController::class, 'destroy']);
     Route::get('/integrations', [IntegrationController::class, 'index']);
     Route::get('/integrations/configuration', [IntegrationController::class, 'configuration']);
-    Route::get('/profile/stats', [ProfileController::class, 'stats']);
-    Route::get('/profile', [ProfileController::class, 'show']);
-    Route::put('/profile', [ProfileController::class, 'update']);
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
     Route::apiResource('projects', ProjectController::class);
     Route::get('/projects/{project}/integrations', [ProjectIntegrationController::class, 'index']);
     Route::get('/projects/{project}/integrations/{integration}/configuration', [ProjectIntegrationController::class, 'showConfiguration']);
@@ -51,10 +43,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/projects/{project}/modules/{moduleKey}/override', [ProjectModuleOverrideController::class, 'update']);
     Route::get('/projects/{project}/audit-logs', [AuditLogController::class, 'index']);
     
-    // Project members
-    // Project members
-    Route::get('/projects/{project}/members', [ProjectMemberController::class, 'index']);
-    Route::post('/projects/{project}/members', [ProjectMemberController::class, 'store']);
-    Route::put('/projects/{project}/members/{user}', [ProjectMemberController::class, 'update']);
-    Route::delete('/projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy']);
+    // Project memberships
+    Route::get('/projects/{project}/memberships', [ProjectMembershipController::class, 'index']);
+    Route::post('/projects/{project}/memberships', [ProjectMembershipController::class, 'store']);
+    Route::post('/projects/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
+    Route::put('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
+    Route::delete('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
 });

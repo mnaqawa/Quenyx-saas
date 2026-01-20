@@ -12,18 +12,13 @@ class ProjectAccessService
      */
     public function canManageProject(User $user, Project $project): bool
     {
-        // System admin can manage any project
-        if ($user->isSystemAdmin()) {
-            return true;
-        }
-
         // Project owner can manage
         if ($project->owner_id === $user->id) {
             return true;
         }
 
         // Check if user is project admin
-        $member = $project->members()
+        $member = $project->memberships()
             ->where('user_id', $user->id)
             ->first();
 
@@ -35,18 +30,13 @@ class ProjectAccessService
      */
     public function canViewProject(User $user, Project $project): bool
     {
-        // System admin can view any project
-        if ($user->isSystemAdmin()) {
-            return true;
-        }
-
         // Project owner can view
         if ($project->owner_id === $user->id) {
             return true;
         }
 
         // Check if user is a member (any role)
-        return $project->members()
+        return $project->memberships()
             ->where('user_id', $user->id)
             ->exists();
     }
@@ -56,15 +46,11 @@ class ProjectAccessService
      */
     public function getUserRole(User $user, Project $project): ?string
     {
-        if ($user->isSystemAdmin()) {
-            return 'system_admin';
-        }
-
         if ($project->owner_id === $user->id) {
             return 'owner';
         }
 
-        $member = $project->members()
+        $member = $project->memberships()
             ->where('user_id', $user->id)
             ->first();
 

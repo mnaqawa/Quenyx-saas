@@ -60,17 +60,47 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
-                'user' => [
-                    'id' => $user?->id,
-                    'name' => $user?->name,
-                    'email' => $user?->email,
-                    'last_login_at' => $user?->last_login_at,
-                    'api_calls_30d' => $user?->api_calls_30d ?? 0,
-                    'created_at' => $user?->created_at,
-                ],
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+        ]);
+    }
+
+    public function update(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
             ],
         ]);
     }

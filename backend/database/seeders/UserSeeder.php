@@ -15,7 +15,6 @@ class UserSeeder extends Seeder
             [
                 'name' => 'PortShield Admin',
                 'password' => Hash::make('Password123!'),
-                'role' => 'system_admin',
                 'api_calls_30d' => 2400,
                 'last_login_at' => now()->subDay(),
             ]

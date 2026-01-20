@@ -33,9 +33,14 @@ class Project extends Model
         return $this->hasMany(ProjectModuleOverride::class);
     }
 
-    public function members(): HasMany
+    public function memberships(): HasMany
     {
-        return $this->hasMany(ProjectMember::class);
+        return $this->hasMany(ProjectMembership::class);
+    }
+
+    public function invites(): HasMany
+    {
+        return $this->hasMany(ProjectInvite::class);
     }
 
     /**

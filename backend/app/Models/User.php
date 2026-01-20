@@ -16,8 +16,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
-        'preferences',
     ];
 
     protected $hidden = [
@@ -27,7 +25,6 @@ class User extends Authenticatable
 
     protected $casts = [
         'last_login_at' => 'datetime',
-        'preferences' => 'array',
     ];
 
     public function projects(): HasMany
@@ -37,14 +34,6 @@ class User extends Authenticatable
 
     public function projectMemberships(): HasMany
     {
-        return $this->hasMany(ProjectMember::class);
-    }
-
-    /**
-     * Check if user is system admin
-     */
-    public function isSystemAdmin(): bool
-    {
-        return $this->role === 'system_admin';
+        return $this->hasMany(ProjectMembership::class);
     }
 }
