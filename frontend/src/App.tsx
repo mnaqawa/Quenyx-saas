@@ -7,6 +7,8 @@ import Profile from './pages/Profile'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectDetailsPage from './pages/ProjectDetailsPage'
 import ProjectAccessSettings from './pages/ProjectAccessSettings'
+import ProjectMembers from './pages/ProjectMembers'
+import AdminPlans from './pages/AdminPlans'
 import Login from './pages/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -22,6 +24,8 @@ function App() {
           <Route path="app/projects/:id" element={<ProjectDetailsPage />} />
           <Route path="subscriptions" element={<Subscriptions />} />
           <Route path="settings/access" element={<ProjectAccessSettings />} />
+          <Route path="settings/members" element={<ProjectMembers />} />
+          <Route path="admin/plans" element={<AdminPlans />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="profile" element={<Profile />} />
         </Route>

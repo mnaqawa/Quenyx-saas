@@ -81,12 +81,23 @@ function AppLayout() {
             to="/settings/access"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/settings/access')
+              isActive('/settings/access') || isActive('/settings/members')
                 ? 'bg-white/10 text-white'
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
             Project Settings
+          </Link>
+          <Link
+            to="/admin/plans"
+            className={[
+              'rounded-md px-3 py-2 text-sm font-medium transition',
+              isActive('/admin/plans')
+                ? 'bg-white/10 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+            ].join(' ')}
+          >
+            Admin Plans
           </Link>
           <Link
             to="/integrations"

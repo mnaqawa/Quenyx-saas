@@ -4,15 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Project;
+use App\Services\ProjectAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AuditLogController extends Controller
 {
+    public function __construct(
+        private ProjectAccessService $accessService
+    ) {
+    }
+
     /**
      * Get audit logs for a project
-     * Only project owners can view audit logs
+     * Only project owners and admins can view audit logs
      */
     public function index(Request $request, Project $project): JsonResponse
     {
@@ -22,11 +28,11 @@ class AuditLogController extends Controller
                 return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
             }
 
-            // Authorize: user must own the project
-            if ($project->owner_id !== $user->id) {
+            // Authorize: user must be owner or admin
+            if (!$this->accessService->canManageProject($user, $project)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only project owners can view audit logs',
+                    'message' => 'Only project owners and admins can view audit logs',
                 ], 403);
             }
 

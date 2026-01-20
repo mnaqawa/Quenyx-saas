@@ -33,6 +33,11 @@ class Project extends Model
         return $this->hasMany(ProjectModuleOverride::class);
     }
 
+    public function members(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
     /**
      * Get the plan through the subscription (helper accessor)
      */

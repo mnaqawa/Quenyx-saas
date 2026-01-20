@@ -2,30 +2,43 @@ import { useEffect, useMemo, useState } from 'react'
 import { authService, AuthUser } from '../services/authService'
 import { moduleService } from '../services/moduleService'
 import { integrationService } from '../services/integrationService'
-import { profileService, ProfileStats } from '../services/profileService'
+import { profileService, ProfileStats, UserProfile } from '../services/profileService'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { Module } from '../services/dashboardService'
 import type { Integration } from '../services/integrationService'
 
 function Profile() {
-  const { t } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [modules, setModules] = useState<Module[]>([])
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const [userData, moduleData, integrationData, statsData] = await Promise.all([
+        const [userData, profileData, moduleData, integrationData, statsData] = await Promise.all([
           authService.me(),
+          profileService.getProfile(),
           moduleService.getModules(),
           integrationService.getIntegrations(),
           profileService.getStats(),
         ])
         setUser(userData)
+        if (profileData.success) {
+          setProfile(profileData.data)
+          setNameValue(profileData.data.name)
+        }
         setModules(moduleData)
         setIntegrations(integrationData)
         setStats(statsData)
@@ -78,17 +91,57 @@ function Profile() {
               </div>
               <button
                 type="button"
+                onClick={() => {
+                  setEditingName(true)
+                  setNameValue(user?.name || '')
+                }}
                 className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
               >
-                Edit
+                {editingName ? 'Cancel' : 'Edit'}
               </button>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">{t('profile.fullName')}</p>
-                <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs">
-                  {user?.name ?? '—'}
-                </div>
+                {editingName ? (
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="text"
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setSaving(true)
+                        setError(null)
+                        try {
+                          const response = await profileService.updateProfile({ name: nameValue })
+                          if (response.success) {
+                            setProfile(response.data)
+                            setUser({ ...user!, name: response.data.name })
+                            setEditingName(false)
+                          } else {
+                            setError(response.message || 'Failed to update name')
+                          }
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Failed to update name')
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                      disabled={saving || !nameValue.trim()}
+                      className="rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs">
+                    {user?.name ?? '—'}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">{t('profile.email')}</p>
@@ -105,17 +158,85 @@ function Profile() {
               <p className="text-xs text-white/60">{t('profile.accountSecurityDesc')}</p>
             </div>
             <div className="mt-4 space-y-4 text-xs text-white/70">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
-                  <p className="text-sm font-semibold text-white">{t('profile.password')}</p>
-                  <p className="text-xs text-white/50">{t('profile.passwordUpdated')}</p>
+              <div className="space-y-4 border-b border-white/10 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{t('profile.password')}</p>
+                    <p className="text-xs text-white/50">{t('profile.passwordUpdated')}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPassword(!editingPassword)}
+                    className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+                  >
+                    {editingPassword ? 'Cancel' : t('profile.changePassword')}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-                >
-                  {t('profile.changePassword')}
-                </button>
+                {editingPassword && (
+                  <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">Current Password</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (newPassword !== confirmPassword) {
+                          setError('Passwords do not match')
+                          return
+                        }
+                        if (newPassword.length < 8) {
+                          setError('Password must be at least 8 characters')
+                          return
+                        }
+                        setSaving(true)
+                        setError(null)
+                        try {
+                          const response = await profileService.updatePassword(currentPassword, newPassword)
+                          if (response.success) {
+                            setEditingPassword(false)
+                            setCurrentPassword('')
+                            setNewPassword('')
+                            setConfirmPassword('')
+                          } else {
+                            setError(response.message || 'Failed to update password')
+                          }
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Failed to update password')
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                      disabled={saving || !currentPassword || !newPassword || !confirmPassword}
+                      className="w-full rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:opacity-50"
+                    >
+                      {saving ? 'Updating...' : 'Update Password'}
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
@@ -161,9 +282,28 @@ function Profile() {
                   <p className="text-sm font-semibold text-white">{t('profile.language')}</p>
                   <p className="text-xs text-white/50">{t('profile.languageDesc')}</p>
                 </div>
-                <span className="rounded-full bg-sky-500/20 px-3 py-1 text-[10px] text-sky-200">
-                  {t('language.english')}
-                </span>
+                <select
+                  value={language}
+                  onChange={async (e) => {
+                    const newLanguage = e.target.value as 'en' | 'ar'
+                    setLanguage(newLanguage)
+                    // Save to backend preferences
+                    try {
+                      await profileService.updateProfile({
+                        preferences: {
+                          ...(profile?.preferences || {}),
+                          language: newLanguage,
+                        },
+                      })
+                    } catch (err) {
+                      console.error('Failed to save language preference:', err)
+                    }
+                  }}
+                  className="rounded-full border border-white/10 bg-sky-500/20 px-3 py-1 text-[10px] text-sky-200 focus:border-sky-500 focus:outline-none"
+                >
+                  <option value="en">English</option>
+                  <option value="ar">Arabic</option>
+                </select>
               </div>
               <div className="flex items-center justify-between">
                 <div>

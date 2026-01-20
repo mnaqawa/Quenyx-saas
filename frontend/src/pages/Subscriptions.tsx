@@ -42,9 +42,12 @@ function Subscriptions() {
         const planOrder: PlanKey[] = ['free', 'pro', 'enterprise']
         for (const planKey of planOrder) {
           const plan = plans.find((p) => p.key === planKey)
-          if (plan && plan.features.modules.includes(targetModuleKey)) {
-            recommended = planKey
-            break
+          if (plan) {
+            const planModules = plan.features.modules_allowed || plan.features.modules || []
+            if (planModules.includes(targetModuleKey)) {
+              recommended = planKey
+              break
+            }
           }
         }
       }

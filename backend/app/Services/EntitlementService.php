@@ -19,7 +19,7 @@ class EntitlementService
     public function getEntitlements(Project $project): array
     {
         $plan = $this->getEffectivePlan($project);
-        $planModules = $plan->features['modules'] ?? [];
+        $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
 
         // Get effective modules (plan + overrides)
         $effectiveModules = $this->getEffectiveModules($project, $planModules);
@@ -87,7 +87,7 @@ class EntitlementService
     public function hasEffectiveModuleAccess(Project $project, string $moduleKey): bool
     {
         $plan = $this->getEffectivePlan($project);
-        $planModules = $plan->features['modules'] ?? [];
+        $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
 
         // Check for override
         $override = ProjectModuleOverride::query()
@@ -133,7 +133,7 @@ class EntitlementService
     public function getAllowedModules(Project $project): array
     {
         $plan = $this->getEffectivePlan($project);
-        return $plan->features['modules'] ?? [];
+        return $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
     }
 
     /**
@@ -177,7 +177,7 @@ class EntitlementService
                 'name' => 'Free',
                 'price_cents' => 0,
                 'features' => [
-                    'modules' => [],
+                    'modules_allowed' => [],
                     'limits' => [],
                 ],
             ]);

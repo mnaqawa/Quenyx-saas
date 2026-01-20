@@ -98,7 +98,7 @@ class ProjectModuleController extends Controller
 
             // Get plan modules
             $plan = $this->entitlementService->getEffectivePlan($project);
-            $planModules = $plan->features['modules'] ?? [];
+            $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
 
             // Get overrides
             $overrides = ProjectModuleOverride::query()

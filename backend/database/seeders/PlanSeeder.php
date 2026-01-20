@@ -9,56 +9,59 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        // Free Plan - minimal modules
-        Plan::firstOrCreate(
+        // Free Plan
+        Plan::updateOrCreate(
             ['key' => 'free'],
             [
                 'name' => 'Free',
                 'price_cents' => 0,
-                'interval' => null,
+                'interval' => 'month',
                 'features' => [
-                    'modules' => [
+                    'modules_allowed' => [
                         'shieldcore',
                     ],
                     'limits' => [
-                        'api_calls_per_month' => 1000,
+                        'projects' => 1,
+                        'members_per_project' => 1,
                     ],
                 ],
             ]
         );
 
-        // Pro Plan - more modules
-        Plan::firstOrCreate(
+        // Pro Plan
+        Plan::updateOrCreate(
             ['key' => 'pro'],
             [
                 'name' => 'Pro',
-                'price_cents' => 2900, // $29.00
+                'price_cents' => 4900, // $49.00
                 'interval' => 'month',
                 'features' => [
-                    'modules' => [
+                    'modules_allowed' => [
                         'shieldcore',
                         'shieldobserve',
                         'shieldinventory',
                         'shieldnotify',
                         'shieldknowledge',
+                        'shielddesk',
                         'shieldintegrations',
                     ],
                     'limits' => [
-                        'api_calls_per_month' => 10000,
+                        'projects' => 5,
+                        'members_per_project' => 10,
                     ],
                 ],
             ]
         );
 
-        // Enterprise Plan - all modules
-        Plan::firstOrCreate(
+        // Enterprise Plan
+        Plan::updateOrCreate(
             ['key' => 'enterprise'],
             [
                 'name' => 'Enterprise',
-                'price_cents' => 9900, // $99.00
+                'price_cents' => 19900, // $199.00
                 'interval' => 'month',
                 'features' => [
-                    'modules' => [
+                    'modules_allowed' => [
                         'shieldcore',
                         'shieldobserve',
                         'shieldinventory',
@@ -73,7 +76,38 @@ class PlanSeeder extends Seeder
                         'shieldintegrations',
                     ],
                     'limits' => [
-                        'api_calls_per_month' => 100000,
+                        'projects' => 999,
+                        'members_per_project' => 999,
+                    ],
+                ],
+            ]
+        );
+
+        // Internal Plan (optional, for internal use only)
+        Plan::updateOrCreate(
+            ['key' => 'internal'],
+            [
+                'name' => 'Internal',
+                'price_cents' => 0,
+                'interval' => 'month',
+                'features' => [
+                    'modules_allowed' => [
+                        'shieldcore',
+                        'shieldobserve',
+                        'shieldinventory',
+                        'shieldrespond',
+                        'shieldsecure',
+                        'shieldnotify',
+                        'shieldvoice',
+                        'shieldknowledge',
+                        'shieldautomate',
+                        'shieldbalance',
+                        'shielddesk',
+                        'shieldintegrations',
+                    ],
+                    'limits' => [
+                        'projects' => 999,
+                        'members_per_project' => 999,
                     ],
                 ],
             ]

@@ -7,7 +7,8 @@ export interface Plan {
   price_cents: number
   interval: string | null
   features: {
-    modules: string[]
+    modules_allowed: string[]
+    modules?: string[] // Legacy support
     limits: Record<string, any>
   }
 }

@@ -1,24 +1,39 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useProjectContext } from '../projects/ProjectContext'
 import { moduleService, AuditLog } from '../services/moduleService'
+import { projectMemberService } from '../services/projectMemberService'
 
 function ProjectAccessSettings() {
   const { selectedProjectId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useProjectContext()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
   const [overrideError, setOverrideError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchAuditLogs = async () => {
+    const fetchData = async () => {
       if (!selectedProjectId) {
         setAuditLogs([])
+        setUserRole(null)
         return
       }
       setLoadingAuditLogs(true)
       try {
-        const response = await moduleService.getProjectAuditLogs(selectedProjectId)
-        if (response.success) {
-          setAuditLogs(response.data)
+        const [auditResponse, membersResponse] = await Promise.all([
+          moduleService.getProjectAuditLogs(selectedProjectId),
+          projectMemberService.getProjectMembers(selectedProjectId),
+        ])
+        if (auditResponse.success) {
+          setAuditLogs(auditResponse.data)
+        }
+        if (membersResponse.success) {
+          // Determine user role (for now, assume owner if they can access)
+          // In real app, get from auth context
+          const owner = membersResponse.data.find((m) => m.role === 'owner')
+          if (owner) {
+            setUserRole('owner') // Simplified - should get from auth
+          }
         }
       } catch (err) {
         // Ignore errors
@@ -27,7 +42,7 @@ function ProjectAccessSettings() {
       }
     }
 
-    fetchAuditLogs()
+    fetchData()
   }, [selectedProjectId])
 
   const handleOverrideChange = async (moduleKey: string, mode: 'allow' | 'deny' | null) => {
@@ -79,11 +94,36 @@ function ProjectAccessSettings() {
     return <div className="text-sm text-white/60">Loading...</div>
   }
 
+  const canManage = userRole === 'owner' || userRole === 'admin'
+
   return (
     <div className="space-y-6">
       <div className="space-y-1 text-center">
         <h1 className="text-2xl font-semibold text-white">Project Access</h1>
         <p className="text-sm text-white/60">Manage module access for your project</p>
+      </div>
+
+      <div className="flex gap-2 justify-center">
+        <Link
+          to="/settings/access"
+          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+            window.location.pathname === '/settings/access'
+              ? 'bg-sky-500 text-white'
+              : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+          }`}
+        >
+          Access
+        </Link>
+        <Link
+          to="/settings/members"
+          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+            window.location.pathname === '/settings/members'
+              ? 'bg-sky-500 text-white'
+              : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+          }`}
+        >
+          Members
+        </Link>
       </div>
 
       {modulesError && (
@@ -147,21 +187,27 @@ function ProjectAccessSettings() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-white/60">Override:</label>
-                  <select
-                    value={module.override || ''}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      handleOverrideChange(module.key, value === '' ? null : value as 'allow' | 'deny')
-                    }}
-                    className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                  >
-                    <option value="">Default (Plan)</option>
-                    <option value="allow">Force Enable</option>
-                    <option value="deny">Force Disable</option>
-                  </select>
-                </div>
+                {canManage ? (
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-white/60">Override:</label>
+                    <select
+                      value={module.override || ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        handleOverrideChange(module.key, value === '' ? null : value as 'allow' | 'deny')
+                      }}
+                      className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="">Default (Plan)</option>
+                      <option value="allow">Force Enable</option>
+                      <option value="deny">Force Disable</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="text-xs text-white/40">
+                    Only owners and admins can change overrides
+                  </div>
+                )}
               </div>
             ))}
           </div>

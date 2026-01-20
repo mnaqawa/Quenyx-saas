@@ -7,6 +7,7 @@ use App\Models\Module;
 use App\Models\Project;
 use App\Models\ProjectModuleOverride;
 use App\Services\EntitlementService;
+use App\Services\ProjectAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Log;
 class ProjectModuleOverrideController extends Controller
 {
     public function __construct(
-        private EntitlementService $entitlementService
+        private EntitlementService $entitlementService,
+        private ProjectAccessService $accessService
     ) {
     }
 
@@ -29,11 +31,11 @@ class ProjectModuleOverrideController extends Controller
                 return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
             }
 
-            // Authorize: user must own the project (only owners can change overrides)
-            if ($project->owner_id !== $user->id) {
+            // Authorize: user must be owner or admin
+            if (!$this->accessService->canManageProject($user, $project)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only project owners can change module access settings',
+                    'message' => 'Only project owners and admins can change module access settings',
                 ], 403);
             }
 
@@ -48,7 +50,7 @@ class ProjectModuleOverrideController extends Controller
 
             // Get plan info before update
             $plan = $this->entitlementService->getEffectivePlan($project);
-            $planModules = $plan->features['modules'] ?? [];
+            $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
             $allowedByPlan = in_array($moduleKey, $planModules, true);
 
             // Capture existing override (for audit)
