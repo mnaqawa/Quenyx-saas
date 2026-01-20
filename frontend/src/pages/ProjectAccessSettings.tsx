@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProjectContext } from '../projects/ProjectContext'
 import { moduleService, AuditLog } from '../services/moduleService'
-import { projectMemberService } from '../services/projectMemberService'
+import { projectMembershipService } from '../services/projectMembershipService'
+import { authService } from '../services/authService'
 
 function ProjectAccessSettings() {
   const { selectedProjectId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useProjectContext()
@@ -22,17 +23,20 @@ function ProjectAccessSettings() {
       try {
         const [auditResponse, membersResponse] = await Promise.all([
           moduleService.getProjectAuditLogs(selectedProjectId),
-          projectMemberService.getProjectMembers(selectedProjectId),
+          projectMembershipService.getProjectMemberships(selectedProjectId),
         ])
         if (auditResponse.success) {
           setAuditLogs(auditResponse.data)
         }
         if (membersResponse.success) {
-          // Determine user role (for now, assume owner if they can access)
-          // In real app, get from auth context
-          const owner = membersResponse.data.find((m) => m.role === 'owner')
+          // Determine user role from memberships
+          const currentUser = await authService.me()
+          const owner = membersResponse.data.memberships.find((m) => m.role === 'owner' && m.user.email === currentUser.email)
           if (owner) {
-            setUserRole('owner') // Simplified - should get from auth
+            setUserRole('owner')
+          } else {
+            const membership = membersResponse.data.memberships.find((m) => m.user.email === currentUser.email)
+            setUserRole(membership?.role || null)
           }
         }
       } catch (err) {

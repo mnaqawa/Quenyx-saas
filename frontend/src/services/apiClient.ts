@@ -82,7 +82,14 @@ class ApiClient {
         }
       }
 
-      // Handle success responses (may or may not have success field)
+      // Handle success responses - backend always returns { success: true, data: ... }
+      if (data.success === true && 'data' in data) {
+        return {
+          success: true,
+          data: data.data as T,
+        }
+      }
+      // Fallback for non-standard responses
       return {
         success: true,
         data: data as T,

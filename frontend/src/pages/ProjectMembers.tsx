@@ -1,57 +1,85 @@
 import { useEffect, useState } from 'react'
 import { useProjectContext } from '../projects/ProjectContext'
-import { projectMemberService, ProjectMember } from '../services/projectMemberService'
+import { projectMembershipService, ProjectMembership, ProjectInvite } from '../services/projectMembershipService'
+import { authService } from '../services/authService'
 
 function ProjectMembers() {
   const { selectedProjectId } = useProjectContext()
-  const [members, setMembers] = useState<ProjectMember[]>([])
+  const [memberships, setMemberships] = useState<ProjectMembership[]>([])
+  const [invites, setInvites] = useState<ProjectInvite[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addingMember, setAddingMember] = useState(false)
+  const [invitingMember, setInvitingMember] = useState(false)
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<'admin' | 'member' | 'viewer'>('member')
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const user = await authService.me()
+        setCurrentUser(user)
+      } catch (err) {
+        // Ignore
+      }
+    }
+    fetchCurrentUser()
+  }, [])
+
+  useEffect(() => {
     if (selectedProjectId) {
-      loadMembers()
+      loadMemberships()
     } else {
-      setMembers([])
+      setMemberships([])
+      setInvites([])
     }
   }, [selectedProjectId])
 
-  const loadMembers = async () => {
+  const loadMemberships = async () => {
     if (!selectedProjectId) return
 
     setLoading(true)
     setError(null)
     try {
-      const response = await projectMemberService.getProjectMembers(selectedProjectId)
+      const response = await projectMembershipService.getProjectMemberships(selectedProjectId)
       if (response.success) {
-        setMembers(response.data)
-        // Determine current user's role (owner is first in list, or check members)
-        const owner = response.data.find((m) => m.role === 'owner')
-        if (owner) {
-          // For now, assume user is owner if they can see this page
-          // In real app, get from auth context
-          setUserRole('owner')
+        setMemberships(response.data.memberships || [])
+        setInvites(response.data.invites || [])
+        
+        // Determine current user's role
+        if (currentUser) {
+          const owner = response.data.memberships.find((m) => m.role === 'owner' && m.user.email === currentUser.email)
+          if (owner) {
+            setUserRole('owner')
+          } else {
+            const membership = response.data.memberships.find((m) => m.user.email === currentUser.email)
+            setUserRole(membership?.role || null)
+          }
         }
       } else {
-        setError(response.message || 'Failed to load members')
+        setError(response.message || 'Failed to load memberships')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load members')
+      setError(err instanceof Error ? err.message : 'Failed to load memberships')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (currentUser && selectedProjectId) {
+      loadMemberships()
+    }
+  }, [currentUser, selectedProjectId])
 
   const handleAddMember = async () => {
     if (!selectedProjectId || !newMemberEmail.trim()) return
 
     setError(null)
     try {
-      const response = await projectMemberService.addMember(
+      const response = await projectMembershipService.addMember(
         selectedProjectId,
         newMemberEmail.trim(),
         newMemberRole
@@ -60,7 +88,7 @@ function ProjectMembers() {
         setNewMemberEmail('')
         setNewMemberRole('member')
         setAddingMember(false)
-        await loadMembers()
+        await loadMemberships()
       } else {
         setError(response.message || 'Failed to add member')
       }
@@ -69,14 +97,37 @@ function ProjectMembers() {
     }
   }
 
-  const handleUpdateRole = async (userId: number, newRole: 'admin' | 'member' | 'viewer') => {
-    if (!selectedProjectId) return
+  const handleInvite = async () => {
+    if (!selectedProjectId || !newMemberEmail.trim()) return
 
     setError(null)
     try {
-      const response = await projectMemberService.updateMemberRole(selectedProjectId, userId, newRole)
+      const response = await projectMembershipService.createInvite(
+        selectedProjectId,
+        newMemberEmail.trim(),
+        newMemberRole
+      )
       if (response.success) {
-        await loadMembers()
+        setNewMemberEmail('')
+        setNewMemberRole('member')
+        setInvitingMember(false)
+        await loadMemberships()
+      } else {
+        setError(response.message || 'Failed to create invite')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create invite')
+    }
+  }
+
+  const handleUpdateRole = async (membershipId: number, newRole: 'owner' | 'admin' | 'member' | 'viewer') => {
+    if (!selectedProjectId || !membershipId) return
+
+    setError(null)
+    try {
+      const response = await projectMembershipService.updateMembershipRole(selectedProjectId, membershipId, newRole)
+      if (response.success) {
+        await loadMemberships()
       } else {
         setError(response.message || 'Failed to update role')
       }
@@ -85,15 +136,15 @@ function ProjectMembers() {
     }
   }
 
-  const handleRemoveMember = async (userId: number) => {
-    if (!selectedProjectId) return
+  const handleRemoveMembership = async (membershipId: number) => {
+    if (!selectedProjectId || !membershipId) return
     if (!confirm('Are you sure you want to remove this member?')) return
 
     setError(null)
     try {
-      const response = await projectMemberService.removeMember(selectedProjectId, userId)
+      const response = await projectMembershipService.removeMembership(selectedProjectId, membershipId)
       if (response.success) {
-        await loadMembers()
+        await loadMemberships()
       } else {
         setError(response.message || 'Failed to remove member')
       }
@@ -143,15 +194,24 @@ function ProjectMembers() {
 
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         {canManage && (
-          <div className="mb-4">
-            {!addingMember ? (
-              <button
-                type="button"
-                onClick={() => setAddingMember(true)}
-                className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
-              >
-                + Add Member
-              </button>
+          <div className="mb-4 space-y-3">
+            {!addingMember && !invitingMember ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAddingMember(true)}
+                  className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+                >
+                  + Add Member
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInvitingMember(true)}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/10"
+                >
+                  + Invite
+                </button>
+              </div>
             ) : (
               <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
                 <div>
@@ -179,15 +239,16 @@ function ProjectMembers() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={handleAddMember}
+                    onClick={addingMember ? handleAddMember : handleInvite}
                     className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
                   >
-                    Add
+                    {addingMember ? 'Add' : 'Send Invite'}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setAddingMember(false)
+                      setInvitingMember(false)
                       setNewMemberEmail('')
                       setNewMemberRole('member')
                     }}
@@ -201,49 +262,79 @@ function ProjectMembers() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {members.length === 0 ? (
-            <div className="text-sm text-white/60">No members found</div>
-          ) : (
-            members.map((member) => (
-              <div
-                key={member.user_id}
-                className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4"
-              >
-                <div>
-                  <p className="font-semibold">{member.user.name}</p>
-                  <p className="text-xs text-white/60">{member.user.email}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {canManage && member.role !== 'owner' ? (
-                    <>
-                      <select
-                        value={member.role}
-                        onChange={(e) =>
-                          handleUpdateRole(member.user_id, e.target.value as 'admin' | 'member' | 'viewer')
-                        }
-                        className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="member">Member</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200 transition hover:bg-rose-500/20"
-                      >
-                        Remove
-                      </button>
-                    </>
-                  ) : (
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-white/80">Members</h3>
+            <div className="space-y-3">
+              {memberships.length === 0 ? (
+                <div className="text-sm text-white/60">No members found</div>
+              ) : (
+                memberships.map((membership) => (
+                  <div
+                    key={membership.id || `owner-${membership.user_id}`}
+                    className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4"
+                  >
+                    <div>
+                      <p className="font-semibold">{membership.user.name}</p>
+                      <p className="text-xs text-white/60">{membership.user.email}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {canManage && membership.role !== 'owner' && membership.id ? (
+                        <>
+                          <select
+                            value={membership.role}
+                            onChange={(e) =>
+                              handleUpdateRole(membership.id!, e.target.value as 'owner' | 'admin' | 'member' | 'viewer')
+                            }
+                            className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                          >
+                            <option value="owner">Owner</option>
+                            <option value="admin">Admin</option>
+                            <option value="member">Member</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => membership.id && handleRemoveMembership(membership.id)}
+                            className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200 transition hover:bg-rose-500/20"
+                          >
+                            Remove
+                          </button>
+                        </>
+                      ) : (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                          {membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {invites.length > 0 && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-white/80">Pending Invites</h3>
+              <div className="space-y-3">
+                {invites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4"
+                  >
+                    <div>
+                      <p className="font-semibold">{invite.email}</p>
+                      <p className="text-xs text-white/60">
+                        Invited by {invite.invited_by.name} • {invite.status}
+                      </p>
+                    </div>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                      {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
                     </span>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))
+            </div>
           )}
         </div>
       </div>
