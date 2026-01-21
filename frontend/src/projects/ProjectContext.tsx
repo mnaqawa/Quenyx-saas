@@ -42,19 +42,22 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       setSelectedProjectIdState(null)
       return
     }
-    const response = await projectService.listProjects()
-    if (response.success) {
-      setProjects(response.data)
+    try {
+      const projects = await projectService.listProjects()
+      setProjects(projects)
       const stored = localStorage.getItem(STORAGE_KEY)
       const storedId = stored ? Number(stored) : null
       const validId =
-        storedId && response.data.some((project) => project.id === storedId)
+        storedId && projects.some((project) => project.id === storedId)
           ? storedId
-          : response.data[0]?.id ?? null
+          : projects[0]?.id ?? null
       setSelectedProjectIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, String(validId))
       }
+    } catch (err) {
+      // Ignore errors
+      setProjects([])
     }
   }
 
@@ -66,12 +69,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoadingEntitlements(true)
     try {
-      const response = await subscriptionService.getProjectEntitlements(selectedProjectId)
-      if (response.success) {
-        setEntitlements(response.data)
-      } else {
-        setEntitlements(null)
-      }
+      const entitlements = await subscriptionService.getProjectEntitlements(selectedProjectId)
+      setEntitlements(entitlements)
     } catch (err) {
       setEntitlements(null)
     } finally {
@@ -93,12 +92,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingModules(true)
     setModulesError(null)
     try {
-      const response = await moduleService.getProjectModules(selectedProjectId)
-      if (response.success) {
-        // Deduplicate modules by key (defensive filter)
-        // Use Map to ensure true uniqueness - only first occurrence of each key is kept
-        const moduleMap = new Map<string, typeof response.data[0]>()
-        response.data.forEach((module) => {
+      const modules = await moduleService.getProjectModules(selectedProjectId)
+      // Deduplicate modules by key (defensive filter)
+      // Use Map to ensure true uniqueness - only first occurrence of each key is kept
+      const moduleMap = new Map<string, typeof modules[0]>()
+      modules.forEach((module) => {
           if (module?.key && !moduleMap.has(module.key)) {
             moduleMap.set(module.key, module)
           } else if (module?.key && moduleMap.has(module.key)) {
@@ -120,12 +118,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           return true
         })
         
-        setModulesWithAccess(verifiedModules)
-        setModulesError(null)
-      } else {
-        setModulesWithAccess(null)
-        setModulesError(response.message || 'Failed to load modules')
-      }
+      setModulesWithAccess(verifiedModules)
+      setModulesError(null)
     } catch (err) {
       setModulesWithAccess(null)
       const errorMessage = err instanceof Error ? err.message : 'Failed to load modules'

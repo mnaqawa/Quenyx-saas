@@ -31,19 +31,9 @@ function ProjectDetailsPage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await projectService.getProject(projectId)
-      if (!response.success) {
-        setError(response.message || 'Failed to load project')
-        setLoading(false)
-        return
-      }
-      if (!response.data || typeof response.data !== 'object') {
-        setError('Invalid response format: expected project object')
-        setLoading(false)
-        return
-      }
-      setProject(response.data)
-      setForm({ name: response.data.name, status: response.data.status })
+      const project = await projectService.getProject(projectId)
+      setProject(project)
+      setForm({ name: project.name, status: project.status })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
@@ -64,13 +54,8 @@ function ProjectDetailsPage() {
         name: form.name?.trim() || project.name,
         status: form.status ?? project.status,
       }
-      const response = await projectService.updateProject(project.id, payload)
-      if (!response.success) {
-        setError(response.message || 'Failed to update project')
-        setSaving(false)
-        return
-      }
-      setProject(response.data)
+      const updatedProject = await projectService.updateProject(project.id, payload)
+      setProject(updatedProject)
       setEditing(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -85,12 +70,7 @@ function ProjectDetailsPage() {
     setDeleting(true)
     setError(null)
     try {
-      const response = await projectService.deleteProject(project.id)
-      if (!response.success) {
-        setError(response.message || 'Failed to delete project')
-        setDeleting(false)
-        return
-      }
+      await projectService.deleteProject(project.id)
       navigate('/app/projects')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')

@@ -65,10 +65,8 @@ function Subscriptions() {
       }
       setLoadingSubscription(true)
       try {
-        const response = await subscriptionService.getProjectSubscription(selectedProjectId)
-        if (response.success) {
-          setSubscription(response.data)
-        }
+        const subscription = await subscriptionService.getProjectSubscription(selectedProjectId)
+        setSubscription(subscription)
       } catch (err) {
         // Ignore errors for now
       } finally {
@@ -82,10 +80,8 @@ function Subscriptions() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await subscriptionService.getPlans()
-        if (response.success) {
-          setPlans(response.data)
-        }
+        const plans = await subscriptionService.getPlans()
+        setPlans(plans)
       } catch (err) {
         // Ignore errors
       }
@@ -123,12 +119,10 @@ function Subscriptions() {
 
     setSavingPlan(true)
     try {
-      const response = await subscriptionService.updateProjectSubscription(selectedProjectId, planKey)
-      if (response.success) {
-        setSubscription(response.data)
-        await refreshEntitlements()
-        await refreshModules()
-      }
+      const subscription = await subscriptionService.updateProjectSubscription(selectedProjectId, planKey)
+      setSubscription(subscription)
+      await refreshEntitlements()
+      await refreshModules()
     } catch (err) {
       // Handle error
     } finally {

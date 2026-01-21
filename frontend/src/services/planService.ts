@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './apiClient'
+import { apiClient } from './apiClient'
 
 export interface Plan {
   id?: number
@@ -14,16 +14,8 @@ export interface Plan {
 }
 
 export const planService = {
-  async getPlans(): Promise<ApiResponse<Plan[]>> {
-    const response = await apiClient.get<{ success: boolean; data: Plan[] }>('/api/plans')
-    if (!response.success) {
-      return response
-    }
-    // Backend returns { success: true, data: [...] }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
-    return {
-      success: true,
-      data: Array.isArray(data) ? data : [],
-    }
+  async getPlans(): Promise<Plan[]> {
+    // apiClient unwraps { success: true, data: ... } so response is already Plan[]
+    return apiClient.get<Plan[]>('/api/plans')
   },
 }

@@ -27,16 +27,9 @@ export interface DashboardData {
   alerts_by_module: AlertsByModule[]
 }
 
-interface DashboardResponse {
-  data: DashboardData
-}
-
 export const dashboardService = {
   async getDashboard(): Promise<DashboardData> {
-    const response = await apiClient.get<DashboardResponse>('/api/dashboard')
-    if (!response.success) {
-      throw new Error(response.message)
-    }
-    return response.data.data
+    // apiClient unwraps { success: true, data: ... } so response is already DashboardData
+    return apiClient.get<DashboardData>('/api/dashboard')
   },
 }

@@ -23,19 +23,8 @@ function ProjectsPage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await projectService.listProjects()
-      if (!response.success) {
-        setError(response.message || 'An unexpected error occurred')
-        setLoading(false)
-        return
-      }
-      // Ensure data is an array (normalization should handle this, but be defensive)
-      if (!Array.isArray(response.data)) {
-        setError('Invalid response format: expected array of projects')
-        setLoading(false)
-        return
-      }
-      setProjects(response.data)
+      const projects = await projectService.listProjects()
+      setProjects(projects)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
@@ -53,15 +42,10 @@ function ProjectsPage() {
     setSuccess(null)
     setError(null)
     try {
-      const response = await projectService.createProject({
+      await projectService.createProject({
         name: form.name.trim(),
         status: form.status,
       })
-      if (!response.success) {
-        setError(response.message || 'Failed to create project')
-        setCreating(false)
-        return
-      }
       setForm({ name: '', status: 'active' })
       setSuccess(t('projects.createTitle'))
       await loadProjects()

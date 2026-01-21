@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './apiClient'
+import { apiClient } from './apiClient'
 import { PlanKey, ProjectEntitlements, ProjectSubscription } from '../types/subscription'
 
 export interface Plan {
@@ -26,75 +26,52 @@ interface SubscriptionResponse {
 }
 
 export const subscriptionService = {
-  async getProjectSubscription(projectId: number): Promise<ApiResponse<ProjectSubscription>> {
+  async getProjectSubscription(projectId: number): Promise<ProjectSubscription> {
     const response = await apiClient.get<SubscriptionResponse>(
       `/api/projects/${projectId}/subscription`
     )
-    if (!response.success) {
-      return response
-    }
+    // Transform backend response to frontend type
     return {
-      success: true,
-      data: {
-        status: response.data.status as ProjectSubscription['status'],
-        plan: {
-          key: response.data.plan.key as PlanKey,
-          name: response.data.plan.name,
-        },
-        starts_at: response.data.starts_at,
-        ends_at: response.data.ends_at,
+      status: response.status as ProjectSubscription['status'],
+      plan: {
+        key: response.plan.key as PlanKey,
+        name: response.plan.name,
       },
+      starts_at: response.starts_at,
+      ends_at: response.ends_at,
     }
   },
 
   async updateProjectSubscription(
     projectId: number,
     planKey: PlanKey
-  ): Promise<ApiResponse<ProjectSubscription>> {
+  ): Promise<ProjectSubscription> {
     const response = await apiClient.put<SubscriptionResponse>(
       `/api/projects/${projectId}/subscription`,
       { plan_key: planKey }
     )
-    if (!response.success) {
-      return response
-    }
+    // Transform backend response to frontend type
     return {
-      success: true,
-      data: {
-        status: response.data.status as ProjectSubscription['status'],
-        plan: {
-          key: response.data.plan.key as PlanKey,
-          name: response.data.plan.name,
-        },
-        starts_at: response.data.starts_at,
-        ends_at: response.data.ends_at,
+      status: response.status as ProjectSubscription['status'],
+      plan: {
+        key: response.plan.key as PlanKey,
+        name: response.plan.name,
       },
+      starts_at: response.starts_at,
+      ends_at: response.ends_at,
     }
   },
 
-  async getProjectEntitlements(projectId: number): Promise<ApiResponse<ProjectEntitlements>> {
-    const response = await apiClient.get<ProjectEntitlements>(
-      `/api/projects/${projectId}/entitlements`
-    )
-    if (!response.success) {
-      return response
-    }
-    return response
+  async getProjectEntitlements(projectId: number): Promise<ProjectEntitlements> {
+    // apiClient unwraps { success: true, data: ... } so response is already ProjectEntitlements
+    return apiClient.get<ProjectEntitlements>(`/api/projects/${projectId}/entitlements`)
   },
 
   /**
    * Get all plans catalog
    */
-  async getPlans(): Promise<ApiResponse<Plan[]>> {
-    const response = await apiClient.get<Plan[] | { data: Plan[] }>('/api/plans')
-    if (!response.success) {
-      return response
-    }
-    // Normalize response
-    const data = Array.isArray(response.data) ? response.data : (response.data as { data: Plan[] }).data
-    return {
-      success: true,
-      data,
-    }
+  async getPlans(): Promise<Plan[]> {
+    // apiClient unwraps { success: true, data: ... } so response is already Plan[]
+    return apiClient.get<Plan[]>('/api/plans')
   },
 }

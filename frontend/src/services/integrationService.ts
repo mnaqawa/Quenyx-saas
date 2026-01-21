@@ -24,86 +24,37 @@ export interface IntegrationConfiguration {
   }
 }
 
-interface IntegrationsResponse {
-  data: Integration[]
-}
-
-interface ConfigurationResponse {
-  data: IntegrationConfiguration
-}
-
-/**
- * Normalizes response data that may be wrapped in a nested `data` property.
- */
-function normalizeResponseData<T>(payload: unknown): T {
-  if (Array.isArray(payload)) {
-    return payload as T
-  }
-  
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    const wrapped = payload as { data: unknown }
-    if (Array.isArray(wrapped.data)) {
-      return wrapped.data as T
-    }
-    return wrapped.data as T
-  }
-  
-  return payload as T
-}
-
 export const integrationService = {
   async getIntegrations(): Promise<Integration[]> {
-    const response = await apiClient.get<Integration[] | IntegrationsResponse>('/api/integrations')
-    if (!response.success) {
-      throw new Error(response.message)
-    }
-    return normalizeResponseData<Integration[]>(response.data)
+    // apiClient unwraps { success: true, data: ... } so response is already Integration[]
+    return apiClient.get<Integration[]>('/api/integrations')
   },
   async getConfiguration(): Promise<IntegrationConfiguration> {
-    const response = await apiClient.get<IntegrationConfiguration | ConfigurationResponse>('/api/integrations/configuration')
-    if (!response.success) {
-      throw new Error(response.message)
-    }
-    return normalizeResponseData<IntegrationConfiguration>(response.data)
+    // apiClient unwraps { success: true, data: ... } so response is already IntegrationConfiguration
+    return apiClient.get<IntegrationConfiguration>('/api/integrations/configuration')
   },
   async listProjectIntegrations(projectId: number): Promise<Integration[]> {
-    const response = await apiClient.get<Integration[] | IntegrationsResponse>(`/api/projects/${projectId}/integrations`)
-    if (!response.success) {
-      throw new Error(response.message || `Failed to load integrations for project ${projectId}`)
-    }
-    return normalizeResponseData<Integration[]>(response.data)
+    // apiClient unwraps { success: true, data: ... } so response is already Integration[]
+    return apiClient.get<Integration[]>(`/api/projects/${projectId}/integrations`)
   },
   async getProjectIntegrationConfiguration(
     projectId: number,
     integrationId: number
   ): Promise<{ settings: Record<string, unknown> | null }> {
-    const response = await apiClient.get<{
-      settings: Record<string, unknown> | null
-    } | {
-      data: { settings: Record<string, unknown> | null }
-    }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`)
-    if (!response.success) {
-      throw new Error(response.message || `Failed to load configuration for integration ${integrationId}`)
-    }
-    const normalized = normalizeResponseData<{ settings: Record<string, unknown> | null }>(response.data)
-    return normalized
+    // apiClient unwraps { success: true, data: ... } so response is already { settings: ... }
+    return apiClient.get<{ settings: Record<string, unknown> | null }>(
+      `/api/projects/${projectId}/integrations/${integrationId}/configuration`
+    )
   },
   async updateProjectIntegrationConfiguration(
     projectId: number,
     integrationId: number,
     settings: Record<string, unknown>
   ): Promise<{ settings: Record<string, unknown> | null }> {
-    const response = await apiClient.put<{
-      settings: Record<string, unknown> | null
-    } | {
-      data: { settings: Record<string, unknown> | null }
-    }>(`/api/projects/${projectId}/integrations/${integrationId}/configuration`, {
-      settings,
-    })
-    if (!response.success) {
-      throw new Error(response.message || `Failed to update configuration for integration ${integrationId}`)
-    }
-    const normalized = normalizeResponseData<{ settings: Record<string, unknown> | null }>(response.data)
-    return normalized
+    // apiClient unwraps { success: true, data: ... } so response is already { settings: ... }
+    return apiClient.put<{ settings: Record<string, unknown> | null }>(
+      `/api/projects/${projectId}/integrations/${integrationId}/configuration`,
+      { settings }
+    )
   },
 }

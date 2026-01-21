@@ -21,13 +21,11 @@ function ProjectAccessSettings() {
       }
       setLoadingAuditLogs(true)
       try {
-        const [auditResponse, membersData] = await Promise.all([
+        const [auditLogs, membersData] = await Promise.all([
           moduleService.getProjectAuditLogs(selectedProjectId),
           projectMembershipService.getProjectMemberships(selectedProjectId),
         ])
-        if (auditResponse.success) {
-          setAuditLogs(auditResponse.data)
-        }
+        setAuditLogs(auditLogs)
         // Determine user role from memberships by comparing user.id
         const currentUser = await authService.me()
         const userMembership = membersData.memberships.find((m) => m.user.id === currentUser.id || m.user_id === currentUser.id)
@@ -53,22 +51,12 @@ function ProjectAccessSettings() {
 
     setOverrideError(null)
     try {
-      const response = await moduleService.updateModuleOverride(selectedProjectId, moduleKey, mode)
-      if (!response.success) {
-        if (response.message?.includes('403') || response.message?.includes('owners')) {
-          setOverrideError('Only project owners can change access settings.')
-        } else {
-          setOverrideError(response.message || 'Failed to update module override')
-        }
-        return
-      }
+      await moduleService.updateModuleOverride(selectedProjectId, moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
       // Refresh audit logs to show the new entry
-      const auditResponse = await moduleService.getProjectAuditLogs(selectedProjectId)
-      if (auditResponse.success) {
-        setAuditLogs(auditResponse.data)
-      }
+      const auditLogs = await moduleService.getProjectAuditLogs(selectedProjectId)
+      setAuditLogs(auditLogs)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update module override'
       if (errorMessage.includes('403') || errorMessage.includes('owners')) {
