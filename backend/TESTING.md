@@ -2,6 +2,22 @@
 
 This project uses PHPUnit for testing. Since Laravel 10 doesn't include the `php artisan test` command by default, use PHPUnit directly.
 
+## Prerequisites
+
+Make sure dev dependencies are installed:
+
+```bash
+composer install
+```
+
+or if you only want to install dev dependencies:
+
+```bash
+composer install --dev
+```
+
+This will install PHPUnit and other testing dependencies.
+
 ## Running All Tests
 
 ```bash
@@ -43,9 +59,16 @@ vendor/bin/phpunit --coverage-html coverage
 ## Test Configuration
 
 Tests are configured in `phpunit.xml`. The test environment uses:
-- SQLite in-memory database (or `testing` connection)
+- SQLite in-memory database (`:memory:`)
 - Array cache driver
 - Array session driver
 - Array mail driver
 
-Make sure your `.env` file has a `DB_CONNECTION=testing` entry, or the tests will use the default database connection.
+The tests use `RefreshDatabase` trait, which automatically creates and migrates a fresh database for each test.
+
+## Troubleshooting
+
+If `vendor/bin/phpunit` doesn't exist:
+1. Make sure you've run `composer install` to install dev dependencies
+2. Check that `phpunit/phpunit` is listed in `composer.json` under `require-dev`
+3. Verify the vendor directory exists and contains the bin folder
