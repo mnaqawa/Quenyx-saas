@@ -76,7 +76,7 @@ class ProjectMembershipPolicy
     /**
      * Determine if user can delete membership (remove member)
      */
-    public function delete(User $user, ProjectMembership $membership, Project $project = null): bool
+    public function delete(User $user, ProjectMembership $membership): bool
     {
         // Get project from membership if not provided
         $project = $project ?? $membership->project;
