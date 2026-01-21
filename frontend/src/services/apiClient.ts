@@ -83,13 +83,15 @@ class ApiClient {
       }
 
       // Handle success responses - backend always returns { success: true, data: ... }
-      if (data.success === true && 'data' in data) {
+      // But apiClient already unwraps it, so data here is the inner data
+      // Check if it's already unwrapped or still has success/data structure
+      if (data && typeof data === 'object' && 'success' in data && 'data' in data && data.success === true) {
         return {
           success: true,
-          data: data.data as T,
+          data: (data as any).data as T,
         }
       }
-      // Fallback for non-standard responses
+      // Data is already the unwrapped value
       return {
         success: true,
         data: data as T,

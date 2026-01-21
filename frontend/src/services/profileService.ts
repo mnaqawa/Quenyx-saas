@@ -8,26 +8,26 @@ export interface UserProfile {
 
 export const profileService = {
   async getProfile(): Promise<ApiResponse<UserProfile>> {
-    const response = await apiClient.get<{ success: boolean; data: UserProfile }>('/api/me')
+    const response = await apiClient.get<UserProfile>('/api/auth/me')
     if (!response.success) {
       return response
     }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
+    // apiClient unwraps { success: true, data: ... } so response.data is already UserProfile
     return {
       success: true,
-      data,
+      data: response.data,
     }
   },
 
   async updateProfile(updates: { name: string }): Promise<ApiResponse<UserProfile>> {
-    const response = await apiClient.put<{ success: boolean; data: UserProfile }>('/api/me', updates)
+    const response = await apiClient.put<UserProfile>('/api/auth/me', updates)
     if (!response.success) {
       return response
     }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
+    // apiClient unwraps { success: true, data: ... } so response.data is already UserProfile
     return {
       success: true,
-      data,
+      data: response.data,
     }
   },
 }

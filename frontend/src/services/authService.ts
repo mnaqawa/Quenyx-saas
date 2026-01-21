@@ -16,12 +16,6 @@ interface LoginResponse {
   }
 }
 
-interface MeResponse {
-  data: {
-    user: AuthUser
-  }
-}
-
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse['data']> {
     const response = await apiClient.post<LoginResponse>('/api/auth/login', {
@@ -38,12 +32,14 @@ export const authService = {
   },
 
   async me(): Promise<AuthUser> {
-    const response = await apiClient.get<MeResponse>('/api/auth/me')
+    const response = await apiClient.get<AuthUser>('/api/auth/me')
     if (!response.success) {
       throw new Error(response.message)
     }
 
-    return response.data.data.user
+    // Backend returns { success: true, data: { id, name, email } }
+    // apiClient unwraps it, so response.data is already AuthUser
+    return response.data
   },
 
   async logout(): Promise<void> {
