@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './apiClient'
+import { apiClient } from './apiClient'
 
 export interface UserProfile {
   id: number
@@ -7,27 +7,13 @@ export interface UserProfile {
 }
 
 export const profileService = {
-  async getProfile(): Promise<ApiResponse<UserProfile>> {
-    const response = await apiClient.get<UserProfile>('/api/auth/me')
-    if (!response.success) {
-      return response
-    }
-    // apiClient unwraps { success: true, data: ... } so response.data is already UserProfile
-    return {
-      success: true,
-      data: response.data,
-    }
+  async getProfile(): Promise<UserProfile> {
+    // apiClient unwraps { success: true, data: ... } so response is already UserProfile
+    return apiClient.get<UserProfile>('/api/auth/me')
   },
 
-  async updateProfile(updates: { name: string }): Promise<ApiResponse<UserProfile>> {
-    const response = await apiClient.put<UserProfile>('/api/auth/me', updates)
-    if (!response.success) {
-      return response
-    }
-    // apiClient unwraps { success: true, data: ... } so response.data is already UserProfile
-    return {
-      success: true,
-      data: response.data,
-    }
+  async updateProfile(updates: { name: string }): Promise<UserProfile> {
+    // apiClient unwraps { success: true, data: ... } so response is already UserProfile
+    return apiClient.put<UserProfile>('/api/auth/me', updates)
   },
 }

@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from './apiClient'
+import { apiClient } from './apiClient'
 
 export interface ProjectMembership {
   id: number | null
@@ -31,73 +31,28 @@ export interface ProjectMembershipsResponse {
 }
 
 export const projectMembershipService = {
-  async getProjectMemberships(projectId: number): Promise<ApiResponse<ProjectMembershipsResponse>> {
-    const response = await apiClient.get<{ success: boolean; data: ProjectMembershipsResponse }>(
-      `/api/projects/${projectId}/memberships`
-    )
-    if (!response.success) {
-      return response
-    }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
-    return {
-      success: true,
-      data,
-    }
+  async getProjectMemberships(projectId: number): Promise<ProjectMembershipsResponse> {
+    // apiClient unwraps { success: true, data: ... } so response is already ProjectMembershipsResponse
+    return apiClient.get<ProjectMembershipsResponse>(`/api/projects/${projectId}/memberships`)
   },
 
-  async addMember(projectId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<ApiResponse<ProjectMembership>> {
-    const response = await apiClient.post<{ success: boolean; data: ProjectMembership }>(
-      `/api/projects/${projectId}/memberships`,
-      { email, role }
-    )
-    if (!response.success) {
-      return response
-    }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
-    return {
-      success: true,
-      data,
-    }
+  async addMember(projectId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<ProjectMembership> {
+    // apiClient unwraps { success: true, data: ... } so response is already ProjectMembership
+    return apiClient.post<ProjectMembership>(`/api/projects/${projectId}/memberships`, { email, role })
   },
 
-  async createInvite(projectId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<ApiResponse<ProjectInvite>> {
-    const response = await apiClient.post<{ success: boolean; data: ProjectInvite }>(
-      `/api/projects/${projectId}/memberships/invite`,
-      { email, role }
-    )
-    if (!response.success) {
-      return response
-    }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
-    return {
-      success: true,
-      data,
-    }
+  async createInvite(projectId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<ProjectInvite> {
+    // apiClient unwraps { success: true, data: ... } so response is already ProjectInvite
+    return apiClient.post<ProjectInvite>(`/api/projects/${projectId}/memberships/invite`, { email, role })
   },
 
-  async updateMembershipRole(projectId: number, membershipId: number, role: 'owner' | 'admin' | 'member' | 'viewer'): Promise<ApiResponse<ProjectMembership>> {
-    const response = await apiClient.put<{ success: boolean; data: ProjectMembership }>(
-      `/api/projects/${projectId}/memberships/${membershipId}`,
-      { role }
-    )
-    if (!response.success) {
-      return response
-    }
-    const data = 'data' in response.data ? response.data.data : (response.data as any)
-    return {
-      success: true,
-      data,
-    }
+  async updateMembershipRole(projectId: number, membershipId: number, role: 'owner' | 'admin' | 'member' | 'viewer'): Promise<ProjectMembership> {
+    // apiClient unwraps { success: true, data: ... } so response is already ProjectMembership
+    return apiClient.put<ProjectMembership>(`/api/projects/${projectId}/memberships/${membershipId}`, { role })
   },
 
-  async removeMembership(projectId: number, membershipId: number): Promise<ApiResponse<void>> {
-    const response = await apiClient.delete(`/api/projects/${projectId}/memberships/${membershipId}`)
-    if (!response.success) {
-      return response as ApiResponse<void>
-    }
-    return {
-      success: true,
-      data: undefined,
-    }
+  async removeMembership(projectId: number, membershipId: number): Promise<void> {
+    // apiClient unwraps { success: true, data: ... } so response is already void/undefined
+    await apiClient.delete(`/api/projects/${projectId}/memberships/${membershipId}`)
   },
 }

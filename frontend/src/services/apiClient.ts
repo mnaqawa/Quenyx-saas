@@ -13,6 +13,7 @@ export const clearAuthToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
+// Legacy types for backward compatibility during migration
 export interface ApiError {
   success: false
   message: string
@@ -36,7 +37,7 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
     
     const defaultHeaders: Record<string, string> = {
@@ -63,67 +64,62 @@ class ApiClient {
       const response = await fetch(url, config)
       const data = await response.json()
 
-      if (!response.ok) {
+      // Strict envelope handling: backend MUST return { success, data } or { success, message }
+      if (!data || typeof data !== 'object' || !('success' in data)) {
+        throw new Error('Invalid API response: missing success field')
+      }
+
+      if (data.success === false) {
+        // Handle error responses
         if (response.status === 401) {
           clearAuthToken()
         }
-        // Handle Laravel error format
-        if (data.success === false) {
-          return {
-            success: false,
-            message: data.message || 'An error occurred',
-            errors: data.errors || null,
-          }
-        }
-        return {
-          success: false,
-          message: data.message || 'An error occurred',
-          errors: data.errors || null,
-        }
+        const message = data.message || 'An error occurred'
+        const error = new Error(message)
+        ;(error as any).errors = data.errors || null
+        ;(error as any).status = response.status
+        throw error
       }
 
-      // Handle success responses - backend always returns { success: true, data: ... }
-      // But apiClient already unwraps it, so data here is the inner data
-      // Check if it's already unwrapped or still has success/data structure
-      if (data && typeof data === 'object' && 'success' in data && 'data' in data && data.success === true) {
-        return {
-          success: true,
-          data: (data as any).data as T,
+      if (data.success === true) {
+        // Success response: must have data field
+        if (!('data' in data)) {
+          throw new Error('Invalid API response: success=true but missing data field')
         }
+        return data.data as T
       }
-      // Data is already the unwrapped value
-      return {
-        success: true,
-        data: data as T,
-      }
+
+      // Invalid success value
+      throw new Error(`Invalid API response: success=${data.success}`)
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Network error',
-        errors: null,
+      // Re-throw if it's already an Error we created
+      if (error instanceof Error) {
+        throw error
       }
+      // Otherwise wrap network/parsing errors
+      throw new Error(error instanceof Error ? error.message : 'Network error')
     }
   }
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' })
   }
 
-  async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     })
   }
 
-  async put<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
     })
   }
 
-  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' })
   }
 }

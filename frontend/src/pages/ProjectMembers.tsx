@@ -3,6 +3,8 @@ import { useProjectContext } from '../projects/ProjectContext'
 import { projectMembershipService, ProjectMembership, ProjectInvite } from '../services/projectMembershipService'
 import { authService } from '../services/authService'
 
+type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer'
+
 function ProjectMembers() {
   const { selectedProjectId } = useProjectContext()
   const [memberships, setMemberships] = useState<ProjectMembership[]>([])
@@ -13,14 +15,15 @@ function ProjectMembers() {
   const [invitingMember, setInvitingMember] = useState(false)
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<'admin' | 'member' | 'viewer'>('member')
-  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<ProjectRole | null>(null)
+  const [unauthorized, setUnauthorized] = useState(false)
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const user = await authService.me()
-        setCurrentUser(user)
+        setCurrentUserId(user.id)
       } catch (err) {
         // Ignore
       }
@@ -29,69 +32,59 @@ function ProjectMembers() {
   }, [])
 
   useEffect(() => {
-    if (selectedProjectId) {
+    if (selectedProjectId && currentUserId !== null) {
       loadMemberships()
     } else {
       setMemberships([])
       setInvites([])
+      setCurrentUserRole(null)
+      setUnauthorized(false)
     }
-  }, [selectedProjectId])
+  }, [selectedProjectId, currentUserId])
 
   const loadMemberships = async () => {
-    if (!selectedProjectId) return
+    if (!selectedProjectId || currentUserId === null) return
 
     setLoading(true)
     setError(null)
+    setUnauthorized(false)
     try {
-      const response = await projectMembershipService.getProjectMemberships(selectedProjectId)
-      if (response.success) {
-        setMemberships(response.data.memberships || [])
-        setInvites(response.data.invites || [])
-        
-        // Determine current user's role
-        if (currentUser) {
-          const owner = response.data.memberships.find((m) => m.role === 'owner' && m.user.email === currentUser.email)
-          if (owner) {
-            setUserRole('owner')
-          } else {
-            const membership = response.data.memberships.find((m) => m.user.email === currentUser.email)
-            setUserRole(membership?.role || null)
-          }
-        }
+      const data = await projectMembershipService.getProjectMemberships(selectedProjectId)
+      setMemberships(data.memberships || [])
+      setInvites(data.invites || [])
+      
+      // Derive current user's role from memberships list by comparing user.id
+      const userMembership = data.memberships.find((m) => m.user.id === currentUserId || m.user_id === currentUserId)
+      if (userMembership) {
+        setCurrentUserRole(userMembership.role)
       } else {
-        setError(response.message || 'Failed to load memberships')
+        // Check if user is the owner (owner doesn't have a membership record, but appears in list)
+        const isOwner = data.memberships.some((m) => m.role === 'owner' && (m.user.id === currentUserId || m.user_id === currentUserId))
+        setCurrentUserRole(isOwner ? 'owner' : null)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load memberships')
+      // Handle 403 unauthorized errors gracefully
+      if (err instanceof Error && (err as any).status === 403) {
+        setUnauthorized(true)
+        setError('You do not have permission to view memberships for this project.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load memberships')
+      }
     } finally {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    if (currentUser && selectedProjectId) {
-      loadMemberships()
-    }
-  }, [currentUser, selectedProjectId])
 
   const handleAddMember = async () => {
     if (!selectedProjectId || !newMemberEmail.trim()) return
 
     setError(null)
     try {
-      const response = await projectMembershipService.addMember(
-        selectedProjectId,
-        newMemberEmail.trim(),
-        newMemberRole
-      )
-      if (response.success) {
-        setNewMemberEmail('')
-        setNewMemberRole('member')
-        setAddingMember(false)
-        await loadMemberships()
-      } else {
-        setError(response.message || 'Failed to add member')
-      }
+      await projectMembershipService.addMember(selectedProjectId, newMemberEmail.trim(), newMemberRole)
+      setNewMemberEmail('')
+      setNewMemberRole('member')
+      setAddingMember(false)
+      await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add member')
     }
@@ -102,35 +95,23 @@ function ProjectMembers() {
 
     setError(null)
     try {
-      const response = await projectMembershipService.createInvite(
-        selectedProjectId,
-        newMemberEmail.trim(),
-        newMemberRole
-      )
-      if (response.success) {
-        setNewMemberEmail('')
-        setNewMemberRole('member')
-        setInvitingMember(false)
-        await loadMemberships()
-      } else {
-        setError(response.message || 'Failed to create invite')
-      }
+      await projectMembershipService.createInvite(selectedProjectId, newMemberEmail.trim(), newMemberRole)
+      setNewMemberEmail('')
+      setNewMemberRole('member')
+      setInvitingMember(false)
+      await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create invite')
     }
   }
 
-  const handleUpdateRole = async (membershipId: number, newRole: 'owner' | 'admin' | 'member' | 'viewer') => {
+  const handleUpdateRole = async (membershipId: number, newRole: ProjectRole) => {
     if (!selectedProjectId || !membershipId) return
 
     setError(null)
     try {
-      const response = await projectMembershipService.updateMembershipRole(selectedProjectId, membershipId, newRole)
-      if (response.success) {
-        await loadMemberships()
-      } else {
-        setError(response.message || 'Failed to update role')
-      }
+      await projectMembershipService.updateMembershipRole(selectedProjectId, membershipId, newRole)
+      await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
     }
@@ -142,18 +123,15 @@ function ProjectMembers() {
 
     setError(null)
     try {
-      const response = await projectMembershipService.removeMembership(selectedProjectId, membershipId)
-      if (response.success) {
-        await loadMemberships()
-      } else {
-        setError(response.message || 'Failed to remove member')
-      }
+      await projectMembershipService.removeMembership(selectedProjectId, membershipId)
+      await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove member')
     }
   }
 
-  const canManage = userRole === 'owner' || userRole === 'admin'
+  const canManage = currentUserRole === 'owner' || currentUserRole === 'admin'
+  const isOwner = currentUserRole === 'owner'
 
   if (!selectedProjectId) {
     return (
@@ -171,6 +149,21 @@ function ProjectMembers() {
 
   if (loading) {
     return <div className="text-sm text-white/60">Loading members...</div>
+  }
+
+  // Show unauthorized message if user doesn't have permission
+  if (unauthorized) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1 text-center">
+          <h1 className="text-2xl font-semibold text-white">Project Members</h1>
+          <p className="text-sm text-white/60">Manage team members and their roles</p>
+        </div>
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error || 'You do not have permission to view memberships for this project.'}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -284,11 +277,12 @@ function ProjectMembers() {
                           <select
                             value={membership.role}
                             onChange={(e) =>
-                              handleUpdateRole(membership.id!, e.target.value as 'owner' | 'admin' | 'member' | 'viewer')
+                              handleUpdateRole(membership.id!, e.target.value as ProjectRole)
                             }
                             className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
                           >
-                            <option value="owner">Owner</option>
+                            {/* Only show owner option if current user is owner */}
+                            {isOwner && <option value="owner">Owner</option>}
                             <option value="admin">Admin</option>
                             <option value="member">Member</option>
                             <option value="viewer">Viewer</option>

@@ -21,26 +21,25 @@ function ProjectAccessSettings() {
       }
       setLoadingAuditLogs(true)
       try {
-        const [auditResponse, membersResponse] = await Promise.all([
+        const [auditResponse, membersData] = await Promise.all([
           moduleService.getProjectAuditLogs(selectedProjectId),
           projectMembershipService.getProjectMemberships(selectedProjectId),
         ])
         if (auditResponse.success) {
           setAuditLogs(auditResponse.data)
         }
-        if (membersResponse.success) {
-          // Determine user role from memberships
-          const currentUser = await authService.me()
-          const owner = membersResponse.data.memberships.find((m) => m.role === 'owner' && m.user.email === currentUser.email)
-          if (owner) {
-            setUserRole('owner')
-          } else {
-            const membership = membersResponse.data.memberships.find((m) => m.user.email === currentUser.email)
-            setUserRole(membership?.role || null)
-          }
+        // Determine user role from memberships by comparing user.id
+        const currentUser = await authService.me()
+        const userMembership = membersData.memberships.find((m) => m.user.id === currentUser.id || m.user_id === currentUser.id)
+        if (userMembership) {
+          setUserRole(userMembership.role)
+        } else {
+          // Check if user is the owner (owner doesn't have a membership record, but appears in list)
+          const isOwner = membersData.memberships.some((m) => m.role === 'owner' && (m.user.id === currentUser.id || m.user_id === currentUser.id))
+          setUserRole(isOwner ? 'owner' : null)
         }
       } catch (err) {
-        // Ignore errors
+        // Ignore errors (e.g., 403 for non-admin/member users)
       } finally {
         setLoadingAuditLogs(false)
       }

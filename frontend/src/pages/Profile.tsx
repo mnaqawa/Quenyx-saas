@@ -16,17 +16,13 @@ function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const [userData, profileResponse] = await Promise.all([
+        const [userData, profileData] = await Promise.all([
           authService.me(),
           profileService.getProfile(),
         ])
         setUser(userData)
-        if (profileResponse.success) {
-          setProfile(profileResponse.data)
-          setNameValue(profileResponse.data.name)
-        } else {
-          setError(profileResponse.message || 'Failed to load profile')
-        }
+        setProfile(profileData)
+        setNameValue(profileData.name)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile')
       } finally {
@@ -98,14 +94,10 @@ function Profile() {
                         setSaving(true)
                         setError(null)
                         try {
-                          const response = await profileService.updateProfile({ name: nameValue })
-                          if (response.success) {
-                            setProfile(response.data)
-                            setUser({ ...user!, name: response.data.name })
-                            setEditingName(false)
-                          } else {
-                            setError(response.message || 'Failed to update name')
-                          }
+                          const updatedProfile = await profileService.updateProfile({ name: nameValue })
+                          setProfile(updatedProfile)
+                          setUser({ ...user!, name: updatedProfile.name })
+                          setEditingName(false)
                         } catch (err) {
                           setError(err instanceof Error ? err.message : 'Failed to update name')
                         } finally {

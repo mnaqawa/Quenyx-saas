@@ -23,30 +23,19 @@ export const authService = {
       password,
     })
 
-    if (!response.success) {
-      throw new Error(response.message)
-    }
-
-    setAuthToken(response.data.data.token)
-    return response.data.data
-  },
-
-  async me(): Promise<AuthUser> {
-    const response = await apiClient.get<AuthUser>('/api/auth/me')
-    if (!response.success) {
-      throw new Error(response.message)
-    }
-
-    // Backend returns { success: true, data: { id, name, email } }
-    // apiClient unwraps it, so response.data is already AuthUser
+    // apiClient now returns unwrapped data directly
+    setAuthToken(response.data.token)
     return response.data
   },
 
+  async me(): Promise<AuthUser> {
+    // Backend returns { success: true, data: { id, name, email } }
+    // apiClient unwraps it, so response is already AuthUser
+    return apiClient.get<AuthUser>('/api/auth/me')
+  },
+
   async logout(): Promise<void> {
-    const response = await apiClient.post('/api/auth/logout')
-    if (!response.success) {
-      throw new Error(response.message)
-    }
+    await apiClient.post('/api/auth/logout')
     clearAuthToken()
   },
 }
