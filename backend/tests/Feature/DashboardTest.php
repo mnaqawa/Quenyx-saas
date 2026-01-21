@@ -17,20 +17,29 @@ class DashboardTest extends TestCase
         // Run seeders to populate data
         $this->seed();
 
-        $response = $this->get('/api/dashboard');
+        // Create a user and authenticate
+        $user = \App\Models\User::create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/dashboard');
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     'platform_health',
-                     'modules' => [
-                         '*' => [
-                             'id',
-                             'name',
-                             'description',
-                             'status',
-                             'subscription_state',
-                         ],
+                     'success',
+                     'data' => [
+                         'platform_health',
+                         'modules',
+                         'performance_series',
+                         'weekly_uptime',
+                         'alerts_by_module',
                      ],
+                 ])
+                 ->assertJson([
+                     'success' => true,
                  ]);
     }
 }

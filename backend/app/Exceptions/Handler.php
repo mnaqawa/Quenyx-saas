@@ -2,9 +2,11 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -36,6 +38,22 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $e): JsonResponse|\Symfony\Component\HttpFoundation\Response
     {
+        // Handle authentication exceptions (401)
+        if ($e instanceof AuthenticationException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        // Handle authorization exceptions (403)
+        if ($e instanceof AuthorizationException) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?: 'This action is unauthorized',
+            ], 403);
+        }
+
         // Handle validation exceptions
         if ($e instanceof ValidationException) {
             return response()->json([
