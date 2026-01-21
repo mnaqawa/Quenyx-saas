@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectMembership;
 use App\Models\ProjectInvite;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -83,6 +84,9 @@ class ProjectMembershipController extends Controller
                     'invites' => $invites,
                 ],
             ]);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectMembershipController@index failed', [
                 'project_id' => $project->id,
@@ -170,6 +174,9 @@ class ProjectMembershipController extends Controller
                     'expires_at' => $invite->expires_at->toISOString(),
                 ],
             ], 201);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectMembershipController@invite failed', [
                 'project_id' => $project->id,
@@ -249,6 +256,9 @@ class ProjectMembershipController extends Controller
                     'created_at' => $membership->created_at->toISOString(),
                 ],
             ], 201);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectMembershipController@store failed', [
                 'project_id' => $project->id,
@@ -316,6 +326,9 @@ class ProjectMembershipController extends Controller
                     'created_at' => $membership->created_at->toISOString(),
                 ],
             ]);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectMembershipController@update failed', [
                 'project_id' => $project->id,
@@ -352,6 +365,9 @@ class ProjectMembershipController extends Controller
             return response()->json([
                 'success' => true,
             ]);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectMembershipController@destroy failed', [
                 'project_id' => $project->id,
