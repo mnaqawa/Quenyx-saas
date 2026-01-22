@@ -376,6 +376,7 @@ class ProjectMembershipController extends Controller
 
             return response()->json([
                 'success' => true,
+                'data' => null,
             ]);
         } catch (AuthorizationException $e) {
             // Re-throw authorization exceptions so they're handled by the exception handler
