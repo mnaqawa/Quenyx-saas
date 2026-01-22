@@ -16,13 +16,14 @@ const formatDate = (value: string) => {
 function ProjectsPage() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { setSelectedProjectId } = useProjectContext()
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext()
   const [workspaces, setWorkspaces] = useState<WorkspaceListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<CreateProjectInput>({ name: '', status: 'active' })
   const [creating, setCreating] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
+  const [hasAutoSelected, setHasAutoSelected] = useState(false)
 
   const loadWorkspaces = async () => {
     setLoading(true)
@@ -60,6 +61,19 @@ function ProjectsPage() {
   useEffect(() => {
     loadWorkspaces()
   }, [])
+
+  // Auto-select and redirect if exactly one workspace and none selected
+  useEffect(() => {
+    if (!loading && workspaces.length === 1 && !selectedProjectId && !hasAutoSelected) {
+      const singleWorkspace = workspaces[0]
+      setSelectedProjectId(singleWorkspace.project.id)
+      setHasAutoSelected(true)
+      // Navigate to dashboard after a brief moment to allow state to update
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true })
+      }, 100)
+    }
+  }, [loading, workspaces, selectedProjectId, hasAutoSelected, setSelectedProjectId, navigate])
 
   const handleCreate = async (event?: React.FormEvent<HTMLFormElement>) => {
     if (event) {
