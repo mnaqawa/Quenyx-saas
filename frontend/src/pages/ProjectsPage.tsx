@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { projectService } from '../services/projectService'
-import { CreateProjectInput, Project, ProjectStatus } from '../types/project'
+import { workspaceService } from '../services/workspaceService'
+import { CreateProjectInput, ProjectStatus } from '../types/project'
+import { WorkspaceListItem, Role } from '../types/workspace'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useProjectContext } from '../projects/ProjectContext'
 
 const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
@@ -12,19 +15,21 @@ const formatDate = (value: string) => {
 
 function ProjectsPage() {
   const { t } = useLanguage()
-  const [projects, setProjects] = useState<Project[]>([])
+  const navigate = useNavigate()
+  const { setSelectedProjectId } = useProjectContext()
+  const [workspaces, setWorkspaces] = useState<WorkspaceListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<CreateProjectInput>({ name: '', status: 'active' })
   const [creating, setCreating] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const loadProjects = async () => {
+  const loadWorkspaces = async () => {
     setLoading(true)
     setError(null)
     try {
-      const projects = await projectService.listProjects()
-      setProjects(projects)
+      const workspaces = await workspaceService.getMyWorkspaces()
+      setWorkspaces(workspaces)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
@@ -32,8 +37,28 @@ function ProjectsPage() {
     }
   }
 
+  const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
+    setSelectedProjectId(workspace.project.id)
+    navigate(`/app/projects/${workspace.project.id}`)
+  }
+
+  const getRoleBadgeColor = (role: Role) => {
+    switch (role) {
+      case 'owner':
+        return 'bg-purple-500/20 text-purple-200 border-purple-500/30'
+      case 'admin':
+        return 'bg-blue-500/20 text-blue-200 border-blue-500/30'
+      case 'member':
+        return 'bg-green-500/20 text-green-200 border-green-500/30'
+      case 'viewer':
+        return 'bg-gray-500/20 text-gray-200 border-gray-500/30'
+      default:
+        return 'bg-white/10 text-white/70 border-white/10'
+    }
+  }
+
   useEffect(() => {
-    loadProjects()
+    loadWorkspaces()
   }, [])
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -48,7 +73,7 @@ function ProjectsPage() {
       })
       setForm({ name: '', status: 'active' })
       setSuccess(t('projects.createTitle'))
-      await loadProjects()
+      await loadWorkspaces()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
@@ -56,9 +81,11 @@ function ProjectsPage() {
     }
   }
 
-  const orderedProjects = useMemo(() => {
-    return [...projects].sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-  }, [projects])
+  const orderedWorkspaces = useMemo(() => {
+    return [...workspaces].sort((a, b) => 
+      b.project.updated_at.localeCompare(a.project.updated_at)
+    )
+  }, [workspaces])
 
   if (loading) {
     return <div className="text-sm text-white/60">{t('common.loadingDashboard')}</div>
@@ -122,30 +149,35 @@ function ProjectsPage() {
         {success ? <p className="mt-3 text-xs text-emerald-300">{success}</p> : null}
       </section>
 
-      {orderedProjects.length === 0 ? (
+      {orderedWorkspaces.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] px-6 py-10 text-center text-white">
           <h3 className="text-sm font-semibold">{t('projects.emptyTitle')}</h3>
           <p className="mt-2 text-xs text-white/60">{t('projects.emptySubtitle')}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {orderedProjects.map((project) => (
-            <Link
-              key={project.id}
-              to={`/app/projects/${project.id}`}
-              className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white transition hover:border-white/20"
+          {orderedWorkspaces.map((workspace) => (
+            <div
+              key={workspace.project.id}
+              className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white transition hover:border-white/20 cursor-pointer"
+              onClick={() => handleOpenWorkspace(workspace)}
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold">{project.name}</h3>
-                  <p className="text-xs text-white/50">{project.status}</p>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold">{workspace.project.name}</h3>
+                  <p className="text-xs text-white/50">{workspace.project.status}</p>
                 </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/60">
-                  {t('projects.updatedAt')} {formatDate(project.updated_at)}
+                <span className={`rounded-full border px-3 py-1 text-[10px] font-medium ${getRoleBadgeColor(workspace.my_role)}`}>
+                  {workspace.my_role.charAt(0).toUpperCase() + workspace.my_role.slice(1)}
                 </span>
               </div>
-              <div className="mt-4 text-xs text-sky-200">{t('projects.viewDetails')}</div>
-            </Link>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-xs text-white/60">
+                  {t('projects.updatedAt')} {formatDate(workspace.project.updated_at)}
+                </span>
+                <span className="text-xs text-sky-200">Open →</span>
+              </div>
+            </div>
           ))}
         </div>
       )}

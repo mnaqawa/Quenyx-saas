@@ -9,12 +9,16 @@ import ProjectDetailsPage from './pages/ProjectDetailsPage'
 import ProjectAccessSettings from './pages/ProjectAccessSettings'
 import ProjectMembers from './pages/ProjectMembers'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import InviteAcceptance from './pages/InviteAcceptance'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/invites/accept" element={<InviteAcceptance />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<AppLayout />}>
           <Route path="dashboard" element={<Dashboard />} />

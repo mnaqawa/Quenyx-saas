@@ -17,6 +17,7 @@ export interface ProjectInvite {
   email: string
   role: 'admin' | 'member' | 'viewer'
   status: 'pending' | 'accepted' | 'rejected' | 'expired'
+  token?: string
   invited_by: {
     id: number
     name: string

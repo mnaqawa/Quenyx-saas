@@ -316,11 +316,28 @@ function ProjectMembers() {
                     key={invite.id}
                     className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4"
                   >
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold">{invite.email}</p>
                       <p className="text-xs text-white/60">
                         Invited by {invite.invited_by.name} • {invite.status}
                       </p>
+                      {canManage && invite.token && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <code className="rounded bg-white/5 px-2 py-1 text-[10px] text-white/80 font-mono">
+                            {invite.token}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invite.token!)
+                              // Could show a toast here, but keeping minimal
+                            }}
+                            className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/70 transition hover:bg-white/10"
+                          >
+                            Copy Token
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
                       {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
