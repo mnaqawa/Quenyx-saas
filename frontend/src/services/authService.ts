@@ -10,22 +10,21 @@ export interface AuthUser {
 }
 
 interface LoginResponse {
-  data: {
-    token: string
-    user: AuthUser
-  }
+  token: string
+  user: AuthUser
 }
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse['data']> {
+  async login(email: string, password: string): Promise<LoginResponse> {
+    // Backend returns { success: true, data: { token, user } }
+    // apiClient unwraps it, so response is already { token, user }
     const response = await apiClient.post<LoginResponse>('/api/auth/login', {
       email,
       password,
     })
 
-    // apiClient now returns unwrapped data directly
-    setAuthToken(response.data.token)
-    return response.data
+    setAuthToken(response.token)
+    return response
   },
 
   async me(): Promise<AuthUser> {
