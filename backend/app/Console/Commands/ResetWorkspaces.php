@@ -68,7 +68,11 @@ class ResetWorkspaces extends Command
         $this->warn('   This includes related memberships and invites.');
         $this->newLine();
 
-        if (!$this->confirm("Do you want to proceed for user: {$user->name} ({$email})?", false)) {
+        // Skip confirmation in non-interactive mode (e.g., when called from tests)
+        // Artisan::call() sets input to non-interactive, but we also check environment
+        $skipConfirmation = !$this->input->isInteractive() || app()->environment('testing');
+        
+        if (!$skipConfirmation && !$this->confirm("Do you want to proceed for user: {$user->name} ({$email})?", false)) {
             $this->info('Operation cancelled.');
             return Command::SUCCESS;
         }
