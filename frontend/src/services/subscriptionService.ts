@@ -28,7 +28,7 @@ interface SubscriptionResponse {
 export const subscriptionService = {
   async getProjectSubscription(projectId: number): Promise<ProjectSubscription> {
     const response = await apiClient.get<SubscriptionResponse>(
-      `/api/projects/${projectId}/subscription`
+      `/api/workspaces/${projectId}/subscription`
     )
     // Transform backend response to frontend type
     return {
@@ -47,7 +47,7 @@ export const subscriptionService = {
     planKey: PlanKey
   ): Promise<ProjectSubscription> {
     const response = await apiClient.put<SubscriptionResponse>(
-      `/api/projects/${projectId}/subscription`,
+      `/api/workspaces/${projectId}/subscription`,
       { plan_key: planKey }
     )
     // Transform backend response to frontend type
@@ -64,7 +64,7 @@ export const subscriptionService = {
 
   async getProjectEntitlements(projectId: number): Promise<ProjectEntitlements> {
     // apiClient unwraps { success: true, data: ... } so response is already ProjectEntitlements
-    return apiClient.get<ProjectEntitlements>(`/api/projects/${projectId}/entitlements`)
+    return apiClient.get<ProjectEntitlements>(`/api/workspaces/${projectId}/entitlements`)
   },
 
   /**

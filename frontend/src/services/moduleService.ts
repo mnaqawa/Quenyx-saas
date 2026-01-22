@@ -25,7 +25,7 @@ export const moduleService = {
    */
   async getProjectModules(projectId: number): Promise<ModuleWithAccess[]> {
     // apiClient unwraps { success: true, data: ... } so response is already ModuleWithAccess[]
-    return apiClient.get<ModuleWithAccess[]>(`/api/projects/${projectId}/modules`)
+    return apiClient.get<ModuleWithAccess[]>(`/api/workspaces/${projectId}/modules`)
   },
 
   /**
@@ -33,7 +33,7 @@ export const moduleService = {
    */
   async getProjectModuleAccess(projectId: number): Promise<ProjectModuleAccess> {
     // apiClient unwraps { success: true, data: ... } so response is already ProjectModuleAccess
-    return apiClient.get<ProjectModuleAccess>(`/api/projects/${projectId}/modules/access`)
+    return apiClient.get<ProjectModuleAccess>(`/api/workspaces/${projectId}/modules/access`)
   },
 
   /**
@@ -46,7 +46,7 @@ export const moduleService = {
   ): Promise<ModuleWithAccess> {
     // apiClient unwraps { success: true, data: ... } so response is already ModuleWithAccess
     return apiClient.put<ModuleWithAccess>(
-      `/api/projects/${projectId}/modules/${moduleKey}/override`,
+      `/api/workspaces/${projectId}/modules/${moduleKey}/override`,
       { mode }
     )
   },
@@ -56,7 +56,7 @@ export const moduleService = {
    */
   async getProjectAuditLogs(projectId: number): Promise<AuditLog[]> {
     // apiClient unwraps { success: true, data: ... } so response is already AuditLog[]
-    return apiClient.get<AuditLog[]>(`/api/projects/${projectId}/audit-logs`)
+    return apiClient.get<AuditLog[]>(`/api/workspaces/${projectId}/audit-logs`)
   },
 }
 

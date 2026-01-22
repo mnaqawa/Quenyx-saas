@@ -35,7 +35,7 @@ export const integrationService = {
   },
   async listProjectIntegrations(projectId: number): Promise<Integration[]> {
     // apiClient unwraps { success: true, data: ... } so response is already Integration[]
-    return apiClient.get<Integration[]>(`/api/projects/${projectId}/integrations`)
+    return apiClient.get<Integration[]>(`/api/workspaces/${projectId}/integrations`)
   },
   async getProjectIntegrationConfiguration(
     projectId: number,
@@ -43,7 +43,7 @@ export const integrationService = {
   ): Promise<{ settings: Record<string, unknown> | null }> {
     // apiClient unwraps { success: true, data: ... } so response is already { settings: ... }
     return apiClient.get<{ settings: Record<string, unknown> | null }>(
-      `/api/projects/${projectId}/integrations/${integrationId}/configuration`
+      `/api/workspaces/${projectId}/integrations/${integrationId}/configuration`
     )
   },
   async updateProjectIntegrationConfiguration(
@@ -53,7 +53,7 @@ export const integrationService = {
   ): Promise<{ settings: Record<string, unknown> | null }> {
     // apiClient unwraps { success: true, data: ... } so response is already { settings: ... }
     return apiClient.put<{ settings: Record<string, unknown> | null }>(
-      `/api/projects/${projectId}/integrations/${integrationId}/configuration`,
+      `/api/workspaces/${projectId}/integrations/${integrationId}/configuration`,
       { settings }
     )
   },
