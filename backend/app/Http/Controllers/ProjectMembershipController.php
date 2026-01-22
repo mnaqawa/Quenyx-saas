@@ -43,11 +43,16 @@ class ProjectMembershipController extends Controller
                 ->values();
 
             // Get invites (include token for owner/admin)
+            $user = $request->user();
+            $userMembership = $project->memberships()
+                ->where('user_id', $user->id)
+                ->first();
+            $isOwnerOrAdmin = $project->owner_id === $user->id || ($userMembership && in_array($userMembership->role, ['admin'], true));
+            
             $invites = $project->invites()
                 ->with('invitedBy:id,name')
                 ->get()
-                ->map(function (ProjectInvite $invite) use ($user, $membership) {
-                    $isOwnerOrAdmin = $membership && in_array($membership->role, ['owner', 'admin'], true);
+                ->map(function (ProjectInvite $invite) use ($isOwnerOrAdmin) {
                     return [
                         'id' => $invite->id,
                         'email' => $invite->email,

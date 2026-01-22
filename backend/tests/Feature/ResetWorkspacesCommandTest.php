@@ -70,7 +70,7 @@ class ResetWorkspacesCommandTest extends TestCase
         $result = Artisan::call('portshield:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 2,
-        ], ['interactive' => false]);
+        ]);
 
         $this->assertEquals(0, $result); // Command::SUCCESS
 
@@ -152,7 +152,7 @@ class ResetWorkspacesCommandTest extends TestCase
         Artisan::call('portshield:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 1,
-        ], ['interactive' => false]);
+        ]);
 
         // Verify related data was deleted
         $this->assertDatabaseMissing('project_memberships', [
