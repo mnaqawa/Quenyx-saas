@@ -14,6 +14,7 @@ use App\Http\Controllers\ProjectModuleOverrideController;
 use App\Http\Controllers\ProjectMembershipController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\InviteController;
 
 Route::get('/health', [HealthController::class, 'index']);
 
@@ -31,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/modules', [ModuleController::class, 'index']);
     Route::get('/plans', [PlanController::class, 'index']);
+    Route::post('/invites/{token}/accept', [InviteController::class, 'accept']);
     Route::get('/integrations', [IntegrationController::class, 'index']);
     Route::get('/integrations/configuration', [IntegrationController::class, 'configuration']);
     Route::apiResource('projects', ProjectController::class);

@@ -146,14 +146,19 @@ class ProjectMembershipController extends Controller
                 ], 400);
             }
 
-            // Create invite
+            // Create invite with secure, unique token
+            // Generate token and ensure uniqueness
+            do {
+                $token = bin2hex(random_bytes(32));
+            } while (ProjectInvite::where('token', $token)->exists());
+
             $invite = ProjectInvite::create([
                 'project_id' => $project->id,
                 'email' => $request->email,
                 'role' => $request->role,
                 'invited_by_user_id' => $user->id,
                 'status' => 'pending',
-                'token' => bin2hex(random_bytes(32)),
+                'token' => $token,
                 'expires_at' => now()->addDays(7),
             ]);
 

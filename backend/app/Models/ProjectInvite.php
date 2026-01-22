@@ -18,10 +18,12 @@ class ProjectInvite extends Model
         'status',
         'token',
         'expires_at',
+        'accepted_at',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'accepted_at' => 'datetime',
     ];
 
     public function project(): BelongsTo

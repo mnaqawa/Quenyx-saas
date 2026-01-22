@@ -29,14 +29,46 @@ class ProjectController extends Controller
                 ], 401);
             }
 
+            // Get all projects where user is either owner or member
             $projects = Project::query()
-                ->where('owner_id', $user->id)
-                ->latest()
-                ->get();
+                ->where(function ($query) use ($user) {
+                    // User is owner
+                    $query->where('owner_id', $user->id)
+                        // OR user has membership
+                        ->orWhereHas('memberships', function ($q) use ($user) {
+                            $q->where('user_id', $user->id);
+                        });
+                })
+                ->with(['memberships' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                }])
+                ->latest('updated_at')
+                ->get()
+                ->map(function (Project $project) use ($user) {
+                    // Determine role: owner takes precedence
+                    $role = 'owner';
+                    if ($project->owner_id !== $user->id) {
+                        // User is not owner, get role from membership
+                        $membership = $project->memberships->first();
+                        $role = $membership ? $membership->role : null;
+                    }
+
+                    return [
+                        'project' => [
+                            'id' => $project->id,
+                            'name' => $project->name,
+                            'status' => $project->status,
+                            'created_at' => $project->created_at->toISOString(),
+                            'updated_at' => $project->updated_at->toISOString(),
+                        ],
+                        'my_role' => $role,
+                    ];
+                })
+                ->values();
 
             return response()->json([
                 'success' => true,
-                'data' => ProjectResource::collection($projects),
+                'data' => $projects,
             ]);
         } catch (\Exception $e) {
             Log::error('ProjectController@index failed', [

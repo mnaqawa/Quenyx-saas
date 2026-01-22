@@ -191,6 +191,88 @@ Remove membership. Requires owner or admin role. Cannot remove last owner.
 }
 ```
 
+## Invite Acceptance
+
+### POST /api/invites/{token}/accept
+Accept a project invite by token. Requires authentication.
+
+**Rules:**
+- Must be authenticated
+- Invite must exist (404 if token invalid)
+- Invite status must be 'pending' (409 if not pending)
+- Invite email must match authenticated user email (case-insensitive, 403 if mismatch)
+- User must not already have membership in the project (409 if exists, role is NOT changed)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "membership": {
+      "id": 3,
+      "user_id": 5,
+      "user": {
+        "id": 5,
+        "name": "User Name",
+        "email": "user@example.com"
+      },
+      "role": "member",
+      "created_at": "2026-01-15T15:00:00.000000Z"
+    },
+    "project": {
+      "id": 1,
+      "name": "Project Name",
+      "status": "active"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `404`: Invite not found
+- `403`: Email mismatch
+- `409`: Invite not pending OR user already has membership
+
+## My Workspaces
+
+### GET /api/projects
+List all projects the authenticated user is a member of (as owner or via membership).
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "project": {
+        "id": 1,
+        "name": "My Project",
+        "status": "active",
+        "created_at": "2026-01-15T10:00:00.000000Z",
+        "updated_at": "2026-01-15T10:00:00.000000Z"
+      },
+      "my_role": "owner"
+    },
+    {
+      "project": {
+        "id": 2,
+        "name": "Another Project",
+        "status": "active",
+        "created_at": "2026-01-15T11:00:00.000000Z",
+        "updated_at": "2026-01-15T11:00:00.000000Z"
+      },
+      "my_role": "admin"
+    }
+  ]
+}
+```
+
+**Notes:**
+- Returns projects where user is owner (my_role: "owner")
+- Returns projects where user has membership (my_role from membership.role)
+- Deduplicates if user is both owner and has membership record
+- Sorted by updated_at descending
+
 ## Authorization Rules
 
 - **Owner**: Can view, invite, add, update, and remove members. Can promote to owner.

@@ -176,7 +176,11 @@ class RegistrationTest extends TestCase
             ->assertJsonValidationErrors(['email']);
 
         // Duplicate email
-        User::factory()->create(['email' => 'existing@example.com']);
+        User::create([
+            'name' => 'Existing User',
+            'email' => 'existing@example.com',
+            'password' => Hash::make('password'),
+        ]);
 
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Test User',

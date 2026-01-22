@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('role'); // 'admin', 'member', 'viewer'
             $table->foreignId('invited_by_user_id')->constrained('users')->onDelete('cascade');
             $table->string('status')->default('pending'); // 'pending', 'accepted', 'rejected', 'expired'
-            $table->string('token')->nullable();
+            $table->string('token')->unique();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
 
