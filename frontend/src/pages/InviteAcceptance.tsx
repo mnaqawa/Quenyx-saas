@@ -58,9 +58,9 @@ function InviteAcceptance() {
       setSuccess(true)
       
       // Navigate to the project after a short delay
-      setTimeout(() => {
-        navigate(`/app/projects/${response.project.id}`, { replace: true })
-      }, 1500)
+              setTimeout(() => {
+                navigate(`/app/workspaces/${response.project.id}`, { replace: true })
+              }, 1500)
     } catch (err) {
       if (err instanceof Error) {
         const status = (err as any).status

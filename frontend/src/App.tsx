@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './layouts/AppLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
@@ -25,7 +25,11 @@ function App() {
           <Route path="/" element={<AppLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route index element={<Dashboard />} />
-            <Route path="app/projects" element={<WorkspacesPage />} />
+            {/* Canonical workspace routes */}
+            <Route path="app/workspaces" element={<WorkspacesPage />} />
+            <Route path="app/workspaces/:id" element={<WorkspaceDetailsPage />} />
+            {/* Legacy project routes - redirect to workspaces */}
+            <Route path="app/projects" element={<Navigate to="/app/workspaces" replace />} />
             <Route path="app/projects/:id" element={<WorkspaceDetailsPage />} />
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="settings/access" element={<WorkspaceAccessSettings />} />

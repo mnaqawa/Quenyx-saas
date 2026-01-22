@@ -39,7 +39,7 @@ function Register() {
       }
 
       // Navigate to workspaces page
-      navigate('/app/projects', { replace: true })
+      navigate('/app/workspaces', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {

@@ -13,7 +13,7 @@ function WorkspaceDetailsPage() {
   const { t } = useLanguage()
   const { id } = useParams()
   const navigate = useNavigate()
-  const { selectedWorkspaceId, setSelectedWorkspaceId, workspaces } = useWorkspaceContext()
+  const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,15 +25,12 @@ function WorkspaceDetailsPage() {
   const projectId = Number(id)
 
   // Auto-select workspace from URL if different from current selection
+  // Do NOT require workspace to exist in loaded list (works for deep links/hard refresh)
   useEffect(() => {
-    if (Number.isFinite(projectId) && projectId > 0) {
-      // Check if workspace exists in the list
-      const workspaceExists = workspaces.some((w) => w.id === projectId)
-      if (workspaceExists && selectedWorkspaceId !== projectId) {
-        setSelectedWorkspaceId(projectId)
-      }
+    if (Number.isFinite(projectId) && projectId > 0 && selectedWorkspaceId !== projectId) {
+      setSelectedWorkspaceId(projectId)
     }
-  }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId, workspaces])
+  }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId])
 
   const loadProject = async () => {
     if (!Number.isFinite(projectId)) {
@@ -84,7 +81,7 @@ function WorkspaceDetailsPage() {
     setError(null)
     try {
       await workspaceService.deleteWorkspace(project.id)
-      navigate('/app/projects')
+      navigate('/app/workspaces')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setDeleting(false)
@@ -114,7 +111,7 @@ function WorkspaceDetailsPage() {
           <h1 className="text-2xl font-semibold text-white">{t('projects.detailsTitle')}</h1>
           <p className="text-sm text-white/60">{project.name}</p>
         </div>
-        <Link to="/app/projects" className="text-xs text-sky-200">
+        <Link to="/app/workspaces" className="text-xs text-sky-200">
           {t('projects.back')}
         </Link>
       </div>

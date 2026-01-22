@@ -39,7 +39,7 @@ function WorkspacesPage() {
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
     setSelectedWorkspaceId(workspace.project.id)
-    navigate(`/app/projects/${workspace.project.id}`)
+    navigate(`/app/workspaces/${workspace.project.id}`)
   }
 
   const getRoleBadgeColor = (role: Role) => {

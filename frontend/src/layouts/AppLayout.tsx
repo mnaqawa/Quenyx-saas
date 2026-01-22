@@ -14,8 +14,8 @@ function AppLayout() {
     if (path === '/dashboard') {
       return location.pathname === '/' || location.pathname.startsWith('/dashboard')
     }
-    if (path === '/app/projects') {
-      return location.pathname.startsWith('/app/projects')
+    if (path === '/app/workspaces' || path === '/app/projects') {
+      return location.pathname.startsWith('/app/workspaces') || location.pathname.startsWith('/app/projects')
     }
     return location.pathname === path
   }
@@ -56,10 +56,10 @@ function AppLayout() {
             {t('nav.dashboard')}
           </Link>
           <Link
-            to="/app/projects"
+            to="/app/workspaces"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/app/projects')
+              isActive('/app/workspaces')
                 ? 'bg-white/10 text-white'
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}

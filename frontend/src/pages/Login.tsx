@@ -20,7 +20,7 @@ function Login() {
       if (next) {
         navigate(decodeURIComponent(next), { replace: true })
       } else {
-        navigate('/app/projects', { replace: true })
+        navigate('/app/workspaces', { replace: true })
       }
     }
   }, [navigate, searchParams])
@@ -38,7 +38,7 @@ function Login() {
       if (next) {
         navigate(decodeURIComponent(next), { replace: true })
       } else {
-        navigate('/app/projects', { replace: true })
+        navigate('/app/workspaces', { replace: true })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.errorGeneric'))
