@@ -53,4 +53,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
     Route::put('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
     Route::delete('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
+
+    // Workspaces aliases (non-breaking API compatibility)
+    // These routes are aliases of /api/projects endpoints, pointing to the same controllers
+    Route::get('/workspaces', [ProjectController::class, 'index']); // GET /api/workspaces -> GET /api/projects
+    Route::get('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'index']);
+    Route::post('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'store']);
+    Route::post('/workspaces/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
+    Route::put('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
+    Route::delete('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
 });
