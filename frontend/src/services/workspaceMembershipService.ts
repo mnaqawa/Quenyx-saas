@@ -34,26 +34,26 @@ export interface WorkspaceMembershipsResponse {
 export const workspaceMembershipService = {
   async getWorkspaceMemberships(workspaceId: number): Promise<WorkspaceMembershipsResponse> {
     // apiClient unwraps { success: true, data: ... } so response is already WorkspaceMembershipsResponse
-    return apiClient.get<WorkspaceMembershipsResponse>(`/api/projects/${workspaceId}/memberships`)
+    return apiClient.get<WorkspaceMembershipsResponse>(`/api/workspaces/${workspaceId}/memberships`)
   },
 
   async addMember(workspaceId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<WorkspaceMembership> {
     // apiClient unwraps { success: true, data: ... } so response is already WorkspaceMembership
-    return apiClient.post<WorkspaceMembership>(`/api/projects/${workspaceId}/memberships`, { email, role })
+    return apiClient.post<WorkspaceMembership>(`/api/workspaces/${workspaceId}/memberships`, { email, role })
   },
 
   async createInvite(workspaceId: number, email: string, role: 'admin' | 'member' | 'viewer'): Promise<WorkspaceInvite> {
     // apiClient unwraps { success: true, data: ... } so response is already WorkspaceInvite
-    return apiClient.post<WorkspaceInvite>(`/api/projects/${workspaceId}/memberships/invite`, { email, role })
+    return apiClient.post<WorkspaceInvite>(`/api/workspaces/${workspaceId}/memberships/invite`, { email, role })
   },
 
   async updateMembershipRole(workspaceId: number, membershipId: number, role: 'owner' | 'admin' | 'member' | 'viewer'): Promise<WorkspaceMembership> {
     // apiClient unwraps { success: true, data: ... } so response is already WorkspaceMembership
-    return apiClient.put<WorkspaceMembership>(`/api/projects/${workspaceId}/memberships/${membershipId}`, { role })
+    return apiClient.put<WorkspaceMembership>(`/api/workspaces/${workspaceId}/memberships/${membershipId}`, { role })
   },
 
   async removeMembership(workspaceId: number, membershipId: number): Promise<void> {
     // apiClient unwraps { success: true, data: ... } so response is already void/undefined
-    await apiClient.delete(`/api/projects/${workspaceId}/memberships/${membershipId}`)
+    await apiClient.delete(`/api/workspaces/${workspaceId}/memberships/${membershipId}`)
   },
 }
