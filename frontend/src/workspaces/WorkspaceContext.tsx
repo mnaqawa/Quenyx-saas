@@ -2,17 +2,17 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { Project } from '../types/project'
 import { ProjectEntitlements } from '../types/subscription'
 import { ModuleWithAccess } from '../types/module'
-import { projectService } from '../services/projectService'
+import { workspaceService } from '../services/workspaceService'
 import { subscriptionService } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
 import { getAuthToken } from '../services/apiClient'
 
-interface ProjectContextValue {
-  projects: Project[]
-  selectedProject: Project | null
-  selectedProjectId: number | null
-  setSelectedProjectId: (projectId: number) => void
-  refreshProjects: () => Promise<void>
+interface WorkspaceContextValue {
+  workspaces: Project[] // Keep Project type since backend returns Project
+  selectedWorkspace: Project | null
+  selectedWorkspaceId: number | null
+  setSelectedWorkspaceId: (workspaceId: number) => void
+  refreshWorkspaces: () => Promise<void>
   entitlements: ProjectEntitlements | null
   isLoadingEntitlements: boolean
   refreshEntitlements: () => Promise<void>
@@ -23,67 +23,77 @@ interface ProjectContextValue {
   allowedByKey: Record<string, boolean>
 }
 
-const ProjectContext = createContext<ProjectContextValue | undefined>(undefined)
+const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'portshield.selected_project_id'
+const STORAGE_KEY = 'portshield.selected_workspace_id'
+const OLD_STORAGE_KEY = 'portshield.selected_project_id' // For backward compatibility
 
-export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(null)
+export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const [workspaces, setWorkspaces] = useState<Project[]>([])
+  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<number | null>(null)
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
   const [modulesWithAccess, setModulesWithAccess] = useState<ModuleWithAccess[] | null>(null)
   const [isLoadingModules, setIsLoadingModules] = useState(false)
   const [modulesError, setModulesError] = useState<string | null>(null)
 
-  const refreshProjects = async () => {
+  const refreshWorkspaces = async () => {
     if (!getAuthToken()) {
-      setProjects([])
-      setSelectedProjectIdState(null)
+      setWorkspaces([])
+      setSelectedWorkspaceIdState(null)
       return
     }
     try {
-      const projects = await projectService.listProjects()
-      setProjects(projects)
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const workspaces = await workspaceService.listWorkspaces()
+      setWorkspaces(workspaces)
+      // Backward compatibility: try new key first, then old key
+      let stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) {
+        stored = localStorage.getItem(OLD_STORAGE_KEY)
+        if (stored) {
+          // Migrate old key to new key
+          localStorage.setItem(STORAGE_KEY, stored)
+          localStorage.removeItem(OLD_STORAGE_KEY)
+        }
+      }
       const storedId = stored ? Number(stored) : null
       const validId =
-        storedId && projects.some((project) => project.id === storedId)
+        storedId && workspaces.some((workspace) => workspace.id === storedId)
           ? storedId
-          : projects[0]?.id ?? null
-      setSelectedProjectIdState(validId)
+          : workspaces[0]?.id ?? null
+      setSelectedWorkspaceIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, String(validId))
       }
     } catch (err) {
       // Ignore errors
-      setProjects([])
+      setWorkspaces([])
     }
   }
 
   const refreshEntitlements = useCallback(async () => {
-    if (!getAuthToken() || !selectedProjectId) {
+    if (!getAuthToken() || !selectedWorkspaceId) {
       setEntitlements(null)
       return
     }
 
     setIsLoadingEntitlements(true)
     try {
-      const entitlements = await subscriptionService.getProjectEntitlements(selectedProjectId)
+      const entitlements = await subscriptionService.getProjectEntitlements(selectedWorkspaceId)
       setEntitlements(entitlements)
     } catch (err) {
       setEntitlements(null)
     } finally {
       setIsLoadingEntitlements(false)
     }
-  }, [selectedProjectId])
+  }, [selectedWorkspaceId])
 
   useEffect(() => {
-    refreshProjects()
+    refreshWorkspaces()
   }, [])
 
   const refreshModules = useCallback(async () => {
-    if (!getAuthToken() || !selectedProjectId) {
+    if (!getAuthToken() || !selectedWorkspaceId) {
       setModulesWithAccess(null)
       setModulesError(null)
       return
@@ -92,7 +102,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingModules(true)
     setModulesError(null)
     try {
-      const modules = await moduleService.getProjectModules(selectedProjectId)
+      const modules = await moduleService.getProjectModules(selectedWorkspaceId)
       // Deduplicate modules by key (defensive filter)
       // Use Map to ensure true uniqueness - only first occurrence of each key is kept
       const moduleMap = new Map<string, typeof modules[0]>()
@@ -128,16 +138,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingModules(false)
     }
-  }, [selectedProjectId])
+  }, [selectedWorkspaceId])
 
   useEffect(() => {
     refreshEntitlements()
     refreshModules()
   }, [refreshEntitlements, refreshModules])
 
-  const setSelectedProjectId = (projectId: number) => {
-    setSelectedProjectIdState(projectId)
-    localStorage.setItem(STORAGE_KEY, String(projectId))
+  const setSelectedWorkspaceId = (workspaceId: number) => {
+    setSelectedWorkspaceIdState(workspaceId)
+    localStorage.setItem(STORAGE_KEY, String(workspaceId))
   }
 
   const allowedByKey = useMemo(() => {
@@ -150,15 +160,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return lookup
   }, [modulesWithAccess])
 
-  const value = useMemo<ProjectContextValue>(() => {
-    const selectedProject =
-      projects.find((project) => project.id === selectedProjectId) ?? null
+  const value = useMemo<WorkspaceContextValue>(() => {
+    const selectedWorkspace =
+      workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
     return {
-      projects,
-      selectedProject,
-      selectedProjectId,
-      setSelectedProjectId,
-      refreshProjects,
+      workspaces,
+      selectedWorkspace,
+      selectedWorkspaceId,
+      setSelectedWorkspaceId,
+      refreshWorkspaces,
       entitlements,
       isLoadingEntitlements,
       refreshEntitlements,
@@ -169,8 +179,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       allowedByKey,
     }
   }, [
-    projects,
-    selectedProjectId,
+    workspaces,
+    selectedWorkspaceId,
     entitlements,
     isLoadingEntitlements,
     refreshEntitlements,
@@ -181,13 +191,13 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     allowedByKey,
   ])
 
-  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
 }
 
-export function useProjectContext() {
-  const context = useContext(ProjectContext)
+export function useWorkspaceContext() {
+  const context = useContext(WorkspaceContext)
   if (!context) {
-    throw new Error('useProjectContext must be used within ProjectProvider')
+    throw new Error('useWorkspaceContext must be used within WorkspaceProvider')
   }
   return context
 }

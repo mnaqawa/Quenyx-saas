@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { projectService } from '../services/projectService'
 import { workspaceService } from '../services/workspaceService'
 import { CreateProjectInput, ProjectStatus } from '../types/project'
 import { WorkspaceListItem, Role } from '../types/workspace'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
@@ -13,10 +12,10 @@ const formatDate = (value: string) => {
   return new Date(value).toLocaleDateString()
 }
 
-function ProjectsPage() {
+function WorkspacesPage() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { selectedProjectId, setSelectedProjectId } = useProjectContext()
+  const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
   const [workspaces, setWorkspaces] = useState<WorkspaceListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +38,7 @@ function ProjectsPage() {
   }
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
-    setSelectedProjectId(workspace.project.id)
+    setSelectedWorkspaceId(workspace.project.id)
     navigate(`/app/projects/${workspace.project.id}`)
   }
 
@@ -64,16 +63,16 @@ function ProjectsPage() {
 
   // Auto-select and redirect if exactly one workspace and none selected
   useEffect(() => {
-    if (!loading && workspaces.length === 1 && !selectedProjectId && !hasAutoSelected) {
+    if (!loading && workspaces.length === 1 && !selectedWorkspaceId && !hasAutoSelected) {
       const singleWorkspace = workspaces[0]
-      setSelectedProjectId(singleWorkspace.project.id)
+      setSelectedWorkspaceId(singleWorkspace.project.id)
       setHasAutoSelected(true)
       // Navigate to dashboard after a brief moment to allow state to update
       setTimeout(() => {
         navigate('/dashboard', { replace: true })
       }, 100)
     }
-  }, [loading, workspaces, selectedProjectId, hasAutoSelected, setSelectedProjectId, navigate])
+  }, [loading, workspaces, selectedWorkspaceId, hasAutoSelected, setSelectedWorkspaceId, navigate])
 
   const handleCreate = async (event?: React.FormEvent<HTMLFormElement>) => {
     if (event) {
@@ -86,7 +85,7 @@ function ProjectsPage() {
     setSuccess(null)
     setError(null)
     try {
-      await projectService.createProject({
+      await workspaceService.createWorkspace({
         name: form.name.trim(),
         status: form.status,
       })
@@ -244,4 +243,4 @@ function ProjectsPage() {
   )
 }
 
-export default ProjectsPage
+export default WorkspacesPage

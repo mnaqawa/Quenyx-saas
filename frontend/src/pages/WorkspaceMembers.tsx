@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useProjectContext } from '../projects/ProjectContext'
-import { projectMembershipService, ProjectMembership, ProjectInvite } from '../services/projectMembershipService'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import { workspaceMembershipService, WorkspaceMembership, WorkspaceInvite } from '../services/workspaceMembershipService'
 import { authService } from '../services/authService'
 import { Role, canManageMembers, canPromoteToOwner } from '../rbac/permissions'
 
-function ProjectMembers() {
-  const { selectedProjectId } = useProjectContext()
-  const [memberships, setMemberships] = useState<ProjectMembership[]>([])
-  const [invites, setInvites] = useState<ProjectInvite[]>([])
+function WorkspaceMembers() {
+  const { selectedWorkspaceId } = useWorkspaceContext()
+  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([])
+  const [invites, setInvites] = useState<WorkspaceInvite[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addingMember, setAddingMember] = useState(false)
@@ -31,7 +31,7 @@ function ProjectMembers() {
   }, [])
 
   useEffect(() => {
-    if (selectedProjectId && currentUserId !== null) {
+    if (selectedWorkspaceId && currentUserId !== null) {
       loadMemberships()
     } else {
       setMemberships([])
@@ -39,16 +39,16 @@ function ProjectMembers() {
       setCurrentUserRole(null)
       setUnauthorized(false)
     }
-  }, [selectedProjectId, currentUserId])
+  }, [selectedWorkspaceId, currentUserId])
 
   const loadMemberships = async () => {
-    if (!selectedProjectId || currentUserId === null) return
+    if (!selectedWorkspaceId || currentUserId === null) return
 
     setLoading(true)
     setError(null)
     setUnauthorized(false)
     try {
-      const data = await projectMembershipService.getProjectMemberships(selectedProjectId)
+      const data = await workspaceMembershipService.getWorkspaceMemberships(selectedWorkspaceId)
       setMemberships(data.memberships || [])
       setInvites(data.invites || [])
       
@@ -75,11 +75,11 @@ function ProjectMembers() {
   }
 
   const handleAddMember = async () => {
-    if (!selectedProjectId || !newMemberEmail.trim()) return
+    if (!selectedWorkspaceId || !newMemberEmail.trim()) return
 
     setError(null)
     try {
-      await projectMembershipService.addMember(selectedProjectId, newMemberEmail.trim(), newMemberRole)
+      await workspaceMembershipService.addMember(selectedWorkspaceId, newMemberEmail.trim(), newMemberRole)
       setNewMemberEmail('')
       setNewMemberRole('member')
       setAddingMember(false)
@@ -90,11 +90,11 @@ function ProjectMembers() {
   }
 
   const handleInvite = async () => {
-    if (!selectedProjectId || !newMemberEmail.trim()) return
+    if (!selectedWorkspaceId || !newMemberEmail.trim()) return
 
     setError(null)
     try {
-      await projectMembershipService.createInvite(selectedProjectId, newMemberEmail.trim(), newMemberRole)
+      await workspaceMembershipService.createInvite(selectedWorkspaceId, newMemberEmail.trim(), newMemberRole)
       setNewMemberEmail('')
       setNewMemberRole('member')
       setInvitingMember(false)
@@ -105,11 +105,11 @@ function ProjectMembers() {
   }
 
   const handleUpdateRole = async (membershipId: number, newRole: Role) => {
-    if (!selectedProjectId || !membershipId) return
+    if (!selectedWorkspaceId || !membershipId) return
 
     setError(null)
     try {
-      await projectMembershipService.updateMembershipRole(selectedProjectId, membershipId, newRole)
+      await workspaceMembershipService.updateMembershipRole(selectedWorkspaceId, membershipId, newRole)
       await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
@@ -117,12 +117,12 @@ function ProjectMembers() {
   }
 
   const handleRemoveMembership = async (membershipId: number) => {
-    if (!selectedProjectId || !membershipId) return
+    if (!selectedWorkspaceId || !membershipId) return
     if (!confirm('Are you sure you want to remove this member?')) return
 
     setError(null)
     try {
-      await projectMembershipService.removeMembership(selectedProjectId, membershipId)
+      await workspaceMembershipService.removeMembership(selectedWorkspaceId, membershipId)
       await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove member')
@@ -132,7 +132,7 @@ function ProjectMembers() {
   const canManage = canManageMembers(currentUserRole)
   const isOwner = canPromoteToOwner(currentUserRole)
 
-  if (!selectedProjectId) {
+  if (!selectedWorkspaceId) {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
@@ -168,7 +168,7 @@ function ProjectMembers() {
   return (
     <div className="space-y-6">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold text-white">Project Members</h1>
+        <h1 className="text-2xl font-semibold text-white">Workspace Members</h1>
         <p className="text-sm text-white/60">Manage team members and their roles</p>
       </div>
 
@@ -352,4 +352,4 @@ function ProjectMembers() {
   )
 }
 
-export default ProjectMembers
+export default WorkspaceMembers

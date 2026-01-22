@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAuthToken } from '../services/apiClient'
 import { authService } from '../services/authService'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 function Register() {
   const navigate = useNavigate()
-  const { setSelectedProjectId } = useProjectContext()
+  const { setSelectedWorkspaceId } = useWorkspaceContext()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,7 +35,7 @@ function Register() {
 
       // Set the newly created workspace as the selected project
       if (response.workspace) {
-        setSelectedProjectId(response.workspace.id)
+        setSelectedWorkspaceId(response.workspace.id)
       }
 
       // Navigate to workspaces page

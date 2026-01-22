@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { projectService } from '../services/projectService'
+import { workspaceService } from '../services/workspaceService'
 import { Project, ProjectStatus, UpdateProjectInput } from '../types/project'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -8,7 +8,7 @@ const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
 const formatDate = (value: string) => new Date(value).toLocaleDateString()
 
-function ProjectDetailsPage() {
+function WorkspaceDetailsPage() {
   const { t } = useLanguage()
   const { id } = useParams()
   const navigate = useNavigate()
@@ -31,7 +31,7 @@ function ProjectDetailsPage() {
     setLoading(true)
     setError(null)
     try {
-      const project = await projectService.getProject(projectId)
+      const project = await workspaceService.getWorkspace(projectId)
       setProject(project)
       setForm({ name: project.name, status: project.status })
     } catch (err) {
@@ -54,7 +54,7 @@ function ProjectDetailsPage() {
         name: form.name?.trim() || project.name,
         status: form.status ?? project.status,
       }
-      const updatedProject = await projectService.updateProject(project.id, payload)
+      const updatedProject = await workspaceService.updateWorkspace(project.id, payload)
       setProject(updatedProject)
       setEditing(false)
     } catch (err) {
@@ -70,7 +70,7 @@ function ProjectDetailsPage() {
     setDeleting(true)
     setError(null)
     try {
-      await projectService.deleteProject(project.id)
+      await workspaceService.deleteWorkspace(project.id)
       navigate('/app/projects')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -186,4 +186,4 @@ function ProjectDetailsPage() {
   )
 }
 
-export default ProjectDetailsPage
+export default WorkspaceDetailsPage

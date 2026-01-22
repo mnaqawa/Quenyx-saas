@@ -4,7 +4,7 @@ import {
   Integration,
 } from '../services/integrationService'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const statusStyles: Record<string, string> = {
   connected: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30',
@@ -20,7 +20,7 @@ const statusLabels: Record<string, string> = {
 
 function Integrations() {
   const { t } = useLanguage()
-  const { selectedProjectId } = useProjectContext()
+  const { selectedWorkspaceId } = useWorkspaceContext()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<number | null>(null)
   const [configSettings, setConfigSettings] = useState<Record<string, string>>({})
@@ -33,12 +33,12 @@ function Integrations() {
       setLoading(true)
       setError(null)
       try {
-        if (!selectedProjectId) {
+        if (!selectedWorkspaceId) {
           setIntegrations([])
           setLoading(false)
           return
         }
-        const integrationData = await integrationService.listProjectIntegrations(selectedProjectId)
+        const integrationData = await integrationService.listProjectIntegrations(selectedWorkspaceId)
         setIntegrations(integrationData)
         setSelectedIntegrationId(integrationData[0]?.id ?? null)
       } catch (err) {
@@ -52,15 +52,15 @@ function Integrations() {
     }
 
     fetchData()
-  }, [selectedProjectId])
+  }, [selectedWorkspaceId])
 
   useEffect(() => {
     const fetchConfiguration = async () => {
-      if (!selectedProjectId || !selectedIntegrationId) {
+      if (!selectedWorkspaceId || !selectedIntegrationId) {
         return
       }
       const data = await integrationService.getProjectIntegrationConfiguration(
-        selectedProjectId,
+        selectedWorkspaceId,
         selectedIntegrationId
       )
       const settings = (data.settings ?? {}) as Record<string, string>
@@ -73,7 +73,7 @@ function Integrations() {
       })
     }
     fetchConfiguration()
-  }, [selectedProjectId, selectedIntegrationId])
+  }, [selectedWorkspaceId, selectedIntegrationId])
 
   const activeIntegration = useMemo(() => {
     return integrations.find((integration) => integration.id === selectedIntegrationId) ?? null
@@ -204,10 +204,10 @@ function Integrations() {
             <button
               type="button"
               onClick={async () => {
-                if (!selectedProjectId || !selectedIntegrationId) return
+                if (!selectedWorkspaceId || !selectedIntegrationId) return
                 setSavingConfig(true)
                 await integrationService.updateProjectIntegrationConfiguration(
-                  selectedProjectId,
+                  selectedWorkspaceId,
                   selectedIntegrationId,
                   configSettings
                 )
@@ -247,10 +247,10 @@ function Integrations() {
             <button
               type="button"
               onClick={async () => {
-                if (!selectedProjectId || !selectedIntegrationId) return
+                if (!selectedWorkspaceId || !selectedIntegrationId) return
                 setSavingConfig(true)
                 await integrationService.updateProjectIntegrationConfiguration(
-                  selectedProjectId,
+                  selectedWorkspaceId,
                   selectedIntegrationId,
                   configSettings
                 )

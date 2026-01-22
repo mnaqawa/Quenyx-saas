@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { moduleService, AuditLog } from '../services/moduleService'
-import { projectMembershipService } from '../services/projectMembershipService'
+import { workspaceMembershipService } from '../services/workspaceMembershipService'
 import { authService } from '../services/authService'
 import { Role, canManageIntegrations } from '../rbac/permissions'
 
-function ProjectAccessSettings() {
-  const { selectedProjectId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useProjectContext()
+function WorkspaceAccessSettings() {
+  const { selectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useWorkspaceContext()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
   const [overrideError, setOverrideError] = useState<string | null>(null)
@@ -15,7 +15,7 @@ function ProjectAccessSettings() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!selectedProjectId) {
+      if (!selectedWorkspaceId) {
         setAuditLogs([])
         setUserRole(null)
         return
@@ -23,8 +23,8 @@ function ProjectAccessSettings() {
       setLoadingAuditLogs(true)
       try {
         const [auditLogs, membersData] = await Promise.all([
-          moduleService.getProjectAuditLogs(selectedProjectId),
-          projectMembershipService.getProjectMemberships(selectedProjectId),
+          moduleService.getProjectAuditLogs(selectedWorkspaceId),
+          workspaceMembershipService.getWorkspaceMemberships(selectedWorkspaceId),
         ])
         setAuditLogs(auditLogs)
         // Determine user role from memberships by comparing user.id
@@ -45,18 +45,18 @@ function ProjectAccessSettings() {
     }
 
     fetchData()
-  }, [selectedProjectId])
+  }, [selectedWorkspaceId])
 
   const handleOverrideChange = async (moduleKey: string, mode: 'allow' | 'deny' | null) => {
-    if (!selectedProjectId) return
+    if (!selectedWorkspaceId) return
 
     setOverrideError(null)
     try {
-      await moduleService.updateModuleOverride(selectedProjectId, moduleKey, mode)
+      await moduleService.updateModuleOverride(selectedWorkspaceId, moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
       // Refresh audit logs to show the new entry
-      const auditLogs = await moduleService.getProjectAuditLogs(selectedProjectId)
+      const auditLogs = await moduleService.getProjectAuditLogs(selectedWorkspaceId)
       setAuditLogs(auditLogs)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update module override'
@@ -68,7 +68,7 @@ function ProjectAccessSettings() {
     }
   }
 
-  if (!selectedProjectId) {
+  if (!selectedWorkspaceId) {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
@@ -132,7 +132,7 @@ function ProjectAccessSettings() {
 
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         <p className="mb-4 text-xs text-white/60">
-          Plan defines defaults; overrides let you enable/disable modules for this project.
+          Plan defines defaults; overrides let you enable/disable modules for this workspace.
         </p>
 
         {modulesWithAccess && modulesWithAccess.length > 0 ? (
@@ -260,4 +260,4 @@ function ProjectAccessSettings() {
   )
 }
 
-export default ProjectAccessSettings
+export default WorkspaceAccessSettings

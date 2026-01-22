@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
-  const { projects, selectedProjectId, setSelectedProjectId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useProjectContext()
+  const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useWorkspaceContext()
 
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
@@ -121,7 +121,7 @@ function AppLayout() {
             </div>
           ) : !modulesWithAccess || modulesWithAccess.length === 0 ? (
             <div className="px-3 py-2 text-xs text-white/40">
-              {selectedProjectId ? 'No modules available' : 'Select a workspace'}
+              {selectedWorkspaceId ? 'No modules available' : 'Select a workspace'}
             </div>
           ) : (
             modulesWithAccess
@@ -199,16 +199,16 @@ function AppLayout() {
               <div className="flex items-center gap-2 text-xs text-white/70">
                 <span>{t('nav.projects')}</span>
                 <select
-                  value={selectedProjectId ?? ''}
-                  onChange={(event) => setSelectedProjectId(Number(event.target.value))}
+                  value={selectedWorkspaceId ?? ''}
+                  onChange={(event) => setSelectedWorkspaceId(Number(event.target.value))}
                   className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
                 >
-                  {projects.length === 0 ? (
+                  {workspaces.length === 0 ? (
                     <option value="">No workspaces</option>
                   ) : (
-                    projects.map((project) => (
-                      <option key={project.id} value={project.id} className="text-slate-900">
-                        {project.name}
+                    workspaces.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id} className="text-slate-900">
+                        {workspace.name}
                       </option>
                     ))
                   )}

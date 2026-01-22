@@ -4,10 +4,10 @@ import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import Integrations from './pages/Integrations'
 import Profile from './pages/Profile'
-import ProjectsPage from './pages/ProjectsPage'
-import ProjectDetailsPage from './pages/ProjectDetailsPage'
-import ProjectAccessSettings from './pages/ProjectAccessSettings'
-import ProjectMembers from './pages/ProjectMembers'
+import WorkspacesPage from './pages/WorkspacesPage'
+import WorkspaceDetailsPage from './pages/WorkspaceDetailsPage'
+import WorkspaceAccessSettings from './pages/WorkspaceAccessSettings'
+import WorkspaceMembers from './pages/WorkspaceMembers'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import InviteAcceptance from './pages/InviteAcceptance'
@@ -25,11 +25,11 @@ function App() {
           <Route path="/" element={<AppLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route index element={<Dashboard />} />
-            <Route path="app/projects" element={<ProjectsPage />} />
-            <Route path="app/projects/:id" element={<ProjectDetailsPage />} />
+            <Route path="app/projects" element={<WorkspacesPage />} />
+            <Route path="app/projects/:id" element={<WorkspaceDetailsPage />} />
             <Route path="subscriptions" element={<Subscriptions />} />
-            <Route path="settings/access" element={<ProjectAccessSettings />} />
-            <Route path="settings/members" element={<ProjectMembers />} />
+            <Route path="settings/access" element={<WorkspaceAccessSettings />} />
+            <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="profile" element={<Profile />} />
           </Route>

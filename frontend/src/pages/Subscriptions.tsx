@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import { subscriptionService, Plan } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { PlanKey } from '../types/subscription'
 
 function Subscriptions() {
   const { t } = useLanguage()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { selectedProjectId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useProjectContext()
+  const { selectedWorkspaceId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useWorkspaceContext()
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
@@ -59,13 +59,13 @@ function Subscriptions() {
 
   useEffect(() => {
     const fetchSubscription = async () => {
-      if (!selectedProjectId) {
+      if (!selectedWorkspaceId) {
         setSubscription(null)
         return
       }
       setLoadingSubscription(true)
       try {
-        const subscription = await subscriptionService.getProjectSubscription(selectedProjectId)
+        const subscription = await subscriptionService.getProjectSubscription(selectedWorkspaceId)
         setSubscription(subscription)
       } catch (err) {
         // Ignore errors for now
@@ -75,7 +75,7 @@ function Subscriptions() {
     }
 
     fetchSubscription()
-  }, [selectedProjectId])
+  }, [selectedWorkspaceId])
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -115,11 +115,11 @@ function Subscriptions() {
   }, [targetModuleKey, modulesWithAccess, isLoadingModules, setSearchParams])
 
   const handlePlanChange = async (planKey: PlanKey) => {
-    if (!selectedProjectId || savingPlan) return
+    if (!selectedWorkspaceId || savingPlan) return
 
     setSavingPlan(true)
     try {
-      const subscription = await subscriptionService.updateProjectSubscription(selectedProjectId, planKey)
+      const subscription = await subscriptionService.updateProjectSubscription(selectedWorkspaceId, planKey)
       setSubscription(subscription)
       await refreshEntitlements()
       await refreshModules()
@@ -131,10 +131,10 @@ function Subscriptions() {
   }
 
   const handleOverrideChange = async (moduleKey: string, mode: 'allow' | 'deny' | null) => {
-    if (!selectedProjectId) return
+    if (!selectedWorkspaceId) return
 
     try {
-      await moduleService.updateModuleOverride(selectedProjectId, moduleKey, mode)
+      await moduleService.updateModuleOverride(selectedWorkspaceId, moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
     } catch (err) {
@@ -142,7 +142,7 @@ function Subscriptions() {
     }
   }
 
-  if (!selectedProjectId) {
+  if (!selectedWorkspaceId) {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
@@ -173,7 +173,7 @@ function Subscriptions() {
         </div>
       )}
 
-      {selectedProjectId && (
+      {selectedWorkspaceId && (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
           <h2 className="text-sm font-semibold mb-4">Workspace Subscription</h2>
           {loadingSubscription ? (

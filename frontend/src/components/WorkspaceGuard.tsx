@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { getAuthToken } from '../services/apiClient'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 /**
  * Guard that ensures a workspace is selected before accessing app routes.
@@ -10,7 +10,7 @@ import { useProjectContext } from '../projects/ProjectContext'
 function WorkspaceGuard() {
   const token = getAuthToken()
   const location = useLocation()
-  const { selectedProjectId } = useProjectContext()
+  const { selectedWorkspaceId } = useWorkspaceContext()
 
   // If not authenticated, let ProtectedRoute handle it
   if (!token) {
@@ -28,7 +28,7 @@ function WorkspaceGuard() {
   }
 
   // If no workspace selected, redirect to workspaces page
-  if (!selectedProjectId) {
+  if (!selectedWorkspaceId) {
     return <Navigate to="/app/projects" replace />
   }
 

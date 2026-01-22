@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { inviteService } from '../services/inviteService'
-import { useProjectContext } from '../projects/ProjectContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { getAuthToken } from '../services/apiClient'
 
 function InviteAcceptance() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setSelectedProjectId } = useProjectContext()
+  const { setSelectedWorkspaceId } = useWorkspaceContext()
   const tokenFromQuery = searchParams.get('token') || ''
   const [token, setToken] = useState(tokenFromQuery)
   const [loading, setLoading] = useState(false)
@@ -53,7 +53,7 @@ function InviteAcceptance() {
       const response = await inviteService.acceptInvite(tokenValue)
       
       // Set the project as the selected project
-      setSelectedProjectId(response.project.id)
+      setSelectedWorkspaceId(response.project.id)
       
       setSuccess(true)
       
