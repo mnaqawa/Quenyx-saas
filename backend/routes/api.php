@@ -18,6 +18,7 @@ use App\Http\Controllers\PlanController;
 Route::get('/health', [HealthController::class, 'index']);
 
 Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
 
