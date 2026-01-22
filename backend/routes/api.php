@@ -61,9 +61,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}', [ProjectController::class, 'show']); // GET /api/workspaces/{id} -> GET /api/projects/{id}
     Route::put('/workspaces/{project}', [ProjectController::class, 'update']); // PUT /api/workspaces/{id} -> PUT /api/projects/{id}
     Route::delete('/workspaces/{project}', [ProjectController::class, 'destroy']); // DELETE /api/workspaces/{id} -> DELETE /api/projects/{id}
+    
+    // Workspace memberships aliases
     Route::get('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'index']);
     Route::post('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'store']);
     Route::post('/workspaces/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
     Route::put('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
     Route::delete('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
+    
+    // Workspace integrations aliases
+    Route::get('/workspaces/{project}/integrations', [ProjectIntegrationController::class, 'index']);
+    Route::get('/workspaces/{project}/integrations/{integration}/configuration', [ProjectIntegrationController::class, 'showConfiguration']);
+    Route::put('/workspaces/{project}/integrations/{integration}/configuration', [ProjectIntegrationController::class, 'upsertConfiguration']);
+    
+    // Workspace subscription/entitlements aliases
+    Route::get('/workspaces/{project}/subscription', [ProjectSubscriptionController::class, 'show']);
+    Route::put('/workspaces/{project}/subscription', [ProjectSubscriptionController::class, 'update']);
+    Route::get('/workspaces/{project}/entitlements', [ProjectSubscriptionController::class, 'entitlements']);
+    
+    // Workspace modules aliases
+    Route::get('/workspaces/{project}/modules/access', [ProjectModuleController::class, 'access']);
+    Route::get('/workspaces/{project}/modules', [ProjectModuleController::class, 'index']);
+    Route::put('/workspaces/{project}/modules/{moduleKey}/override', [ProjectModuleOverrideController::class, 'update']);
+    
+    // Workspace audit logs alias
+    Route::get('/workspaces/{project}/audit-logs', [AuditLogController::class, 'index']);
 });

@@ -189,4 +189,144 @@ class WorkspacesAliasTest extends TestCase
 
         $response->assertStatus(401);
     }
+
+    /**
+     * Test that GET /api/workspaces/{project}/modules returns same data as /api/projects/{project}/modules
+     */
+    public function test_workspaces_modules_returns_same_data(): void
+    {
+        $user = $this->createUser();
+        $project = Project::create([
+            'owner_id' => $user->id,
+            'name' => 'Test Project',
+            'status' => 'active',
+        ]);
+
+        // Seed modules (required for modules endpoint)
+        $this->artisan('db:seed', ['--class' => 'ModuleSeeder']);
+
+        // Test /api/projects/{project}/modules endpoint
+        $projectsResponse = $this->actingAsUser($user)
+            ->getJson("/api/projects/{$project->id}/modules");
+
+        $projectsResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    '*' => ['key', 'name', 'description', 'status', 'allowed_by_plan', 'override', 'allowed'],
+                ],
+            ]);
+
+        // Test /api/workspaces/{project}/modules endpoint (alias)
+        $workspacesResponse = $this->actingAsUser($user)
+            ->getJson("/api/workspaces/{$project->id}/modules");
+
+        $workspacesResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    '*' => ['key', 'name', 'description', 'status', 'allowed_by_plan', 'override', 'allowed'],
+                ],
+            ]);
+
+        // Verify both responses contain the same data
+        $projectsData = $projectsResponse->json('data');
+        $workspacesData = $workspacesResponse->json('data');
+
+        $this->assertEquals($projectsData, $workspacesData);
+    }
+
+    /**
+     * Test that GET /api/workspaces/{project}/integrations returns same data as /api/projects/{project}/integrations
+     */
+    public function test_workspaces_integrations_returns_same_data(): void
+    {
+        $user = $this->createUser();
+        $project = Project::create([
+            'owner_id' => $user->id,
+            'name' => 'Test Project',
+            'status' => 'active',
+        ]);
+
+        // Seed integrations (required for integrations endpoint)
+        $this->artisan('db:seed', ['--class' => 'IntegrationSeeder']);
+
+        // Test /api/projects/{project}/integrations endpoint
+        $projectsResponse = $this->actingAsUser($user)
+            ->getJson("/api/projects/{$project->id}/integrations");
+
+        $projectsResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    '*' => ['id', 'name', 'description', 'status', 'configured'],
+                ],
+            ]);
+
+        // Test /api/workspaces/{project}/integrations endpoint (alias)
+        $workspacesResponse = $this->actingAsUser($user)
+            ->getJson("/api/workspaces/{$project->id}/integrations");
+
+        $workspacesResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    '*' => ['id', 'name', 'description', 'status', 'configured'],
+                ],
+            ]);
+
+        // Verify both responses contain the same data
+        $projectsData = $projectsResponse->json('data');
+        $workspacesData = $workspacesResponse->json('data');
+
+        $this->assertEquals($projectsData, $workspacesData);
+    }
+
+    /**
+     * Test that GET /api/workspaces/{project}/entitlements returns same data as /api/projects/{project}/entitlements
+     */
+    public function test_workspaces_entitlements_returns_same_data(): void
+    {
+        $user = $this->createUser();
+        $project = Project::create([
+            'owner_id' => $user->id,
+            'name' => 'Test Project',
+            'status' => 'active',
+        ]);
+
+        // Seed plans (required for entitlements endpoint)
+        $this->artisan('db:seed', ['--class' => 'PlanSeeder']);
+
+        // Test /api/projects/{project}/entitlements endpoint
+        $projectsResponse = $this->actingAsUser($user)
+            ->getJson("/api/projects/{$project->id}/entitlements");
+
+        $projectsResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'plan',
+                    'modules_allowed',
+                ],
+            ]);
+
+        // Test /api/workspaces/{project}/entitlements endpoint (alias)
+        $workspacesResponse = $this->actingAsUser($user)
+            ->getJson("/api/workspaces/{$project->id}/entitlements");
+
+        $workspacesResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'plan',
+                    'modules_allowed',
+                ],
+            ]);
+
+        // Verify both responses contain the same data
+        $projectsData = $projectsResponse->json('data');
+        $workspacesData = $workspacesResponse->json('data');
+
+        $this->assertEquals($projectsData, $workspacesData);
+    }
 }
