@@ -8,20 +8,41 @@ function InviteAcceptance() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { setSelectedProjectId } = useProjectContext()
-  const [token, setToken] = useState(searchParams.get('token') || '')
+  const tokenFromQuery = searchParams.get('token') || ''
+  const [token, setToken] = useState(tokenFromQuery)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [autoAttempted, setAutoAttempted] = useState(false)
 
+  // Redirect to login if not authenticated, preserving return path + token
   useEffect(() => {
     if (!getAuthToken()) {
-      navigate('/login', { replace: true })
+      const currentPath = `/invites/accept${tokenFromQuery ? `?token=${tokenFromQuery}` : ''}`
+      navigate(`/login?next=${encodeURIComponent(currentPath)}`, { replace: true })
+      return
     }
-  }, [navigate])
+  }, [navigate, tokenFromQuery])
 
-  const handleAccept = async () => {
-    if (!token.trim()) {
-      setError('Please enter an invite token')
+  // Auto-attempt accept on page load if authenticated and token exists in query
+  useEffect(() => {
+    const authToken = getAuthToken()
+    if (authToken && tokenFromQuery && !autoAttempted && !success && !loading) {
+      setAutoAttempted(true)
+      // Use a separate async function to avoid dependency issues
+      const attemptAccept = async () => {
+        await handleAccept(tokenFromQuery, true)
+      }
+      attemptAccept()
+    }
+  }, [tokenFromQuery, autoAttempted, success, loading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAccept = async (tokenToUse?: string, isAutoAttempt = false) => {
+    const tokenValue = tokenToUse || token.trim()
+    if (!tokenValue) {
+      if (!isAutoAttempt) {
+        setError('Please enter an invite token')
+      }
       return
     }
 
@@ -29,7 +50,7 @@ function InviteAcceptance() {
     setError(null)
 
     try {
-      const response = await inviteService.acceptInvite(token.trim())
+      const response = await inviteService.acceptInvite(tokenValue)
       
       // Set the project as the selected project
       setSelectedProjectId(response.project.id)
@@ -107,7 +128,7 @@ function InviteAcceptance() {
 
           <button
             type="button"
-            onClick={handleAccept}
+            onClick={() => handleAccept()}
             disabled={loading || !token.trim()}
             className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
           >

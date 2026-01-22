@@ -4,13 +4,14 @@ import { useProjectContext } from '../projects/ProjectContext'
 import { moduleService, AuditLog } from '../services/moduleService'
 import { projectMembershipService } from '../services/projectMembershipService'
 import { authService } from '../services/authService'
+import { Role, canManageIntegrations } from '../rbac/permissions'
 
 function ProjectAccessSettings() {
   const { selectedProjectId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useProjectContext()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
   const [overrideError, setOverrideError] = useState<string | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<Role | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,7 +86,7 @@ function ProjectAccessSettings() {
     return <div className="text-sm text-white/60">Loading...</div>
   }
 
-  const canManage = userRole === 'owner' || userRole === 'admin'
+  const canManage = canManageIntegrations(userRole)
 
   return (
     <div className="space-y-6">

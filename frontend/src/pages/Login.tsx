@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAuthToken } from '../services/apiClient'
 import { authService } from '../services/authService'
 import { useLanguage } from '../i18n/LanguageContext'
 
 function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -14,9 +15,15 @@ function Login() {
 
   useEffect(() => {
     if (getAuthToken()) {
-      navigate('/', { replace: true })
+      // If there's a return path, go there; otherwise go to dashboard
+      const next = searchParams.get('next')
+      if (next) {
+        navigate(decodeURIComponent(next), { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
     }
-  }, [navigate])
+  }, [navigate, searchParams])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -25,7 +32,14 @@ function Login() {
 
     try {
       await authService.login(email, password)
-      navigate('/dashboard', { replace: true })
+      
+      // Redirect to return path if present, otherwise dashboard
+      const next = searchParams.get('next')
+      if (next) {
+        navigate(decodeURIComponent(next), { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.errorGeneric'))
     } finally {

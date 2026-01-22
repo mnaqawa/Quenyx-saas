@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProjectContext } from '../projects/ProjectContext'
 import { projectMembershipService, ProjectMembership, ProjectInvite } from '../services/projectMembershipService'
 import { authService } from '../services/authService'
-
-type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer'
+import { Role, canManageMembers, canPromoteToOwner } from '../rbac/permissions'
 
 function ProjectMembers() {
   const { selectedProjectId } = useProjectContext()
@@ -16,7 +15,7 @@ function ProjectMembers() {
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<'admin' | 'member' | 'viewer'>('member')
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
-  const [currentUserRole, setCurrentUserRole] = useState<ProjectRole | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null)
   const [unauthorized, setUnauthorized] = useState(false)
 
   useEffect(() => {
@@ -105,7 +104,7 @@ function ProjectMembers() {
     }
   }
 
-  const handleUpdateRole = async (membershipId: number, newRole: ProjectRole) => {
+  const handleUpdateRole = async (membershipId: number, newRole: Role) => {
     if (!selectedProjectId || !membershipId) return
 
     setError(null)
@@ -130,8 +129,8 @@ function ProjectMembers() {
     }
   }
 
-  const canManage = currentUserRole === 'owner' || currentUserRole === 'admin'
-  const isOwner = currentUserRole === 'owner'
+  const canManage = canManageMembers(currentUserRole)
+  const isOwner = canPromoteToOwner(currentUserRole)
 
   if (!selectedProjectId) {
     return (
@@ -277,7 +276,7 @@ function ProjectMembers() {
                           <select
                             value={membership.role}
                             onChange={(e) =>
-                              handleUpdateRole(membership.id!, e.target.value as ProjectRole)
+                              handleUpdateRole(membership.id!, e.target.value as Role)
                             }
                             className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
                           >
