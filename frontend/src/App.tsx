@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import InviteAcceptance from './pages/InviteAcceptance'
 import ProtectedRoute from './components/ProtectedRoute'
+import WorkspaceGuard from './components/WorkspaceGuard'
 
 function App() {
   return (
@@ -20,16 +21,18 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/invites/accept" element={<InviteAcceptance />} />
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<AppLayout />}>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route index element={<Dashboard />} />
-          <Route path="app/projects" element={<ProjectsPage />} />
-          <Route path="app/projects/:id" element={<ProjectDetailsPage />} />
-          <Route path="subscriptions" element={<Subscriptions />} />
-          <Route path="settings/access" element={<ProjectAccessSettings />} />
-          <Route path="settings/members" element={<ProjectMembers />} />
-          <Route path="integrations" element={<Integrations />} />
-          <Route path="profile" element={<Profile />} />
+        <Route element={<WorkspaceGuard />}>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route index element={<Dashboard />} />
+            <Route path="app/projects" element={<ProjectsPage />} />
+            <Route path="app/projects/:id" element={<ProjectDetailsPage />} />
+            <Route path="subscriptions" element={<Subscriptions />} />
+            <Route path="settings/access" element={<ProjectAccessSettings />} />
+            <Route path="settings/members" element={<ProjectMembers />} />
+            <Route path="integrations" element={<Integrations />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

@@ -15,12 +15,12 @@ function Login() {
 
   useEffect(() => {
     if (getAuthToken()) {
-      // If there's a return path, go there; otherwise go to dashboard
+      // If there's a return path, go there; otherwise go to workspaces
       const next = searchParams.get('next')
       if (next) {
         navigate(decodeURIComponent(next), { replace: true })
       } else {
-        navigate('/', { replace: true })
+        navigate('/app/projects', { replace: true })
       }
     }
   }, [navigate, searchParams])
@@ -33,12 +33,12 @@ function Login() {
     try {
       await authService.login(email, password)
       
-      // Redirect to return path if present, otherwise dashboard
+      // Redirect to return path if present, otherwise workspaces page
       const next = searchParams.get('next')
       if (next) {
         navigate(decodeURIComponent(next), { replace: true })
       } else {
-        navigate('/dashboard', { replace: true })
+        navigate('/app/projects', { replace: true })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.errorGeneric'))

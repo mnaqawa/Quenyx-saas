@@ -61,8 +61,13 @@ function ProjectsPage() {
     loadWorkspaces()
   }, [])
 
-  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleCreate = async (event?: React.FormEvent<HTMLFormElement>) => {
+    if (event) {
+      event.preventDefault()
+    }
+    if (!form.name.trim()) {
+      return
+    }
     setCreating(true)
     setSuccess(null)
     setError(null)
@@ -106,56 +111,95 @@ function ProjectsPage() {
         <p className="text-sm text-white/60">{t('projects.subtitle')}</p>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-        <h2 className="text-sm font-semibold">{t('projects.createTitle')}</h2>
-        <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-[2fr,1fr,auto]">
-          <div className="space-y-1">
-            <label className="text-xs text-white/60">{t('projects.nameLabel')}</label>
-            <input
-              value={form.name}
-              required
-              minLength={2}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-              placeholder="New workspace"
-            />
+      {orderedWorkspaces.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-white">
+          <div className="text-center mb-6">
+            <h3 className="text-sm font-semibold">{t('projects.emptyTitle')}</h3>
+            <p className="mt-2 text-xs text-white/60">{t('projects.emptySubtitle')}</p>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-white/60">{t('projects.statusLabel')}</label>
-            <select
-              value={form.status}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, status: event.target.value as ProjectStatus }))
-              }
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-            >
-              {statusOptions.map((option) => (
-                <option key={option} value={option} className="text-slate-900">
-                  {option}
-                </option>
+          
+          <div className="space-y-4 max-w-md mx-auto">
+            <div className="space-y-2">
+              <label className="text-xs text-white/60 block">Workspace Name</label>
+              <input
+                value={form.name}
+                required
+                minLength={2}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                placeholder="Enter workspace name"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs text-white/60 w-full">Suggested names:</span>
+              {['Production Env', 'Staging Env', 'Product X', 'Product Y'].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, name: suggestion }))}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  {suggestion}
+                </button>
               ))}
-            </select>
-          </div>
-          <div className="flex items-end">
+            </div>
+            
             <button
-              type="submit"
-              disabled={creating}
-              className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+              type="button"
+              onClick={() => handleCreate()}
+              disabled={creating || !form.name.trim()}
+              className="w-full rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {creating ? t('projects.creating') : t('projects.createButton')}
             </button>
           </div>
-        </form>
-        {success ? <p className="mt-3 text-xs text-emerald-300">{success}</p> : null}
-      </section>
-
-      {orderedWorkspaces.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#0f151d] px-6 py-10 text-center text-white">
-          <h3 className="text-sm font-semibold">{t('projects.emptyTitle')}</h3>
-          <p className="mt-2 text-xs text-white/60">{t('projects.emptySubtitle')}</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <>
+          <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+            <h2 className="text-sm font-semibold">{t('projects.createTitle')}</h2>
+            <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-[2fr,1fr,auto]">
+              <div className="space-y-1">
+                <label className="text-xs text-white/60">{t('projects.nameLabel')}</label>
+                <input
+                  value={form.name}
+                  required
+                  minLength={2}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                  placeholder="New workspace"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-white/60">{t('projects.statusLabel')}</label>
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, status: event.target.value as ProjectStatus }))
+                  }
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option} value={option} className="text-slate-900">
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {creating ? t('projects.creating') : t('projects.createButton')}
+                </button>
+              </div>
+            </form>
+            {success ? <p className="mt-3 text-xs text-emerald-300">{success}</p> : null}
+          </section>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orderedWorkspaces.map((workspace) => (
             <div
               key={workspace.project.id}
@@ -180,6 +224,7 @@ function ProjectsPage() {
             </div>
           ))}
         </div>
+        </>
       )}
     </div>
   )

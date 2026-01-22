@@ -38,8 +38,8 @@ function Register() {
         setSelectedProjectId(response.workspace.id)
       }
 
-      // Navigate to dashboard
-      navigate('/dashboard', { replace: true })
+      // Navigate to workspaces page
+      navigate('/app/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
