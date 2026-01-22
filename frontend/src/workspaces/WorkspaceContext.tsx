@@ -44,8 +44,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      const workspaces = await workspaceService.listWorkspaces()
-      setWorkspaces(workspaces)
+      const workspaceListItems = await workspaceService.getMyWorkspaces()
+      // Extract Project objects from WorkspaceListItem[]
+      // Convert ProjectSummary to Project (they have compatible structure)
+      const projects: Project[] = workspaceListItems.map((item) => ({
+        ...item.project,
+        status: item.project.status as Project['status'],
+      }))
+      setWorkspaces(projects)
       // Backward compatibility: try new key first, then old key
       let stored = localStorage.getItem(STORAGE_KEY)
       if (!stored) {
@@ -58,9 +64,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
       const storedId = stored ? Number(stored) : null
       const validId =
-        storedId && workspaces.some((workspace) => workspace.id === storedId)
+        storedId && projects.some((workspace) => workspace.id === storedId)
           ? storedId
-          : workspaces[0]?.id ?? null
+          : projects[0]?.id ?? null
       setSelectedWorkspaceIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, String(validId))

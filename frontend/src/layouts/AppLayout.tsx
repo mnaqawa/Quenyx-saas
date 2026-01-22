@@ -200,18 +200,26 @@ function AppLayout() {
                 <span>{t('nav.projects')}</span>
                 <select
                   value={selectedWorkspaceId ?? ''}
-                  onChange={(event) => setSelectedWorkspaceId(Number(event.target.value))}
+                  onChange={(event) => {
+                    const workspaceId = Number(event.target.value)
+                    if (workspaceId) {
+                      setSelectedWorkspaceId(workspaceId)
+                      // Navigate to dashboard after selection
+                      navigate('/dashboard')
+                    }
+                  }}
                   className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
                 >
                   {workspaces.length === 0 ? (
                     <option value="">No workspaces</option>
-                  ) : (
-                    workspaces.map((workspace) => (
-                      <option key={workspace.id} value={workspace.id} className="text-slate-900">
-                        {workspace.name}
-                      </option>
-                    ))
-                  )}
+                  ) : !selectedWorkspaceId ? (
+                    <option value="">Select a workspace</option>
+                  ) : null}
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id} className="text-slate-900">
+                      {workspace.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <span className="inline-flex items-center gap-2 text-xs text-white/70">

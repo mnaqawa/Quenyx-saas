@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
 import { Project, ProjectStatus, UpdateProjectInput } from '../types/project'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
@@ -12,6 +13,7 @@ function WorkspaceDetailsPage() {
   const { t } = useLanguage()
   const { id } = useParams()
   const navigate = useNavigate()
+  const { selectedWorkspaceId, setSelectedWorkspaceId, workspaces } = useWorkspaceContext()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,6 +23,17 @@ function WorkspaceDetailsPage() {
   const [deleting, setDeleting] = useState(false)
 
   const projectId = Number(id)
+
+  // Auto-select workspace from URL if different from current selection
+  useEffect(() => {
+    if (Number.isFinite(projectId) && projectId > 0) {
+      // Check if workspace exists in the list
+      const workspaceExists = workspaces.some((w) => w.id === projectId)
+      if (workspaceExists && selectedWorkspaceId !== projectId) {
+        setSelectedWorkspaceId(projectId)
+      }
+    }
+  }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId, workspaces])
 
   const loadProject = async () => {
     if (!Number.isFinite(projectId)) {

@@ -5,7 +5,7 @@ import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 /**
  * Guard that ensures a workspace is selected before accessing app routes.
  * Redirects to /app/projects if no workspace is selected.
- * Exception: allows access to /app/projects itself.
+ * Exceptions: allows access to /app/projects (list) and /profile without selection.
  */
 function WorkspaceGuard() {
   const token = getAuthToken()
@@ -17,13 +17,20 @@ function WorkspaceGuard() {
     return <Outlet />
   }
 
-  // Allow access to workspaces page itself (but not project details)
+  // Allow access to workspaces list page without selection
   if (location.pathname === '/app/projects') {
     return <Outlet />
   }
-  
-  // Allow access to project details page (user can view details without selecting)
+
+  // Allow access to profile page without selection
+  if (location.pathname === '/profile') {
+    return <Outlet />
+  }
+
+  // For workspace detail pages, we'll auto-select in the component (see WorkspaceDetailsPage)
+  // But still require selection for other workspace-scoped pages
   if (location.pathname.startsWith('/app/projects/')) {
+    // Allow access, but the page component will auto-select
     return <Outlet />
   }
 
