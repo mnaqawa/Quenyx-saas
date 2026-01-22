@@ -30,14 +30,19 @@ const OLD_STORAGE_KEY = 'portshield.selected_project_id' // For backward compati
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Project[]>([])
-  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<number | null>(null)
+  // Initialize selectedWorkspaceId from localStorage on mount for immediate display
+  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY)
+    return stored ? Number(stored) : null
+  })
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
   const [modulesWithAccess, setModulesWithAccess] = useState<ModuleWithAccess[] | null>(null)
   const [isLoadingModules, setIsLoadingModules] = useState(false)
   const [modulesError, setModulesError] = useState<string | null>(null)
 
-  const refreshWorkspaces = async () => {
+  const refreshWorkspaces = useCallback(async () => {
     if (!getAuthToken()) {
       setWorkspaces([])
       setSelectedWorkspaceIdState(null)
@@ -70,12 +75,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setSelectedWorkspaceIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, String(validId))
+      } else {
+        // Clear localStorage if no valid selection
+        localStorage.removeItem(STORAGE_KEY)
       }
     } catch (err) {
-      // Ignore errors
-      setWorkspaces([])
+      // On error, preserve existing selection if possible
+      console.error('Failed to refresh workspaces:', err)
+      // Only clear if we have no stored selection
+      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY)
+      if (!stored) {
+        setWorkspaces([])
+        setSelectedWorkspaceIdState(null)
+      }
     }
-  }
+  }, [])
 
   const refreshEntitlements = useCallback(async () => {
     if (!getAuthToken() || !selectedWorkspaceId) {
@@ -96,7 +110,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshWorkspaces()
-  }, [])
+  }, [refreshWorkspaces])
 
   const refreshModules = useCallback(async () => {
     if (!getAuthToken() || !selectedWorkspaceId) {

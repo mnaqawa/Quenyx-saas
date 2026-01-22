@@ -198,6 +198,11 @@ function AppLayout() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2 text-xs text-white/70">
                 <span>{t('nav.projects')}</span>
+                {import.meta.env.DEV && (
+                  <span className="text-[10px] text-white/40">
+                    ({workspaces.length} ws, sel: {selectedWorkspaceId ?? 'null'})
+                  </span>
+                )}
                 <select
                   value={selectedWorkspaceId ?? ''}
                   onChange={(event) => {

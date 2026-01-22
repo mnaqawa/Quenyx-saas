@@ -15,27 +15,35 @@ const formatDate = (value: string) => {
 function WorkspacesPage() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
-  const [workspaces, setWorkspaces] = useState<WorkspaceListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { selectedWorkspaceId, setSelectedWorkspaceId, refreshWorkspaces } = useWorkspaceContext()
   const [form, setForm] = useState<CreateProjectInput>({ name: '', status: 'active' })
   const [creating, setCreating] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [hasAutoSelected, setHasAutoSelected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch workspaces list for display (includes my_role which context doesn't have)
+  const [workspacesList, setWorkspacesList] = useState<WorkspaceListItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   const loadWorkspaces = async () => {
     setLoading(true)
     setError(null)
     try {
       const workspaces = await workspaceService.getMyWorkspaces()
-      setWorkspaces(workspaces)
+      setWorkspacesList(workspaces)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadWorkspaces()
+    // Also refresh context workspaces to keep dropdown in sync
+    refreshWorkspaces()
+  }, [refreshWorkspaces])
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
     setSelectedWorkspaceId(workspace.project.id)
@@ -57,14 +65,10 @@ function WorkspacesPage() {
     }
   }
 
-  useEffect(() => {
-    loadWorkspaces()
-  }, [])
-
   // Auto-select and redirect if exactly one workspace and none selected
   useEffect(() => {
-    if (!loading && workspaces.length === 1 && !selectedWorkspaceId && !hasAutoSelected) {
-      const singleWorkspace = workspaces[0]
+    if (!loading && workspacesList.length === 1 && !selectedWorkspaceId && !hasAutoSelected) {
+      const singleWorkspace = workspacesList[0]
       setSelectedWorkspaceId(singleWorkspace.project.id)
       setHasAutoSelected(true)
       // Navigate to dashboard after a brief moment to allow state to update
@@ -72,7 +76,7 @@ function WorkspacesPage() {
         navigate('/dashboard', { replace: true })
       }, 100)
     }
-  }, [loading, workspaces, selectedWorkspaceId, hasAutoSelected, setSelectedWorkspaceId, navigate])
+  }, [loading, workspacesList, selectedWorkspaceId, hasAutoSelected, setSelectedWorkspaceId, navigate])
 
   const handleCreate = async (event?: React.FormEvent<HTMLFormElement>) => {
     if (event) {
@@ -91,6 +95,9 @@ function WorkspacesPage() {
       })
       setForm({ name: '', status: 'active' })
       setSuccess(t('projects.createTitle'))
+      // Refresh context workspaces so dropdown updates immediately
+      await refreshWorkspaces()
+      // Also refresh local list for display
       await loadWorkspaces()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -100,10 +107,10 @@ function WorkspacesPage() {
   }
 
   const orderedWorkspaces = useMemo(() => {
-    return [...workspaces].sort((a, b) => 
+    return [...workspacesList].sort((a, b) => 
       b.project.updated_at.localeCompare(a.project.updated_at)
     )
-  }, [workspaces])
+  }, [workspacesList])
 
   if (loading) {
     return <div className="text-sm text-white/60">{t('common.loadingDashboard')}</div>
