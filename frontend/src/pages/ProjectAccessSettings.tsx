@@ -61,7 +61,7 @@ function ProjectAccessSettings() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update module override'
       if (errorMessage.includes('403') || errorMessage.includes('owners')) {
-        setOverrideError('Only project owners can change access settings.')
+        setOverrideError('Only workspace owners can change access settings.')
       } else {
         setOverrideError(errorMessage)
       }
@@ -72,11 +72,11 @@ function ProjectAccessSettings() {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold text-white">Project Access</h1>
-          <p className="text-sm text-white/60">Manage module access for your project</p>
+          <h1 className="text-2xl font-semibold text-white">Workspace Access</h1>
+          <p className="text-sm text-white/60">Manage module access for your workspace</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
-          <p className="text-sm text-white/60">Select a project to manage access settings</p>
+          <p className="text-sm text-white/60">Select a workspace to manage access settings</p>
         </div>
       </div>
     )
@@ -90,10 +90,10 @@ function ProjectAccessSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold text-white">Project Access</h1>
-        <p className="text-sm text-white/60">Manage module access for your project</p>
-      </div>
+        <div className="space-y-1 text-center">
+          <h1 className="text-2xl font-semibold text-white">Workspace Access</h1>
+          <p className="text-sm text-white/60">Manage module access for your workspace</p>
+        </div>
 
       <div className="flex gap-2 justify-center">
         <Link

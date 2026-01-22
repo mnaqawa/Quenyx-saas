@@ -150,7 +150,7 @@ function Subscriptions() {
           <p className="text-sm text-white/60">{t('subscriptions.subtitle')}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
-          <p className="text-sm text-white/60">Select a project to view module subscriptions</p>
+          <p className="text-sm text-white/60">Select a workspace to view module subscriptions</p>
         </div>
       </div>
     )
@@ -175,7 +175,7 @@ function Subscriptions() {
 
       {selectedProjectId && (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <h2 className="text-sm font-semibold mb-4">Project Subscription</h2>
+          <h2 className="text-sm font-semibold mb-4">Workspace Subscription</h2>
           {loadingSubscription ? (
             <div className="text-sm text-white/60">Loading...</div>
           ) : subscription ? (

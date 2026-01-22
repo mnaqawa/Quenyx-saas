@@ -65,7 +65,7 @@ function ProjectMembers() {
       // Handle 403 unauthorized errors gracefully
       if (err instanceof Error && (err as any).status === 403) {
         setUnauthorized(true)
-        setError('You do not have permission to view memberships for this project.')
+        setError('You do not have permission to view memberships for this workspace.')
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load memberships')
       }
@@ -136,11 +136,11 @@ function ProjectMembers() {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold text-white">Project Members</h1>
+          <h1 className="text-2xl font-semibold text-white">Workspace Members</h1>
           <p className="text-sm text-white/60">Manage team members and their roles</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
-          <p className="text-sm text-white/60">Select a project to manage members</p>
+          <p className="text-sm text-white/60">Select a workspace to manage members</p>
         </div>
       </div>
     )
@@ -155,11 +155,11 @@ function ProjectMembers() {
     return (
       <div className="space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold text-white">Project Members</h1>
+          <h1 className="text-2xl font-semibold text-white">Workspace Members</h1>
           <p className="text-sm text-white/60">Manage team members and their roles</p>
         </div>
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {error || 'You do not have permission to view memberships for this project.'}
+          {error || 'You do not have permission to view memberships for this workspace.'}
         </div>
       </div>
     )
@@ -180,7 +180,7 @@ function ProjectMembers() {
 
       {!canManage && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          Only project owners and admins can manage members
+          Only workspace owners and admins can manage members
         </div>
       )}
 

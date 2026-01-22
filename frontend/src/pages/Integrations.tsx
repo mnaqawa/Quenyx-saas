@@ -44,7 +44,7 @@ function Integrations() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load integrations'
         setError(errorMessage.includes('404') || errorMessage.includes('not found')
-          ? `Project integrations not available. Please ensure the project exists and you have access.`
+          ? `Workspace integrations not available. Please ensure the workspace exists and you have access.`
           : errorMessage)
       } finally {
         setLoading(false)

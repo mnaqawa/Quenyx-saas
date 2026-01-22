@@ -117,7 +117,7 @@ function ProjectsPage() {
               minLength={2}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-              placeholder="New project"
+              placeholder="New workspace"
             />
           </div>
           <div className="space-y-1">

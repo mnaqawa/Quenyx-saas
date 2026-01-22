@@ -86,7 +86,7 @@ function AppLayout() {
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
-            Project Settings
+            Workspace Settings
           </Link>
           <Link
             to="/integrations"
@@ -121,7 +121,7 @@ function AppLayout() {
             </div>
           ) : !modulesWithAccess || modulesWithAccess.length === 0 ? (
             <div className="px-3 py-2 text-xs text-white/40">
-              {selectedProjectId ? 'No modules available' : 'Select a project'}
+              {selectedProjectId ? 'No modules available' : 'Select a workspace'}
             </div>
           ) : (
             modulesWithAccess
@@ -204,7 +204,7 @@ function AppLayout() {
                   className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
                 >
                   {projects.length === 0 ? (
-                    <option value="">No projects</option>
+                    <option value="">No workspaces</option>
                   ) : (
                     projects.map((project) => (
                       <option key={project.id} value={project.id} className="text-slate-900">

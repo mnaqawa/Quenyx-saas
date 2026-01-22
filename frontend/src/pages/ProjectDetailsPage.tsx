@@ -24,7 +24,7 @@ function ProjectDetailsPage() {
 
   const loadProject = async () => {
     if (!Number.isFinite(projectId)) {
-      setError('Invalid project id')
+      setError('Invalid workspace id')
       setLoading(false)
       return
     }
@@ -66,7 +66,7 @@ function ProjectDetailsPage() {
 
   const handleDelete = async () => {
     if (!project) return
-    if (!window.confirm('Delete this project?')) return
+    if (!window.confirm('Delete this workspace?')) return
     setDeleting(true)
     setError(null)
     try {
