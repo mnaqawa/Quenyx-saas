@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService } from '../services/authService'
-import { routesByModule, getModule, isModuleReady, getModuleBasePath, isModuleLocked } from '../constants/platformRegistry'
+import { routesByModule, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules } from '../constants/platformRegistry'
 
 function AppLayout() {
   const location = useLocation()
@@ -216,30 +216,19 @@ function AppLayout() {
                   </div>
                 )}
               </div>
-              {/* Other modules - use platformRegistry */}
-              {modulesWithAccess
-                .filter((module) => {
-                  // Filter out invalid modules
-                  if (!module || !module.key) return false
-                  return module.key.toLowerCase().startsWith('shield') && module.key !== 'shieldobserve'
+              {/* Other modules - use platformRegistry as source of truth */}
+              {platformModules
+                .filter((moduleConfig) => {
+                  // Show all modules except shieldobserve (which is shown separately above)
+                  return moduleConfig.key !== 'shieldobserve'
                 })
-                .filter((module, index, self) => 
-                  // Deduplicate by key (defensive filter)
-                  module.key && index === self.findIndex((m) => m.key === module.key)
-                )
-                .map((module) => {
-                  // Safely get module config with fallback
-                  const moduleConfig = getModule(module.key)
-                  if (!moduleConfig) {
-                    // If module not in registry, skip it (defensive)
-                    console.warn(`Module ${module.key} not found in platformRegistry`)
-                    return null
-                  }
-
+                .sort((a, b) => (a.sidebar.order || 999) - (b.sidebar.order || 999))
+                .map((moduleConfig) => {
                   try {
-                    const isAllowed = allowedByKey[module.key] ?? false
-                    const isModuleReadyStatus = isModuleReady(module.key)
-                    const isLocked = isModuleLocked(module.key, allowedByKey)
+                    // Check if module has access from API
+                    const isAllowed = allowedByKey[moduleConfig.key] ?? false
+                    const isModuleReadyStatus = isModuleReady(moduleConfig.key)
+                    const isLocked = isModuleLocked(moduleConfig.key, allowedByKey)
                     
                     // Build navigation path using platformRegistry
                     let navPath = '#'
@@ -248,25 +237,25 @@ function AppLayout() {
                       navPath = '#'
                     } else if (!isModuleReadyStatus) {
                       // Module not ready - route to placeholder
-                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                      navPath = getModuleBasePath(moduleConfig.key, selectedWorkspaceId)
                     } else if (isModuleReadyStatus && isAllowed) {
                       // Ready and allowed - use base path (first route if available)
-                      const routes = routesByModule[module.key]
+                      const routes = routesByModule[moduleConfig.key]
                       if (routes && routes.length > 0) {
                         navPath = routes[0].path.replace(':id', String(selectedWorkspaceId))
                       } else {
-                        navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                        navPath = getModuleBasePath(moduleConfig.key, selectedWorkspaceId)
                       }
                     } else {
                       // Ready but locked - route to placeholder (locked state handled in ComingSoon)
-                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                      navPath = getModuleBasePath(moduleConfig.key, selectedWorkspaceId)
                     }
 
                     const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')
 
                     return (
                       <Link
-                        key={module.key}
+                        key={moduleConfig.key}
                         to={navPath}
                         onClick={(e) => {
                           if (!selectedWorkspaceId && moduleConfig.requiresWorkspace) {
@@ -303,7 +292,7 @@ function AppLayout() {
                     )
                   } catch (err) {
                     // Defensive error handling for module rendering
-                    console.error(`Error rendering module ${module.key}:`, err)
+                    console.error(`Error rendering module ${moduleConfig.key}:`, err)
                     return null
                   }
                 })
