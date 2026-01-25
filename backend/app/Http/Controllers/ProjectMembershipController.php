@@ -44,6 +44,14 @@ class ProjectMembershipController extends Controller
 
             // Get invites (include token for owner/admin)
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated',
+                ], 401);
+            }
+            
             $userMembership = $project->memberships()
                 ->where('user_id', $user->id)
                 ->first();
@@ -130,6 +138,13 @@ class ProjectMembershipController extends Controller
             }
 
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated',
+                ], 401);
+            }
 
             // Check if user already has membership
             $existingMembership = $project->memberships()
