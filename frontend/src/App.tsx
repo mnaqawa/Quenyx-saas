@@ -23,7 +23,7 @@ import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
 import Reports from './pages/observe/Reports'
 import DataSources from './pages/observe/DataSources'
-import ModulePlaceholder from './pages/ModulePlaceholder'
+import ComingSoon from './pages/ComingSoon'
 
 function App() {
   return (
@@ -63,7 +63,7 @@ function App() {
             {/* Module placeholder routes (Coming Soon) */}
             <Route 
               path="app/workspaces/:id/modules/:moduleKey" 
-              element={<ModulePlaceholder />} 
+              element={<ComingSoon />} 
             />
           </Route>
         </Route>

@@ -28,7 +28,7 @@ function buildGatewayUrl(endpoint: string, options?: GatewayRequestOptions): str
   }
 
   // Direct API route (current behavior)
-  return `/${cleanEndpoint}`
+  return `/api/${cleanEndpoint}`
 }
 
 /**

@@ -234,22 +234,20 @@ function AppLayout() {
                   const moduleConfig = getModuleByKey(module.key)
                   const isModuleReadyStatus = isModuleReady(module.key)
                   
-                  // Determine if module should navigate to ComingSoon or subscriptions
-                  const shouldShowComingSoon = !isModuleReadyStatus || (!isAllowed && isModuleReadyStatus)
-                  
                   // Build navigation path
                   let navPath = '#'
-                  if (shouldShowComingSoon && selectedWorkspaceId) {
-                    // Route to ComingSoon page for this module
+                  if (!selectedWorkspaceId) {
+                    // No workspace selected - keep disabled
+                    navPath = '#'
+                  } else if (!isModuleReadyStatus) {
+                    // Module not ready - route to placeholder
                     navPath = `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
-                  } else if (!isAllowed) {
-                    // Locked module - still route to ComingSoon but with locked flag
-                    navPath = selectedWorkspaceId 
-                      ? `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
-                      : '/subscriptions'
-                  } else if (moduleConfig && isModuleReadyStatus) {
-                    // Ready module - use its base path
-                    navPath = moduleConfig.basePath(selectedWorkspaceId || '')
+                  } else if (isModuleReadyStatus && isAllowed && moduleConfig) {
+                    // Ready and allowed - use base path
+                    navPath = moduleConfig.basePath(selectedWorkspaceId)
+                  } else {
+                    // Ready but locked - route to placeholder (locked state handled in ComingSoon)
+                    navPath = `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
                   }
 
                   const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')

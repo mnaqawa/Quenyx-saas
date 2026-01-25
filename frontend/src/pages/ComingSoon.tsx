@@ -1,22 +1,18 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { getModuleByKey } from '../constants/modules'
 
-interface ComingSoonProps {
-  moduleKey: string
-  moduleName?: string
-  description?: string
-  isLocked?: boolean
-}
-
-export default function ComingSoon({ moduleKey, moduleName, description, isLocked }: ComingSoonProps) {
+export default function ComingSoon() {
   const navigate = useNavigate()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const { moduleKey } = useParams<{ moduleKey: string }>()
+  const { selectedWorkspaceId, allowedByKey } = useWorkspaceContext()
 
   // Get module config if available
-  const moduleConfig = getModuleByKey(moduleKey)
-  const displayName = moduleName || moduleConfig?.displayName || moduleKey
-  const moduleDescription = description || moduleConfig?.description || 'This module is under construction and will be available soon.'
+  const actualModuleKey = moduleKey || 'unknown'
+  const moduleConfig = getModuleByKey(actualModuleKey)
+  const displayName = moduleConfig?.displayName || actualModuleKey
+  const moduleDescription = moduleConfig?.description || 'This module is under construction and will be available soon.'
+  const isLocked = !allowedByKey[actualModuleKey]
 
   const canNavigateToObserve = selectedWorkspaceId !== null
   const observePath = selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring` : '#'
@@ -49,10 +45,10 @@ export default function ComingSoon({ moduleKey, moduleName, description, isLocke
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/app/workspaces')}
             className="rounded-full bg-sky-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
           >
-            Back to Dashboard
+            Back to Workspaces
           </button>
           <Link
             to={observePath}
