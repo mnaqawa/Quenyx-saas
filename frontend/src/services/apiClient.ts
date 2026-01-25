@@ -139,10 +139,12 @@ class ApiClient {
         if (response.status === 401) {
           clearAuthToken()
         }
-        const message = data.message || 'An error occurred'
+        // Extract error message - prioritize message field, fallback to error field
+        const message = data.message || data.error || `Server error (${response.status})`
         const error = new Error(message)
         ;(error as any).errors = data.errors || null
         ;(error as any).status = response.status
+        ;(error as any).url = url
         throw error
       }
 

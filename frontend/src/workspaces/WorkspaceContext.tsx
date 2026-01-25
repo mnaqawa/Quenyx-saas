@@ -103,18 +103,29 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // Improved error handling with more specific messages
       let errorMessage = 'Failed to load workspaces'
       if (err instanceof Error) {
-        // Check for specific error types
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          errorMessage = 'Authentication required'
-        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
-          errorMessage = 'Access denied'
-        } else if (err.message.includes('404') || err.message.includes('Not Found')) {
-          errorMessage = 'Workspaces not found'
-        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
-          errorMessage = 'Network error - please check your connection'
-        } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
-          // Use the actual error message if it's meaningful
+        // Always use the error message from the backend if available
+        // Only override for generic/unhelpful messages
+        if (err.message && 
+            err.message !== 'An error occurred' && 
+            err.message !== 'An unexpected error occurred' &&
+            !err.message.startsWith('HTTP ') && // Don't use generic HTTP status messages if we have a better one
+            !err.message.includes('Failed to parse') &&
+            !err.message.includes('Invalid API response')) {
+          // Use the actual error message from backend
           errorMessage = err.message
+        } else {
+          // Fallback to specific error types for generic errors
+          if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            errorMessage = 'Authentication required'
+          } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+            errorMessage = 'Access denied'
+          } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+            errorMessage = 'Workspaces not found'
+          } else if (err.message.includes('500') || err.message.includes('Internal Server Error')) {
+            errorMessage = 'Server error - please contact support if this persists'
+          } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+            errorMessage = 'Network error - please check your connection'
+          }
         }
       }
 

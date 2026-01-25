@@ -39,19 +39,31 @@ function WorkspacesPage() {
       const workspaces = await workspaceService.getMyWorkspaces()
       setWorkspacesList(workspaces)
     } catch (err) {
-      // Improved error handling
+      // Improved error handling - use backend error message directly
       let errorMessage = 'Failed to load workspaces'
       if (err instanceof Error) {
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          errorMessage = 'Authentication required'
-        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
-          errorMessage = 'Access denied'
-        } else if (err.message.includes('404') || err.message.includes('Not Found')) {
-          errorMessage = 'Workspaces not found'
-        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
-          errorMessage = 'Network error - please check your connection'
-        } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
+        // Always use the error message from the backend if available
+        if (err.message && 
+            err.message !== 'An error occurred' && 
+            err.message !== 'An unexpected error occurred' &&
+            !err.message.startsWith('HTTP ') &&
+            !err.message.includes('Failed to parse') &&
+            !err.message.includes('Invalid API response')) {
+          // Use the actual error message from backend
           errorMessage = err.message
+        } else {
+          // Fallback to specific error types
+          if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            errorMessage = 'Authentication required'
+          } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+            errorMessage = 'Access denied'
+          } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+            errorMessage = 'Workspaces not found'
+          } else if (err.message.includes('500') || err.message.includes('Internal Server Error')) {
+            errorMessage = 'Server error - please contact support if this persists'
+          } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+            errorMessage = 'Network error - please check your connection'
+          }
         }
       }
       setError(errorMessage)
