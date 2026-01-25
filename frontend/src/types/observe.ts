@@ -165,3 +165,31 @@ export interface DataSourceSummary {
   syncStatus: number
   lastUpdate: string
 }
+
+// Services page types
+export interface ObserveServiceRow {
+  host: string
+  service: string
+  status: 'ok' | 'warning' | 'critical' | 'unknown' | 'pending'
+  lastCheckAt: string
+  durationSec: number
+  attempt: string
+  info: string
+}
+
+export interface ObserveServicesResponse {
+  hostTotals: {
+    up: number
+    down: number
+    unreachable: number
+    pending: number
+  }
+  serviceTotals: {
+    ok: number
+    warning: number
+    unknown: number
+    critical: number
+    pending: number
+  }
+  items: ObserveServiceRow[]
+}

@@ -13,6 +13,7 @@ import type {
   ReportSummary,
   DataSource,
   DataSourceSummary,
+  ObserveServicesResponse,
 } from '../types/observe'
 
 export const observeService = {
@@ -68,6 +69,28 @@ export const observeService = {
       ? `/api/workspaces/${workspaceId}/observe/instances?status=${encodeURIComponent(status)}`
       : `/api/workspaces/${workspaceId}/observe/instances`
     return apiClient.get<Instance[]>(url)
+  },
+
+  // Services
+  async getServices(
+    workspaceId: number,
+    params?: {
+      q?: string
+      status?: string[]
+      limit?: number
+      problemsOnly?: boolean
+    }
+  ): Promise<ObserveServicesResponse> {
+    const queryParams = new URLSearchParams()
+    if (params?.q) queryParams.append('q', params.q)
+    if (params?.status) params.status.forEach((s) => queryParams.append('status', s))
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.problemsOnly) queryParams.append('problemsOnly', 'true')
+
+    const url = `/api/workspaces/${workspaceId}/observe/services${
+      queryParams.toString() ? `?${queryParams.toString()}` : ''
+    }`
+    return apiClient.get<ObserveServicesResponse>(url)
   },
 
   async getInstanceSummary(workspaceId: number): Promise<InstanceSummary> {

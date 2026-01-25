@@ -20,6 +20,7 @@ import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
 import CapacityPlanning from './pages/observe/CapacityPlanning'
 import AlertManagement from './pages/observe/AlertManagement'
 import InstanceManagement from './pages/observe/InstanceManagement'
+import Services from './pages/observe/Services'
 import Reports from './pages/observe/Reports'
 import DataSources from './pages/observe/DataSources'
 
@@ -53,6 +54,7 @@ function App() {
               <Route path="capacity-planning" element={<CapacityPlanning />} />
               <Route path="alert-management" element={<AlertManagement />} />
               <Route path="instance-management" element={<InstanceManagement />} />
+              <Route path="services" element={<Services />} />
               <Route path="reports" element={<Reports />} />
               <Route path="data-sources" element={<DataSources />} />
               <Route index element={<RealTimeMonitoring />} />

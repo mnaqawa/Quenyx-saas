@@ -8,6 +8,7 @@ const observePages = [
   { path: 'capacity-planning', label: 'Capacity Planning' },
   { path: 'alert-management', label: 'Alert Management' },
   { path: 'instance-management', label: 'Instance Management' },
+  { path: 'services', label: 'Services' },
   { path: 'reports', label: 'Reports' },
   { path: 'data-sources', label: 'Data Sources' },
 ]

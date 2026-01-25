@@ -16,6 +16,7 @@ import {
   dataSourcesFixture,
   dataSourceSummaryFixture,
 } from '../fixtures/observeFixtures'
+import { servicesFixture } from '../fixtures/servicesFixture'
 import type {
   RealTimeMetrics,
   SystemInfo,
@@ -30,6 +31,7 @@ import type {
   ReportSummary,
   DataSource,
   DataSourceSummary,
+  ObserveServicesResponse,
 } from '../types/observe'
 
 // Real-time Monitoring hooks
@@ -358,4 +360,82 @@ export function useDataSourceSummary() {
   }, [selectedWorkspaceId])
 
   return { summary, loading }
+}
+
+// Services hooks
+interface UseObserveServicesParams {
+  workspaceId: string | null
+  q?: string
+  statuses?: string[]
+  limit?: number
+  problemsOnly?: boolean
+}
+
+export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly }: UseObserveServicesParams) {
+  const [data, setData] = useState<ObserveServicesResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setData(null)
+      setLoading(false)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      let filtered = { ...servicesFixture }
+
+      // Apply problemsOnly filter
+      if (problemsOnly) {
+        filtered.items = filtered.items.filter(
+          (item) => item.status !== 'ok' && item.status !== 'pending'
+        )
+      }
+
+      // Apply status filter
+      if (statuses && statuses.length > 0) {
+        filtered.items = filtered.items.filter((item) => statuses.includes(item.status))
+      }
+
+      // Apply search query
+      if (q && q.trim()) {
+        const query = q.toLowerCase()
+        filtered.items = filtered.items.filter(
+          (item) =>
+            item.host.toLowerCase().includes(query) ||
+            item.service.toLowerCase().includes(query) ||
+            item.info.toLowerCase().includes(query)
+        )
+      }
+
+      // Apply limit
+      if (limit) {
+        filtered.items = filtered.items.slice(0, limit)
+      }
+
+      // Recalculate totals based on filtered items
+      const hostCounts = new Set(filtered.items.map((item) => item.host))
+      filtered.hostTotals = {
+        up: hostCounts.size,
+        down: 0,
+        unreachable: 0,
+        pending: 0,
+      }
+
+      filtered.serviceTotals = {
+        ok: filtered.items.filter((item) => item.status === 'ok').length,
+        warning: filtered.items.filter((item) => item.status === 'warning').length,
+        unknown: filtered.items.filter((item) => item.status === 'unknown').length,
+        critical: filtered.items.filter((item) => item.status === 'critical').length,
+        pending: filtered.items.filter((item) => item.status === 'pending').length,
+      }
+
+      setData(filtered)
+      setLoading(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [workspaceId, q, statuses, limit, problemsOnly])
+
+  return { data, loading }
 }
