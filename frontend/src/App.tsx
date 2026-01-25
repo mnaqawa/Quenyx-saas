@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import AppLayout from './layouts/AppLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
@@ -24,8 +25,17 @@ import Services from './pages/observe/Services'
 import Reports from './pages/observe/Reports'
 import DataSources from './pages/observe/DataSources'
 import ComingSoon from './pages/ComingSoon'
+import { routesByModule } from './constants/platformRegistry'
+import { validateRegistryInDevelopment } from './constants/registrySanity'
 
 function App() {
+  // Validate platform registry in development mode
+  useEffect(() => {
+    validateRegistryInDevelopment()
+  }, [])
+
+  // Generate ShieldObserve routes from platformRegistry
+  const observeRoutes = routesByModule.shieldobserve || []
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -47,17 +57,36 @@ function App() {
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="profile" element={<Profile />} />
-            {/* ShieldObserve routes */}
+            {/* ShieldObserve routes - generated from platformRegistry */}
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
-              <Route path="real-time-monitoring" element={<RealTimeMonitoring />} />
-              <Route path="infrastructure-map" element={<InfrastructureMap />} />
-              <Route path="performance-analytics" element={<PerformanceAnalytics />} />
-              <Route path="capacity-planning" element={<CapacityPlanning />} />
-              <Route path="alert-management" element={<AlertManagement />} />
-              <Route path="instance-management" element={<InstanceManagement />} />
-              <Route path="services" element={<Services />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="data-sources" element={<DataSources />} />
+              {/* Route mapping: route.key -> component */}
+              {observeRoutes.find((r) => r.key === 'real-time-monitoring') && (
+                <Route path="real-time-monitoring" element={<RealTimeMonitoring />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'infrastructure-map') && (
+                <Route path="infrastructure-map" element={<InfrastructureMap />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'performance-analytics') && (
+                <Route path="performance-analytics" element={<PerformanceAnalytics />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'capacity-planning') && (
+                <Route path="capacity-planning" element={<CapacityPlanning />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'alert-management') && (
+                <Route path="alert-management" element={<AlertManagement />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'instance-management') && (
+                <Route path="instance-management" element={<InstanceManagement />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'services') && (
+                <Route path="services" element={<Services />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'reports') && (
+                <Route path="reports" element={<Reports />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'data-sources') && (
+                <Route path="data-sources" element={<DataSources />} />
+              )}
               <Route index element={<RealTimeMonitoring />} />
             </Route>
             {/* Module placeholder routes (Coming Soon) */}

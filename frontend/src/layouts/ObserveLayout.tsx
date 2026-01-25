@@ -1,6 +1,6 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import { getObservePageTitle } from '../constants/observeRoutes'
+import { getPageTitleFromPath } from '../constants/platformRegistry'
 
 export default function ObserveLayout() {
   const location = useLocation()
@@ -14,10 +14,8 @@ export default function ObserveLayout() {
     )
   }
 
-  // Extract current page from path and get friendly title
-  const pathParts = location.pathname.split('/')
-  const currentPagePath = pathParts[pathParts.length - 1]
-  const currentPageTitle = getObservePageTitle(currentPagePath)
+  // Get page title from platformRegistry
+  const currentPageTitle = getPageTitleFromPath(location.pathname)
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">

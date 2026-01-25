@@ -1,68 +1,45 @@
-// Single source of truth for all modules in the platform
-// Defines module metadata: key, display name, status, routes, and access requirements
+// DEPRECATED: This file is kept for backward compatibility
+// All modules are now defined in platformRegistry.ts
+// Re-export from platformRegistry to maintain existing imports
 
-export type ModuleStatus = 'ready' | 'comingSoon'
-export type ModuleKey = 'shieldobserve' | 'shieldrun' | 'shieldbalance' | 'shieldcore' | string
+import {
+  type ModuleStatus,
+  type ModuleKey,
+  type ModuleConfig,
+  moduleRegistry,
+  getModuleByKey as getModuleByKeyFromRegistry,
+  getReadyModules as getReadyModulesFromRegistry,
+  getComingSoonModules as getComingSoonModulesFromRegistry,
+  isModuleReady as isModuleReadyFromRegistry,
+  getModuleBasePath,
+} from './platformRegistry'
 
-export interface ModuleConfig {
-  key: ModuleKey
-  displayName: string
-  status: ModuleStatus
-  basePath: (workspaceId: string | number) => string // Function to generate base path
-  requiresWorkspace: boolean
-  description?: string
-}
+// Re-export types
+export type { ModuleStatus, ModuleKey, ModuleConfig }
 
-// Module registry - all modules in the platform
-export const moduleRegistry: ModuleConfig[] = [
-  {
-    key: 'shieldobserve',
-    displayName: 'ShieldObserve',
-    status: 'ready',
-    basePath: (workspaceId) => `/app/workspaces/${workspaceId}/observe/real-time-monitoring`,
-    requiresWorkspace: true,
-    description: 'Real-time monitoring and infrastructure observability',
-  },
-  {
-    key: 'shieldrun',
-    displayName: 'ShieldRun',
-    status: 'comingSoon',
-    basePath: (workspaceId) => `/app/workspaces/${workspaceId}/shieldrun`,
-    requiresWorkspace: true,
-    description: 'Automated workflow execution and task scheduling',
-  },
-  {
-    key: 'shieldbalance',
-    displayName: 'ShieldBalance',
-    status: 'comingSoon',
-    basePath: (workspaceId) => `/app/workspaces/${workspaceId}/shieldbalance`,
-    requiresWorkspace: true,
-    description: 'Load balancing and traffic distribution',
-  },
-  {
-    key: 'shieldcore',
-    displayName: 'ShieldCore',
-    status: 'comingSoon',
-    basePath: (workspaceId) => `/app/workspaces/${workspaceId}/shieldcore`,
-    requiresWorkspace: true,
-    description: 'Core platform management and configuration',
-  },
-]
+// Re-export registry
+export { moduleRegistry }
 
-// Helper functions
+// Re-export helpers (with backward compatibility wrapper for basePath)
 export function getModuleByKey(key: string): ModuleConfig | undefined {
-  return moduleRegistry.find((m) => m.key === key)
+  const module = getModuleByKeyFromRegistry(key)
+  if (!module) return undefined
+
+  // Create backward-compatible ModuleConfig with basePath function
+  return {
+    ...module,
+    basePath: (workspaceId: string | number) => getModuleBasePath(key, workspaceId),
+  } as ModuleConfig & { basePath: (workspaceId: string | number) => string }
 }
 
 export function getReadyModules(): ModuleConfig[] {
-  return moduleRegistry.filter((m) => m.status === 'ready')
+  return getReadyModulesFromRegistry()
 }
 
 export function getComingSoonModules(): ModuleConfig[] {
-  return moduleRegistry.filter((m) => m.status === 'comingSoon')
+  return getComingSoonModulesFromRegistry()
 }
 
 export function isModuleReady(key: string): boolean {
-  const module = getModuleByKey(key)
-  return module?.status === 'ready'
+  return isModuleReadyFromRegistry(key)
 }

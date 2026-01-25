@@ -10,6 +10,7 @@ const USE_GATEWAY = import.meta.env.VITE_USE_GATEWAY === 'true' || false
 // Get current workspace ID from context (will be injected by services)
 export interface GatewayRequestOptions {
   workspaceId?: string | number
+  moduleKey?: string // Module scope for gateway routing (e.g., 'shieldobserve', 'shieldrun')
   headers?: Record<string, string>
 }
 
@@ -32,6 +33,27 @@ function buildGatewayUrl(endpoint: string, options?: GatewayRequestOptions): str
 }
 
 /**
+ * Builds headers with module scope information for gateway middleware
+ */
+function buildGatewayHeaders(options?: GatewayRequestOptions): Record<string, string> {
+  const headers: Record<string, string> = {
+    ...options?.headers,
+  }
+
+  // Add workspace ID header for gateway scoping
+  if (options?.workspaceId) {
+    headers['x-workspace-id'] = String(options.workspaceId)
+  }
+
+  // Add module key header for gateway scoping (defaults to 'shieldobserve' for observeService)
+  if (options?.moduleKey) {
+    headers['x-module-key'] = options.moduleKey
+  }
+
+  return headers
+}
+
+/**
  * Gateway client wrapper around apiClient
  * All future API calls should use this instead of apiClient directly
  */
@@ -41,7 +63,8 @@ export const gatewayClient = {
    */
   async get<T>(endpoint: string, options?: GatewayRequestOptions): Promise<T> {
     const url = buildGatewayUrl(endpoint, options)
-    return apiClient.get<T>(url)
+    const headers = buildGatewayHeaders(options)
+    return apiClient.get<T>(url, headers)
   },
 
   /**
@@ -49,7 +72,8 @@ export const gatewayClient = {
    */
   async post<T>(endpoint: string, body?: unknown, options?: GatewayRequestOptions): Promise<T> {
     const url = buildGatewayUrl(endpoint, options)
-    return apiClient.post<T>(url, body)
+    const headers = buildGatewayHeaders(options)
+    return apiClient.post<T>(url, body, headers)
   },
 
   /**
@@ -57,7 +81,8 @@ export const gatewayClient = {
    */
   async put<T>(endpoint: string, body?: unknown, options?: GatewayRequestOptions): Promise<T> {
     const url = buildGatewayUrl(endpoint, options)
-    return apiClient.put<T>(url, body)
+    const headers = buildGatewayHeaders(options)
+    return apiClient.put<T>(url, body, headers)
   },
 
   /**
@@ -65,7 +90,8 @@ export const gatewayClient = {
    */
   async delete<T>(endpoint: string, options?: GatewayRequestOptions): Promise<T> {
     const url = buildGatewayUrl(endpoint, options)
-    return apiClient.delete<T>(url)
+    const headers = buildGatewayHeaders(options)
+    return apiClient.delete<T>(url, headers)
   },
 }
 

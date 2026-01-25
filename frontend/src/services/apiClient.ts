@@ -101,26 +101,28 @@ class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' })
+  async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET', headers })
   }
 
-  async post<T>(endpoint: string, body?: unknown): Promise<T> {
+  async post<T>(endpoint: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
+      headers,
     })
   }
 
-  async put<T>(endpoint: string, body?: unknown): Promise<T> {
+  async put<T>(endpoint: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
+      headers,
     })
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' })
+  async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE', headers })
   }
 }
 

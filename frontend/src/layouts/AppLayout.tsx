@@ -3,8 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService } from '../services/authService'
-import { observeRoutes } from '../constants/observeRoutes'
-import { getModuleByKey, isModuleReady } from '../constants/modules'
+import { routesByModule, getModule, isModuleReady, getModuleBasePath, isModuleLocked } from '../constants/platformRegistry'
 
 function AppLayout() {
   const location = useLocation()
@@ -43,11 +42,6 @@ function AppLayout() {
       return location.pathname.startsWith('/app/workspaces') || location.pathname.startsWith('/app/projects')
     }
     return location.pathname === path
-  }
-
-  const isObserveSubpageActive = (route: string): boolean => {
-    if (!selectedWorkspaceId) return false
-    return location.pathname === `/app/workspaces/${selectedWorkspaceId}/observe/${route}`
   }
 
   const handleLogout = async () => {
@@ -191,17 +185,17 @@ function AppLayout() {
                 </button>
                 {isObserveExpanded && (
                   <div className="ml-4 mt-1 space-y-0.5 border-l border-white/5 pl-10">
-                    {observeRoutes.map((subpage) => {
-                      const isActive = isObserveSubpageActive(subpage.route)
-                      const isDisabled = !selectedWorkspaceId || isObserveLocked
-                      const href = selectedWorkspaceId
-                        ? `/app/workspaces/${selectedWorkspaceId}/observe/${subpage.route}`
+                    {(routesByModule.shieldobserve || []).map((route) => {
+                      const routePath = selectedWorkspaceId
+                        ? route.path.replace(':id', String(selectedWorkspaceId))
                         : '#'
+                      const isActive = location.pathname === routePath || location.pathname.startsWith(routePath + '/')
+                      const isDisabled = !selectedWorkspaceId || isObserveLocked
 
                       return (
                         <Link
-                          key={subpage.route}
-                          to={href}
+                          key={route.key}
+                          to={routePath}
                           onClick={(e) => {
                             if (isDisabled) {
                               e.preventDefault()
@@ -215,14 +209,14 @@ function AppLayout() {
                               : 'text-white/60 hover:bg-white/5 hover:text-white'
                           }`}
                         >
-                          {subpage.label}
+                          {route.label}
                         </Link>
                       )
                     })}
                   </div>
                 )}
               </div>
-              {/* Other modules */}
+              {/* Other modules - use platformRegistry */}
               {modulesWithAccess
                 .filter((module) => module.key?.toLowerCase().startsWith('shield') && module.key !== 'shieldobserve')
                 .filter((module, index, self) => 
@@ -230,24 +224,32 @@ function AppLayout() {
                   module.key && index === self.findIndex((m) => m.key === module.key)
                 )
                 .map((module) => {
+                  const moduleConfig = getModule(module.key)
+                  if (!moduleConfig) return null
+
                   const isAllowed = allowedByKey[module.key] ?? false
-                  const moduleConfig = getModuleByKey(module.key)
                   const isModuleReadyStatus = isModuleReady(module.key)
+                  const isLocked = isModuleLocked(module.key, allowedByKey)
                   
-                  // Build navigation path
+                  // Build navigation path using platformRegistry
                   let navPath = '#'
                   if (!selectedWorkspaceId) {
                     // No workspace selected - keep disabled
                     navPath = '#'
                   } else if (!isModuleReadyStatus) {
                     // Module not ready - route to placeholder
-                    navPath = `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
-                  } else if (isModuleReadyStatus && isAllowed && moduleConfig) {
-                    // Ready and allowed - use base path
-                    navPath = moduleConfig.basePath(selectedWorkspaceId)
+                    navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                  } else if (isModuleReadyStatus && isAllowed) {
+                    // Ready and allowed - use base path (first route if available)
+                    const routes = routesByModule[module.key]
+                    if (routes && routes.length > 0) {
+                      navPath = routes[0].path.replace(':id', String(selectedWorkspaceId))
+                    } else {
+                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                    }
                   } else {
                     // Ready but locked - route to placeholder (locked state handled in ComingSoon)
-                    navPath = `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
+                    navPath = getModuleBasePath(module.key, selectedWorkspaceId)
                   }
 
                   const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')
@@ -257,7 +259,7 @@ function AppLayout() {
                       key={module.key}
                       to={navPath}
                       onClick={(e) => {
-                        if (!selectedWorkspaceId && moduleConfig?.requiresWorkspace) {
+                        if (!selectedWorkspaceId && moduleConfig.requiresWorkspace) {
                           e.preventDefault()
                         }
                       }}
@@ -272,8 +274,8 @@ function AppLayout() {
                         }
                       `}
                     >
-                      <span>{module.name}</span>
-                      {!isAllowed && (
+                      <span>{moduleConfig.displayName}</span>
+                      {isLocked && (
                         <svg
                           width="14"
                           height="14"

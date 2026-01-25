@@ -23,21 +23,21 @@ export const observeService = {
     // Using gatewayClient for future-proofing (currently routes to direct API)
     return gatewayClient.get<RealTimeMetrics>(
       `workspaces/${workspaceId}/observe/real-time/metrics`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
   async getSystemInfo(workspaceId: number): Promise<SystemInfo> {
     return gatewayClient.get<SystemInfo>(
       `workspaces/${workspaceId}/observe/real-time/system-info`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
   async getPerformanceThresholds(workspaceId: number): Promise<Array<{ metric: string; warning: string; critical: string }>> {
     return gatewayClient.get<Array<{ metric: string; warning: string; critical: string }>>(
       `workspaces/${workspaceId}/observe/real-time/thresholds`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
@@ -45,7 +45,7 @@ export const observeService = {
   async getNetworkTopology(workspaceId: number): Promise<NetworkNode[]> {
     return gatewayClient.get<NetworkNode[]>(
       `workspaces/${workspaceId}/observe/infrastructure/topology`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
@@ -54,7 +54,7 @@ export const observeService = {
     const endpoint = timeRange
       ? `workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(timeRange)}`
       : `workspaces/${workspaceId}/observe/performance/metrics`
-    return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId })
+    return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
   },
 
   // Capacity Planning
@@ -62,21 +62,21 @@ export const observeService = {
     const endpoint = range
       ? `workspaces/${workspaceId}/observe/capacity/metrics?range=${encodeURIComponent(range)}`
       : `workspaces/${workspaceId}/observe/capacity/metrics`
-    return gatewayClient.get<CapacityMetric[]>(endpoint, { workspaceId })
+    return gatewayClient.get<CapacityMetric[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
   },
 
   // Alert Management
   async getAlertRules(workspaceId: number): Promise<AlertRule[]> {
     return gatewayClient.get<AlertRule[]>(
       `workspaces/${workspaceId}/observe/alerts/rules`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
   async getAlertSummary(workspaceId: number): Promise<AlertSummary> {
     return gatewayClient.get<AlertSummary>(
       `workspaces/${workspaceId}/observe/alerts/summary`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
@@ -107,13 +107,13 @@ export const observeService = {
     const endpoint = `workspaces/${workspaceId}/observe/services${
       queryParams.toString() ? `?${queryParams.toString()}` : ''
     }`
-    return gatewayClient.get<ObserveServicesResponse>(endpoint, { workspaceId })
+    return gatewayClient.get<ObserveServicesResponse>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
   },
 
   async getInstanceSummary(workspaceId: number): Promise<InstanceSummary> {
     return gatewayClient.get<InstanceSummary>(
       `workspaces/${workspaceId}/observe/instances/summary`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
@@ -121,14 +121,14 @@ export const observeService = {
   async getReports(workspaceId: number): Promise<Report[]> {
     return gatewayClient.get<Report[]>(
       `workspaces/${workspaceId}/observe/reports`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
   async getReportSummary(workspaceId: number): Promise<ReportSummary> {
     return gatewayClient.get<ReportSummary>(
       `workspaces/${workspaceId}/observe/reports/summary`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
@@ -136,14 +136,14 @@ export const observeService = {
   async getDataSources(workspaceId: number): Promise<DataSource[]> {
     return gatewayClient.get<DataSource[]>(
       `workspaces/${workspaceId}/observe/data-sources`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 
   async getDataSourceSummary(workspaceId: number): Promise<DataSourceSummary> {
     return gatewayClient.get<DataSourceSummary>(
       `workspaces/${workspaceId}/observe/data-sources/summary`,
-      { workspaceId }
+      { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
 }
