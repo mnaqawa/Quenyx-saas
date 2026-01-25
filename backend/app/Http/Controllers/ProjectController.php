@@ -6,6 +6,7 @@ use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,8 @@ class ProjectController extends Controller
 {
     public function __construct()
     {
-        $this->authorizeResource(Project::class, 'project');
+        // Only apply authorizeResource to methods that need a project instance
+        // For index, we'll handle authorization manually
     }
 
     public function index(Request $request): JsonResponse
@@ -28,6 +30,9 @@ class ProjectController extends Controller
                     'message' => 'Unauthenticated',
                 ], 401);
             }
+
+            // Authorize: user can view their projects list
+            $this->authorize('viewAny', Project::class);
 
             // Get all projects where user is either owner or member
             $projects = Project::query()
@@ -45,35 +50,51 @@ class ProjectController extends Controller
                 ->latest('updated_at')
                 ->get()
                 ->map(function (Project $project) use ($user) {
-                    // Determine role: owner takes precedence
-                    $role = 'owner';
-                    if ($project->owner_id !== $user->id) {
-                        // User is not owner, get role from membership
-                        $membership = $project->memberships->first();
-                        $role = $membership ? $membership->role : null;
-                    }
+                    try {
+                        // Determine role: owner takes precedence
+                        $role = 'owner';
+                        if ($project->owner_id !== $user->id) {
+                            // User is not owner, get role from membership
+                            $membership = $project->memberships->first();
+                            $role = $membership ? $membership->role : null;
+                        }
 
-                    return [
-                        'project' => [
-                            'id' => $project->id,
-                            'name' => $project->name,
-                            'status' => $project->status,
-                            'created_at' => $project->created_at->toISOString(),
-                            'updated_at' => $project->updated_at->toISOString(),
-                        ],
-                        'my_role' => $role,
-                    ];
+                        return [
+                            'project' => [
+                                'id' => $project->id,
+                                'name' => $project->name,
+                                'status' => $project->status,
+                                'created_at' => $project->created_at ? $project->created_at->toISOString() : null,
+                                'updated_at' => $project->updated_at ? $project->updated_at->toISOString() : null,
+                            ],
+                            'my_role' => $role,
+                        ];
+                    } catch (\Exception $e) {
+                        // Log error for this specific project but continue processing others
+                        Log::warning('Error processing project in index', [
+                            'project_id' => $project->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        return null;
+                    }
                 })
+                ->filter() // Remove null entries
                 ->values();
 
             return response()->json([
                 'success' => true,
                 'data' => $projects,
             ]);
+        } catch (AuthorizationException $e) {
+            // Re-throw authorization exceptions so they're handled by the exception handler
+            throw $e;
         } catch (\Exception $e) {
             Log::error('ProjectController@index failed', [
+                'user_id' => $request->user()?->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return response()->json([
@@ -94,6 +115,8 @@ class ProjectController extends Controller
                     'message' => 'Unauthenticated',
                 ], 401);
             }
+
+            $this->authorize('create', Project::class);
 
             $data = $request->validated();
 
@@ -120,31 +143,73 @@ class ProjectController extends Controller
         }
     }
 
-    public function show(Project $project): JsonResponse
+    public function show(Request $request, Project $project): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'data' => new ProjectResource($project),
-        ]);
+        try {
+            $this->authorize('view', $project);
+            
+            return response()->json([
+                'success' => true,
+                'data' => new ProjectResource($project),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('ProjectController@show failed', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'Failed to retrieve project',
+            ], 500);
+        }
     }
 
     public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
-        $project->update($request->validated());
+        try {
+            $this->authorize('update', $project);
+            
+            $project->update($request->validated());
 
-        return response()->json([
-            'success' => true,
-            'data' => new ProjectResource($project),
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => new ProjectResource($project),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('ProjectController@update failed', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'Failed to update project',
+            ], 500);
+        }
     }
 
-    public function destroy(Project $project): JsonResponse
+    public function destroy(Request $request, Project $project): JsonResponse
     {
-        $project->delete();
+        try {
+            $this->authorize('delete', $project);
+            
+            $project->delete();
 
-        return response()->json([
-            'success' => true,
-            'data' => null,
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => null,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('ProjectController@destroy failed', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'Failed to delete project',
+            ], 500);
+        }
     }
 }
