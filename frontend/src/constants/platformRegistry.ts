@@ -3,7 +3,20 @@
 // "Coming Soon / Locked" behavior, and future gateway API scoping
 
 export type ModuleStatus = 'ready' | 'comingSoon'
-export type ModuleKey = 'shieldobserve' | 'shieldrun' | 'shieldbalance' | 'shieldcore' | string
+export type ModuleKey = 
+  | 'shieldobserve' 
+  | 'shieldcore' 
+  | 'shieldautomate' 
+  | 'shieldbalance' 
+  | 'shielddesk' 
+  | 'shieldintegrations' 
+  | 'shieldinventory' 
+  | 'shieldknowledge' 
+  | 'shieldnotify' 
+  | 'shieldrespond' 
+  | 'shieldsecure' 
+  | 'shieldvoice' 
+  | string
 
 export interface RouteConfig {
   key: string // Unique identifier for the route
@@ -88,6 +101,7 @@ const shieldObserveRoutes: RouteConfig[] = [
 ]
 
 // Module registry - all modules in the platform
+// This should match the backend ModuleSeeder SHIELD_MODULES list
 export const modules: ModuleConfig[] = [
   {
     key: 'shieldobserve',
@@ -95,32 +109,10 @@ export const modules: ModuleConfig[] = [
     status: 'ready',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/observe',
-    description: 'Real-time monitoring and infrastructure observability',
+    description: 'Real-time infrastructure monitoring and performance insights across your environment.',
     sidebar: {
       order: 1,
       children: shieldObserveRoutes,
-    },
-  },
-  {
-    key: 'shieldrun',
-    displayName: 'ShieldRun',
-    status: 'comingSoon',
-    requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Automated workflow execution and task scheduling',
-    sidebar: {
-      order: 2,
-    },
-  },
-  {
-    key: 'shieldbalance',
-    displayName: 'ShieldBalance',
-    status: 'comingSoon',
-    requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Load balancing and traffic distribution',
-    sidebar: {
-      order: 3,
     },
   },
   {
@@ -129,9 +121,119 @@ export const modules: ModuleConfig[] = [
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Core platform management and configuration',
+    description: 'Central configuration and governance hub for platform control and policy management.',
+    sidebar: {
+      order: 2,
+    },
+  },
+  {
+    key: 'shieldautomate',
+    displayName: 'ShieldAutomate',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Workflow automation and process orchestration across systems and teams.',
+    sidebar: {
+      order: 3,
+    },
+  },
+  {
+    key: 'shieldbalance',
+    displayName: 'ShieldBalance',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Load balancing and traffic management for optimal resource distribution.',
     sidebar: {
       order: 4,
+    },
+  },
+  {
+    key: 'shielddesk',
+    displayName: 'ShieldDesk',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
+    sidebar: {
+      order: 5,
+    },
+  },
+  {
+    key: 'shieldintegrations',
+    displayName: 'ShieldIntegrations',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Third-party integrations and API connections for external services.',
+    sidebar: {
+      order: 6,
+    },
+  },
+  {
+    key: 'shieldinventory',
+    displayName: 'ShieldInventory',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Comprehensive asset discovery, inventory management, and automated health tracking.',
+    sidebar: {
+      order: 7,
+    },
+  },
+  {
+    key: 'shieldknowledge',
+    displayName: 'ShieldKnowledge',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Knowledge management for documentation, playbooks, and operational procedures.',
+    sidebar: {
+      order: 8,
+    },
+  },
+  {
+    key: 'shieldnotify',
+    displayName: 'ShieldNotify',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Alert and notification management across email, SMS, and in-app channels.',
+    sidebar: {
+      order: 9,
+    },
+  },
+  {
+    key: 'shieldrespond',
+    displayName: 'ShieldRespond',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Automated incident response and orchestration for rapid recovery and resolution.',
+    sidebar: {
+      order: 10,
+    },
+  },
+  {
+    key: 'shieldsecure',
+    displayName: 'ShieldSecure',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
+    sidebar: {
+      order: 11,
+    },
+  },
+  {
+    key: 'shieldvoice',
+    displayName: 'ShieldVoice',
+    status: 'comingSoon',
+    requiresWorkspace: true,
+    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    description: 'AI voice and IVR operations for automated customer support and service analytics.',
+    sidebar: {
+      order: 12,
     },
   },
 ]
