@@ -92,11 +92,9 @@ function WorkspacesPage() {
     // Load workspaces list (includes my_role which context doesn't have)
     loadWorkspaces()
     
-    // Refresh context workspaces to keep dropdown in sync (if not already loading)
-    if (!isLoadingWorkspaces) {
-      refreshWorkspaces()
-    }
-  }, [refreshWorkspaces, workspacesError, isLoadingWorkspaces])
+    // Note: Don't call refreshWorkspaces here to avoid infinite loop
+    // The context will refresh workspaces on mount, and we'll sync via loadWorkspaces
+  }, [workspacesError, isLoadingWorkspaces]) // Removed refreshWorkspaces from dependencies
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
     setSelectedWorkspaceId(String(workspace.project.id))
@@ -148,10 +146,12 @@ function WorkspacesPage() {
       })
       setForm({ name: '', status: 'active' })
       setSuccess(t('projects.createTitle'))
-      // Refresh context workspaces so dropdown updates immediately
-      await refreshWorkspaces()
-      // Also refresh local list for display
+      // Refresh local list for display first
       await loadWorkspaces()
+      // Then refresh context workspaces so dropdown updates (but only if not already loading)
+      if (!isLoadingWorkspaces) {
+        await refreshWorkspaces()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
