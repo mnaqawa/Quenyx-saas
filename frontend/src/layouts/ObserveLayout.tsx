@@ -31,24 +31,24 @@ export default function ObserveLayout() {
   const currentPageLabel = observePagesMap[currentPagePath] || 'ShieldObserve'
 
   return (
-    <div className="space-y-6">
-      {/* Minimal breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-white/60">
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* Minimal breadcrumb - smaller and less prominent */}
+      <div className="flex items-center gap-1.5 text-xs text-white/40 mt-2">
         <Link
           to={`/app/workspaces/${selectedWorkspaceId}`}
-          className="hover:text-white transition"
+          className="hover:text-white/60 transition"
         >
           {selectedWorkspace?.name || 'Workspace'}
         </Link>
         <span>/</span>
         <Link
           to={`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`}
-          className="hover:text-white transition"
+          className="hover:text-white/60 transition"
         >
           ShieldObserve
         </Link>
         <span>/</span>
-        <span className="text-white">{currentPageLabel}</span>
+        <span className="text-white/50">{currentPageLabel}</span>
       </div>
       <Outlet />
     </div>
