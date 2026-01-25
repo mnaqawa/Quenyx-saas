@@ -100,6 +100,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(STORAGE_KEY)
       }
     } catch (err) {
+      // Check if this is an authentication error (401)
+      const isAuthError = err instanceof Error && ((err as any).status === 401 || (err as any).isAuthError || err.message.includes('Unauthenticated'))
+      
+      if (isAuthError) {
+        // For 401 errors, don't set error message - just clear workspaces
+        // The app should redirect to login or show login prompt
+        setWorkspaces([])
+        setSelectedWorkspaceIdState(null)
+        setWorkspacesError(null) // Don't show error for 401 - user needs to log in
+        return
+      }
+
       // Improved error handling with more specific messages
       let errorMessage = 'Failed to load workspaces'
       if (err instanceof Error) {
@@ -115,9 +127,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           errorMessage = err.message
         } else {
           // Fallback to specific error types for generic errors
-          if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-            errorMessage = 'Authentication required'
-          } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          if (err.message.includes('403') || err.message.includes('Forbidden')) {
             errorMessage = 'Access denied'
           } else if (err.message.includes('404') || err.message.includes('Not Found')) {
             errorMessage = 'Workspaces not found'

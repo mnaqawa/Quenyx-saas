@@ -102,6 +102,22 @@ class ApiClient {
         // Handle authentication errors
         if (response.status === 401) {
           clearAuthToken()
+          const authError = new Error(errorMessage || 'Unauthenticated')
+          ;(authError as any).status = 401
+          ;(authError as any).isAuthError = true
+          ;(authError as any).url = url
+          
+          // Log error details in development
+          if (import.meta.env.DEV) {
+            console.error('API Error (401):', {
+              url,
+              status: response.status,
+              statusText: response.statusText,
+              message: errorMessage,
+            })
+          }
+          
+          throw authError
         }
         
         // Log error details in development
@@ -138,9 +154,29 @@ class ApiClient {
         // Handle error responses
         if (response.status === 401) {
           clearAuthToken()
+          // For 401, throw AuthenticationException-like error
+          const error = new Error(data.message || 'Unauthenticated')
+          ;(error as any).status = 401
+          ;(error as any).isAuthError = true
+          ;(error as any).url = url
+          throw error
         }
+        
         // Extract error message - prioritize message field, fallback to error field
-        const message = data.message || data.error || `Server error (${response.status})`
+        let message = data.message || data.error || `Server error (${response.status})`
+        
+        // For validation errors (422), include field-specific errors in message
+        if (response.status === 422 && data.errors) {
+          const errorFields = Object.keys(data.errors)
+          const errorMessages = errorFields.map(field => {
+            const fieldErrors = Array.isArray(data.errors[field]) ? data.errors[field] : [data.errors[field]]
+            return `${field}: ${fieldErrors.join(', ')}`
+          })
+          if (errorMessages.length > 0) {
+            message = errorMessages.join('. ')
+          }
+        }
+        
         const error = new Error(message)
         ;(error as any).errors = data.errors || null
         ;(error as any).status = response.status

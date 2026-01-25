@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
 import { CreateProjectInput, ProjectStatus } from '../types/project'
 import { WorkspaceListItem, Role } from '../types/workspace'
@@ -15,6 +15,7 @@ const formatDate = (value: string) => {
 function WorkspacesPage() {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const location = useLocation()
   const { 
     selectedWorkspaceId, 
     setSelectedWorkspaceId, 
@@ -171,6 +172,25 @@ function WorkspacesPage() {
 
   // Show error from context or local state
   const displayError = workspacesError || error
+  
+  // Check if this is an authentication error (401)
+  const isAuthError = displayError && (
+    displayError.includes('Unauthenticated') || 
+    displayError.includes('Authentication required') ||
+    displayError.includes('401')
+  )
+  
+  if (isAuthError) {
+    // For 401 errors, redirect to login with return path
+    const returnPath = location.pathname + location.search
+    navigate(`/login?next=${encodeURIComponent(returnPath)}`, { replace: true })
+    return (
+      <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+        <p>Please log in to continue. Redirecting to login...</p>
+      </div>
+    )
+  }
+  
   if (displayError) {
     return (
       <div className="space-y-4">

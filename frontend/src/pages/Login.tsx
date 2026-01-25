@@ -41,7 +41,23 @@ function Login() {
         navigate('/app/workspaces', { replace: true })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.errorGeneric'))
+      // Extract error message, handling validation errors specially
+      let errorMessage = t('common.errorGeneric')
+      if (err instanceof Error) {
+        errorMessage = err.message
+        // If it's a validation error with field details, use that
+        if ((err as any).errors && typeof (err as any).errors === 'object') {
+          const errorFields = Object.keys((err as any).errors)
+          if (errorFields.length > 0) {
+            const firstField = errorFields[0]
+            const firstError = Array.isArray((err as any).errors[firstField]) 
+              ? (err as any).errors[firstField][0] 
+              : (err as any).errors[firstField]
+            errorMessage = firstError || err.message
+          }
+        }
+      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
