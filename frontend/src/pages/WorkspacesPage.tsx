@@ -15,7 +15,13 @@ const formatDate = (value: string) => {
 function WorkspacesPage() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { selectedWorkspaceId, setSelectedWorkspaceId, refreshWorkspaces } = useWorkspaceContext()
+  const { 
+    selectedWorkspaceId, 
+    setSelectedWorkspaceId, 
+    refreshWorkspaces,
+    isLoadingWorkspaces,
+    workspacesError
+  } = useWorkspaceContext()
   const [form, setForm] = useState<CreateProjectInput>({ name: '', status: 'active' })
   const [creating, setCreating] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
@@ -33,17 +39,51 @@ function WorkspacesPage() {
       const workspaces = await workspaceService.getMyWorkspaces()
       setWorkspacesList(workspaces)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      // Improved error handling
+      let errorMessage = 'Failed to load workspaces'
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Authentication required'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          errorMessage = 'Access denied'
+        } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+          errorMessage = 'Workspaces not found'
+        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+          errorMessage = 'Network error - please check your connection'
+        } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
+          errorMessage = err.message
+        }
+      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    // If context is loading, wait for it
+    if (isLoadingWorkspaces) {
+      setLoading(true)
+      return
+    }
+    
+    // Use context error if available
+    if (workspacesError) {
+      setError(workspacesError)
+      setLoading(false)
+      // Still try to load workspaces list for display (might succeed even if context failed)
+      loadWorkspaces()
+      return
+    }
+    
+    // Load workspaces list (includes my_role which context doesn't have)
     loadWorkspaces()
-    // Also refresh context workspaces to keep dropdown in sync
-    refreshWorkspaces()
-  }, [refreshWorkspaces])
+    
+    // Refresh context workspaces to keep dropdown in sync (if not already loading)
+    if (!isLoadingWorkspaces) {
+      refreshWorkspaces()
+    }
+  }, [refreshWorkspaces, workspacesError, isLoadingWorkspaces])
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
     setSelectedWorkspaceId(String(workspace.project.id))
@@ -112,14 +152,27 @@ function WorkspacesPage() {
     )
   }, [workspacesList])
 
-  if (loading) {
+  // Show loading state from context or local state
+  if (loading || isLoadingWorkspaces) {
     return <div className="text-sm text-white/60">{t('common.loadingDashboard')}</div>
   }
 
-  if (error) {
+  // Show error from context or local state
+  const displayError = workspacesError || error
+  if (displayError) {
     return (
-      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-        {error}
+      <div className="space-y-4">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {displayError}
+        </div>
+        {displayError.includes('Network') && (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            <p className="font-semibold">Connection Issue</p>
+            <p className="mt-1 text-xs text-sky-200/80">
+              Please check your internet connection and try again. If the problem persists, contact support.
+            </p>
+          </div>
+        )}
       </div>
     )
   }

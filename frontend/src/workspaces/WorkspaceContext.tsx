@@ -301,6 +301,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [
     workspaces,
     selectedWorkspaceId,
+    setSelectedWorkspaceId,
+    refreshWorkspaces,
+    isLoadingWorkspaces,
+    workspacesError,
     entitlements,
     isLoadingEntitlements,
     refreshEntitlements,
