@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient'
+import { gatewayClient } from './gatewayClient'
 import type {
   RealTimeMetrics,
   SystemInfo,
@@ -20,55 +20,72 @@ export const observeService = {
   // Real-time Monitoring
   async getRealTimeMetrics(workspaceId: number): Promise<RealTimeMetrics> {
     // Placeholder - will read from fixtures
-    return apiClient.get<RealTimeMetrics>(`/api/workspaces/${workspaceId}/observe/real-time/metrics`)
+    // Using gatewayClient for future-proofing (currently routes to direct API)
+    return gatewayClient.get<RealTimeMetrics>(
+      `workspaces/${workspaceId}/observe/real-time/metrics`,
+      { workspaceId }
+    )
   },
 
   async getSystemInfo(workspaceId: number): Promise<SystemInfo> {
-    return apiClient.get<SystemInfo>(`/api/workspaces/${workspaceId}/observe/real-time/system-info`)
+    return gatewayClient.get<SystemInfo>(
+      `workspaces/${workspaceId}/observe/real-time/system-info`,
+      { workspaceId }
+    )
   },
 
   async getPerformanceThresholds(workspaceId: number): Promise<Array<{ metric: string; warning: string; critical: string }>> {
-    return apiClient.get<Array<{ metric: string; warning: string; critical: string }>>(
-      `/api/workspaces/${workspaceId}/observe/real-time/thresholds`
+    return gatewayClient.get<Array<{ metric: string; warning: string; critical: string }>>(
+      `workspaces/${workspaceId}/observe/real-time/thresholds`,
+      { workspaceId }
     )
   },
 
   // Infrastructure Map
   async getNetworkTopology(workspaceId: number): Promise<NetworkNode[]> {
-    return apiClient.get<NetworkNode[]>(`/api/workspaces/${workspaceId}/observe/infrastructure/topology`)
+    return gatewayClient.get<NetworkNode[]>(
+      `workspaces/${workspaceId}/observe/infrastructure/topology`,
+      { workspaceId }
+    )
   },
 
   // Performance Analytics
   async getPerformanceMetrics(workspaceId: number, timeRange?: string): Promise<PerformanceMetric[]> {
-    const url = timeRange
-      ? `/api/workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(timeRange)}`
-      : `/api/workspaces/${workspaceId}/observe/performance/metrics`
-    return apiClient.get<PerformanceMetric[]>(url)
+    const endpoint = timeRange
+      ? `workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(timeRange)}`
+      : `workspaces/${workspaceId}/observe/performance/metrics`
+    return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId })
   },
 
   // Capacity Planning
   async getCapacityMetrics(workspaceId: number, range?: string): Promise<CapacityMetric[]> {
-    const url = range
-      ? `/api/workspaces/${workspaceId}/observe/capacity/metrics?range=${encodeURIComponent(range)}`
-      : `/api/workspaces/${workspaceId}/observe/capacity/metrics`
-    return apiClient.get<CapacityMetric[]>(url)
+    const endpoint = range
+      ? `workspaces/${workspaceId}/observe/capacity/metrics?range=${encodeURIComponent(range)}`
+      : `workspaces/${workspaceId}/observe/capacity/metrics`
+    return gatewayClient.get<CapacityMetric[]>(endpoint, { workspaceId })
   },
 
   // Alert Management
   async getAlertRules(workspaceId: number): Promise<AlertRule[]> {
-    return apiClient.get<AlertRule[]>(`/api/workspaces/${workspaceId}/observe/alerts/rules`)
+    return gatewayClient.get<AlertRule[]>(
+      `workspaces/${workspaceId}/observe/alerts/rules`,
+      { workspaceId }
+    )
   },
 
   async getAlertSummary(workspaceId: number): Promise<AlertSummary> {
-    return apiClient.get<AlertSummary>(`/api/workspaces/${workspaceId}/observe/alerts/summary`)
+    return gatewayClient.get<AlertSummary>(
+      `workspaces/${workspaceId}/observe/alerts/summary`,
+      { workspaceId }
+    )
   },
 
   // Instance Management
   async getInstances(workspaceId: number, status?: string): Promise<Instance[]> {
-    const url = status
-      ? `/api/workspaces/${workspaceId}/observe/instances?status=${encodeURIComponent(status)}`
-      : `/api/workspaces/${workspaceId}/observe/instances`
-    return apiClient.get<Instance[]>(url)
+    const endpoint = status
+      ? `workspaces/${workspaceId}/observe/instances?status=${encodeURIComponent(status)}`
+      : `workspaces/${workspaceId}/observe/instances`
+    return gatewayClient.get<Instance[]>(endpoint, { workspaceId })
   },
 
   // Services
@@ -87,31 +104,46 @@ export const observeService = {
     if (params?.limit) queryParams.append('limit', params.limit.toString())
     if (params?.problemsOnly) queryParams.append('problemsOnly', 'true')
 
-    const url = `/api/workspaces/${workspaceId}/observe/services${
+    const endpoint = `workspaces/${workspaceId}/observe/services${
       queryParams.toString() ? `?${queryParams.toString()}` : ''
     }`
-    return apiClient.get<ObserveServicesResponse>(url)
+    return gatewayClient.get<ObserveServicesResponse>(endpoint, { workspaceId })
   },
 
   async getInstanceSummary(workspaceId: number): Promise<InstanceSummary> {
-    return apiClient.get<InstanceSummary>(`/api/workspaces/${workspaceId}/observe/instances/summary`)
+    return gatewayClient.get<InstanceSummary>(
+      `workspaces/${workspaceId}/observe/instances/summary`,
+      { workspaceId }
+    )
   },
 
   // Reports
   async getReports(workspaceId: number): Promise<Report[]> {
-    return apiClient.get<Report[]>(`/api/workspaces/${workspaceId}/observe/reports`)
+    return gatewayClient.get<Report[]>(
+      `workspaces/${workspaceId}/observe/reports`,
+      { workspaceId }
+    )
   },
 
   async getReportSummary(workspaceId: number): Promise<ReportSummary> {
-    return apiClient.get<ReportSummary>(`/api/workspaces/${workspaceId}/observe/reports/summary`)
+    return gatewayClient.get<ReportSummary>(
+      `workspaces/${workspaceId}/observe/reports/summary`,
+      { workspaceId }
+    )
   },
 
   // Data Sources
   async getDataSources(workspaceId: number): Promise<DataSource[]> {
-    return apiClient.get<DataSource[]>(`/api/workspaces/${workspaceId}/observe/data-sources`)
+    return gatewayClient.get<DataSource[]>(
+      `workspaces/${workspaceId}/observe/data-sources`,
+      { workspaceId }
+    )
   },
 
   async getDataSourceSummary(workspaceId: number): Promise<DataSourceSummary> {
-    return apiClient.get<DataSourceSummary>(`/api/workspaces/${workspaceId}/observe/data-sources/summary`)
+    return gatewayClient.get<DataSourceSummary>(
+      `workspaces/${workspaceId}/observe/data-sources/summary`,
+      { workspaceId }
+    )
   },
 }

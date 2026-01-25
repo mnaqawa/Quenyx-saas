@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService } from '../services/authService'
 import { observeRoutes } from '../constants/observeRoutes'
+import { getModuleByKey, isModuleReady } from '../constants/modules'
 
 function AppLayout() {
   const location = useLocation()
@@ -230,30 +231,51 @@ function AppLayout() {
                 )
                 .map((module) => {
                   const isAllowed = allowedByKey[module.key] ?? false
-                  const isDisabled = !isLoadingModules && !isAllowed
+                  const moduleConfig = getModuleByKey(module.key)
+                  const isModuleReadyStatus = isModuleReady(module.key)
+                  
+                  // Determine if module should navigate to ComingSoon or subscriptions
+                  const shouldShowComingSoon = !isModuleReadyStatus || (!isAllowed && isModuleReadyStatus)
+                  
+                  // Build navigation path
+                  let navPath = '#'
+                  if (shouldShowComingSoon && selectedWorkspaceId) {
+                    // Route to ComingSoon page for this module
+                    navPath = `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
+                  } else if (!isAllowed) {
+                    // Locked module - still route to ComingSoon but with locked flag
+                    navPath = selectedWorkspaceId 
+                      ? `/app/workspaces/${selectedWorkspaceId}/modules/${module.key}`
+                      : '/subscriptions'
+                  } else if (moduleConfig && isModuleReadyStatus) {
+                    // Ready module - use its base path
+                    navPath = moduleConfig.basePath(selectedWorkspaceId || '')
+                  }
 
-                return (
-                  <div key={module.key} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isDisabled) {
-                          // Navigate to subscriptions page with module query param
-                          navigate(`/subscriptions?module=${module.key}`)
+                  const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')
+
+                  return (
+                    <Link
+                      key={module.key}
+                      to={navPath}
+                      onClick={(e) => {
+                        if (!selectedWorkspaceId && moduleConfig?.requiresWorkspace) {
+                          e.preventDefault()
                         }
                       }}
-                      disabled={isDisabled}
                       className={`
                         rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
                         ${
-                          isDisabled
-                            ? 'text-white/30 cursor-not-allowed opacity-50'
+                          isActive
+                            ? 'bg-white/10 text-white'
+                            : !isAllowed
+                            ? 'text-white/30 opacity-50'
                             : 'text-white/60 hover:bg-white/5 hover:text-white'
                         }
                       `}
                     >
                       <span>{module.name}</span>
-                      {isDisabled && (
+                      {!isAllowed && (
                         <svg
                           width="14"
                           height="14"
@@ -267,10 +289,9 @@ function AppLayout() {
                           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                         </svg>
                       )}
-                    </button>
-                  </div>
-                )
-              })}
+                    </Link>
+                  )
+                })}
             </>
           )}
         </nav>
