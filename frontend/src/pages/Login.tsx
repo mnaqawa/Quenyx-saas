@@ -30,8 +30,15 @@ function Login() {
     setLoading(true)
     setError(null)
 
+    // Validate that email and password are not empty before submitting
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password')
+      setLoading(false)
+      return
+    }
+
     try {
-      await authService.login(email, password)
+      await authService.login(email.trim(), password)
       
       // Redirect to return path if present, otherwise workspaces page
       const next = searchParams.get('next')

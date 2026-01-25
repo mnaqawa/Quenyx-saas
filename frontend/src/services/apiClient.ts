@@ -56,8 +56,8 @@ class ApiClient {
     }
 
     const config: RequestInit = {
-      headers: mergedHeaders,
       ...options,
+      headers: mergedHeaders,
     }
 
     try {
@@ -70,6 +70,8 @@ class ApiClient {
           method: options.method || 'GET',
           status: response.status,
           statusText: response.statusText,
+          body: options.body,
+          headers: mergedHeaders,
         })
       }
       
@@ -222,6 +224,10 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+    // Log request body in development
+    if (import.meta.env.DEV && body) {
+      console.log('POST Request Body:', body)
+    }
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
