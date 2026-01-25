@@ -13,6 +13,15 @@ import Register from './pages/Register'
 import InviteAcceptance from './pages/InviteAcceptance'
 import ProtectedRoute from './components/ProtectedRoute'
 import WorkspaceGuard from './components/WorkspaceGuard'
+import ObserveLayout from './layouts/ObserveLayout'
+import RealTimeMonitoring from './pages/observe/RealTimeMonitoring'
+import InfrastructureMap from './pages/observe/InfrastructureMap'
+import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
+import CapacityPlanning from './pages/observe/CapacityPlanning'
+import AlertManagement from './pages/observe/AlertManagement'
+import InstanceManagement from './pages/observe/InstanceManagement'
+import Reports from './pages/observe/Reports'
+import DataSources from './pages/observe/DataSources'
 
 function App() {
   return (
@@ -36,6 +45,18 @@ function App() {
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="profile" element={<Profile />} />
+            {/* ShieldObserve routes */}
+            <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
+              <Route path="real-time-monitoring" element={<RealTimeMonitoring />} />
+              <Route path="infrastructure-map" element={<InfrastructureMap />} />
+              <Route path="performance-analytics" element={<PerformanceAnalytics />} />
+              <Route path="capacity-planning" element={<CapacityPlanning />} />
+              <Route path="alert-management" element={<AlertManagement />} />
+              <Route path="instance-management" element={<InstanceManagement />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="data-sources" element={<DataSources />} />
+              <Route index element={<RealTimeMonitoring />} />
+            </Route>
           </Route>
         </Route>
       </Route>

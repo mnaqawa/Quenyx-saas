@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  nagios:
+    image: jasonrivers/nagios:latest
+    container_name: nagios-core
+    ports:
+      - "8080:80"
+    environment:
+      - NAGIOS_TIMEZONE=UTC
+    volumes:
+      - nagios-data:/usr/local/nagios
+      - nagios-etc:/opt/nagios/etc
+    networks:
+      - nagios-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nagios/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  nagios-data:
+    driver: local
+  nagios-etc:
+    driver: local
+
+networks:
+  nagios-network:
+    driver: bridge

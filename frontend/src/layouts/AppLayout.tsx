@@ -138,55 +138,72 @@ function AppLayout() {
               {selectedWorkspaceId ? 'No modules available' : 'Select a workspace'}
             </div>
           ) : (
-            modulesWithAccess
-              .filter((module) => module.key?.toLowerCase().startsWith('shield')) // Defensive filter
-              .filter((module, index, self) => 
-                // Deduplicate by key (defensive filter)
-                module.key && index === self.findIndex((m) => m.key === module.key)
-              )
-              .map((module) => {
-                const isAllowed = allowedByKey[module.key] ?? false
-                const isDisabled = !isLoadingModules && !isAllowed
+            <>
+              {/* ShieldObserve - always visible, even when locked */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedWorkspaceId) {
+                      navigate(`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`)
+                    }
+                  }}
+                  className="rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between text-white/60 hover:bg-white/5 hover:text-white"
+                >
+                  <span>ShieldObserve</span>
+                </button>
+              </div>
+              {/* Other modules */}
+              {modulesWithAccess
+                .filter((module) => module.key?.toLowerCase().startsWith('shield') && module.key !== 'shieldobserve')
+                .filter((module, index, self) => 
+                  // Deduplicate by key (defensive filter)
+                  module.key && index === self.findIndex((m) => m.key === module.key)
+                )
+                .map((module) => {
+                  const isAllowed = allowedByKey[module.key] ?? false
+                  const isDisabled = !isLoadingModules && !isAllowed
 
-              return (
-                <div key={module.key} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isDisabled) {
-                        // Navigate to subscriptions page with module query param
-                        navigate(`/subscriptions?module=${module.key}`)
-                      }
-                    }}
-                    disabled={isDisabled}
-                    className={`
-                      rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
-                      ${
-                        isDisabled
-                          ? 'text-white/30 cursor-not-allowed opacity-50'
-                          : 'text-white/60 hover:bg-white/5 hover:text-white'
-                      }
-                    `}
-                  >
-                    <span>{module.name}</span>
-                    {isDisabled && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="text-white/30"
-                      >
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              )
-            })
+                return (
+                  <div key={module.key} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isDisabled) {
+                          // Navigate to subscriptions page with module query param
+                          navigate(`/subscriptions?module=${module.key}`)
+                        }
+                      }}
+                      disabled={isDisabled}
+                      className={`
+                        rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
+                        ${
+                          isDisabled
+                            ? 'text-white/30 cursor-not-allowed opacity-50'
+                            : 'text-white/60 hover:bg-white/5 hover:text-white'
+                        }
+                      `}
+                    >
+                      <span>{module.name}</span>
+                      {isDisabled && (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-white/30"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+            </>
           )}
         </nav>
         <div className="mt-auto border-t border-white/10 px-4 py-4">
