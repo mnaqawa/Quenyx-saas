@@ -188,7 +188,7 @@ function WorkspaceAccessSettings() {
                         const value = e.target.value
                         handleOverrideChange(module.key, value === '' ? null : value as 'allow' | 'deny')
                       }}
-                      className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
+                      className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white"
                     >
                       <option value="">Default (Plan)</option>
                       <option value="allow">Force Enable</option>
