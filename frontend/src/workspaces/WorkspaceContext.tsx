@@ -122,6 +122,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to refresh workspaces:', {
         error: err,
         message: errorMessage,
+        errorType: err instanceof Error ? err.constructor.name : typeof err,
+        errorDetails: err instanceof Error ? {
+          message: err.message,
+          stack: err.stack,
+          status: (err as any).status,
+        } : err,
       })
 
       // On error, preserve existing selection if possible

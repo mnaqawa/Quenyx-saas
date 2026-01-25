@@ -62,7 +62,72 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config)
-      const data = await response.json()
+      
+      // Log request details for debugging (only in development)
+      if (import.meta.env.DEV) {
+        console.log('API Request:', {
+          url,
+          method: options.method || 'GET',
+          status: response.status,
+          statusText: response.statusText,
+        })
+      }
+      
+      // Check if response is ok (status 200-299)
+      if (!response.ok) {
+        // Try to parse error response
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        const contentType = response.headers.get('content-type')
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json()
+            if (errorData && typeof errorData === 'object') {
+              if (errorData.message) {
+                errorMessage = errorData.message
+              } else if (errorData.error) {
+                errorMessage = errorData.error
+              }
+            }
+          } catch (parseError) {
+            // If JSON parsing fails, use status text
+            console.warn('Failed to parse error response as JSON:', parseError)
+          }
+        }
+        
+        const error = new Error(`${errorMessage} (${url})`)
+        ;(error as any).status = response.status
+        ;(error as any).url = url
+        
+        // Handle authentication errors
+        if (response.status === 401) {
+          clearAuthToken()
+        }
+        
+        // Log error details in development
+        if (import.meta.env.DEV) {
+          console.error('API Error:', {
+            url,
+            status: response.status,
+            statusText: response.statusText,
+            message: errorMessage,
+          })
+        }
+        
+        throw error
+      }
+
+      // Parse JSON response
+      let data
+      try {
+        const text = await response.text()
+        if (!text) {
+          throw new Error('Empty response from server')
+        }
+        data = JSON.parse(text)
+      } catch (parseError) {
+        throw new Error(`Failed to parse response: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`)
+      }
 
       // Strict envelope handling: backend MUST return { success, data } or { success, message }
       if (!data || typeof data !== 'object' || !('success' in data)) {
@@ -94,10 +159,23 @@ class ApiClient {
     } catch (error) {
       // Re-throw if it's already an Error we created
       if (error instanceof Error) {
+        // Add more context for network errors
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Network request failed')) {
+          const networkError = new Error(`Network error - cannot connect to ${url}. Please check your connection and ensure the server is running.`)
+          ;(networkError as any).url = url
+          ;(networkError as any).originalError = error
+          throw networkError
+        }
+        // Preserve URL in error if not already present
+        if (!(error as any).url) {
+          ;(error as any).url = url
+        }
         throw error
       }
       // Otherwise wrap network/parsing errors
-      throw new Error(error instanceof Error ? error.message : 'Network error')
+      const wrappedError = new Error(error instanceof Error ? error.message : 'Network error')
+      ;(wrappedError as any).url = url
+      throw wrappedError
     }
   }
 
