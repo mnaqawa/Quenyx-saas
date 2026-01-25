@@ -22,18 +22,22 @@ function WorkspaceDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const projectId = Number(id)
+  const projectId = id ? Number(id) : null
 
   // Auto-select workspace from URL if different from current selection
   // Do NOT require workspace to exist in loaded list (works for deep links/hard refresh)
+  // URL param is already string, but we normalize it to string for consistency
   useEffect(() => {
-    if (Number.isFinite(projectId) && projectId > 0 && selectedWorkspaceId !== projectId) {
-      setSelectedWorkspaceId(projectId)
+    if (projectId && Number.isFinite(projectId) && projectId > 0) {
+      const projectIdString = String(projectId)
+      if (selectedWorkspaceId !== projectIdString) {
+        setSelectedWorkspaceId(projectIdString)
+      }
     }
   }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId])
 
   const loadProject = async () => {
-    if (!Number.isFinite(projectId)) {
+    if (!projectId || !Number.isFinite(projectId)) {
       setError('Invalid workspace id')
       setLoading(false)
       return

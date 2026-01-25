@@ -23,8 +23,8 @@ function WorkspaceAccessSettings() {
       setLoadingAuditLogs(true)
       try {
         const [auditLogs, membersData] = await Promise.all([
-          moduleService.getProjectAuditLogs(selectedWorkspaceId),
-          workspaceMembershipService.getWorkspaceMemberships(selectedWorkspaceId),
+          moduleService.getProjectAuditLogs(Number(selectedWorkspaceId)),
+          workspaceMembershipService.getWorkspaceMemberships(Number(selectedWorkspaceId)),
         ])
         setAuditLogs(auditLogs)
         // Determine user role from memberships by comparing user.id
@@ -52,11 +52,11 @@ function WorkspaceAccessSettings() {
 
     setOverrideError(null)
     try {
-      await moduleService.updateModuleOverride(selectedWorkspaceId, moduleKey, mode)
+      await moduleService.updateModuleOverride(Number(selectedWorkspaceId), moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
       // Refresh audit logs to show the new entry
-      const auditLogs = await moduleService.getProjectAuditLogs(selectedWorkspaceId)
+      const auditLogs = await moduleService.getProjectAuditLogs(Number(selectedWorkspaceId))
       setAuditLogs(auditLogs)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update module override'

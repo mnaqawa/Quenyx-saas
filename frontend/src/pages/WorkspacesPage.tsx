@@ -46,7 +46,7 @@ function WorkspacesPage() {
   }, [refreshWorkspaces])
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
-    setSelectedWorkspaceId(workspace.project.id)
+    setSelectedWorkspaceId(String(workspace.project.id))
     navigate(`/app/workspaces/${workspace.project.id}`)
   }
 
@@ -69,7 +69,7 @@ function WorkspacesPage() {
   useEffect(() => {
     if (!loading && workspacesList.length === 1 && !selectedWorkspaceId && !hasAutoSelected) {
       const singleWorkspace = workspacesList[0]
-      setSelectedWorkspaceId(singleWorkspace.project.id)
+      setSelectedWorkspaceId(String(singleWorkspace.project.id))
       setHasAutoSelected(true)
       // Navigate to dashboard after a brief moment to allow state to update
       setTimeout(() => {

@@ -48,7 +48,7 @@ function WorkspaceMembers() {
     setError(null)
     setUnauthorized(false)
     try {
-      const data = await workspaceMembershipService.getWorkspaceMemberships(selectedWorkspaceId)
+      const data = await workspaceMembershipService.getWorkspaceMemberships(Number(selectedWorkspaceId))
       setMemberships(data.memberships || [])
       setInvites(data.invites || [])
       
@@ -79,7 +79,7 @@ function WorkspaceMembers() {
 
     setError(null)
     try {
-      await workspaceMembershipService.addMember(selectedWorkspaceId, newMemberEmail.trim(), newMemberRole)
+      await workspaceMembershipService.addMember(Number(selectedWorkspaceId), newMemberEmail.trim(), newMemberRole)
       setNewMemberEmail('')
       setNewMemberRole('member')
       setAddingMember(false)
@@ -94,7 +94,7 @@ function WorkspaceMembers() {
 
     setError(null)
     try {
-      await workspaceMembershipService.createInvite(selectedWorkspaceId, newMemberEmail.trim(), newMemberRole)
+      await workspaceMembershipService.createInvite(Number(selectedWorkspaceId), newMemberEmail.trim(), newMemberRole)
       setNewMemberEmail('')
       setNewMemberRole('member')
       setInvitingMember(false)
@@ -109,7 +109,7 @@ function WorkspaceMembers() {
 
     setError(null)
     try {
-      await workspaceMembershipService.updateMembershipRole(selectedWorkspaceId, membershipId, newRole)
+      await workspaceMembershipService.updateMembershipRole(Number(selectedWorkspaceId), membershipId, newRole)
       await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
@@ -122,7 +122,7 @@ function WorkspaceMembers() {
 
     setError(null)
     try {
-      await workspaceMembershipService.removeMembership(selectedWorkspaceId, membershipId)
+      await workspaceMembershipService.removeMembership(Number(selectedWorkspaceId), membershipId)
       await loadMemberships()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove member')

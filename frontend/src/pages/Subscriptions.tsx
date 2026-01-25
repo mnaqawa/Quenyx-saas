@@ -65,7 +65,7 @@ function Subscriptions() {
       }
       setLoadingSubscription(true)
       try {
-        const subscription = await subscriptionService.getProjectSubscription(selectedWorkspaceId)
+        const subscription = await subscriptionService.getProjectSubscription(Number(selectedWorkspaceId))
         setSubscription(subscription)
       } catch (err) {
         // Ignore errors for now
@@ -119,7 +119,7 @@ function Subscriptions() {
 
     setSavingPlan(true)
     try {
-      const subscription = await subscriptionService.updateProjectSubscription(selectedWorkspaceId, planKey)
+      const subscription = await subscriptionService.updateProjectSubscription(Number(selectedWorkspaceId), planKey)
       setSubscription(subscription)
       await refreshEntitlements()
       await refreshModules()
@@ -134,7 +134,7 @@ function Subscriptions() {
     if (!selectedWorkspaceId) return
 
     try {
-      await moduleService.updateModuleOverride(selectedWorkspaceId, moduleKey, mode)
+      await moduleService.updateModuleOverride(Number(selectedWorkspaceId), moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
     } catch (err) {

@@ -38,7 +38,7 @@ function Integrations() {
           setLoading(false)
           return
         }
-        const integrationData = await integrationService.listProjectIntegrations(selectedWorkspaceId)
+        const integrationData = await integrationService.listProjectIntegrations(Number(selectedWorkspaceId))
         setIntegrations(integrationData)
         setSelectedIntegrationId(integrationData[0]?.id ?? null)
       } catch (err) {
@@ -60,7 +60,7 @@ function Integrations() {
         return
       }
       const data = await integrationService.getProjectIntegrationConfiguration(
-        selectedWorkspaceId,
+        Number(selectedWorkspaceId),
         selectedIntegrationId
       )
       const settings = (data.settings ?? {}) as Record<string, string>
@@ -207,7 +207,7 @@ function Integrations() {
                 if (!selectedWorkspaceId || !selectedIntegrationId) return
                 setSavingConfig(true)
                 await integrationService.updateProjectIntegrationConfiguration(
-                  selectedWorkspaceId,
+                  Number(selectedWorkspaceId),
                   selectedIntegrationId,
                   configSettings
                 )
@@ -250,7 +250,7 @@ function Integrations() {
                 if (!selectedWorkspaceId || !selectedIntegrationId) return
                 setSavingConfig(true)
                 await integrationService.updateProjectIntegrationConfiguration(
-                  selectedWorkspaceId,
+                  Number(selectedWorkspaceId),
                   selectedIntegrationId,
                   configSettings
                 )

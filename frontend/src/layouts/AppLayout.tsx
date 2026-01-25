@@ -10,6 +10,9 @@ function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
   const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useWorkspaceContext()
+  
+  // Find selected workspace using string comparison
+  const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
@@ -240,7 +243,7 @@ function AppLayout() {
                 <select
                   value={selectedWorkspaceId ?? ''}
                   onChange={(event) => {
-                    const workspaceId = Number(event.target.value)
+                    const workspaceId = event.target.value
                     if (workspaceId) {
                       setSelectedWorkspaceId(workspaceId)
                       // Navigate to dashboard after selection
@@ -253,9 +256,11 @@ function AppLayout() {
                     <option value="">No workspaces</option>
                   ) : !selectedWorkspaceId ? (
                     <option value="">Select a workspace</option>
-                  ) : null}
+                  ) : selectedWorkspace ? null : (
+                    <option value={selectedWorkspaceId}>Selected workspace</option>
+                  )}
                   {workspaces.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id} className="bg-slate-900 text-white">
+                    <option key={workspace.id} value={String(workspace.id)} className="bg-slate-900 text-white">
                       {workspace.name}
                     </option>
                   ))}

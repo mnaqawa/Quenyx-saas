@@ -10,8 +10,8 @@ import { getAuthToken } from '../services/apiClient'
 interface WorkspaceContextValue {
   workspaces: Project[] // Keep Project type since backend returns Project
   selectedWorkspace: Project | null
-  selectedWorkspaceId: number | null
-  setSelectedWorkspaceId: (workspaceId: number) => void
+  selectedWorkspaceId: string | null
+  setSelectedWorkspaceId: (workspaceId: string | number) => void
   refreshWorkspaces: () => Promise<void>
   entitlements: ProjectEntitlements | null
   isLoadingEntitlements: boolean
@@ -31,10 +31,11 @@ const OLD_STORAGE_KEY = 'portshield.selected_project_id' // For backward compati
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Project[]>([])
   // Initialize selectedWorkspaceId from localStorage on mount for immediate display
-  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<number | null>(() => {
+  // Keep as string to match localStorage storage format
+  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
     const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY)
-    return stored ? Number(stored) : null
+    return stored || null
   })
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
@@ -67,14 +68,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem(OLD_STORAGE_KEY)
         }
       }
-      const storedId = stored ? Number(stored) : null
+      const storedId = stored || null
       const validId =
-        storedId && projects.some((workspace) => workspace.id === storedId)
+        storedId && projects.some((workspace) => String(workspace.id) === storedId)
           ? storedId
-          : projects[0]?.id ?? null
+          : projects[0] ? String(projects[0].id) : null
       setSelectedWorkspaceIdState(validId)
       if (validId) {
-        localStorage.setItem(STORAGE_KEY, String(validId))
+        localStorage.setItem(STORAGE_KEY, validId)
       } else {
         // Clear localStorage if no valid selection
         localStorage.removeItem(STORAGE_KEY)
@@ -99,7 +100,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoadingEntitlements(true)
     try {
-      const entitlements = await subscriptionService.getProjectEntitlements(selectedWorkspaceId)
+      // Convert string ID to number for API call (backend expects number)
+      const entitlements = await subscriptionService.getProjectEntitlements(Number(selectedWorkspaceId))
       setEntitlements(entitlements)
     } catch (err) {
       setEntitlements(null)
@@ -122,7 +124,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingModules(true)
     setModulesError(null)
     try {
-      const modules = await moduleService.getProjectModules(selectedWorkspaceId)
+      // Convert string ID to number for API call (backend expects number)
+      const modules = await moduleService.getProjectModules(Number(selectedWorkspaceId))
       // Deduplicate modules by key (defensive filter)
       // Use Map to ensure true uniqueness - only first occurrence of each key is kept
       const moduleMap = new Map<string, typeof modules[0]>()
@@ -165,9 +168,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshModules()
   }, [refreshEntitlements, refreshModules])
 
-  const setSelectedWorkspaceId = (workspaceId: number) => {
-    setSelectedWorkspaceIdState(workspaceId)
-    localStorage.setItem(STORAGE_KEY, String(workspaceId))
+  const setSelectedWorkspaceId = (workspaceId: string | number) => {
+    // Always normalize to string for consistency
+    const normalizedId = String(workspaceId)
+    setSelectedWorkspaceIdState(normalizedId)
+    localStorage.setItem(STORAGE_KEY, normalizedId)
   }
 
   const allowedByKey = useMemo(() => {
@@ -182,7 +187,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<WorkspaceContextValue>(() => {
     const selectedWorkspace =
-      workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? null
+      workspaces.find((workspace) => String(workspace.id) === selectedWorkspaceId) ?? null
     return {
       workspaces,
       selectedWorkspace,
