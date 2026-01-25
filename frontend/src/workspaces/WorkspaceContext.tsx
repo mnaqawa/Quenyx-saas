@@ -13,6 +13,8 @@ interface WorkspaceContextValue {
   selectedWorkspaceId: string | null
   setSelectedWorkspaceId: (workspaceId: string | number) => void
   refreshWorkspaces: () => Promise<void>
+  isLoadingWorkspaces: boolean
+  workspacesError: string | null
   entitlements: ProjectEntitlements | null
   isLoadingEntitlements: boolean
   refreshEntitlements: () => Promise<void>
@@ -37,6 +39,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY)
     return stored || null
   })
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
+  const [workspacesError, setWorkspacesError] = useState<string | null>(null)
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
   const [modulesWithAccess, setModulesWithAccess] = useState<ModuleWithAccess[] | null>(null)
@@ -47,10 +51,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!getAuthToken()) {
       setWorkspaces([])
       setSelectedWorkspaceIdState(null)
+      setWorkspacesError(null)
       return
     }
+
+    setIsLoadingWorkspaces(true)
+    setWorkspacesError(null)
     try {
       const workspaceListItems = await workspaceService.getMyWorkspaces()
+      
+      // Handle empty or invalid response gracefully
+      if (!Array.isArray(workspaceListItems)) {
+        console.warn('Workspaces API returned non-array response:', workspaceListItems)
+        setWorkspaces([])
+        setWorkspacesError(null)
+        return
+      }
+
       // Extract Project objects from WorkspaceListItem[]
       // Convert ProjectSummary to Project (they have compatible structure)
       const projects: Project[] = workspaceListItems.map((item) => ({
@@ -58,6 +75,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         status: item.project.status as Project['status'],
       }))
       setWorkspaces(projects)
+      setWorkspacesError(null)
+
       // Backward compatibility: try new key first, then old key
       let stored = localStorage.getItem(STORAGE_KEY)
       if (!stored) {
@@ -81,14 +100,38 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(STORAGE_KEY)
       }
     } catch (err) {
+      // Improved error handling with more specific messages
+      let errorMessage = 'Failed to load workspaces'
+      if (err instanceof Error) {
+        // Check for specific error types
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Authentication required'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          errorMessage = 'Access denied'
+        } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+          errorMessage = 'Workspaces not found'
+        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+          errorMessage = 'Network error - please check your connection'
+        } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
+          // Use the actual error message if it's meaningful
+          errorMessage = err.message
+        }
+      }
+
+      setWorkspacesError(errorMessage)
+      console.error('Failed to refresh workspaces:', {
+        error: err,
+        message: errorMessage,
+      })
+
       // On error, preserve existing selection if possible
-      console.error('Failed to refresh workspaces:', err)
-      // Only clear if we have no stored selection
       const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY)
       if (!stored) {
         setWorkspaces([])
         setSelectedWorkspaceIdState(null)
       }
+    } finally {
+      setIsLoadingWorkspaces(false)
     }
   }, [])
 
@@ -244,6 +287,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       selectedWorkspaceId,
       setSelectedWorkspaceId,
       refreshWorkspaces,
+      isLoadingWorkspaces,
+      workspacesError,
       entitlements,
       isLoadingEntitlements,
       refreshEntitlements,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const MODULE_CAPACITY = 10
 
@@ -77,24 +78,60 @@ const buildWeeklyUptime = (modules: Module[]): number[] => {
 
 function Dashboard() {
   const { t } = useLanguage()
+  const { workspaces, workspacesError, isLoadingWorkspaces } = useWorkspaceContext()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Don't fetch dashboard if workspaces are still loading or if there's a workspace error
+    if (isLoadingWorkspaces) {
+      return
+    }
+
+    // If there's a workspace error, show that instead of trying to load dashboard
+    if (workspacesError) {
+      setError(workspacesError)
+      setLoading(false)
+      return
+    }
+
+    // If no workspaces available, show helpful message
+    if (workspaces.length === 0) {
+      setError('No workspaces available. Please create a workspace to get started.')
+      setLoading(false)
+      return
+    }
+
     const fetchDashboard = async () => {
       try {
         const dashboardData = await dashboardService.getDashboard()
         setData(dashboardData)
+        setError(null)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard')
+        // Improved error handling with more specific messages
+        let errorMessage = 'Failed to load dashboard'
+        if (err instanceof Error) {
+          if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            errorMessage = 'Authentication required'
+          } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+            errorMessage = 'Access denied'
+          } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+            errorMessage = 'Dashboard data not found'
+          } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+            errorMessage = 'Network error - please check your connection'
+          } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
+            errorMessage = err.message
+          }
+        }
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
     }
 
     fetchDashboard()
-  }, [])
+  }, [isLoadingWorkspaces, workspacesError, workspaces.length])
 
   const metrics = useMemo(() => {
     const modules = data?.modules ?? []
@@ -161,14 +198,24 @@ function Dashboard() {
     return values.map((value) => ((value - min) / (max - min)) * 100)
   }
 
-  if (loading) {
+  if (loading || isLoadingWorkspaces) {
     return <div className="text-sm text-white/60">{t('common.loadingDashboard')}</div>
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-        {error}
+      <div className="space-y-4">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {error}
+        </div>
+        {workspaces.length === 0 && !workspacesError && (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            <p className="font-semibold">Get Started</p>
+            <p className="mt-1 text-xs text-sky-200/80">
+              Create your first workspace to start using PortShield SaaS.
+            </p>
+          </div>
+        )}
       </div>
     )
   }

@@ -10,7 +10,7 @@ function AppLayout() {
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
-  const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useWorkspaceContext()
+  const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
   
   // Find selected workspace using string comparison
   const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
@@ -368,8 +368,13 @@ function AppLayout() {
                     }
                   }}
                   className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
+                  title={workspacesError || undefined}
                 >
-                  {workspaces.length === 0 ? (
+                  {isLoadingWorkspaces ? (
+                    <option value="">Loading workspaces...</option>
+                  ) : workspacesError ? (
+                    <option value="">Error loading workspaces</option>
+                  ) : workspaces.length === 0 ? (
                     <option value="">No workspaces</option>
                   ) : !selectedWorkspaceId ? (
                     <option value="">Select a workspace</option>
