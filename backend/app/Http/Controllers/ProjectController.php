@@ -35,55 +35,70 @@ class ProjectController extends Controller
             $this->authorize('viewAny', Project::class);
 
             // Get all projects where user is either owner or member
-            $projects = Project::query()
-                ->where(function ($query) use ($user) {
-                    // User is owner
-                    $query->where('owner_id', $user->id)
-                        // OR user has membership
-                        ->orWhereHas('memberships', function ($q) use ($user) {
-                            $q->where('user_id', $user->id);
-                        });
-                })
-                ->with(['memberships' => function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                }])
-                ->latest('updated_at')
-                ->get()
-                ->map(function (Project $project) use ($user) {
-                    try {
-                        // Determine role: owner takes precedence
-                        $role = 'owner';
-                        if ($project->owner_id !== $user->id) {
-                            // User is not owner, get role from membership
-                            $membership = $project->memberships->first();
-                            $role = $membership ? $membership->role : null;
-                        }
+            // Use try-catch around the query to catch any database errors
+            try {
+                $projects = Project::query()
+                    ->where(function ($query) use ($user) {
+                        // User is owner
+                        $query->where('owner_id', $user->id)
+                            // OR user has membership
+                            ->orWhereHas('memberships', function ($q) use ($user) {
+                                $q->where('user_id', $user->id);
+                            });
+                    })
+                    ->with(['memberships' => function ($query) use ($user) {
+                        $query->where('user_id', $user->id);
+                    }])
+                    ->latest('updated_at')
+                    ->get();
+            } catch (\Exception $queryException) {
+                Log::error('Database query failed in ProjectController@index', [
+                    'user_id' => $user->id,
+                    'error' => $queryException->getMessage(),
+                    'trace' => $queryException->getTraceAsString(),
+                    'file' => $queryException->getFile(),
+                    'line' => $queryException->getLine(),
+                ]);
+                throw $queryException; // Re-throw to be caught by outer catch
+            }
 
-                        return [
-                            'project' => [
-                                'id' => $project->id,
-                                'name' => $project->name,
-                                'status' => $project->status,
-                                'created_at' => $project->created_at ? $project->created_at->toISOString() : null,
-                                'updated_at' => $project->updated_at ? $project->updated_at->toISOString() : null,
-                            ],
-                            'my_role' => $role,
-                        ];
-                    } catch (\Exception $e) {
-                        // Log error for this specific project but continue processing others
-                        Log::warning('Error processing project in index', [
-                            'project_id' => $project->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                        return null;
+            // Map projects to response format
+            $mappedProjects = $projects->map(function (Project $project) use ($user) {
+                try {
+                    // Determine role: owner takes precedence
+                    $role = 'owner';
+                    if ($project->owner_id !== $user->id) {
+                        // User is not owner, get role from membership
+                        $membership = $project->memberships->first();
+                        $role = $membership ? $membership->role : null;
                     }
-                })
-                ->filter() // Remove null entries
-                ->values();
+
+                    return [
+                        'project' => [
+                            'id' => $project->id,
+                            'name' => $project->name ?? '',
+                            'status' => $project->status ?? 'active',
+                            'created_at' => $project->created_at ? $project->created_at->toISOString() : null,
+                            'updated_at' => $project->updated_at ? $project->updated_at->toISOString() : null,
+                        ],
+                        'my_role' => $role,
+                    ];
+                } catch (\Exception $e) {
+                    // Log error for this specific project but continue processing others
+                    Log::warning('Error processing project in index', [
+                        'project_id' => $project->id ?? 'unknown',
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    return null;
+                }
+            })
+            ->filter() // Remove null entries
+            ->values();
 
             return response()->json([
                 'success' => true,
-                'data' => $projects,
+                'data' => $mappedProjects,
             ]);
         } catch (AuthorizationException $e) {
             // Re-throw authorization exceptions so they're handled by the exception handler

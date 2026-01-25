@@ -7,6 +7,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -26,10 +27,45 @@ class Handler extends ExceptionHandler
     /**
      * Register the exception handling callbacks for the application.
      */
+    /**
+     * Report or log an exception.
+     */
+    public function report(Throwable $e): void
+    {
+        // Explicitly log all exceptions before parent handles it
+        try {
+            Log::error('Exception reported', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'class' => get_class($e),
+            ]);
+        } catch (\Exception $logException) {
+            // If logging fails, at least try to write to error_log
+            error_log('Failed to log exception: ' . $logException->getMessage());
+            error_log('Original exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        }
+
+        parent::report($e);
+    }
+
+    /**
+     * Register the exception handling callbacks for the application.
+     */
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            //
+            // Additional logging in reportable callback
+            try {
+                Log::error('Exception in reportable callback', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+            } catch (\Exception $logException) {
+                error_log('Failed to log in reportable: ' . $logException->getMessage());
+            }
         });
     }
 
@@ -73,6 +109,22 @@ class Handler extends ExceptionHandler
         }
 
         // Handle all other exceptions
+        // Log the exception before rendering (in case report wasn't called)
+        try {
+            Log::error('Unhandled exception in Handler::render', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'class' => get_class($e),
+                'request_url' => $request->fullUrl(),
+                'request_method' => $request->method(),
+            ]);
+        } catch (\Exception $logException) {
+            error_log('Failed to log in render: ' . $logException->getMessage());
+            error_log('Original exception: ' . $e->getMessage());
+        }
+
         $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
         $message = config('app.debug') ? $e->getMessage() : 'An unexpected error occurred';
 
