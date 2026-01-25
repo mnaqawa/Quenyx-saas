@@ -218,80 +218,96 @@ function AppLayout() {
               </div>
               {/* Other modules - use platformRegistry */}
               {modulesWithAccess
-                .filter((module) => module.key?.toLowerCase().startsWith('shield') && module.key !== 'shieldobserve')
+                .filter((module) => {
+                  // Filter out invalid modules
+                  if (!module || !module.key) return false
+                  return module.key.toLowerCase().startsWith('shield') && module.key !== 'shieldobserve'
+                })
                 .filter((module, index, self) => 
                   // Deduplicate by key (defensive filter)
                   module.key && index === self.findIndex((m) => m.key === module.key)
                 )
                 .map((module) => {
+                  // Safely get module config with fallback
                   const moduleConfig = getModule(module.key)
-                  if (!moduleConfig) return null
-
-                  const isAllowed = allowedByKey[module.key] ?? false
-                  const isModuleReadyStatus = isModuleReady(module.key)
-                  const isLocked = isModuleLocked(module.key, allowedByKey)
-                  
-                  // Build navigation path using platformRegistry
-                  let navPath = '#'
-                  if (!selectedWorkspaceId) {
-                    // No workspace selected - keep disabled
-                    navPath = '#'
-                  } else if (!isModuleReadyStatus) {
-                    // Module not ready - route to placeholder
-                    navPath = getModuleBasePath(module.key, selectedWorkspaceId)
-                  } else if (isModuleReadyStatus && isAllowed) {
-                    // Ready and allowed - use base path (first route if available)
-                    const routes = routesByModule[module.key]
-                    if (routes && routes.length > 0) {
-                      navPath = routes[0].path.replace(':id', String(selectedWorkspaceId))
-                    } else {
-                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
-                    }
-                  } else {
-                    // Ready but locked - route to placeholder (locked state handled in ComingSoon)
-                    navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                  if (!moduleConfig) {
+                    // If module not in registry, skip it (defensive)
+                    console.warn(`Module ${module.key} not found in platformRegistry`)
+                    return null
                   }
 
-                  const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')
+                  try {
+                    const isAllowed = allowedByKey[module.key] ?? false
+                    const isModuleReadyStatus = isModuleReady(module.key)
+                    const isLocked = isModuleLocked(module.key, allowedByKey)
+                    
+                    // Build navigation path using platformRegistry
+                    let navPath = '#'
+                    if (!selectedWorkspaceId) {
+                      // No workspace selected - keep disabled
+                      navPath = '#'
+                    } else if (!isModuleReadyStatus) {
+                      // Module not ready - route to placeholder
+                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                    } else if (isModuleReadyStatus && isAllowed) {
+                      // Ready and allowed - use base path (first route if available)
+                      const routes = routesByModule[module.key]
+                      if (routes && routes.length > 0) {
+                        navPath = routes[0].path.replace(':id', String(selectedWorkspaceId))
+                      } else {
+                        navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                      }
+                    } else {
+                      // Ready but locked - route to placeholder (locked state handled in ComingSoon)
+                      navPath = getModuleBasePath(module.key, selectedWorkspaceId)
+                    }
 
-                  return (
-                    <Link
-                      key={module.key}
-                      to={navPath}
-                      onClick={(e) => {
-                        if (!selectedWorkspaceId && moduleConfig.requiresWorkspace) {
-                          e.preventDefault()
-                        }
-                      }}
-                      className={`
-                        rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
-                        ${
-                          isActive
-                            ? 'bg-white/10 text-white'
-                            : !isAllowed
-                            ? 'text-white/30 opacity-50'
-                            : 'text-white/60 hover:bg-white/5 hover:text-white'
-                        }
-                      `}
-                    >
-                      <span>{moduleConfig.displayName}</span>
-                      {isLocked && (
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="text-white/30"
-                        >
-                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>
-                      )}
-                    </Link>
-                  )
-                })}
+                    const isActive = location.pathname === navPath || location.pathname.startsWith(navPath + '/')
+
+                    return (
+                      <Link
+                        key={module.key}
+                        to={navPath}
+                        onClick={(e) => {
+                          if (!selectedWorkspaceId && moduleConfig.requiresWorkspace) {
+                            e.preventDefault()
+                          }
+                        }}
+                        className={`
+                          rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between
+                          ${
+                            isActive
+                              ? 'bg-white/10 text-white'
+                              : !isAllowed
+                              ? 'text-white/30 opacity-50'
+                              : 'text-white/60 hover:bg-white/5 hover:text-white'
+                          }
+                        `}
+                      >
+                        <span>{moduleConfig.displayName}</span>
+                        {isLocked && (
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-white/30"
+                          >
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
+                        )}
+                      </Link>
+                    )
+                  } catch (err) {
+                    // Defensive error handling for module rendering
+                    console.error(`Error rendering module ${module.key}:`, err)
+                    return null
+                  }
+                })
+                .filter((item) => item !== null)} {/* Remove null items from map */}
             </>
           )}
         </nav>

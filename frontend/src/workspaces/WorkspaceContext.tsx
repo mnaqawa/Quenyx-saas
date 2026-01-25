@@ -115,7 +115,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [refreshWorkspaces])
 
   const refreshModules = useCallback(async () => {
-    if (!getAuthToken() || !selectedWorkspaceId) {
+    if (!getAuthToken()) {
+      setModulesWithAccess(null)
+      setModulesError(null)
+      return
+    }
+
+    if (!selectedWorkspaceId) {
+      // No workspace selected - clear modules but don't show error
       setModulesWithAccess(null)
       setModulesError(null)
       return
@@ -126,38 +133,81 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       // Convert string ID to number for API call (backend expects number)
       const modules = await moduleService.getProjectModules(Number(selectedWorkspaceId))
+      
+      // Handle empty or invalid response gracefully
+      if (!Array.isArray(modules)) {
+        console.warn('Modules API returned non-array response:', modules)
+        setModulesWithAccess([])
+        setModulesError(null)
+        return
+      }
+
       // Deduplicate modules by key (defensive filter)
       // Use Map to ensure true uniqueness - only first occurrence of each key is kept
       const moduleMap = new Map<string, typeof modules[0]>()
       modules.forEach((module) => {
-          if (module?.key && !moduleMap.has(module.key)) {
-            moduleMap.set(module.key, module)
-          } else if (module?.key && moduleMap.has(module.key)) {
-            // Log duplicate detection for debugging
-            console.warn(`Duplicate module key detected: ${module.key}`, module)
-          }
-        })
-        const uniqueModules = Array.from(moduleMap.values())
-        
-        // Final verification: ensure no duplicates in final array
-        const finalKeys = new Set<string>()
-        const verifiedModules = uniqueModules.filter((module) => {
-          if (!module.key) return false
-          if (finalKeys.has(module.key)) {
-            console.error(`Duplicate module key in final array: ${module.key}`)
-            return false
-          }
-          finalKeys.add(module.key)
-          return true
-        })
-        
+        if (module?.key && !moduleMap.has(module.key)) {
+          moduleMap.set(module.key, module)
+        } else if (module?.key && moduleMap.has(module.key)) {
+          // Log duplicate detection for debugging
+          console.warn(`Duplicate module key detected: ${module.key}`, module)
+        }
+      })
+      const uniqueModules = Array.from(moduleMap.values())
+      
+      // Final verification: ensure no duplicates in final array
+      const finalKeys = new Set<string>()
+      const verifiedModules = uniqueModules.filter((module) => {
+        if (!module.key) return false
+        if (finalKeys.has(module.key)) {
+          console.error(`Duplicate module key in final array: ${module.key}`)
+          return false
+        }
+        finalKeys.add(module.key)
+        return true
+      })
+      
       setModulesWithAccess(verifiedModules)
       setModulesError(null)
     } catch (err) {
-      setModulesWithAccess(null)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load modules'
-      setModulesError(errorMessage)
-      console.error('Failed to load modules:', err)
+      // Improved error handling with more specific messages
+      // Try to provide fallback modules from platformRegistry if API fails
+      let errorMessage = 'Failed to load modules'
+      if (err instanceof Error) {
+        // Check for specific error types
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Authentication required'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          errorMessage = 'Access denied'
+        } else if (err.message.includes('404') || err.message.includes('Not Found')) {
+          errorMessage = 'Modules not found'
+        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+          errorMessage = 'Network error - please check your connection'
+        } else if (err.message && err.message !== 'An error occurred' && err.message !== 'An unexpected error occurred') {
+          // Use the actual error message if it's meaningful
+          errorMessage = err.message
+        }
+      }
+      
+      // For non-critical errors (like network issues), don't show error but log it
+      // Only show error for authentication/authorization issues
+      const isCriticalError = errorMessage.includes('Authentication') || errorMessage.includes('Access denied')
+      
+      if (isCriticalError) {
+        setModulesWithAccess(null)
+        setModulesError(errorMessage)
+      } else {
+        // For non-critical errors, set empty array and don't show error
+        // This allows the UI to still function with platformRegistry modules
+        setModulesWithAccess([])
+        setModulesError(null)
+        // Log the error for debugging but don't show to user
+        console.warn('Modules API failed, using fallback:', {
+          error: err,
+          workspaceId: selectedWorkspaceId,
+          message: errorMessage,
+        })
+      }
     } finally {
       setIsLoadingModules(false)
     }
