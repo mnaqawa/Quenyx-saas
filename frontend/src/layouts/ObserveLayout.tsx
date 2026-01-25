@@ -1,17 +1,6 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-
-const observePagesMap: Record<string, string> = {
-  'real-time-monitoring': 'Real-time Monitoring',
-  'infrastructure-map': 'Infrastructure Map',
-  'performance-analytics': 'Performance Analytics',
-  'capacity-planning': 'Capacity Planning',
-  'alert-management': 'Alert Management',
-  'instance-management': 'Instance Management',
-  'services': 'Services',
-  'reports': 'Reports',
-  'data-sources': 'Data Sources',
-}
+import { getObservePageTitle } from '../constants/observeRoutes'
 
 export default function ObserveLayout() {
   const location = useLocation()
@@ -25,10 +14,10 @@ export default function ObserveLayout() {
     )
   }
 
-  // Extract current page from path
+  // Extract current page from path and get friendly title
   const pathParts = location.pathname.split('/')
   const currentPagePath = pathParts[pathParts.length - 1]
-  const currentPageLabel = observePagesMap[currentPagePath] || 'ShieldObserve'
+  const currentPageTitle = getObservePageTitle(currentPagePath)
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -48,7 +37,7 @@ export default function ObserveLayout() {
           ShieldObserve
         </Link>
         <span>/</span>
-        <span className="text-white/50">{currentPageLabel}</span>
+        <span className="text-white/50">{currentPageTitle}</span>
       </div>
       <Outlet />
     </div>

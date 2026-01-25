@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService } from '../services/authService'
+import { observeRoutes } from '../constants/observeRoutes'
 
 function AppLayout() {
   const location = useLocation()
@@ -14,18 +15,7 @@ function AppLayout() {
   // Find selected workspace using string comparison
   const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
-  // ShieldObserve subpages configuration
-  const observeSubpages = [
-    { path: 'real-time-monitoring', label: 'Real-time Monitoring', route: 'real-time-monitoring' },
-    { path: 'infrastructure-map', label: 'Infrastructure Map', route: 'infrastructure-map' },
-    { path: 'performance-analytics', label: 'Performance Analytics', route: 'performance-analytics' },
-    { path: 'capacity-planning', label: 'Capacity Planning', route: 'capacity-planning' },
-    { path: 'alert-management', label: 'Alert Management', route: 'alert-management' },
-    { path: 'instance-management', label: 'Instance Management', route: 'instance-management' },
-    { path: 'services', label: 'Services', route: 'services' },
-    { path: 'reports', label: 'Reports', route: 'reports' },
-    { path: 'data-sources', label: 'Data Sources', route: 'data-sources' },
-  ]
+  // ShieldObserve subpages configuration (from shared constants)
 
   // Check if ShieldObserve is locked
   const isObserveLocked = useMemo(() => {
@@ -199,8 +189,8 @@ function AppLayout() {
                   </svg>
                 </button>
                 {isObserveExpanded && (
-                  <div className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-2">
-                    {observeSubpages.map((subpage) => {
+                  <div className="ml-4 mt-1 space-y-0.5 border-l border-white/5 pl-10">
+                    {observeRoutes.map((subpage) => {
                       const isActive = isObserveSubpageActive(subpage.route)
                       const isDisabled = !selectedWorkspaceId || isObserveLocked
                       const href = selectedWorkspaceId
@@ -209,18 +199,18 @@ function AppLayout() {
 
                       return (
                         <Link
-                          key={subpage.path}
+                          key={subpage.route}
                           to={href}
                           onClick={(e) => {
                             if (isDisabled) {
                               e.preventDefault()
                             }
                           }}
-                          className={`block rounded-md px-3 py-1.5 text-xs transition ${
+                          className={`relative block rounded-md px-3 py-1.5 text-xs transition ${
                             isDisabled
                               ? 'text-white/30 cursor-not-allowed opacity-50'
                               : isActive
-                              ? 'bg-white/10 text-white'
+                              ? 'bg-white/15 text-white border-l-2 border-sky-500 pl-2.5'
                               : 'text-white/60 hover:bg-white/5 hover:text-white'
                           }`}
                         >

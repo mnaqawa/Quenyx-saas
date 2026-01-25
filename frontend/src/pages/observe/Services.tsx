@@ -289,14 +289,14 @@ export default function Services() {
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-[#0f151d]">
               <tr className="border-b border-white/10">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Host</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-32">Host</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Service</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Status</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-28">Status</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Last Check</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Duration</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Attempt</th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-white/70 w-20">Attempt</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Status Information</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-white/70">Actions</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-white/70 w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -312,22 +312,24 @@ export default function Services() {
                     key={`${item.host}-${item.service}-${index}`}
                     className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
                   >
-                    <td className="px-3 py-2 text-xs">{item.host}</td>
-                    <td className="px-3 py-2 text-xs">{item.service}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5 text-[13px]">{item.host}</td>
+                    <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
+                    <td className="px-3 py-2.5">
                       <span
                         className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
                       >
                         {item.status.toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-white/70">{formatDateTime(item.lastCheckAt)}</td>
-                    <td className="px-3 py-2 text-xs text-white/70">{formatDuration(item.durationSec)}</td>
-                    <td className="px-3 py-2 text-xs text-white/70">{item.attempt}</td>
-                    <td className="px-3 py-2 text-xs text-white/70 max-w-md">
-                      <div className="line-clamp-2">{item.info}</div>
+                    <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
+                    <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
+                    <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
+                    <td className="px-3 py-2.5 text-[13px] text-white/70">
+                      <div className="line-clamp-2" title={item.info}>
+                        {item.info}
+                      </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           disabled
