@@ -221,7 +221,7 @@ function AppLayout() {
                     <option value="">Select a workspace</option>
                   ) : null}
                   {workspaces.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id} className="text-slate-900">
+                    <option key={workspace.id} value={workspace.id} className="bg-slate-900 text-white">
                       {workspace.name}
                     </option>
                   ))}
