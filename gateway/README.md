@@ -1,5 +1,9 @@
 # PortShield Gateway
 
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+
+This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
+
 Lightweight API gateway service that enforces project entitlements before forwarding requests to the Laravel backend.
 
 ## Features

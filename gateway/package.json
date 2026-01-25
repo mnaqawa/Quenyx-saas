@@ -10,8 +10,8 @@
     "type-check": "tsc --noEmit"
   },
   "keywords": ["gateway", "api", "proxy"],
-  "author": "",
-  "license": "ISC",
+  "author": "PortShield CO.",
+  "license": "UNLICENSED",
   "dependencies": {
     "express": "^4.18.2",
     "http-proxy-middleware": "^2.0.6"

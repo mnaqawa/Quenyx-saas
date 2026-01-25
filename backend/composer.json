@@ -3,7 +3,7 @@
     "type": "project",
     "description": "PortShield SaaS Backend API",
     "keywords": ["laravel", "framework", "api"],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.1",
         "guzzlehttp/guzzle": "^7.2",

@@ -1,5 +1,9 @@
 # PortShield Backend API
 
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+
+This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
+
 Laravel API-only backend for PortShield SaaS.
 
 ## Requirements
