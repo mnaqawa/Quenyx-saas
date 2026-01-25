@@ -9,8 +9,11 @@ function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const { t } = useLanguage()
-  const { selectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useWorkspaceContext()
+  const { language, setLanguage, t } = useLanguage()
+  const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
+  
+  // Find selected workspace using string comparison
+  const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
   // ShieldObserve subpages configuration (from shared constants)
 
@@ -332,8 +335,97 @@ function AppLayout() {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-slate-50">
-        <Outlet />
+      <main className="min-h-screen min-w-0 flex-1 bg-[#0b0f14] text-slate-100 md:ml-64">
+        <div className="border-b border-white/5 px-4 py-4 md:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="inline-flex items-center justify-center rounded-md border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+              aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6h16M4 12h16M4 18h10"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-xs text-white/70">
+                <span>{t('nav.projects')}</span>
+                <select
+                  value={selectedWorkspaceId ?? ''}
+                  onChange={(event) => {
+                    const workspaceId = event.target.value
+                    if (workspaceId) {
+                      setSelectedWorkspaceId(workspaceId)
+                      // Navigate to dashboard after selection
+                      navigate('/dashboard')
+                    }
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
+                  title={workspacesError || undefined}
+                >
+                  {isLoadingWorkspaces ? (
+                    <option value="">Loading workspaces...</option>
+                  ) : workspacesError && !workspacesError.includes('Unauthenticated') ? (
+                    <option value="">Error loading workspaces</option>
+                  ) : workspaces.length === 0 ? (
+                    <option value="">No workspaces</option>
+                  ) : !selectedWorkspaceId ? (
+                    <option value="">Select a workspace</option>
+                  ) : selectedWorkspace ? null : (
+                    <option value={selectedWorkspaceId}>Selected workspace</option>
+                  )}
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={String(workspace.id)} className="bg-slate-900 text-white">
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="inline-flex items-center gap-2 text-xs text-white/70">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 2a10 10 0 100 20 10 10 0 000-20z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M2 12h20M12 2c3 3 3 15 0 20M12 2c-3 3-3 15 0 20"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                </svg>
+                {t('language.switch')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {t('language.english')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('ar')}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {t('language.arabic')}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
+          <Outlet />
+        </div>
       </main>
     </div>
   )
