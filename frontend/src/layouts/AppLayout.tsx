@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import { authService } from '../services/authService'
 
 function AppLayout() {
   const location = useLocation()
@@ -20,6 +21,16 @@ function AppLayout() {
     return location.pathname === path
   }
 
+  const handleLogout = async () => {
+    try {
+      await authService.logout()
+      navigate('/login')
+    } catch (error) {
+      // Even if logout API call fails, clear token and redirect
+      navigate('/login')
+    }
+  }
+
   return (
     <div className="relative flex min-h-screen bg-[#0b0f14] text-slate-100">
       {isSidebarOpen ? (
@@ -32,7 +43,7 @@ function AppLayout() {
       ) : null}
       <aside
         className={[
-          'fixed left-0 top-0 z-40 h-full w-64 shrink-0 border-r border-white/5 bg-[#0f141b] text-white transition-transform md:static md:translate-x-0',
+          'fixed left-0 top-0 z-40 flex h-full w-64 shrink-0 flex-col border-r border-white/5 bg-[#0f141b] text-white transition-transform md:static md:translate-x-0',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
@@ -175,6 +186,29 @@ function AppLayout() {
             })
           )}
         </nav>
+        <div className="mt-auto border-t border-white/10 px-4 py-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Logout
+          </button>
+        </div>
       </aside>
 
       <main className="min-h-screen min-w-0 flex-1 bg-[#0b0f14] text-slate-100 md:ml-64">
