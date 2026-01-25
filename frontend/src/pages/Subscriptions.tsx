@@ -285,11 +285,11 @@ function Subscriptions() {
                 const value = e.target.value
                 handleOverrideChange(coreModule.key, value === '' ? null : value as 'allow' | 'deny')
               }}
-              className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white"
+              className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
             >
-              <option value="">Default (Plan)</option>
-              <option value="allow">Force Enable</option>
-              <option value="deny">Force Disable</option>
+              <option value="" className="bg-slate-900 text-white">Default (Plan)</option>
+              <option value="allow" className="bg-slate-900 text-white">Force Enable</option>
+              <option value="deny" className="bg-slate-900 text-white">Force Disable</option>
             </select>
           </div>
         </div>
@@ -362,11 +362,11 @@ function Subscriptions() {
                   const value = e.target.value
                   handleOverrideChange(module.key, value === '' ? null : value as 'allow' | 'deny')
                 }}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none [&>option]:bg-slate-900 [&>option]:text-white"
+                className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500 focus:outline-none"
               >
-                <option value="">Default (Plan)</option>
-                <option value="allow">Force Enable</option>
-                <option value="deny">Force Disable</option>
+                <option value="" className="bg-slate-900 text-white">Default (Plan)</option>
+                <option value="allow" className="bg-slate-900 text-white">Force Enable</option>
+                <option value="deny" className="bg-slate-900 text-white">Force Disable</option>
               </select>
             </div>
           </div>

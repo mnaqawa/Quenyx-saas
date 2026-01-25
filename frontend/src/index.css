@@ -8,3 +8,9 @@ body,
 #root {
   height: 100%;
 }
+
+/* Style select dropdown options for dark theme */
+select option {
+  background-color: #0f172a; /* slate-900 */
+  color: #ffffff;
+}
