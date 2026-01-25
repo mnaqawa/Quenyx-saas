@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
@@ -14,6 +14,36 @@ function AppLayout() {
   // Find selected workspace using string comparison
   const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
+  // ShieldObserve subpages configuration
+  const observeSubpages = [
+    { path: 'real-time-monitoring', label: 'Real-time Monitoring', route: 'real-time-monitoring' },
+    { path: 'infrastructure-map', label: 'Infrastructure Map', route: 'infrastructure-map' },
+    { path: 'performance-analytics', label: 'Performance Analytics', route: 'performance-analytics' },
+    { path: 'capacity-planning', label: 'Capacity Planning', route: 'capacity-planning' },
+    { path: 'alert-management', label: 'Alert Management', route: 'alert-management' },
+    { path: 'instance-management', label: 'Instance Management', route: 'instance-management' },
+    { path: 'services', label: 'Services', route: 'services' },
+    { path: 'reports', label: 'Reports', route: 'reports' },
+    { path: 'data-sources', label: 'Data Sources', route: 'data-sources' },
+  ]
+
+  // Check if ShieldObserve is locked
+  const isObserveLocked = useMemo(() => {
+    const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
+    return observeModule ? !allowedByKey['shieldobserve'] : false
+  }, [modulesWithAccess, allowedByKey])
+
+  // Check if we're on any observe route
+  const isObserveRoute = location.pathname.includes('/observe/')
+  const [isObserveExpanded, setIsObserveExpanded] = useState(isObserveRoute)
+
+  // Update expanded state when route changes to observe
+  useEffect(() => {
+    if (isObserveRoute) {
+      setIsObserveExpanded(true)
+    }
+  }, [isObserveRoute])
+
   const isActive = (path: string): boolean => {
     if (path === '/dashboard') {
       return location.pathname === '/' || location.pathname.startsWith('/dashboard')
@@ -22,6 +52,11 @@ function AppLayout() {
       return location.pathname.startsWith('/app/workspaces') || location.pathname.startsWith('/app/projects')
     }
     return location.pathname === path
+  }
+
+  const isObserveSubpageActive = (route: string): boolean => {
+    if (!selectedWorkspaceId) return false
+    return location.pathname === `/app/workspaces/${selectedWorkspaceId}/observe/${route}`
   }
 
   const handleLogout = async () => {
@@ -139,19 +174,62 @@ function AppLayout() {
             </div>
           ) : (
             <>
-              {/* ShieldObserve - always visible, even when locked */}
+              {/* ShieldObserve - always visible, even when locked, with expandable subpages */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (selectedWorkspaceId) {
-                      navigate(`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`)
-                    }
-                  }}
-                  className="rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between text-white/60 hover:bg-white/5 hover:text-white"
+                  onClick={() => setIsObserveExpanded(!isObserveExpanded)}
+                  className={`rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between ${
+                    isObserveRoute
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/60 hover:bg-white/5 hover:text-white'
+                  }`}
                 >
                   <span>ShieldObserve</span>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className={`transition-transform ${isObserveExpanded ? 'rotate-90' : ''}`}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                 </button>
+                {isObserveExpanded && (
+                  <div className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                    {observeSubpages.map((subpage) => {
+                      const isActive = isObserveSubpageActive(subpage.route)
+                      const isDisabled = !selectedWorkspaceId || isObserveLocked
+                      const href = selectedWorkspaceId
+                        ? `/app/workspaces/${selectedWorkspaceId}/observe/${subpage.route}`
+                        : '#'
+
+                      return (
+                        <Link
+                          key={subpage.path}
+                          to={href}
+                          onClick={(e) => {
+                            if (isDisabled) {
+                              e.preventDefault()
+                            }
+                          }}
+                          className={`block rounded-md px-3 py-1.5 text-xs transition ${
+                            isDisabled
+                              ? 'text-white/30 cursor-not-allowed opacity-50'
+                              : isActive
+                              ? 'bg-white/10 text-white'
+                              : 'text-white/60 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {subpage.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
               {/* Other modules */}
               {modulesWithAccess
