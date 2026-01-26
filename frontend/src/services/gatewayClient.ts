@@ -7,6 +7,18 @@ import { apiClient } from './apiClient'
 // GATEWAY_BASE_URL reserved for future use: import.meta.env.VITE_GATEWAY_BASE_URL
 const USE_GATEWAY = import.meta.env.VITE_USE_GATEWAY === 'true' || false
 
+// Generate a unique request ID for each request
+function generateRequestId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+// Get client version from build metadata or package.json
+function getClientVersion(): string {
+  // In production, this could come from build-time env var
+  // For now, use a simple version string
+  return import.meta.env.VITE_APP_VERSION || '1.0.0'
+}
+
 // Get current workspace ID from context (will be injected by services)
 export interface GatewayRequestOptions {
   workspaceId?: string | number
@@ -49,6 +61,10 @@ function buildGatewayHeaders(options?: GatewayRequestOptions): Record<string, st
   if (options?.moduleKey) {
     headers['x-module-key'] = options.moduleKey
   }
+
+  // Add standard gateway headers
+  headers['x-request-id'] = generateRequestId()
+  headers['x-client-version'] = getClientVersion()
 
   return headers
 }

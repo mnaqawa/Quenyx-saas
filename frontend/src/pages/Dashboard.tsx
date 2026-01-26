@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import { useObserveServices } from '../hooks/useObserveData'
 
 const MODULE_CAPACITY = 10
 
@@ -78,10 +80,22 @@ const buildWeeklyUptime = (modules: Module[]): number[] => {
 
 function Dashboard() {
   const { t } = useLanguage()
-  const { workspaces, workspacesError, isLoadingWorkspaces } = useWorkspaceContext()
+  const navigate = useNavigate()
+  const { workspaces, workspacesError, isLoadingWorkspaces, selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Check if ShieldObserve is available and unlocked
+  const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
+  const hasObserveAccess = observeModule ? allowedByKey['shieldobserve'] : false
+  
+  // Fetch Observe summary data if workspace is selected and module is accessible
+  const { data: observeData, loading: observeLoading } = useObserveServices({
+    workspaceId: hasObserveAccess && selectedWorkspaceId ? selectedWorkspaceId : null,
+    limit: 10, // Get top 10 problems for dashboard
+    problemsOnly: true, // Only show problems
+  })
 
   useEffect(() => {
     // Don't fetch dashboard if workspaces are still loading or if there's a workspace error
@@ -382,6 +396,147 @@ function Dashboard() {
           </div>
         </section>
       </div>
+
+      {/* Observe Summary Widget */}
+      {hasObserveAccess && selectedWorkspaceId && (
+        <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-white">ShieldObserve Summary</h2>
+              <p className="mt-1 text-xs text-white/60">Real-time monitoring status and alerts</p>
+            </div>
+            {observeData && (
+              <span className="text-xs text-white/50">
+                Last sync: {new Date().toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+          
+          {observeLoading ? (
+            <div className="py-8 text-center text-sm text-white/60">Loading Observe data...</div>
+          ) : observeData ? (
+            <div className="space-y-4">
+              {/* Summary Cards */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="mb-1 text-xs text-white/60">Hosts</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold text-emerald-200">{observeData.hostTotals.up}</span>
+                    <span className="text-xs text-white/50">Up</span>
+                  </div>
+                  <div className="mt-1 flex gap-2 text-xs text-white/50">
+                    <span>{observeData.hostTotals.down} Down</span>
+                    <span>•</span>
+                    <span>{observeData.hostTotals.unreachable} Unreachable</span>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="mb-1 text-xs text-white/60">Services</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold text-emerald-200">{observeData.serviceTotals.ok}</span>
+                    <span className="text-xs text-white/50">OK</span>
+                  </div>
+                  <div className="mt-1 flex gap-2 text-xs">
+                    <span className="text-yellow-200">{observeData.serviceTotals.warning} Warning</span>
+                    <span className="text-white/50">•</span>
+                    <span className="text-rose-200">{observeData.serviceTotals.critical} Critical</span>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="mb-1 text-xs text-white/60">Problems</div>
+                  <div className="text-lg font-semibold text-rose-200">
+                    {observeData.serviceTotals.warning + observeData.serviceTotals.critical + observeData.serviceTotals.unknown}
+                  </div>
+                  <div className="mt-1 text-xs text-white/50">Active issues</div>
+                </div>
+                
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <div className="mb-1 text-xs text-white/60">Pending</div>
+                  <div className="text-lg font-semibold text-sky-200">{observeData.serviceTotals.pending}</div>
+                  <div className="mt-1 text-xs text-white/50">Awaiting check</div>
+                </div>
+              </div>
+              
+              {/* Top Problems List */}
+              {observeData.items.length > 0 && (
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-white">Top Problems</h3>
+                    <Link
+                      to={`/app/workspaces/${selectedWorkspaceId}/observe/services?problems=1&status=critical,warning`}
+                      className="text-xs text-sky-200 hover:text-sky-100 transition"
+                    >
+                      View All →
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {observeData.items.slice(0, 5).map((item, index) => (
+                      <button
+                        key={`${item.host}-${item.service}-${index}`}
+                        onClick={() => {
+                          navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}&status=${item.status}`)
+                        }}
+                        className="flex w-full items-center justify-between rounded border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:bg-white/10"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-white">{item.host}</span>
+                            <span className="text-xs text-white/50">•</span>
+                            <span className="text-xs text-white/70">{item.service}</span>
+                          </div>
+                          <div className="mt-0.5 text-[10px] text-white/50 line-clamp-1">{item.info}</div>
+                        </div>
+                        <div className="ml-3 flex items-center gap-2">
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                              item.status === 'critical'
+                                ? 'border-rose-500/30 bg-rose-500/20 text-rose-200'
+                                : item.status === 'warning'
+                                ? 'border-yellow-500/30 bg-yellow-500/20 text-yellow-200'
+                                : 'border-purple-500/30 bg-purple-500/20 text-purple-200'
+                            }`}
+                          >
+                            {item.status.toUpperCase()}
+                          </span>
+                          <span className="text-[10px] text-white/50">
+                            {Math.floor(item.durationSec / 3600)}h
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/app/workspaces/${selectedWorkspaceId}/observe/services`}
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  Open Services
+                </Link>
+                <Link
+                  to={`/app/workspaces/${selectedWorkspaceId}/observe/alert-management`}
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  Open Alert Management
+                </Link>
+                <Link
+                  to={`/app/workspaces/${selectedWorkspaceId}/observe/data-sources`}
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  Configure Data Source
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-white/60">No Observe data available</div>
+          )}
+        </section>
+      )}
 
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-center">
         <h3 className="text-sm font-semibold text-white">{t('dashboard.noModulesTitle')}</h3>

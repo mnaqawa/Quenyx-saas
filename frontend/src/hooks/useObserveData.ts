@@ -17,6 +17,7 @@ import {
   dataSourceSummaryFixture,
 } from '../fixtures/observeFixtures'
 import { servicesFixture } from '../fixtures/servicesFixture'
+import { observeService } from '../services/observeService'
 import type {
   RealTimeMetrics,
   SystemInfo,
@@ -33,6 +34,9 @@ import type {
   DataSourceSummary,
   ObserveServicesResponse,
 } from '../types/observe'
+
+// Data source toggle: use fixtures if VITE_OBSERVE_USE_FIXTURES=true, otherwise use real API
+const USE_FIXTURES = import.meta.env.VITE_OBSERVE_USE_FIXTURES === 'true' || false
 
 // Real-time Monitoring hooks
 export function useRealTimeMetrics() {
@@ -369,73 +373,105 @@ interface UseObserveServicesParams {
   statuses?: string[]
   limit?: number
   problemsOnly?: boolean
+  refreshKey?: number // Optional refresh trigger
 }
 
-export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly }: UseObserveServicesParams) {
+export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly, refreshKey = 0 }: UseObserveServicesParams) {
   const [data, setData] = useState<ObserveServicesResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!workspaceId) {
       setData(null)
       setLoading(false)
+      setError(null)
       return
     }
 
-    const timer = setTimeout(() => {
-      let filtered = { ...servicesFixture }
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      
+      try {
+        if (USE_FIXTURES) {
+          // Use fixtures with filtering
+          await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate delay
+          let filtered = { ...servicesFixture }
 
-      // Apply problemsOnly filter
-      if (problemsOnly) {
-        filtered.items = filtered.items.filter(
-          (item) => item.status !== 'ok' && item.status !== 'pending'
-        )
+          // Apply problemsOnly filter
+          if (problemsOnly) {
+            filtered.items = filtered.items.filter(
+              (item) => item.status !== 'ok' && item.status !== 'pending'
+            )
+          }
+
+          // Apply status filter
+          if (statuses && statuses.length > 0) {
+            filtered.items = filtered.items.filter((item) => statuses.includes(item.status))
+          }
+
+          // Apply search query
+          if (q && q.trim()) {
+            const query = q.toLowerCase()
+            filtered.items = filtered.items.filter(
+              (item) =>
+                item.host.toLowerCase().includes(query) ||
+                item.service.toLowerCase().includes(query) ||
+                item.info.toLowerCase().includes(query)
+            )
+          }
+
+          // Apply limit
+          if (limit) {
+            filtered.items = filtered.items.slice(0, limit)
+          }
+
+          // Recalculate totals based on filtered items
+          const hostCounts = new Set(filtered.items.map((item) => item.host))
+          filtered.hostTotals = {
+            up: hostCounts.size,
+            down: 0,
+            unreachable: 0,
+            pending: 0,
+          }
+
+          filtered.serviceTotals = {
+            ok: filtered.items.filter((item) => item.status === 'ok').length,
+            warning: filtered.items.filter((item) => item.status === 'warning').length,
+            unknown: filtered.items.filter((item) => item.status === 'unknown').length,
+            critical: filtered.items.filter((item) => item.status === 'critical').length,
+            pending: filtered.items.filter((item) => item.status === 'pending').length,
+          }
+
+          setData(filtered)
+        } else {
+          // Use real API via observeService
+          const response = await observeService.getServices(Number(workspaceId), {
+            q,
+            status: statuses,
+            limit,
+            problemsOnly,
+          })
+          setData(response)
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load services'
+        setError(errorMessage)
+        // On error, fall back to empty data
+        setData({
+          hostTotals: { up: 0, down: 0, unreachable: 0, pending: 0 },
+          serviceTotals: { ok: 0, warning: 0, unknown: 0, critical: 0, pending: 0 },
+          items: [],
+        })
+      } finally {
+        setLoading(false)
       }
+    }
 
-      // Apply status filter
-      if (statuses && statuses.length > 0) {
-        filtered.items = filtered.items.filter((item) => statuses.includes(item.status))
-      }
+    fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, q, statuses?.join(','), limit, problemsOnly, refreshKey])
 
-      // Apply search query
-      if (q && q.trim()) {
-        const query = q.toLowerCase()
-        filtered.items = filtered.items.filter(
-          (item) =>
-            item.host.toLowerCase().includes(query) ||
-            item.service.toLowerCase().includes(query) ||
-            item.info.toLowerCase().includes(query)
-        )
-      }
-
-      // Apply limit
-      if (limit) {
-        filtered.items = filtered.items.slice(0, limit)
-      }
-
-      // Recalculate totals based on filtered items
-      const hostCounts = new Set(filtered.items.map((item) => item.host))
-      filtered.hostTotals = {
-        up: hostCounts.size,
-        down: 0,
-        unreachable: 0,
-        pending: 0,
-      }
-
-      filtered.serviceTotals = {
-        ok: filtered.items.filter((item) => item.status === 'ok').length,
-        warning: filtered.items.filter((item) => item.status === 'warning').length,
-        unknown: filtered.items.filter((item) => item.status === 'unknown').length,
-        critical: filtered.items.filter((item) => item.status === 'critical').length,
-        pending: filtered.items.filter((item) => item.status === 'pending').length,
-      }
-
-      setData(filtered)
-      setLoading(false)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [workspaceId, q, statuses, limit, problemsOnly])
-
-  return { data, loading }
+  return { data, loading, error }
 }

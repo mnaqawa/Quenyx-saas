@@ -192,4 +192,50 @@ export interface ObserveServicesResponse {
     pending: number
   }
   items: ObserveServiceRow[]
+  meta?: {
+    last_poll_at: string
+    source_version?: string
+  }
+}
+
+// Normalized data model contract (Option A - Normalized state)
+// This schema will be used when backend is ready, ensuring frontend types don't churn
+
+export interface Host {
+  name: string
+  address: string
+  state: 'up' | 'down' | 'unreachable' | 'pending'
+  last_check: string
+  duration: number // seconds
+  output?: string
+  perfdata?: string
+}
+
+export interface Service {
+  host_name: string
+  service_name: string
+  state: 'ok' | 'warning' | 'critical' | 'unknown' | 'pending'
+  last_check: string
+  duration: number // seconds
+  attempt: string // e.g., "1/3"
+  output?: string
+  info?: string // Alias for output for compatibility
+  perfdata?: string
+}
+
+export interface Event {
+  id: string
+  host_name: string
+  service_name?: string
+  state: string
+  timestamp: string
+  message: string
+  type: 'state_change' | 'alert' | 'downtime' | 'acknowledgment'
+}
+
+export interface ObserveMeta {
+  last_poll_at: string
+  source_version?: string
+  total_hosts?: number
+  total_services?: number
 }

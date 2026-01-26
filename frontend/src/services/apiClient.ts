@@ -101,25 +101,40 @@ class ApiClient {
         ;(error as any).status = response.status
         ;(error as any).url = url
         
-        // Handle authentication errors
+        // Standardized error mapping for gateway client
         if (response.status === 401) {
           clearAuthToken()
-          const authError = new Error(errorMessage || 'Unauthenticated')
+          const authError = new Error('Unauthorized')
           ;(authError as any).status = 401
           ;(authError as any).isAuthError = true
           ;(authError as any).url = url
-          
-          // Log error details in development
+          ;(authError as any).userMessage = 'Unauthorized'
           if (import.meta.env.DEV) {
-            console.error('API Error (401):', {
-              url,
-              status: response.status,
-              statusText: response.statusText,
-              message: errorMessage,
-            })
+            console.error('API Error (401):', { url, status: response.status, message: errorMessage })
           }
-          
           throw authError
+        }
+        
+        if (response.status === 403) {
+          const forbiddenError = new Error('Locked')
+          ;(forbiddenError as any).status = 403
+          ;(forbiddenError as any).url = url
+          ;(forbiddenError as any).userMessage = 'Access denied'
+          if (import.meta.env.DEV) {
+            console.error('API Error (403):', { url, status: response.status, message: errorMessage })
+          }
+          throw forbiddenError
+        }
+        
+        if (response.status >= 500) {
+          const serverError = new Error('Service unavailable')
+          ;(serverError as any).status = response.status
+          ;(serverError as any).url = url
+          ;(serverError as any).userMessage = 'Service unavailable'
+          if (import.meta.env.DEV) {
+            console.error('API Error (5xx):', { url, status: response.status, message: errorMessage })
+          }
+          throw serverError
         }
         
         // Log error details in development
@@ -212,9 +227,19 @@ class ApiClient {
         }
         throw error
       }
+      // Handle timeout errors
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('aborted'))) {
+        const timeoutError = new Error('Gateway timeout')
+        ;(timeoutError as any).status = 504
+        ;(timeoutError as any).url = url
+        ;(timeoutError as any).userMessage = 'Request timed out'
+        throw timeoutError
+      }
+      
       // Otherwise wrap network/parsing errors
       const wrappedError = new Error(error instanceof Error ? error.message : 'Network error')
       ;(wrappedError as any).url = url
+      ;(wrappedError as any).userMessage = 'Network error - please check your connection'
       throw wrappedError
     }
   }

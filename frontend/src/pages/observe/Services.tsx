@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
@@ -36,24 +37,74 @@ function formatDateTime(dateString: string): string {
 
 export default function Services() {
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [limit, setLimit] = useState(100)
-  const [problemsOnly, setProblemsOnly] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState('90 seconds')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  
+  // Initialize state from URL query params
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
+    const statusParam = searchParams.get('status')
+    return statusParam ? statusParam.split(',') : []
+  })
+  const [limit, setLimit] = useState(() => {
+    const limitParam = searchParams.get('limit')
+    return limitParam ? Number(limitParam) : 100
+  })
+  const [problemsOnly, setProblemsOnly] = useState(() => {
+    return searchParams.get('problems') === '1'
+  })
+  const [refreshInterval, setRefreshInterval] = useState(() => {
+    const intervalParam = searchParams.get('interval')
+    return intervalParam ? `${intervalParam} seconds` : '90 seconds'
+  })
+  
+  // Sync state changes to URL query params
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (searchQuery) params.set('q', searchQuery)
+    if (selectedStatuses.length > 0) params.set('status', selectedStatuses.join(','))
+    if (limit !== 100) params.set('limit', limit.toString())
+    if (problemsOnly) params.set('problems', '1')
+    const intervalSeconds = refreshInterval.replace(' seconds', '')
+    if (intervalSeconds !== '90') params.set('interval', intervalSeconds)
+    
+    // Only update URL if params changed (avoid infinite loop)
+    const currentParams = searchParams.toString()
+    const newParams = params.toString()
+    if (currentParams !== newParams) {
+      setSearchParams(params, { replace: true })
+    }
+  }, [searchQuery, selectedStatuses, limit, problemsOnly, refreshInterval, setSearchParams, searchParams])
 
   const isLocked = useMemo(() => {
     const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
     return observeModule ? !allowedByKey['shieldobserve'] : false
   }, [modulesWithAccess, allowedByKey])
 
-  const { data, loading } = useObserveServices({
+  // Auto-refresh based on interval - trigger re-fetch by updating a dependency
+  const [refreshKey, setRefreshKey] = useState(0)
+  
+  const { data, loading, error } = useObserveServices({
     workspaceId: selectedWorkspaceId,
     q: searchQuery,
     statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
     limit,
     problemsOnly,
+    refreshKey, // Include refreshKey to trigger re-fetch on interval
   })
+  useEffect(() => {
+    if (!selectedWorkspaceId || isLocked) return
+    
+    const intervalSeconds = parseInt(refreshInterval.replace(' seconds', ''), 10)
+    if (isNaN(intervalSeconds) || intervalSeconds < 30) return
+    
+    const interval = setInterval(() => {
+      // Trigger refresh by updating key (this will cause useObserveServices to re-fetch)
+      setRefreshKey((prev) => prev + 1)
+    }, intervalSeconds * 1000)
+    
+    return () => clearInterval(interval)
+  }, [selectedWorkspaceId, refreshInterval, isLocked])
 
   const toggleStatus = (status: string) => {
     setSelectedStatuses((prev) =>
@@ -96,18 +147,41 @@ export default function Services() {
   }
 
   if (loading) {
-    return <div className="text-sm text-white/60">Loading...</div>
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-sm text-white/60">Loading services...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        Error loading services: {error}
+      </div>
+    )
   }
 
   if (!data) {
-    return <div className="text-sm text-white/60">No data available</div>
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
+        No data available
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
+      {/* Locked module banner - consistent with ObserveLayout */}
       {isLocked && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-200">
-          ShieldObserve is locked. Some features are disabled.
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>ShieldObserve is locked. Some features are disabled.</span>
+          </div>
         </div>
       )}
 
@@ -127,10 +201,14 @@ export default function Services() {
               <option value="90 seconds" className="bg-slate-900 text-white">90 seconds</option>
             </select>
             <button
-              disabled={isLocked}
+              onClick={() => {
+                // Force refresh by updating refreshKey
+                setRefreshKey((prev) => prev + 1)
+              }}
+              disabled={isLocked || loading}
               className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
             >
-              Refresh
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
               disabled={isLocked}
@@ -312,7 +390,18 @@ export default function Services() {
                     key={`${item.host}-${item.service}-${index}`}
                     className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
                   >
-                    <td className="px-3 py-2.5 text-[13px]">{item.host}</td>
+                    <td className="px-3 py-2.5 text-[13px]">
+                      <button
+                        onClick={() => {
+                          if (selectedWorkspaceId) {
+                            navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
+                          }
+                        }}
+                        className="hover:text-sky-200 transition"
+                      >
+                        {item.host}
+                      </button>
+                    </td>
                     <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
                     <td className="px-3 py-2.5">
                       <span
