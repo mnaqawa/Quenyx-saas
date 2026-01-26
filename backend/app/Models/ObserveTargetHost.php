@@ -11,6 +11,8 @@ class ObserveTargetHost extends Model
 {
     use HasFactory;
 
+    protected $table = 'observe_targets_hosts';
+
     protected $fillable = [
         'workspace_id',
         'name',

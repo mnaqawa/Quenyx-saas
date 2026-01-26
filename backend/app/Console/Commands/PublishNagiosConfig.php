@@ -15,7 +15,7 @@ class PublishNagiosConfig extends Command
     public function handle(): int
     {
         // Check if tables exist (migration guard)
-        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_target_hosts')) {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_targets_hosts')) {
             $this->error('Database tables not found. Please run migrations first: php artisan migrate');
             return 1;
         }

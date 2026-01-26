@@ -26,7 +26,7 @@ class NagiosConfigPublisher
     public function publish(int $workspaceId): void
     {
         // Check if tables exist (migration guard)
-        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_target_hosts')) {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_targets_hosts')) {
             throw new \Exception('Database tables not found. Please run migrations first: php artisan migrate');
         }
         

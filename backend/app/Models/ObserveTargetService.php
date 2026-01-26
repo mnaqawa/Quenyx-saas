@@ -10,6 +10,8 @@ class ObserveTargetService extends Model
 {
     use HasFactory;
 
+    protected $table = 'observe_targets_services';
+
     protected $fillable = [
         'workspace_id',
         'host_id',

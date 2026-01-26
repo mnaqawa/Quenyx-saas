@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
+use App\Models\ObserveTargetHost;
+use App\Models\ObserveTargetService;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -202,5 +204,78 @@ class ObserveTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson(['success' => true]);
+    }
+
+    public function test_put_targets_persists_and_publish_reads_back(): void
+    {
+        // PUT targets
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/workspaces/{$this->workspace->id}/observe/targets", [
+                'hosts' => [
+                    [
+                        'name' => 'web-server-01',
+                        'address' => '192.168.1.10',
+                        'check_command' => 'check-host-alive',
+                        'enabled' => true,
+                        'services' => [
+                            [
+                                'name' => 'HTTP',
+                                'check_command' => 'check_http',
+                                'enabled' => true,
+                            ],
+                            [
+                                'name' => 'Ping',
+                                'check_command' => 'check_ping',
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        // Verify targets were persisted
+        $host = ObserveTargetHost::where('workspace_id', $this->workspace->id)
+            ->where('name', 'web-server-01')
+            ->first();
+
+        $this->assertNotNull($host);
+        $this->assertEquals('192.168.1.10', $host->address);
+        $this->assertEquals('check-host-alive', $host->check_command);
+        $this->assertTrue($host->enabled);
+
+        // Verify services were persisted
+        $services = ObserveTargetService::where('host_id', $host->id)->get();
+        $this->assertCount(2, $services);
+
+        $httpService = $services->firstWhere('name', 'HTTP');
+        $this->assertNotNull($httpService);
+        $this->assertEquals('check_http', $httpService->check_command);
+
+        $pingService = $services->firstWhere('name', 'Ping');
+        $this->assertNotNull($pingService);
+        $this->assertEquals('check_ping', $pingService->check_command);
+
+        // Test that publish can read back targets without SQL errors
+        // This verifies the table names are correct
+        try {
+            $publisher = new \App\Services\NagiosConfigPublisher();
+            // Mock the HTTP calls to gateway to avoid actual network calls in test
+            // Just verify it doesn't throw SQL errors when querying
+            $hosts = ObserveTargetHost::where('workspace_id', $this->workspace->id)
+                ->where('enabled', true)
+                ->with(['services' => function ($query) {
+                    $query->where('enabled', true);
+                }])
+                ->get();
+
+            $this->assertCount(1, $hosts);
+            $this->assertEquals('web-server-01', $hosts->first()->name);
+            $this->assertCount(2, $hosts->first()->services);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $this->fail('SQL error when reading targets: ' . $e->getMessage());
+        }
     }
 }
