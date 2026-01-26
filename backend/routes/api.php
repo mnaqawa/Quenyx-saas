@@ -86,4 +86,12 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Workspace audit logs alias
     Route::get('/workspaces/{project}/audit-logs', [AuditLogController::class, 'index']);
+    
+    // Observe endpoints (workspace canonical)
+    Route::get('/workspaces/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
+    Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
+    
+    // Observe endpoints (project aliases)
+    Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
+    Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
 });

@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express'
 import { enforceEntitlements } from './entitlementGuard'
 import { createBackendProxy } from './proxy'
 import { clearCache } from './cache'
+import { registerEngineRoutes } from './engines'
 
 const app = express()
 const PORT = process.env.GATEWAY_PORT || 4000
@@ -21,6 +22,9 @@ app.use((req: Request, res: Response, next) => {
   
   next()
 })
+
+// Register internal engine routes (before entitlement enforcement)
+registerEngineRoutes(app)
 
 // Apply entitlement enforcement before proxying (doesn't need body)
 app.use(enforceEntitlements)

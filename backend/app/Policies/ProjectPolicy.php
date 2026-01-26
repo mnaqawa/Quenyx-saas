@@ -16,7 +16,13 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return $user->id === $project->owner_id;
+        // User is owner
+        if ($user->id === $project->owner_id) {
+            return true;
+        }
+        
+        // User is a member
+        return $project->memberships()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user): bool

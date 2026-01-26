@@ -12,7 +12,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Schedule observe polling (every minute in dev)
+        if (app()->environment('local', 'testing')) {
+            $schedule->command('observe:poll')
+                ->everyMinute()
+                ->withoutOverlapping()
+                ->runInBackground();
+        }
     }
 
     /**
