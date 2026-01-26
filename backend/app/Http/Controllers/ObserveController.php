@@ -52,9 +52,11 @@ class ObserveController extends Controller
         $limit = (int) ($request->query('limit', 100));
         $problemsOnly = $request->query('problems') === '1' || $request->query('problemsOnly') === 'true';
 
-        // Build query
+        // Build query with workspace scoping (only include hosts with ws{workspaceId}- prefix)
+        $workspacePrefix = 'ws' . $workspace->id . '-';
         $query = ObserveService::where('workspace_id', $workspace->id)
-            ->where('engine_key', 'nagios');
+            ->where('engine_key', 'nagios')
+            ->where('host_name', 'like', $workspacePrefix . '%');
 
         // Apply status filter
         if ($statusParam) {
@@ -92,9 +94,10 @@ class ObserveController extends Controller
         // Apply limit
         $services = $query->limit($limit)->get();
 
-        // Calculate totals from actual data
+        // Calculate totals from actual data (workspace-scoped)
         $allServices = ObserveService::where('workspace_id', $workspace->id)
             ->where('engine_key', 'nagios')
+            ->where('host_name', 'like', $workspacePrefix . '%')
             ->get();
 
         $serviceTotals = [

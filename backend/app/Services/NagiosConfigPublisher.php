@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
+use App\Models\ObserveMeta;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -35,7 +36,7 @@ class NagiosConfigPublisher
             return;
         }
 
-        $config = $this->buildConfig($hosts);
+        $config = $this->buildConfig($hosts, $workspaceId);
 
         // Write config via gateway
         $response = Http::timeout(30)
@@ -59,7 +60,43 @@ class NagiosConfigPublisher
             ])
             ->post("{$this->gatewayUrl}/internal/engines/nagios/reload");
 
-        if (!$reloadResponse->successful()) {
+        $reloadSuccess = $reloadResponse->successful();
+        $reloadData = $reloadResponse->json();
+        
+        // Track publish status in observe_meta
+        $publishSuccess = $reloadSuccess && 
+                         isset($reloadData['validated']) && 
+                         $reloadData['validated'] === true &&
+                         isset($reloadData['reloaded']) && 
+                         $reloadData['reloaded'] === true;
+        
+        $publishError = null;
+        if (!$publishSuccess) {
+            if (!$reloadSuccess) {
+                $publishError = "Reload failed: HTTP {$reloadResponse->status()} - {$reloadResponse->body()}";
+            } elseif (isset($reloadData['message'])) {
+                $publishError = $reloadData['message'];
+                if (isset($reloadData['stderr'])) {
+                    $publishError .= ' - ' . substr($reloadData['stderr'], 0, 500);
+                }
+            } else {
+                $publishError = 'Reload validation or execution failed';
+            }
+        }
+
+        ObserveMeta::updateOrCreate(
+            [
+                'workspace_id' => $workspaceId,
+                'engine_key' => 'nagios',
+            ],
+            [
+                'last_publish_at' => now(),
+                'last_publish_success' => $publishSuccess,
+                'last_publish_error' => $publishError,
+            ]
+        );
+
+        if (!$reloadSuccess) {
             Log::warning("Failed to reload Nagios after config publish", [
                 'workspace_id' => $workspaceId,
                 'status' => $reloadResponse->status(),
@@ -72,19 +109,20 @@ class NagiosConfigPublisher
     /**
      * Build Nagios config text from hosts and services
      */
-    private function buildConfig($hosts): string
+    private function buildConfig($hosts, int $workspaceId): string
     {
         $lines = [
-            '# PortShield generated config',
+            '# PortShield Workspace ' . $workspaceId,
             '# DO NOT EDIT MANUALLY - This file is auto-generated',
             '',
         ];
 
         foreach ($hosts as $host) {
-            // Host definition
+            // Host definition with workspace scoping prefix
+            $scopedHostName = 'ws' . $workspaceId . '-' . $host->name;
             $lines[] = "define host {";
             $lines[] = "    use                     generic-host";
-            $lines[] = "    host_name               {$host->name}";
+            $lines[] = "    host_name               {$scopedHostName}";
             $lines[] = "    address                 {$host->address}";
             $lines[] = "    check_command           {$host->check_command}";
             $lines[] = "    max_check_attempts      3";
@@ -98,9 +136,10 @@ class NagiosConfigPublisher
 
             // Service definitions
             foreach ($host->services as $service) {
+                $scopedHostName = 'ws' . $workspaceId . '-' . $host->name;
                 $lines[] = "define service {";
                 $lines[] = "    use                     generic-service";
-                $lines[] = "    host_name               {$host->name}";
+                $lines[] = "    host_name               {$scopedHostName}";
                 $lines[] = "    service_description     {$service->name}";
                 
                 // Build check command with args if provided

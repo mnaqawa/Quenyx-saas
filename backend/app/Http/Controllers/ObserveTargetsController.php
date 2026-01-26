@@ -82,9 +82,74 @@ class ObserveTargetsController extends Controller
             ], 422);
         }
 
+        // Allowed check commands (dev allowlist)
+        $allowedHostCommands = ['check-host-alive', 'check_ping'];
+        $allowedServiceCommands = ['check_ping', 'check_http', 'check_load', 'check_users', 'check_disk'];
+
+        // Sanitize and validate hosts
+        $hostsData = $request->input('hosts', []);
+        $sanitizedHostNames = [];
+        $errors = [];
+
+        foreach ($hostsData as $index => $hostData) {
+            // Sanitize host name
+            $originalName = $hostData['name'] ?? '';
+            $sanitizedName = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $originalName));
+            
+            if (empty($sanitizedName)) {
+                $errors["hosts.{$index}.name"] = ['Host name must contain at least one alphanumeric character'];
+                continue;
+            }
+
+            // Check uniqueness after sanitization
+            if (isset($sanitizedHostNames[$sanitizedName])) {
+                $errors["hosts.{$index}.name"] = ['Host name must be unique (after sanitization)'];
+                continue;
+            }
+            $sanitizedHostNames[$sanitizedName] = true;
+
+            // Validate check command
+            $checkCommand = $hostData['check_command'] ?? 'check-host-alive';
+            if (!in_array($checkCommand, $allowedHostCommands)) {
+                $errors["hosts.{$index}.check_command"] = ['Invalid check command. Allowed: ' . implode(', ', $allowedHostCommands)];
+            }
+
+            // Sanitize and validate services
+            foreach ($hostData['services'] ?? [] as $serviceIndex => $serviceData) {
+                $originalServiceName = $serviceData['name'] ?? '';
+                $sanitizedServiceName = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $originalServiceName));
+                
+                if (empty($sanitizedServiceName)) {
+                    $errors["hosts.{$index}.services.{$serviceIndex}.name"] = ['Service name must contain at least one alphanumeric character'];
+                    continue;
+                }
+
+                $serviceCheckCommand = $serviceData['check_command'] ?? '';
+                if (!in_array($serviceCheckCommand, $allowedServiceCommands)) {
+                    $errors["hosts.{$index}.services.{$serviceIndex}.check_command"] = ['Invalid check command. Allowed: ' . implode(', ', $allowedServiceCommands)];
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $errors,
+            ], 422);
+        }
+
+        // Apply sanitization to request data
+        foreach ($hostsData as $index => &$hostData) {
+            $hostData['name'] = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $hostData['name']));
+            foreach ($hostData['services'] ?? [] as $serviceIndex => &$serviceData) {
+                $serviceData['name'] = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $serviceData['name']));
+            }
+        }
+        unset($hostData, $serviceData);
+
         try {
-            DB::transaction(function () use ($workspace, $request) {
-                $hostsData = $request->input('hosts', []);
+            DB::transaction(function () use ($workspace, $request, $hostsData) {
                 
                 // Get existing host IDs to track what to delete
                 $existingHostIds = ObserveTargetHost::where('workspace_id', $workspace->id)
@@ -145,16 +210,23 @@ class ObserveTargetsController extends Controller
                 }
             });
 
-            // Publish config to Nagios
-            try {
-                $publisher = new NagiosConfigPublisher();
-                $publisher->publish($workspace->id);
-            } catch (\Exception $e) {
-                Log::warning('Failed to publish Nagios config after targets update', [
+            // Auto-publish config to Nagios if enabled
+            $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);
+            if ($autoPublish) {
+                try {
+                    $publisher = new NagiosConfigPublisher();
+                    $publisher->publish($workspace->id);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to publish Nagios config after targets update', [
+                        'workspace_id' => $workspace->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    // Don't fail the request, just log
+                }
+            } else {
+                Log::info('Auto-publish disabled, skipping Nagios config publish', [
                     'workspace_id' => $workspace->id,
-                    'error' => $e->getMessage(),
                 ]);
-                // Don't fail the request, just log
             }
 
             return response()->json([

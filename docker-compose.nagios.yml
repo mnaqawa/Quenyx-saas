@@ -11,6 +11,7 @@ services:
     volumes:
       - nagios-data:/usr/local/nagios
       - nagios-etc:/opt/nagios/etc
+      - ./nagios/config:/opt/nagios/etc/objects/portshield
     networks:
       - nagios-network
     restart: unless-stopped

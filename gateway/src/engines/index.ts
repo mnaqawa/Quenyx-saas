@@ -118,6 +118,9 @@ export function createEngineRouter(): Router {
       res.json({
         success: result.success,
         message: result.message,
+        validated: result.validated,
+        reloaded: result.reloaded,
+        method: result.method,
         stdout: result.stdout,
         stderr: result.stderr,
       })
@@ -126,6 +129,8 @@ export function createEngineRouter(): Router {
       res.status(500).json({
         success: false,
         message: err instanceof Error ? err.message : 'Failed to reload Nagios',
+        validated: false,
+        reloaded: false,
       })
     }
   })

@@ -9,6 +9,31 @@ const NAGIOS_CONFIG_DIR = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
 const NAGIOS_CONTAINER_NAME = process.env.NAGIOS_CONTAINER_NAME || 'nagios-core'
 
 /**
+ * Ensure Nagios base config includes portshield.cfg
+ */
+async function ensureNagiosIncludesPortshield(): Promise<void> {
+  const nagiosCfgPath = '/opt/nagios/etc/nagios.cfg'
+  const portshieldInclude = 'cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg'
+  
+  try {
+    // Check if nagios.cfg already includes portshield.cfg
+    const checkCmd = `docker exec ${NAGIOS_CONTAINER_NAME} grep -q "${portshieldInclude}" ${nagiosCfgPath} || echo "NOT_FOUND"`
+    const checkResult = await execAsync(checkCmd, { timeout: 5000 })
+    
+    if (checkResult.stdout.trim() === 'NOT_FOUND') {
+      // Append include line to nagios.cfg
+      const appendCmd = `docker exec ${NAGIOS_CONTAINER_NAME} sh -c "echo '' >> ${nagiosCfgPath} && echo '# PortShield workspace configs (auto-added)' >> ${nagiosCfgPath} && echo '${portshieldInclude}' >> ${nagiosCfgPath}"`
+      await execAsync(appendCmd, { timeout: 5000 })
+      console.log('Added portshield.cfg include to nagios.cfg')
+    }
+  } catch (err) {
+    // If container not running or command fails, log but don't throw
+    // This allows config writing to continue even if Nagios isn't running yet
+    console.warn('Could not ensure nagios.cfg includes portshield.cfg:', err instanceof Error ? err.message : String(err))
+  }
+}
+
+/**
  * Write Nagios config file for a workspace
  */
 export async function writeNagiosConfig(workspaceId: number, config: string): Promise<void> {
@@ -20,6 +45,25 @@ export async function writeNagiosConfig(workspaceId: number, config: string): Pr
   const configPath = path.join(configDir, `${workspaceId}.cfg`)
   await fs.writeFile(configPath, config, 'utf-8')
   
+  // Ensure portshield.cfg exists and includes workspace directory
+  const portshieldCfgPath = path.resolve(NAGIOS_CONFIG_DIR, 'portshield.cfg')
+  try {
+    await fs.access(portshieldCfgPath)
+  } catch {
+    // Create portshield.cfg if it doesn't exist
+    const portshieldCfg = `# PortShield workspace configurations
+# This file is auto-generated - DO NOT EDIT MANUALLY
+# Workspace configs are loaded from the workspaces/ subdirectory
+
+# Include all workspace configs
+cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
+`
+    await fs.writeFile(portshieldCfgPath, portshieldCfg, 'utf-8')
+  }
+  
+  // Ensure Nagios base config includes portshield.cfg
+  await ensureNagiosIncludesPortshield()
+  
   console.log(`Wrote Nagios config for workspace ${workspaceId} to ${configPath}`)
 }
 
@@ -29,51 +73,133 @@ export async function writeNagiosConfig(workspaceId: number, config: string): Pr
 export async function reloadNagios(): Promise<{
   success: boolean
   message: string
+  validated: boolean
+  reloaded: boolean
+  method?: string
   stdout: string
   stderr: string
 }> {
+  let validated = false
+  let validationStdout = ''
+  let validationStderr = ''
+
   try {
     // First, validate config
     const validateCmd = `docker exec ${NAGIOS_CONTAINER_NAME} /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg`
-    const validateResult = await execAsync(validateCmd, { timeout: 30000 })
-    
-    if (validateResult.stderr && !validateResult.stderr.includes('Total Warnings: 0') && !validateResult.stderr.includes('Things look okay')) {
+    try {
+      const validateResult = await execAsync(validateCmd, { timeout: 30000 })
+      validated = true
+      validationStdout = (validateResult.stdout || '').trim()
+      validationStderr = (validateResult.stderr || '').trim()
+      
+      // Nagios validation outputs to stdout, check for success indicators
+      const output = validationStdout + '\n' + validationStderr
+      const hasErrors = output.includes('Error:') || output.includes('Error processing config file')
+      const hasSuccess = output.includes('Things look okay') || 
+                         output.includes('Configuration check completed') ||
+                         output.includes('Total Warnings: 0')
+      
+      if (hasErrors || !hasSuccess) {
+        return {
+          success: false,
+          message: 'Nagios config validation failed',
+          validated: true,
+          reloaded: false,
+          stdout: validationStdout.substring(0, 1000),
+          stderr: validationStderr.substring(0, 1000),
+        }
+      }
+    } catch (validateErr: any) {
+      // Validation command failed (non-zero exit code means validation failed)
+      validated = false
+      validationStdout = validateErr.stdout?.substring(0, 1000) || ''
+      validationStderr = validateErr.stderr?.substring(0, 1000) || validateErr.message || 'Validation command failed'
+      
       return {
         success: false,
         message: 'Nagios config validation failed',
-        stdout: validateResult.stdout.substring(0, 1000), // Trim to 1KB
-        stderr: validateResult.stderr.substring(0, 1000),
+        validated: false,
+        reloaded: false,
+        stdout: validationStdout,
+        stderr: validationStderr,
       }
     }
     
-    // If validation passed, reload Nagios
-    // Try HUP signal to main process (PID 1 in container)
-    const reloadCmd = `docker exec ${NAGIOS_CONTAINER_NAME} kill -HUP 1`
+    // If validation passed, try to reload Nagios
+    // First, try to find nagios process
+    let nagiosPid: string | null = null
     try {
-      await execAsync(reloadCmd, { timeout: 5000 })
-      return {
-        success: true,
-        message: 'Nagios reloaded successfully',
-        stdout: validateResult.stdout.substring(0, 500),
-        stderr: '',
-      }
-    } catch (reloadErr: any) {
-      // Fallback: try reload script if available
-      const reloadScriptCmd = `docker exec ${NAGIOS_CONTAINER_NAME} /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg && echo "Config valid"`
+      const pgrepCmd = `docker exec ${NAGIOS_CONTAINER_NAME} pgrep -x nagios`
+      const pgrepResult = await execAsync(pgrepCmd, { timeout: 5000 })
+      nagiosPid = pgrepResult.stdout.trim()
+    } catch {
+      // pgrep failed, try PID 1
+      nagiosPid = '1'
+    }
+    
+    // Try HUP signal
+    if (nagiosPid) {
       try {
-        await execAsync(reloadScriptCmd, { timeout: 10000 })
+        const reloadCmd = `docker exec ${NAGIOS_CONTAINER_NAME} kill -HUP ${nagiosPid}`
+        await execAsync(reloadCmd, { timeout: 5000 })
         return {
           success: true,
-          message: 'Nagios config validated (reload may require manual restart)',
-          stdout: validateResult.stdout.substring(0, 500),
-          stderr: '',
+          message: 'Nagios reloaded successfully via HUP signal',
+          validated: true,
+          reloaded: true,
+          method: 'hup',
+          stdout: validationStdout.substring(0, 500),
+          stderr: validationStderr.substring(0, 500),
         }
-      } catch (scriptErr: any) {
+      } catch (hupErr: any) {
+        // HUP failed, try container restart
+        try {
+          const restartCmd = `docker restart ${NAGIOS_CONTAINER_NAME}`
+          await execAsync(restartCmd, { timeout: 30000 })
+          return {
+            success: true,
+            message: 'Nagios reloaded via container restart',
+            validated: true,
+            reloaded: true,
+            method: 'restart',
+            stdout: validationStdout.substring(0, 500),
+            stderr: validationStderr.substring(0, 500),
+          }
+        } catch (restartErr: any) {
+          return {
+            success: false,
+            message: 'Failed to reload Nagios (both HUP and restart failed)',
+            validated: true,
+            reloaded: false,
+            method: 'none',
+            stdout: validationStdout.substring(0, 500),
+            stderr: (hupErr.message || '') + '; ' + (restartErr.message || ''),
+          }
+        }
+      }
+    } else {
+      // No PID found, try restart
+      try {
+        const restartCmd = `docker restart ${NAGIOS_CONTAINER_NAME}`
+        await execAsync(restartCmd, { timeout: 30000 })
+        return {
+          success: true,
+          message: 'Nagios reloaded via container restart (no PID found)',
+          validated: true,
+          reloaded: true,
+          method: 'restart',
+          stdout: validationStdout.substring(0, 500),
+          stderr: validationStderr.substring(0, 500),
+        }
+      } catch (restartErr: any) {
         return {
           success: false,
-          message: 'Failed to reload Nagios',
-          stdout: validateResult.stdout.substring(0, 500),
-          stderr: (reloadErr.message || '') + (scriptErr.message || ''),
+          message: 'Failed to reload Nagios (no PID found and restart failed)',
+          validated: true,
+          reloaded: false,
+          method: 'none',
+          stdout: validationStdout.substring(0, 500),
+          stderr: restartErr.message || 'Restart failed',
         }
       }
     }
@@ -81,7 +207,9 @@ export async function reloadNagios(): Promise<{
     return {
       success: false,
       message: err.message || 'Failed to reload Nagios',
-      stdout: '',
+      validated,
+      reloaded: false,
+      stdout: validationStdout.substring(0, 500),
       stderr: err.stderr?.substring(0, 1000) || err.message || 'Unknown error',
     }
   }

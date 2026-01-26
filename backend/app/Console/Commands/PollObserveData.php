@@ -99,11 +99,17 @@ class PollObserveData extends Command
                 }
             }
 
-            // Upsert services
-            DB::transaction(function () use ($workspace, $services, $summary) {
+            // Upsert services (with workspace scoping - only accept hosts with ws{workspaceId}- prefix)
+            $workspacePrefix = 'ws' . $workspace->id . '-';
+            DB::transaction(function () use ($workspace, $services, $summary, $workspacePrefix) {
                 $engineKey = 'nagios';
                 
                 foreach ($services as $service) {
+                    // Only process services for this workspace (host_name must start with ws{id}-)
+                    if (!str_starts_with($service['host_name'], $workspacePrefix)) {
+                        continue;
+                    }
+                    
                     $engineServiceKey = "{$service['host_name']}::{$service['service_name']}";
                     
                     ObserveService::updateOrCreate(
