@@ -60,13 +60,16 @@ class PollObserveData extends Command
         try {
             $this->info("Polling workspace {$workspace->id} ({$workspace->name})...");
 
-            // Fetch services from gateway
+            // Fetch services from gateway with workspace scoping via host_prefix
+            $workspacePrefix = 'ws' . $workspace->id . '-';
             $servicesUrl = "{$this->gatewayUrl}/internal/engines/nagios/services";
             $servicesResponse = Http::timeout(60)
                 ->withHeaders([
                     'x-internal-secret' => $this->internalSecret,
                 ])
-                ->get($servicesUrl);
+                ->get($servicesUrl, [
+                    'host_prefix' => $workspacePrefix,
+                ]);
 
             if (!$servicesResponse->successful()) {
                 $errorBody = $servicesResponse->body();
@@ -99,13 +102,13 @@ class PollObserveData extends Command
                 }
             }
 
-            // Upsert services (with workspace scoping - only accept hosts with ws{workspaceId}- prefix)
+            // Upsert services (gateway already filtered by host_prefix, but double-check for safety)
             $workspacePrefix = 'ws' . $workspace->id . '-';
             DB::transaction(function () use ($workspace, $services, $summary, $workspacePrefix) {
                 $engineKey = 'nagios';
                 
                 foreach ($services as $service) {
-                    // Only process services for this workspace (host_name must start with ws{id}-)
+                    // Gateway should have already filtered, but verify for safety
                     if (!str_starts_with($service['host_name'], $workspacePrefix)) {
                         continue;
                     }

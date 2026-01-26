@@ -60,7 +60,7 @@ interface NagiosServiceCountResponse {
   }
 }
 
-const NAGIOS_BASE_URL = process.env.NAGIOS_BASE_URL || 'http://127.0.0.1:8080/nagios'
+const NAGIOS_BASE_URL = process.env.NAGIOS_BASE_URL || 'http://127.0.0.1:8080/nagios/cgi-bin/statusjson.cgi'
 const NAGIOS_USER = process.env.NAGIOS_USER || 'nagiosadmin'
 const NAGIOS_PASS = process.env.NAGIOS_PASS || 'nagios'
 
@@ -79,7 +79,15 @@ const CACHE_TTL_MS = 30000 // 30 seconds
  */
 function nagiosRequest<T>(path: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    const url = new URL(path, NAGIOS_BASE_URL)
+    // Handle both full URLs and relative paths
+    let url: URL
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      url = new URL(path)
+    } else {
+      // path should be relative, append to NAGIOS_BASE_URL
+      url = new URL(path, NAGIOS_BASE_URL)
+    }
+    
     const auth = Buffer.from(`${NAGIOS_USER}:${NAGIOS_PASS}`).toString('base64')
     
     const options = {
@@ -180,8 +188,11 @@ function normalizeService(serviceData: {
 /**
  * Fetch service list from Nagios
  */
-async function fetchServiceList(): Promise<NagiosServiceListResponse> {
-  return nagiosRequest<NagiosServiceListResponse>('/cgi-bin/statusjson.cgi?query=servicelist')
+async function fetchServiceList(hostPrefix?: string): Promise<NagiosServiceListResponse> {
+  const url = `${NAGIOS_BASE_URL}/cgi-bin/statusjson.cgi?query=servicelist`
+  // Note: Nagios statusjson.cgi doesn't support host_prefix filtering directly
+  // We'll filter after fetching
+  return nagiosRequest<NagiosServiceListResponse>(url)
 }
 
 /**
@@ -190,30 +201,34 @@ async function fetchServiceList(): Promise<NagiosServiceListResponse> {
 async function fetchServiceDetail(hostname: string, serviceDescription: string): Promise<NagiosServiceDetailResponse> {
   const encodedHost = encodeURIComponent(hostname)
   const encodedService = encodeURIComponent(serviceDescription)
-  return nagiosRequest<NagiosServiceDetailResponse>(
-    `/cgi-bin/statusjson.cgi?query=service&hostname=${encodedHost}&servicedescription=${encodedService}`
-  )
+  const url = `${NAGIOS_BASE_URL}/cgi-bin/statusjson.cgi?query=service&hostname=${encodedHost}&servicedescription=${encodedService}`
+  return nagiosRequest<NagiosServiceDetailResponse>(url)
 }
 
 /**
  * Fetch service count summary
  */
 async function fetchServiceCount(): Promise<NagiosServiceCountResponse> {
-  return nagiosRequest<NagiosServiceCountResponse>('/cgi-bin/statusjson.cgi?query=servicecount')
+  const url = `${NAGIOS_BASE_URL}/cgi-bin/statusjson.cgi?query=servicecount`
+  return nagiosRequest<NagiosServiceCountResponse>(url)
 }
 
 /**
- * Fetch all services with details (with concurrency limit)
+ * Fetch all services with details (with concurrency limit and host prefix filtering)
  */
-async function fetchAllServices(concurrencyLimit: number = 5): Promise<NagiosService[]> {
+async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: string): Promise<NagiosService[]> {
   // Get service list
-  const serviceListResponse = await fetchServiceList()
+  const serviceListResponse = await fetchServiceList(hostPrefix)
   const servicelist = serviceListResponse.data.servicelist
   
-  // Extract unique host/service pairs
+  // Extract unique host/service pairs, filtering by host_prefix if provided
   const serviceKeys = new Set<string>()
   for (const key in servicelist) {
     const service = servicelist[key]
+    // Filter by host_prefix if provided
+    if (hostPrefix && !service.host_name.startsWith(hostPrefix)) {
+      continue
+    }
     serviceKeys.add(`${service.host_name}::${service.service_description}`)
   }
   
@@ -251,9 +266,10 @@ async function fetchAllServices(concurrencyLimit: number = 5): Promise<NagiosSer
 
 /**
  * Get cached services or fetch fresh
+ * @param hostPrefix Optional host name prefix to filter services (e.g., 'ws84-')
  */
-export async function getNagiosServices(): Promise<NagiosService[]> {
-  const cacheKey = 'all'
+export async function getNagiosServices(hostPrefix?: string): Promise<NagiosService[]> {
+  const cacheKey = hostPrefix || 'all'
   const cached = servicesCache.get(cacheKey)
   const now = Date.now()
   
@@ -261,7 +277,7 @@ export async function getNagiosServices(): Promise<NagiosService[]> {
     return cached.data
   }
   
-  const services = await fetchAllServices(5)
+  const services = await fetchAllServices(10, hostPrefix)
   servicesCache.set(cacheKey, {
     data: services,
     expiresAt: now + CACHE_TTL_MS,

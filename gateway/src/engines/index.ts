@@ -33,6 +33,8 @@ export function createEngineRouter(): Router {
   // Nagios routes
   router.get('/nagios/summary', async (req: Request, res: Response) => {
     try {
+      // Note: Summary is workspace-agnostic (total counts)
+      // If workspace-specific totals are needed, filter services and calculate
       const summary = await getNagiosSummary()
       res.json({
         success: true,
@@ -49,7 +51,9 @@ export function createEngineRouter(): Router {
   
   router.get('/nagios/services', async (req: Request, res: Response) => {
     try {
-      const services = await getNagiosServices()
+      // Support host_prefix query parameter for workspace scoping
+      const hostPrefix = req.query.host_prefix as string | undefined
+      const services = await getNagiosServices(hostPrefix)
       res.json({
         success: true,
         data: services,
