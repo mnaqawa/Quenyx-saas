@@ -94,4 +94,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
+    
+    // Observe targets endpoints (workspace canonical)
+    Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
+    Route::put('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
+    Route::post('/workspaces/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validate']);
+    
+    // Observe targets endpoints (project aliases)
+    Route::get('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
+    Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
+    Route::post('/projects/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validate']);
 });

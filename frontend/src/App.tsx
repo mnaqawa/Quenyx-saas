@@ -24,6 +24,7 @@ import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
 import Reports from './pages/observe/Reports'
 import DataSources from './pages/observe/DataSources'
+import Targets from './pages/observe/Targets'
 import ComingSoon from './pages/ComingSoon'
 import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
@@ -86,6 +87,9 @@ function App() {
               )}
               {observeRoutes.find((r) => r.key === 'data-sources') && (
                 <Route path="data-sources" element={<DataSources />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'targets') && (
+                <Route path="targets" element={<Targets />} />
               )}
               <Route index element={<RealTimeMonitoring />} />
             </Route>

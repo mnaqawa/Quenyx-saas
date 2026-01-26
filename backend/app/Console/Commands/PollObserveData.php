@@ -21,8 +21,8 @@ class PollObserveData extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->gatewayUrl = config('app.gateway_url');
-        $this->internalSecret = config('app.gateway_internal_secret');
+        $this->gatewayUrl = config('app.gateway_url', 'http://127.0.0.1:4000');
+        $this->internalSecret = config('app.gateway_internal_secret', 'dev-secret-change-in-production');
     }
 
     public function handle(): int
@@ -61,14 +61,19 @@ class PollObserveData extends Command
             $this->info("Polling workspace {$workspace->id} ({$workspace->name})...");
 
             // Fetch services from gateway
+            $servicesUrl = "{$this->gatewayUrl}/internal/engines/nagios/services";
             $servicesResponse = Http::timeout(60)
                 ->withHeaders([
                     'x-internal-secret' => $this->internalSecret,
                 ])
-                ->get("{$this->gatewayUrl}/internal/engines/nagios/services");
+                ->get($servicesUrl);
 
             if (!$servicesResponse->successful()) {
-                throw new \Exception("Gateway returned {$servicesResponse->status()}: {$servicesResponse->body()}");
+                $errorBody = $servicesResponse->body();
+                if ($servicesResponse->status() === 404) {
+                    throw new \Exception("Gateway internal route not found (404). Gateway may not be updated or routes not mounted. URL: {$servicesUrl}");
+                }
+                throw new \Exception("Gateway returned {$servicesResponse->status()}: {$errorBody}");
             }
 
             $servicesData = $servicesResponse->json();
@@ -79,11 +84,12 @@ class PollObserveData extends Command
             $services = $servicesData['data'];
 
             // Fetch summary
+            $summaryUrl = "{$this->gatewayUrl}/internal/engines/nagios/summary";
             $summaryResponse = Http::timeout(30)
                 ->withHeaders([
                     'x-internal-secret' => $this->internalSecret,
                 ])
-                ->get("{$this->gatewayUrl}/internal/engines/nagios/summary");
+                ->get($summaryUrl);
 
             $summary = null;
             if ($summaryResponse->successful()) {

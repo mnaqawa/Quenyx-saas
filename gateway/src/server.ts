@@ -23,7 +23,11 @@ app.use((req: Request, res: Response, next) => {
   next()
 })
 
+// Body parsing for internal engine routes (PUT /nagios/config needs JSON body)
+app.use('/internal/engines', express.json({ limit: '10mb' }))
+
 // Register internal engine routes (before entitlement enforcement)
+// These routes require x-internal-secret header and are not exposed to browser
 registerEngineRoutes(app)
 
 // Apply entitlement enforcement before proxying (doesn't need body)

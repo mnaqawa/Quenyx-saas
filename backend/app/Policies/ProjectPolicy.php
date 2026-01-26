@@ -32,7 +32,14 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $user->id === $project->owner_id;
+        // Owner can always update
+        if ($user->id === $project->owner_id) {
+            return true;
+        }
+        
+        // Admin members can also update
+        $membership = $project->memberships()->where('user_id', $user->id)->first();
+        return $membership && in_array($membership->role, ['owner', 'admin']);
     }
 
     public function delete(User $user, Project $project): bool

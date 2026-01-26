@@ -1,5 +1,6 @@
-import { Request, Response } from 'express'
+import express, { Request, Response, Router } from 'express'
 import { getNagiosServices, getNagiosSummary } from './nagios'
+import { writeNagiosConfig, reloadNagios } from './nagiosConfig'
 
 const INTERNAL_SECRET = process.env.GATEWAY_INTERNAL_SECRET || 'dev-secret-change-in-production'
 
@@ -10,9 +11,9 @@ function checkInternalSecret(req: Request, res: Response, next: () => void): voi
   const providedSecret = req.headers['x-internal-secret']
   
   if (!providedSecret || providedSecret !== INTERNAL_SECRET) {
-    res.status(403).json({
+    res.status(401).json({
       success: false,
-      message: 'Access denied: invalid or missing internal secret',
+      message: 'Unauthorized',
     })
     return
   }
@@ -21,11 +22,32 @@ function checkInternalSecret(req: Request, res: Response, next: () => void): voi
 }
 
 /**
- * Register engine routes
+ * Create and configure engine router
  */
-export function registerEngineRoutes(app: any): void {
-  // Internal engine routes (require secret header)
-  app.get('/internal/engines/nagios/services', checkInternalSecret, async (req: Request, res: Response) => {
+export function createEngineRouter(): Router {
+  const router = express.Router()
+  
+  // Apply internal secret middleware to all routes
+  router.use(checkInternalSecret)
+  
+  // Nagios routes
+  router.get('/nagios/summary', async (req: Request, res: Response) => {
+    try {
+      const summary = await getNagiosSummary()
+      res.json({
+        success: true,
+        data: summary,
+      })
+    } catch (err) {
+      console.error('Error fetching Nagios summary:', err)
+      res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to fetch Nagios summary',
+      })
+    }
+  })
+  
+  router.get('/nagios/services', async (req: Request, res: Response) => {
     try {
       const services = await getNagiosServices()
       res.json({
@@ -41,19 +63,105 @@ export function registerEngineRoutes(app: any): void {
     }
   })
   
-  app.get('/internal/engines/nagios/summary', checkInternalSecret, async (req: Request, res: Response) => {
+  router.put('/nagios/config', async (req: Request, res: Response) => {
     try {
-      const summary = await getNagiosSummary()
+      const workspaceId = req.headers['x-workspace-id']
+      if (!workspaceId || typeof workspaceId !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing or invalid x-workspace-id header',
+        })
+      }
+      
+      const workspaceIdNum = parseInt(workspaceId, 10)
+      if (isNaN(workspaceIdNum)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid workspace ID format',
+        })
+      }
+      
+      const config = req.body.config
+      if (!config || typeof config !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing or invalid config in request body',
+        })
+      }
+      
+      // Validate config length (safety check)
+      if (config.length > 1000000) { // 1MB limit
+        return res.status(400).json({
+          success: false,
+          message: 'Config file too large (max 1MB)',
+        })
+      }
+      
+      await writeNagiosConfig(workspaceIdNum, config)
+      
       res.json({
         success: true,
-        data: summary,
+        message: 'Config written successfully',
       })
     } catch (err) {
-      console.error('Error fetching Nagios summary:', err)
+      console.error('Error writing Nagios config:', err)
       res.status(500).json({
         success: false,
-        message: err instanceof Error ? err.message : 'Failed to fetch Nagios summary',
+        message: err instanceof Error ? err.message : 'Failed to write Nagios config',
       })
     }
   })
+  
+  router.post('/nagios/reload', async (req: Request, res: Response) => {
+    try {
+      const result = await reloadNagios()
+      res.json({
+        success: result.success,
+        message: result.message,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      })
+    } catch (err) {
+      console.error('Error reloading Nagios:', err)
+      res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to reload Nagios',
+      })
+    }
+  })
+  
+  // Debug route (dev only)
+  if (process.env.NODE_ENV !== 'production') {
+    router.get('/_debug/routes', (req: Request, res: Response) => {
+      const routes = [
+        'GET /internal/engines/nagios/summary',
+        'GET /internal/engines/nagios/services',
+        'PUT /internal/engines/nagios/config',
+        'POST /internal/engines/nagios/reload',
+        'GET /internal/engines/_debug/routes',
+      ]
+      res.json({
+        success: true,
+        routes,
+      })
+    })
+  }
+  
+  // 404 handler for internal routes (must return JSON)
+  router.use((req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      message: `Route not found: ${req.method} ${req.path}`,
+    })
+  })
+  
+  return router
+}
+
+/**
+ * Register engine routes (backward compatibility)
+ */
+export function registerEngineRoutes(app: express.Application): void {
+  const engineRouter = createEngineRouter()
+  app.use('/internal/engines', engineRouter)
 }
