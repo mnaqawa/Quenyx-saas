@@ -9,11 +9,42 @@ const NAGIOS_CONFIG_DIR = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
 const NAGIOS_CONTAINER_NAME = process.env.NAGIOS_CONTAINER_NAME || 'nagios-core'
 
 /**
+ * Check if Docker socket is accessible
+ */
+async function checkDockerAccess(): Promise<{ accessible: boolean; error?: string }> {
+  try {
+    // Try a simple docker command to check access
+    const testCmd = `docker ps --format "{{.Names}}" --filter "name=${NAGIOS_CONTAINER_NAME}"`
+    await execAsync(testCmd, { timeout: 5000 })
+    return { accessible: true }
+  } catch (err: any) {
+    const errorMsg = err.message || String(err)
+    if (errorMsg.includes('permission denied') || errorMsg.includes('docker.sock')) {
+      return {
+        accessible: false,
+        error: 'Docker socket permission denied. Gateway service user needs access to Docker. Action required: Add gateway user to docker group (sudo usermod -aG docker <user>) or run gateway as a user with Docker access.',
+      }
+    }
+    return {
+      accessible: false,
+      error: `Docker access check failed: ${errorMsg}`,
+    }
+  }
+}
+
+/**
  * Ensure Nagios base config includes portshield.cfg
  */
 async function ensureNagiosIncludesPortshield(): Promise<void> {
   const nagiosCfgPath = '/opt/nagios/etc/nagios.cfg'
   const portshieldInclude = 'cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg'
+  
+  // Check Docker access first
+  const dockerCheck = await checkDockerAccess()
+  if (!dockerCheck.accessible) {
+    console.warn('Docker access denied, skipping nagios.cfg update:', dockerCheck.error)
+    return
+  }
   
   try {
     // Check if nagios.cfg already includes portshield.cfg
@@ -82,6 +113,19 @@ export async function reloadNagios(): Promise<{
   let validated = false
   let validationStdout = ''
   let validationStderr = ''
+
+  // Preflight check: Docker socket access
+  const dockerCheck = await checkDockerAccess()
+  if (!dockerCheck.accessible) {
+    return {
+      success: false,
+      message: dockerCheck.error || 'Docker access denied',
+      validated: false,
+      reloaded: false,
+      stdout: '',
+      stderr: dockerCheck.error || 'Docker socket permission denied',
+    }
+  }
 
   try {
     // First, validate config

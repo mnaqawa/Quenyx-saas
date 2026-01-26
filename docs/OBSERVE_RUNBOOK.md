@@ -4,20 +4,37 @@ This runbook provides step-by-step commands for verifying and troubleshooting th
 
 ## Prerequisites
 
-1. **Docker Compose** with Nagios running:
-   ```bash
-   docker-compose -f docker-compose.nagios.yml up -d
-   ```
-
-2. **Environment Variables** configured:
-   - Backend `.env`: `GATEWAY_BASE_URL`, `GATEWAY_INTERNAL_SECRET`, `OBSERVE_AUTO_PUBLISH_NAGIOS=true`
-   - Gateway `.env`: `GATEWAY_INTERNAL_SECRET`, `NAGIOS_CONFIG_DIR`, `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, `NAGIOS_USER`, `NAGIOS_PASS`
-
-3. **Migrations** run:
+1. **Run Migrations (REQUIRED):**
    ```bash
    cd backend
    php artisan migrate
    ```
+   
+   **Important:** The observe targets feature requires the following tables:
+   - `observe_target_hosts`
+   - `observe_target_services`
+   - `observe_services`
+   - `observe_meta`
+   
+   If you see "Table doesn't exist" errors, run migrations first.
+
+2. **Docker Compose** with Nagios running:
+   ```bash
+   docker-compose -f docker-compose.nagios.yml up -d
+   ```
+
+3. **Docker Socket Permissions (for gateway reload):**
+   ```bash
+   # Add gateway service user to docker group (if running as systemd service)
+   sudo usermod -aG docker <gateway-user>
+   # Or run gateway as a user that has Docker access
+   ```
+   
+   **Note:** If gateway cannot access Docker socket, reload will return a clear error message with action required.
+
+4. **Environment Variables** configured:
+   - Backend `.env`: `GATEWAY_BASE_URL`, `GATEWAY_INTERNAL_SECRET`, `OBSERVE_AUTO_PUBLISH_NAGIOS=true`
+   - Gateway `.env`: `GATEWAY_INTERNAL_SECRET`, `NAGIOS_CONFIG_DIR`, `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, `NAGIOS_USER`, `NAGIOS_PASS`
 
 ## Verification Steps
 

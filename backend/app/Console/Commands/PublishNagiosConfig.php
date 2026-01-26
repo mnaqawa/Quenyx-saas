@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Project;
 use App\Services\NagiosConfigPublisher;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class PublishNagiosConfig extends Command
 {
@@ -13,6 +14,12 @@ class PublishNagiosConfig extends Command
 
     public function handle(): int
     {
+        // Check if tables exist (migration guard)
+        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_target_hosts')) {
+            $this->error('Database tables not found. Please run migrations first: php artisan migrate');
+            return 1;
+        }
+        
         $workspaceId = $this->option('workspace_id');
         $publisher = new NagiosConfigPublisher();
 

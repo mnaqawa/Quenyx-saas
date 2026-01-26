@@ -16,12 +16,13 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        // User is owner
+        // Owner can always view
         if ($user->id === $project->owner_id) {
             return true;
         }
         
-        // User is a member
+        // Any member (owner, admin, member, viewer) can view observe data
+        // This allows read-only access to observe endpoints for all roles
         return $project->memberships()->where('user_id', $user->id)->exists();
     }
 
@@ -37,7 +38,8 @@ class ProjectPolicy
             return true;
         }
         
-        // Admin members can also update
+        // Only owner and admin members can update (edit targets, etc.)
+        // Member and viewer roles are read-only
         $membership = $project->memberships()->where('user_id', $user->id)->first();
         return $membership && in_array($membership->role, ['owner', 'admin']);
     }

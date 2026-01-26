@@ -7,6 +7,7 @@ use App\Models\ObserveTargetService;
 use App\Models\ObserveMeta;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class NagiosConfigPublisher
 {
@@ -24,6 +25,11 @@ class NagiosConfigPublisher
      */
     public function publish(int $workspaceId): void
     {
+        // Check if tables exist (migration guard)
+        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_target_hosts')) {
+            throw new \Exception('Database tables not found. Please run migrations first: php artisan migrate');
+        }
+        
         $hosts = ObserveTargetHost::where('workspace_id', $workspaceId)
             ->where('enabled', true)
             ->with(['services' => function ($query) {

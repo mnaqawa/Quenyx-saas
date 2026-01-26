@@ -249,9 +249,9 @@ class ObserveTargetsController extends Controller
     }
 
     /**
-     * Validate targets configuration
+     * Validate targets configuration payload
      */
-    public function validate(Request $request, Project $workspace): JsonResponse
+    public function validateTargetsPayload(Request $request, Project $workspace): JsonResponse
     {
         $this->authorize('view', $workspace);
 
