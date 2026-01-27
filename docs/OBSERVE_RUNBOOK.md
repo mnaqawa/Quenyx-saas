@@ -11,8 +11,8 @@ This runbook provides step-by-step commands for verifying and troubleshooting th
    ```
    
    **Important:** The observe targets feature requires the following tables:
-   - `observe_target_hosts`
-   - `observe_target_services`
+   - `observe_targets_hosts`
+   - `observe_targets_services`
    - `observe_services`
    - `observe_meta`
    
@@ -26,11 +26,11 @@ This runbook provides step-by-step commands for verifying and troubleshooting th
 3. **Docker Socket Permissions (for gateway reload):**
    ```bash
    # Add gateway service user to docker group (if running as systemd service)
-   sudo usermod -aG docker <gateway-user>
+   sudo usermod -aG docker portshield
    # Or run gateway as a user that has Docker access
    ```
    
-   **Note:** If gateway cannot access Docker socket, reload will return a clear error message with action required.
+   **Nagios reload when Docker unavailable:** Config is still written when Docker is unavailable; only reload is skipped. The reload API returns `reload_skipped: true` and a clear message. To apply config: run `docker exec nagios-core kill -HUP 1` or `docker restart nagios-core` as a user with Docker access, or grant the gateway user Docker access (e.g. `usermod -aG docker portshield`).
 
 4. **Environment Variables** configured:
    - Backend `.env`: `GATEWAY_BASE_URL`, `GATEWAY_INTERNAL_SECRET`, `OBSERVE_AUTO_PUBLISH_NAGIOS=true`
@@ -392,6 +392,79 @@ php artisan observe:nagios:publish --workspace_id=84
 - [ ] API returns only workspace-scoped services
 - [ ] Publish status tracked in `observe_meta` (`last_publish_at`, `last_publish_success`)
 
+## End-to-end verification (workspace 84)
+
+Use these exact commands to confirm Observe Targets → Nagios → Poll → UI for workspace 84. Goal: after setting targets for ws84, gateway `.../services?host_prefix=ws84-` returns data and `/observe/services` UI shows rows.
+
+### 1. Set targets and publish
+
+```bash
+# Auth (adjust credentials if needed)
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password"}' | jq -r '.data.token')
+
+# PUT targets for workspace 84
+curl -s -X PUT http://127.0.0.1:8000/api/workspaces/84/observe/targets \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"hosts":[{"name":"web-server-01","address":"192.168.1.10","check_command":"check-host-alive","enabled":true,"services":[{"name":"HTTP","check_command":"check_http","enabled":true},{"name":"Ping","check_command":"check_ping","enabled":true}]}]}' | jq
+# Expected: {"success":true,"message":"Targets updated and published to Nagios"}
+
+# If auto-publish is off, publish manually:
+cd backend && php artisan observe:nagios:publish --workspace_id=84
+```
+
+### 2. Confirm ws84- host exists in Nagios
+
+```bash
+# Option A: config file contains ws84- host
+grep -E "host_name|define host" nagios/config/workspaces/84.cfg
+# Expect lines with ws84-...
+
+# Option B: Nagios API hostlist
+curl -s -u nagiosadmin:nagios "http://127.0.0.1:8080/nagios/cgi-bin/statusjson.cgi?query=hostlist" | jq '.data.hostlist[] | select(.name | startswith("ws84-"))'
+# Expect at least one host object.
+
+# Option C: container sees workspace config
+docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/84.cfg
+# Expect file listing (not "No such file").
+```
+
+### 3. Gateway host_prefix returns >0 services
+
+```bash
+curl -s -H "x-internal-secret: dev-secret-change-in-production" \
+  "http://127.0.0.1:4000/internal/engines/nagios/services?host_prefix=ws84-" | jq '.data | length'
+# Expect a number > 0.
+
+# Inspect response
+curl -s -H "x-internal-secret: dev-secret-change-in-production" \
+  "http://127.0.0.1:4000/internal/engines/nagios/services?host_prefix=ws84-" | jq
+```
+
+### 4. Poll inserts rows
+
+```bash
+cd backend
+php artisan observe:poll --workspace_id=84
+# Expect: "Successfully polled 84: N services" (N > 0).
+
+# Confirm rows in DB
+php artisan tinker --execute="echo \App\Models\ObserveService::where('workspace_id', 84)->where('host_name', 'like', 'ws84-%')->count();"
+# Expect integer > 0.
+```
+
+### 5. API and UI
+
+```bash
+# API returns workspace-scoped services
+curl -s -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8000/api/workspaces/84/observe/services?limit=50" | jq '.data.items | length'
+# Expect > 0.
+
+# UI: open /observe/services for workspace 84 and confirm the table shows rows.
+```
+
 ## Environment Variables Reference
 
 ### Backend `.env`
@@ -410,6 +483,8 @@ NAGIOS_BASE_URL=http://127.0.0.1:8080/nagios
 NAGIOS_USER=nagiosadmin
 NAGIOS_PASS=nagios
 ```
+
+**Config path and bind mount (systemd):** The Nagios container reads config from `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg`, which is the bind mount of the host directory. `docker-compose.nagios.yml` mounts `./nagios/config:/opt/nagios/etc/objects/portshield` (relative to the compose file). When the gateway runs as a systemd user (e.g. `portshield`), its CWD may not be the project root. Set `NAGIOS_CONFIG_DIR` to the **absolute** path that is the same directory used by the compose mount, e.g. `/var/lib/portshield/nagios/config` or `/path/to/portshield-saas/nagios/config`, so that gateway-written files appear at `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg` inside the container.
 
 ## Build Verification
 

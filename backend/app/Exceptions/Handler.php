@@ -126,7 +126,9 @@ class Handler extends ExceptionHandler
         }
 
         $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-        $message = config('app.debug') ? $e->getMessage() : 'An unexpected error occurred';
+        // For API/JSON requests, always return real error message so clients can diagnose
+        $isApi = $request->expectsJson() || $request->is('api/*');
+        $message = (config('app.debug') || $isApi) ? ($e->getMessage() ?: 'An unexpected error occurred') : 'An unexpected error occurred';
 
         return response()->json([
             'success' => false,

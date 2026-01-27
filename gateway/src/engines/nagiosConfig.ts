@@ -106,6 +106,7 @@ export async function reloadNagios(): Promise<{
   message: string
   validated: boolean
   reloaded: boolean
+  reload_skipped?: boolean
   method?: string
   stdout: string
   stderr: string
@@ -119,9 +120,10 @@ export async function reloadNagios(): Promise<{
   if (!dockerCheck.accessible) {
     return {
       success: false,
-      message: dockerCheck.error || 'Docker access denied',
+      message: (dockerCheck.error || 'Docker access denied') + ' Config may have been written; reload was skipped.',
       validated: false,
       reloaded: false,
+      reload_skipped: true,
       stdout: '',
       stderr: dockerCheck.error || 'Docker socket permission denied',
     }

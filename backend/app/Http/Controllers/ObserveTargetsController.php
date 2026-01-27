@@ -241,9 +241,11 @@ class ObserveTargetsController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            $message = $e->getMessage() ?: 'Failed to update targets';
             return response()->json([
                 'success' => false,
-                'message' => config('app.debug') ? $e->getMessage() : 'Failed to update targets',
+                'message' => $message,
+                'errors' => config('app.debug') ? ['detail' => $e->getTraceAsString()] : null,
             ], 500);
         }
     }

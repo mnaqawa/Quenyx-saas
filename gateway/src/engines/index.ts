@@ -124,6 +124,7 @@ export function createEngineRouter(): Router {
         message: result.message,
         validated: result.validated,
         reloaded: result.reloaded,
+        reload_skipped: result.reload_skipped,
         method: result.method,
         stdout: result.stdout,
         stderr: result.stderr,
