@@ -160,6 +160,7 @@ export default function Targets() {
         setHosts(refreshResponse)
       }
     } catch (err) {
+      // apiClient throws on 4xx/5xx and when response.success === false; show that message
       setError(err instanceof Error ? err.message : 'Failed to save targets')
     } finally {
       setSaving(false)

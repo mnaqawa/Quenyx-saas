@@ -60,6 +60,15 @@ class ObserveTargetsController extends Controller
     {
         $this->authorize('update', $project);
 
+        // Ensure hosts are read from JSON body when present (some proxies/server configs may not merge it)
+        $hostsInput = $request->input('hosts');
+        if ($hostsInput === null && $request->getContent()) {
+            $decoded = json_decode($request->getContent(), true);
+            $hostsInput = is_array($decoded['hosts'] ?? null) ? $decoded['hosts'] : [];
+        }
+        $hostsInput = is_array($hostsInput) ? $hostsInput : [];
+        $request->merge(['hosts' => $hostsInput]);
+
         $validator = Validator::make($request->all(), [
             'hosts' => 'present|array',
             'hosts.*.name' => 'required|string|max:255',
@@ -149,8 +158,7 @@ class ObserveTargetsController extends Controller
         unset($hostData, $serviceData);
 
         try {
-            DB::transaction(function () use ($project, $request, $hostsData) {
-                
+            DB::transaction(function () use ($project, $hostsData) {
                 // Get existing host IDs to track what to delete
                 $existingHostIds = ObserveTargetHost::where('workspace_id', $project->id)
                     ->pluck('id')
@@ -209,6 +217,15 @@ class ObserveTargetsController extends Controller
                     ObserveTargetHost::whereIn('id', $hostsToDelete)->delete();
                 }
             });
+
+            // Verify persistence when we had hosts to write (fail fast if DB didn't persist)
+            if (count($hostsData) > 0) {
+                $hostCount = ObserveTargetHost::where('workspace_id', $project->id)->count();
+                $serviceCount = ObserveTargetService::where('workspace_id', $project->id)->count();
+                if ($hostCount === 0) {
+                    throw new \RuntimeException('Targets transaction committed but no rows in observe_targets_hosts. Check table name and DB connection.');
+                }
+            }
 
             // Auto-publish config to Nagios if enabled
             $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);

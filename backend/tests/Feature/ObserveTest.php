@@ -246,7 +246,12 @@ class ObserveTest extends TestCase
             ]);
 
         $response->assertStatus(200)
-            ->assertJson(['success' => true]);
+            ->assertJson(['success' => true])
+            ->assertJsonStructure(['data']);
+
+        // Acceptance: DB counts > 0 for workspace_id after PUT
+        $this->assertGreaterThan(0, ObserveTargetHost::where('workspace_id', $this->workspace->id)->count());
+        $this->assertGreaterThan(0, ObserveTargetService::where('workspace_id', $this->workspace->id)->count());
 
         // Verify targets were persisted
         $host = ObserveTargetHost::where('workspace_id', $this->workspace->id)

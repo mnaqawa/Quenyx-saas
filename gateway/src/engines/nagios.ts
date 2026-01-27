@@ -224,19 +224,35 @@ async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: strin
     return []
   }
 
-  // Extract unique host/service pairs, filtering by host_prefix if provided
+  // Extract unique host/service pairs; never call .startsWith on undefined.
+  // Nagios servicelist can be keyed by "hostname;servicedesc" or have per-entry host_name/service_description.
   const serviceKeys = new Set<string>()
   for (const key in servicelist) {
     const service = servicelist[key]
-    const hostName = service?.host_name
-    const serviceDesc = service?.service_description
+    if (service == null || typeof service !== 'object') {
+      continue
+    }
+    let hostName: string | undefined = service.host_name
+    let serviceDesc: string | undefined = service.service_description
     if (hostName == null || serviceDesc == null) {
+      const sep = key.includes(';') ? ';' : '::'
+      const parts = key.split(sep)
+      if (parts.length >= 2) {
+        hostName = hostName ?? String(parts[0]).trim()
+        serviceDesc = serviceDesc ?? String(parts[1]).trim()
+      }
+    }
+    if (hostName == null || serviceDesc == null || hostName === '' || serviceDesc === '') {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn('[nagios] Skipping servicelist entry with bad shape:', { key, hasHost: hostName != null, hasDesc: serviceDesc != null })
+      }
       continue
     }
-    if (hostPrefix && !String(hostName).startsWith(hostPrefix)) {
+    const hostStr = String(hostName)
+    if (hostPrefix && typeof hostPrefix === 'string' && !hostStr.startsWith(hostPrefix)) {
       continue
     }
-    serviceKeys.add(`${hostName}::${serviceDesc}`)
+    serviceKeys.add(`${hostStr}::${String(serviceDesc)}`)
   }
   
   // Fetch details for each service with concurrency limit
@@ -252,13 +268,18 @@ async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: strin
         const detailResponse = await fetchServiceDetail(hostname, serviceDescription)
         return normalizeService(detailResponse.data.service)
       } catch (err) {
-        // Fallback to servicelist data if detail fetch fails
+        // Fallback to servicelist data if detail fetch fails (guard s.host_name / s.service_description)
         const serviceKey = Object.keys(servicelist).find((k) => {
           const s = servicelist[k]
-          return s.host_name === hostname && s.service_description === serviceDescription
+          const h = s?.host_name
+          const d = s?.service_description
+          return h != null && d != null && String(h) === hostname && String(d) === serviceDescription
         })
         if (serviceKey) {
-          return normalizeService(servicelist[serviceKey])
+          const s = servicelist[serviceKey]
+          if (s?.host_name != null && s?.service_description != null) {
+            return normalizeService(s)
+          }
         }
         throw err
       }
