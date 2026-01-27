@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\ObserveMeta;
+use App\Models\ObserveServiceDefinition;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -13,11 +14,13 @@ class NagiosConfigPublisher
 {
     private string $gatewayUrl;
     private string $internalSecret;
+    private ObserveServiceCommandResolver $resolver;
 
-    public function __construct()
+    public function __construct(?ObserveServiceCommandResolver $resolver = null)
     {
         $this->gatewayUrl = config('app.gateway_url', 'http://127.0.0.1:4000');
         $this->internalSecret = config('app.gateway_internal_secret', 'dev-secret-change-in-production');
+        $this->resolver = $resolver ?? app(ObserveServiceCommandResolver::class);
     }
 
     /**
@@ -183,27 +186,17 @@ class NagiosConfigPublisher
             $lines[] = "}";
             $lines[] = "";
 
-            // Service definitions
+            // Service definitions: use resolver when a definition exists, else legacy
             foreach ($host->services as $service) {
                 $scopedHostName = 'ws' . $workspaceId . '-' . $host->name;
                 $lines[] = "define service {";
                 $lines[] = "    use                     generic-service";
                 $lines[] = "    host_name               {$scopedHostName}";
                 $lines[] = "    service_description     {$service->name}";
-                
-                // Build check command with args if provided
-                $checkCmd = $service->check_command;
-                if (!empty($service->check_args) && is_array($service->check_args)) {
-                    $args = implode('!', array_map(function ($arg) {
-                        // Escape for Nagios (remove dangerous chars, keep basic args)
-                        return str_replace(['!', ';', "\n", "\r"], ['', '', '', ''], $arg);
-                    }, $service->check_args));
-                    if (!empty($args)) {
-                        $checkCmd .= '!' . $args;
-                    }
-                }
+
+                $checkCmd = $this->resolveServiceCheckCommand($service, $workspaceId);
                 $lines[] = "    check_command           {$checkCmd}";
-                
+
                 $lines[] = "    max_check_attempts      3";
                 $lines[] = "    check_interval          5";
                 $lines[] = "    retry_interval          1";
@@ -216,5 +209,88 @@ class NagiosConfigPublisher
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Resolve service check_command via ObserveServiceCommandResolver when a definition exists.
+     * Overrides come from check_args (keyed by arg key, or positional mapped to schema).
+     */
+    private function resolveServiceCheckCommand(ObserveTargetService $service, int $workspaceId): string
+    {
+        if (!Schema::hasTable('observe_service_definitions')) {
+            return $this->legacyCheckCommand($service);
+        }
+
+        $definition = ObserveServiceDefinition::forEngine('nagios')
+            ->where('check_command', $service->check_command)
+            ->first();
+
+        if ($definition === null) {
+            $definition = ObserveServiceDefinition::forEngine('nagios')
+                ->where('service_key', 'custom')
+                ->first();
+            if ($definition !== null) {
+                $overrides = [
+                    'command' => $service->check_command,
+                    'args' => is_array($service->check_args ?? null) ? $service->check_args : [],
+                ];
+            } else {
+                return $this->legacyCheckCommand($service);
+            }
+        } else {
+            $raw = $service->check_args ?? [];
+            $overrides = $this->buildOverridesFromArgs($definition, is_array($raw) ? $raw : []);
+        }
+
+        $context = [
+            'workspace_id' => $workspaceId,
+            'project_id' => $workspaceId,
+            'has_custom_entitlement' => false,
+        ];
+        $result = $this->resolver->resolve($definition, $overrides, $context);
+
+        if ($result->success) {
+            return $result->check_command;
+        }
+
+        Log::warning('Observe service command resolve failed, using legacy', [
+            'service_name' => $service->name,
+            'check_command' => $service->check_command,
+            'errors' => $result->errors,
+        ]);
+        return $this->legacyCheckCommand($service);
+    }
+
+    private function buildOverridesFromArgs(ObserveServiceDefinition $definition, array $args): array
+    {
+        $keys = array_column($definition->getOrderedArgsSchema(), 'key');
+        if ($keys === []) {
+            return $args;
+        }
+        $isAssoc = array_keys($args) !== range(0, count($args) - 1);
+        if ($isAssoc) {
+            return $args;
+        }
+        $overrides = [];
+        foreach ($args as $i => $val) {
+            if (isset($keys[$i])) {
+                $overrides[$keys[$i]] = $val;
+            }
+        }
+        return $overrides;
+    }
+
+    private function legacyCheckCommand(ObserveTargetService $service): string
+    {
+        $checkCmd = $service->check_command;
+        if (!empty($service->check_args) && is_array($service->check_args)) {
+            $args = implode('!', array_map(function ($arg) {
+                return str_replace(['!', ';', "\n", "\r"], ['', '', '', ''], (string) $arg);
+            }, $service->check_args));
+            if ($args !== '') {
+                $checkCmd .= '!' . $args;
+            }
+        }
+        return $checkCmd;
     }
 }
