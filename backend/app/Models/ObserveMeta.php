@@ -10,6 +10,8 @@ class ObserveMeta extends Model
 {
     use HasFactory;
 
+    protected $table = 'observe_meta';
+
     protected $fillable = [
         'workspace_id',
         'engine_key',
