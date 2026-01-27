@@ -67,15 +67,15 @@ class NagiosConfigPublisher
             ->post("{$this->gatewayUrl}/internal/engines/nagios/reload");
 
         $reloadSuccess = $reloadResponse->successful();
-        $reloadData = $reloadResponse->json();
-        
-        // Track publish status in observe_meta
-        $publishSuccess = $reloadSuccess && 
-                         isset($reloadData['validated']) && 
-                         $reloadData['validated'] === true &&
-                         isset($reloadData['reloaded']) && 
-                         $reloadData['reloaded'] === true;
-        
+        $reloadData = $reloadResponse->json() ?? [];
+        $reloadSkipped = !empty($reloadData['reload_skipped']);
+
+        // Config was written successfully. Publish success = reload succeeded OR reload was skipped (e.g. Docker unavailable).
+        $publishSuccess = $reloadSuccess && (
+            (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) ||
+            $reloadSkipped
+        );
+
         $publishError = null;
         if (!$publishSuccess) {
             if (!$reloadSuccess) {
@@ -88,6 +88,9 @@ class NagiosConfigPublisher
             } else {
                 $publishError = 'Reload validation or execution failed';
             }
+        } elseif ($reloadSkipped) {
+            // Config written; reload skipped (e.g. Docker unavailable). Treat as success; do not set publishError.
+            $publishError = null;
         }
 
         ObserveMeta::updateOrCreate(

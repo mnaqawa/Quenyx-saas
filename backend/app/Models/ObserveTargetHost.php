@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Observe target host (workspace-defined host to monitor).
+ * Table: observe_targets_hosts (plural).
+ */
 class ObserveTargetHost extends Model
 {
     use HasFactory;
 
+    /** @var string */
     protected $table = 'observe_targets_hosts';
 
     protected $fillable = [

@@ -5,7 +5,9 @@ import * as path from 'path'
 
 const execAsync = promisify(exec)
 
-const NAGIOS_CONFIG_DIR = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
+// Resolve config dir: use absolute path, or resolve relative to process.cwd() so systemd/any CWD works when project root is set
+const rawConfigDir = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
+const NAGIOS_CONFIG_DIR = path.isAbsolute(rawConfigDir) ? rawConfigDir : path.resolve(process.cwd(), rawConfigDir)
 const NAGIOS_CONTAINER_NAME = process.env.NAGIOS_CONTAINER_NAME || 'nagios-core'
 
 /**

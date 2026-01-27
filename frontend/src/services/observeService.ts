@@ -88,6 +88,17 @@ export const observeService = {
     return gatewayClient.get<Instance[]>(endpoint, { workspaceId })
   },
 
+  // Observe summary (backend /api/workspaces/:id/observe/summary)
+  async getObserveSummary(workspaceId: number): Promise<{
+    totals: { ok: number; warning: number; critical: number; unknown: number; pending: number }
+    last_poll_at: string | null
+  }> {
+    return gatewayClient.get<{ totals: Record<string, number>; last_poll_at: string | null }>(
+      `workspaces/${workspaceId}/observe/summary`,
+      { workspaceId, moduleKey: 'shieldobserve' }
+    )
+  },
+
   // Services
   async getServices(
     workspaceId: number,

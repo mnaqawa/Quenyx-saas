@@ -6,10 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Observe target service (workspace-defined service on a host).
+ * Table: observe_targets_services (plural).
+ */
 class ObserveTargetService extends Model
 {
     use HasFactory;
 
+    /** @var string */
     protected $table = 'observe_targets_services';
 
     protected $fillable = [

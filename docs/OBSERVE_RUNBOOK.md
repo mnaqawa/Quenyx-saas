@@ -486,12 +486,41 @@ NAGIOS_PASS=nagios
 
 **Config path and bind mount (systemd):** The Nagios container reads config from `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg`, which is the bind mount of the host directory. `docker-compose.nagios.yml` mounts `./nagios/config:/opt/nagios/etc/objects/portshield` (relative to the compose file). When the gateway runs as a systemd user (e.g. `portshield`), its CWD may not be the project root. Set `NAGIOS_CONFIG_DIR` to the **absolute** path that is the same directory used by the compose mount, e.g. `/var/lib/portshield/nagios/config` or `/path/to/portshield-saas/nagios/config`, so that gateway-written files appear at `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg` inside the container.
 
+## Database table names (no mismatch)
+
+Observe targets use **plural** table names. Models and code must reference these exactly:
+
+- `observe_targets_hosts` — workspace-defined hosts (ObserveTargetHost `$table`)
+- `observe_targets_services` — workspace-defined services on hosts (ObserveTargetService `$table`)
+- `observe_services` — polled service state from Nagios (ObserveService)
+- `observe_meta` — last poll/publish per workspace/engine (ObserveMeta)
+
+If you see "Table observe_target_hosts doesn't exist" (singular), the code is wrong; use `observe_targets_hosts`.
+
+## Frontend redeploy (use real API, not fixtures)
+
+For production and dev deployments, the Observe UI must call the real backend (`/api/workspaces/:id/observe/services` and `/observe/summary`), not fixtures.
+
+1. **Set env for production build:**
+   - In `frontend/.env.production` set: `VITE_OBSERVE_USE_FIXTURES=false`
+   - Or build with: `VITE_OBSERVE_USE_FIXTURES=false npm run build`
+
+2. **Exact redeploy steps:**
+   ```bash
+   cd frontend
+   # Ensure fixtures are off (default if .env.production has VITE_OBSERVE_USE_FIXTURES=false)
+   npm run build
+   # Deploy the contents of dist/ to your static host / reverse proxy
+   ```
+
+3. **Verification:** After deploy, open `/app/workspaces/84/observe/services`. It should show real rows from the backend after polling; if it shows "No services found" with real data in the DB, the frontend build was likely made with `VITE_OBSERVE_USE_FIXTURES=true` or the backend is not reachable.
+
 ## Build Verification
 
 ```bash
-# Frontend
+# Frontend (production build uses real Observe API when VITE_OBSERVE_USE_FIXTURES is not 'true')
 cd frontend
-npm run build
+VITE_OBSERVE_USE_FIXTURES=false npm run build
 
 # Gateway
 cd gateway
