@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             ProjectSeeder::class,
             ProjectSubscriptionSeeder::class,
             ProjectIntegrationConfigurationSeeder::class,
+            ObserveServiceDefinitionSeeder::class,
         ]);
     }
 }
