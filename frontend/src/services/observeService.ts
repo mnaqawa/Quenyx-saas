@@ -93,10 +93,10 @@ export const observeService = {
     totals: { ok: number; warning: number; critical: number; unknown: number; pending: number }
     last_poll_at: string | null
   }> {
-    return gatewayClient.get<{ totals: Record<string, number>; last_poll_at: string | null }>(
-      `workspaces/${workspaceId}/observe/summary`,
-      { workspaceId, moduleKey: 'shieldobserve' }
-    )
+    return gatewayClient.get<{
+      totals: { ok: number; warning: number; critical: number; unknown: number; pending: number }
+      last_poll_at: string | null
+    }>(`workspaces/${workspaceId}/observe/summary`, { workspaceId, moduleKey: 'shieldobserve' })
   },
 
   // Services
