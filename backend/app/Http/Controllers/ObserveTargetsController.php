@@ -61,7 +61,7 @@ class ObserveTargetsController extends Controller
         $this->authorize('update', $project);
 
         $validator = Validator::make($request->all(), [
-            'hosts' => 'required|array',
+            'hosts' => 'present|array',
             'hosts.*.name' => 'required|string|max:255',
             'hosts.*.address' => 'required|string|max:255',
             'hosts.*.check_command' => 'nullable|string|max:255',
@@ -286,7 +286,7 @@ class ObserveTargetsController extends Controller
         $this->authorize('view', $project);
 
         $validator = Validator::make($request->all(), [
-            'hosts' => 'required|array',
+            'hosts' => 'present|array',
             'hosts.*.name' => 'required|string|max:255',
             'hosts.*.address' => 'required|string|max:255',
             'hosts.*.check_command' => 'nullable|string|max:255',
