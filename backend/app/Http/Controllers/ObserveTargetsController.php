@@ -229,9 +229,37 @@ class ObserveTargetsController extends Controller
                 ]);
             }
 
+            // Return updated targets (frontend expects success responses to include data)
+            $hosts = ObserveTargetHost::where('workspace_id', $project->id)
+                ->with('services')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($host) {
+                    return [
+                        'id' => $host->id,
+                        'name' => $host->name,
+                        'address' => $host->address,
+                        'check_command' => $host->check_command,
+                        'tags' => $host->tags ?? [],
+                        'enabled' => $host->enabled,
+                        'services' => $host->services->map(function ($service) {
+                            return [
+                                'id' => $service->id,
+                                'name' => $service->name,
+                                'check_command' => $service->check_command,
+                                'check_args' => $service->check_args ?? [],
+                                'enabled' => $service->enabled,
+                            ];
+                        }),
+                        'created_at' => $host->created_at->toIso8601String(),
+                        'updated_at' => $host->updated_at->toIso8601String(),
+                    ];
+                });
+
             return response()->json([
                 'success' => true,
                 'message' => 'Targets updated and published to Nagios',
+                'data' => $hosts,
             ]);
 
         } catch (\Exception $e) {
