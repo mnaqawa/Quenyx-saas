@@ -125,6 +125,18 @@ class ObserveTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_workspace_owner_can_fetch_observe_services(): void
+    {
+        // Explicit test: owner (user_id matches workspace owner_id) must get 200
+        $this->assertSame($this->user->id, $this->workspace->owner_id);
+        
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");
+
+        $response->assertStatus(200)
+            ->assertJson(['success' => true]);
+    }
+
     public function test_authorized_user_can_fetch_services(): void
     {
         $response = $this->actingAs($this->user)

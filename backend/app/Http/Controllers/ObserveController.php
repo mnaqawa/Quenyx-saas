@@ -14,11 +14,11 @@ class ObserveController extends Controller
     /**
      * Get observe summary for a workspace
      */
-    public function summary(Request $request, Project $workspace): JsonResponse
+    public function summary(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $workspace);
+        $this->authorize('view', $project);
 
-        $meta = ObserveMeta::where('workspace_id', $workspace->id)
+        $meta = ObserveMeta::where('workspace_id', $project->id)
             ->where('engine_key', 'nagios')
             ->first();
 
@@ -42,9 +42,9 @@ class ObserveController extends Controller
     /**
      * Get observe services for a workspace with filtering
      */
-    public function services(Request $request, Project $workspace): JsonResponse
+    public function services(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $workspace);
+        $this->authorize('view', $project);
 
         // Get query parameters
         $q = $request->query('q');
@@ -53,8 +53,8 @@ class ObserveController extends Controller
         $problemsOnly = $request->query('problems') === '1' || $request->query('problemsOnly') === 'true';
 
         // Build query with workspace scoping (only include hosts with ws{workspaceId}- prefix)
-        $workspacePrefix = 'ws' . $workspace->id . '-';
-        $query = ObserveService::where('workspace_id', $workspace->id)
+        $workspacePrefix = 'ws' . $project->id . '-';
+        $query = ObserveService::where('workspace_id', $project->id)
             ->where('engine_key', 'nagios')
             ->where('host_name', 'like', $workspacePrefix . '%');
 
@@ -118,7 +118,7 @@ class ObserveController extends Controller
         ];
 
         // Get meta for last_poll_at
-        $meta = ObserveMeta::where('workspace_id', $workspace->id)
+        $meta = ObserveMeta::where('workspace_id', $project->id)
             ->where('engine_key', 'nagios')
             ->first();
 

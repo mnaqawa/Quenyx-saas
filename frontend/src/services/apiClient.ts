@@ -116,10 +116,14 @@ class ApiClient {
         }
         
         if (response.status === 403) {
-          const forbiddenError = new Error('Locked')
+          // Use "Locked" only when backend explicitly indicates entitlement/module lock
+          const isEntitlementLock = /locked|entitlement|module\s*access/i.test(errorMessage)
+          const msg = isEntitlementLock ? 'Locked' : 'Access denied'
+          const forbiddenError = new Error(msg)
           ;(forbiddenError as any).status = 403
           ;(forbiddenError as any).url = url
-          ;(forbiddenError as any).userMessage = 'Access denied'
+          ;(forbiddenError as any).userMessage = msg
+          ;(forbiddenError as any).isEntitlementLock = isEntitlementLock
           if (import.meta.env.DEV) {
             console.error('API Error (403):', { url, status: response.status, message: errorMessage })
           }

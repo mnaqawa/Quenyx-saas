@@ -77,20 +77,20 @@ class ProjectMembershipController extends Controller
                 })
                 ->values();
 
-            // Include owner in response
-            $allMembers = collect([
-                [
-                    'id' => null,
-                    'user_id' => $owner->id,
-                    'user' => [
-                        'id' => $owner->id,
-                        'name' => $owner->name,
-                        'email' => $owner->email,
-                    ],
-                    'role' => 'owner',
-                    'created_at' => $project->created_at->toISOString(),
+            // Include owner as first row; dedupe: exclude membership rows for owner so they are not duplicated
+            $ownerRow = [
+                'id' => null,
+                'user_id' => $owner->id,
+                'user' => [
+                    'id' => $owner->id,
+                    'name' => $owner->name,
+                    'email' => $owner->email,
                 ],
-            ])->merge($memberships)->values();
+                'role' => 'owner',
+                'created_at' => $project->created_at->toISOString(),
+            ];
+            $otherMembers = $memberships->filter(fn ($m) => (int) $m['user_id'] !== (int) $project->owner_id)->values();
+            $allMembers = collect([$ownerRow])->merge($otherMembers)->values();
 
             return response()->json([
                 'success' => true,
