@@ -52,7 +52,8 @@ export function createEngineRouter(): Router {
   router.get('/nagios/services', async (req: Request, res: Response) => {
     try {
       const raw = req.query.host_prefix
-      const hostPrefix = typeof raw === 'string' ? raw : Array.isArray(raw) ? (raw[0] ?? undefined) : undefined
+      const hostPrefix: string | undefined =
+        typeof raw === 'string' ? raw : Array.isArray(raw) ? (raw[0] ?? undefined) : undefined
       const services = await getNagiosServices(hostPrefix)
       res.json({
         success: true,
