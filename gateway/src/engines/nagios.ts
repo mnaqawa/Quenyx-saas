@@ -219,17 +219,24 @@ async function fetchServiceCount(): Promise<NagiosServiceCountResponse> {
 async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: string): Promise<NagiosService[]> {
   // Get service list
   const serviceListResponse = await fetchServiceList(hostPrefix)
-  const servicelist = serviceListResponse.data.servicelist
-  
+  const servicelist = serviceListResponse?.data?.servicelist
+  if (!servicelist || typeof servicelist !== 'object') {
+    return []
+  }
+
   // Extract unique host/service pairs, filtering by host_prefix if provided
   const serviceKeys = new Set<string>()
   for (const key in servicelist) {
     const service = servicelist[key]
-    // Filter by host_prefix if provided
-    if (hostPrefix && !service.host_name.startsWith(hostPrefix)) {
+    const hostName = service?.host_name
+    const serviceDesc = service?.service_description
+    if (hostName == null || serviceDesc == null) {
       continue
     }
-    serviceKeys.add(`${service.host_name}::${service.service_description}`)
+    if (hostPrefix && !String(hostName).startsWith(hostPrefix)) {
+      continue
+    }
+    serviceKeys.add(`${hostName}::${serviceDesc}`)
   }
   
   // Fetch details for each service with concurrency limit
