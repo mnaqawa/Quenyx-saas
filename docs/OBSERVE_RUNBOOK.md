@@ -36,6 +36,19 @@ This runbook provides step-by-step commands for verifying and troubleshooting th
    - Backend `.env`: `GATEWAY_BASE_URL`, `GATEWAY_INTERNAL_SECRET`, `OBSERVE_AUTO_PUBLISH_NAGIOS=true`
    - Gateway `.env`: `GATEWAY_INTERNAL_SECRET`, `NAGIOS_CONFIG_DIR`, `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, `NAGIOS_USER`, `NAGIOS_PASS`
 
+5. **NAGIOS_CONFIG_DIR and permissions (required when gateway runs as `portshield`):**
+   - **Use an absolute path.** Example: `NAGIOS_CONFIG_DIR=/var/www/portshield/portshield-saas/nagios/config`
+   - The path must be the same directory that `docker-compose.nagios.yml` mounts into the container as `/opt/nagios/etc/objects/portshield`. If compose uses `./nagios/config` relative to the project root, set `NAGIOS_CONFIG_DIR` to the absolute project path: `/var/www/portshield/portshield-saas/nagios/config`.
+   - Create the directory and make it writable by the gateway user (`portshield`):
+     ```bash
+     NAGIOS_BASE=/var/www/portshield/portshield-saas/nagios
+     sudo mkdir -p "$NAGIOS_BASE/config/workspaces"
+     sudo chown -R portshield:portshield "$NAGIOS_BASE"
+     sudo chmod -R 775 "$NAGIOS_BASE"
+     ```
+   - If you use a relative `NAGIOS_CONFIG_DIR` (e.g. `./nagios/config`) and systemd `WorkingDirectory` is the gateway dir, the gateway will write under the wrong place (e.g. `/var/www/.../gateway/nagios/config/...`) and may hit permission errors when switching to the correct path. Always set `NAGIOS_CONFIG_DIR` to the absolute host path.
+   - **Diagnostic:** PUT `/internal/engines/nagios/config` returns `written_path` in the JSON response. Use it to confirm where the gateway wrote the file (e.g. `.../nagios/config/workspaces/84.cfg`).
+
 ## Verification Steps
 
 ### Step 1: Verify Gateway Internal Routes
@@ -107,23 +120,24 @@ curl -X PUT http://127.0.0.1:8000/api/workspaces/84/observe/targets \
 
 ### Step 3: Verify Nagios Config Files
 
+After publish, the PUT `/internal/engines/nagios/config` response includes `written_path` (absolute path where the gateway wrote the file). Use it to confirm the file landed at the intended host path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`).
+
 ```bash
-# Check workspace config file was created
-ls -la nagios/config/workspaces/84.cfg
+# On host: check workspace config exists at the path returned in written_path
+ls -la /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
 
 # View config content (should show ws84- prefixed host names)
-cat nagios/config/workspaces/84.cfg
+cat /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
 
-# Check portshield.cfg exists
-cat nagios/config/portshield.cfg
+# Inside container: must see the same file (bind mount)
+docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg
+
+# Check portshield.cfg exists in container
+docker exec nagios-core cat /opt/nagios/etc/objects/portshield/portshield.cfg
 
 # Verify Nagios base config includes portshield.cfg
 docker exec nagios-core grep -n "portshield" /opt/nagios/etc/nagios.cfg
-
 # Expected: Line showing cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg
-
-# Verify workspace configs are accessible in container
-docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/
 ```
 
 ### Step 4: Verify Nagios Reload
@@ -234,49 +248,55 @@ php artisan observe:nagios:publish --workspace_id=84
    # Restart gateway process
    ```
 
-### Issue 2: Nagios Config Not Loaded
+### Issue 2: Nagios Config Not Loaded (hostlist only shows localhost)
 
 **Symptoms:**
-- Config files exist in `nagios/config/workspaces/` but Nagios doesn't see them
-- `statusjson.cgi` doesn't show workspace hosts
+- Publish succeeds but Nagios hostlist only shows localhost
+- Workspace hosts (e.g. `ws84-*`) do not appear in `statusjson.cgi?query=hostlist`
 
-**Fixes:**
-1. Check Docker volume mount:
+**Verification steps:**
+
+1. **Confirm workspace cfg exists inside the container** (must match host path via bind mount):
    ```bash
-   docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/
+   docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg
    ```
+   If "No such file", the host path is wrong or the gateway wrote elsewhere. Check PUT response `written_path` and `NAGIOS_CONFIG_DIR`.
 
-2. Verify `portshield.cfg` exists:
-   ```bash
-   docker exec nagios-core cat /opt/nagios/etc/objects/portshield/portshield.cfg
-   ```
-
-3. Check Nagios base config includes portshield.cfg:
+2. **Ensure `nagios.cfg` includes `portshield.cfg`:**
    ```bash
    docker exec nagios-core grep "portshield" /opt/nagios/etc/nagios.cfg
    ```
-   
-   If missing, the gateway should auto-add it on next config write. Or manually:
-   ```bash
-   docker exec nagios-core sh -c "echo 'cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg' >> /opt/nagios/etc/nagios.cfg"
-   ```
+   Expected: a line containing `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg`.
 
-4. Validate Nagios config:
+3. **Ensure `portshield.cfg` exists and includes the workspaces dir:**
    ```bash
-   docker exec nagios-core /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg
+   docker exec nagios-core cat /opt/nagios/etc/objects/portshield/portshield.cfg
    ```
+   Expected: `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces` (or equivalent).
 
-5. Reload Nagios:
+**Auto-fix (idempotent):** If step 2 shows no match, append the include and reload:
    ```bash
-   # Via gateway
+   INC='cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg'
+   docker exec nagios-core sh -c "grep -qF '$INC' /opt/nagios/etc/nagios.cfg || (echo '' >> /opt/nagios/etc/nagios.cfg && echo '# PortShield workspace configs' >> /opt/nagios/etc/nagios.cfg && echo '$INC' >> /opt/nagios/etc/nagios.cfg)"
+   docker exec nagios-core kill -HUP 1
+   ```
+   Or reload via gateway (when Docker is available to the gateway user):
+   ```bash
    curl -X POST http://127.0.0.1:4000/internal/engines/nagios/reload \
      -H "x-internal-secret: dev-secret-change-in-production"
-   
-   # Or manually
-   docker exec nagios-core kill -HUP 1
-   # Or
-   docker restart nagios-core
    ```
+
+4. **Validate and reload:**
+   ```bash
+   docker exec nagios-core /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg
+   docker exec nagios-core kill -HUP 1
+   ```
+
+5. **Re-check hostlist:**
+   ```bash
+   curl -s -u nagiosadmin:nagios "http://127.0.0.1:8080/nagios/cgi-bin/statusjson.cgi?query=hostlist" | jq '.data.hostlist[] | select(.name | startswith("ws84-"))'
+   ```
+   Expect at least one host. Then `.../services?host_prefix=ws84-` should return >0 and poll should insert `observe_services` rows.
 
 ### Issue 3: Reload Method Not Working
 
@@ -381,16 +401,17 @@ php artisan observe:nagios:publish --workspace_id=84
 
 ## Quick Verification Checklist
 
+- [ ] **NAGIOS_CONFIG_DIR** set to absolute path; dir exists and is writable by `portshield` (`mkdir -p .../workspaces && chown -R portshield:portshield .../nagios && chmod -R 775 .../nagios`)
 - [ ] Gateway internal routes accessible (`/_debug/routes`)
 - [ ] Targets can be created via API (`PUT /observe/targets`)
-- [ ] Config files created in `nagios/config/workspaces/{id}.cfg`
-- [ ] `portshield.cfg` exists and includes workspace directory
-- [ ] Nagios base config includes `portshield.cfg`
-- [ ] Reload endpoint returns `validated: true, reloaded: true`
-- [ ] Nagios `statusjson.cgi` shows workspace-prefixed hosts (`ws{id}-...`)
-- [ ] Poller successfully stores services with workspace scoping
-- [ ] API returns only workspace-scoped services
-- [ ] Publish status tracked in `observe_meta` (`last_publish_at`, `last_publish_success`)
+- [ ] **Publish:** PUT config returns `written_path`; file exists on host at that path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`)
+- [ ] **Container sees cfg:** `docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg` shows the file
+- [ ] `portshield.cfg` exists and includes workspace directory; Nagios base config includes `portshield.cfg` (see Issue 2 auto-fix if not)
+- [ ] Reload endpoint returns `validated: true, reloaded: true` (or reload manually after auto-fix)
+- [ ] **Nagios hostlist includes ws84-***: `statusjson.cgi?query=hostlist` shows workspace-prefixed hosts
+- [ ] **Gateway host_prefix=ws84- returns >0:** `.../internal/engines/nagios/services?host_prefix=ws84-` returns `.data` length > 0
+- [ ] **Poll inserts >0 rows:** `observe:poll --workspace_id=84` then `ObserveService::where('workspace_id',84)->count() > 0`
+- [ ] API returns only workspace-scoped services; publish status in `observe_meta`
 
 ## End-to-end verification (workspace 84)
 
@@ -477,14 +498,15 @@ OBSERVE_AUTO_PUBLISH_NAGIOS=true  # Default: true in dev
 ### Gateway `.env`
 ```bash
 GATEWAY_INTERNAL_SECRET=dev-secret-change-in-production
-NAGIOS_CONFIG_DIR=./nagios/config
+# REQUIRED when gateway runs as portshield: use absolute path matching the bind mount source
+NAGIOS_CONFIG_DIR=/var/www/portshield/portshield-saas/nagios/config
 NAGIOS_CONTAINER_NAME=nagios-core
 NAGIOS_BASE_URL=http://127.0.0.1:8080/nagios
 NAGIOS_USER=nagiosadmin
 NAGIOS_PASS=nagios
 ```
 
-**Config path and bind mount (systemd):** The Nagios container reads config from `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg`, which is the bind mount of the host directory. `docker-compose.nagios.yml` mounts `./nagios/config:/opt/nagios/etc/objects/portshield` (relative to the compose file). When the gateway runs as a systemd user (e.g. `portshield`), its CWD may not be the project root. Set `NAGIOS_CONFIG_DIR` to the **absolute** path that is the same directory used by the compose mount, e.g. `/var/lib/portshield/nagios/config` or `/path/to/portshield-saas/nagios/config`, so that gateway-written files appear at `/opt/nagios/etc/objects/portshield/workspaces/{id}.cfg` inside the container.
+**Config path and permissions:** Use an absolute path for `NAGIOS_CONFIG_DIR` so gateway writes to the same directory the Nagios container mounts. Ensure that directory exists and is writable by the gateway user (e.g. `portshield`): `mkdir -p /var/www/portshield/portshield-saas/nagios/config/workspaces && chown -R portshield:portshield /var/www/portshield/portshield-saas/nagios && chmod -R 775 /var/www/portshield/portshield-saas/nagios`. PUT `/internal/engines/nagios/config` returns `written_path` in the JSON response so you can confirm where the file was written.
 
 ## Database table names (no mismatch)
 
