@@ -1,6 +1,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs/promises'
+import * as os from 'os'
 import * as path from 'path'
 
 const execAsync = promisify(exec)
@@ -34,40 +35,71 @@ async function checkDockerAccess(): Promise<{ accessible: boolean; error?: strin
   }
 }
 
+const NAGIOS_CFG_PATH = '/opt/nagios/etc/nagios.cfg'
+const WORKSPACES_CFG_DIR_LINE = 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces'
+
+function lineMatchesCfgFile(s: string): boolean {
+  return /^\s*cfg_file\s*=\s*\/opt\/nagios\/etc\/objects\/portshield\/portshield\.cfg\s*$/.test(s.trim())
+}
+
+function lineMatchesCfgDir(s: string): boolean {
+  return /^\s*cfg_dir\s*=\s*\/opt\/nagios\/etc\/objects\/portshield\/workspaces\s*$/.test(s.trim())
+}
+
 /**
- * Ensure Nagios base config includes portshield.cfg
+ * Ensure nagios.cfg loads workspace configs via cfg_dir (main directive), not via cfg_file to portshield.cfg.
+ * cfg_dir is valid only in the main nagios.cfg; cfg_dir inside an included object file causes
+ * "Unexpected token or statement" and Nagios loads only localhost.
+ * - Removes any cfg_file=.../portshield.cfg line (legacy, invalid pattern).
+ * - Ensures exactly one cfg_dir=/opt/nagios/etc/objects/portshield/workspaces in nagios.cfg.
+ * Idempotent, no duplicates. After updating nagios.cfg, reloads Nagios (HUP or restart).
  */
-async function ensureNagiosIncludesPortshield(): Promise<void> {
-  const nagiosCfgPath = '/opt/nagios/etc/nagios.cfg'
-  const portshieldInclude = 'cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg'
-  
-  // Check Docker access first
+async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
   const dockerCheck = await checkDockerAccess()
   if (!dockerCheck.accessible) {
     console.warn('Docker access denied, skipping nagios.cfg update:', dockerCheck.error)
     return
   }
-  
+
   try {
-    // Check if nagios.cfg already includes portshield.cfg
-    const checkCmd = `docker exec ${NAGIOS_CONTAINER_NAME} grep -q "${portshieldInclude}" ${nagiosCfgPath} || echo "NOT_FOUND"`
-    const checkResult = await execAsync(checkCmd, { timeout: 5000 })
-    
-    if (checkResult.stdout.trim() === 'NOT_FOUND') {
-      // Append include line to nagios.cfg
-      const appendCmd = `docker exec ${NAGIOS_CONTAINER_NAME} sh -c "echo '' >> ${nagiosCfgPath} && echo '# PortShield workspace configs (auto-added)' >> ${nagiosCfgPath} && echo '${portshieldInclude}' >> ${nagiosCfgPath}"`
-      await execAsync(appendCmd, { timeout: 5000 })
-      console.log('Added portshield.cfg include to nagios.cfg')
+    const catCmd = `docker exec ${NAGIOS_CONTAINER_NAME} cat ${NAGIOS_CFG_PATH}`
+    const { stdout } = await execAsync(catCmd, { timeout: 5000 })
+    const lines = (stdout || '').split(/\r?\n/)
+    const originalContent = lines.join('\n')
+    const withoutOldOrCfgDir = lines.filter((l) => !lineMatchesCfgFile(l) && !lineMatchesCfgDir(l))
+    const hadCfgDir = lines.some(lineMatchesCfgDir)
+    const block = [
+      '',
+      '# PortShield workspace configs (auto-added)',
+      WORKSPACES_CFG_DIR_LINE,
+    ]
+    const outLines = hadCfgDir ? withoutOldOrCfgDir : [...withoutOldOrCfgDir, ...block]
+    const out = outLines.join('\n')
+    if (out === originalContent) {
+      return
+    }
+    const tmpPath = path.join(os.tmpdir(), `portshield-nagios-${Date.now()}.cfg`)
+    await fs.writeFile(tmpPath, out, 'utf-8')
+    try {
+      await execAsync(`docker cp "${tmpPath.replace(/"/g, '\\"')}" ${NAGIOS_CONTAINER_NAME}:/tmp/nagios_ps.cfg`, { timeout: 5000 })
+      await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} mv /tmp/nagios_ps.cfg ${NAGIOS_CFG_PATH}`, { timeout: 5000 })
+    } finally {
+      await fs.unlink(tmpPath).catch(() => {})
+    }
+    console.log('[nagios] Updated nagios.cfg: removed legacy cfg_file=.../portshield.cfg if present; ensured cfg_dir=.../workspaces')
+    const reloadResult = await reloadNagios()
+    if (!reloadResult.reloaded && !reloadResult.reload_skipped) {
+      console.warn('[nagios] nagios.cfg was updated but reload failed:', reloadResult.message)
     }
   } catch (err) {
-    // If container not running or command fails, log but don't throw
-    // This allows config writing to continue even if Nagios isn't running yet
-    console.warn('Could not ensure nagios.cfg includes portshield.cfg:', err instanceof Error ? err.message : String(err))
+    console.warn('Could not ensure nagios.cfg cfg_dir for workspaces:', err instanceof Error ? err.message : String(err))
   }
 }
 
 /**
  * Write Nagios config file for a workspace.
+ * Workspace configs are loaded by Nagios via cfg_dir in the main nagios.cfg (see ensureNagiosIncludesWorkspacesCfgDir).
+ * We do not use or create portshield.cfg (cfg_dir is valid only in nagios.cfg, not inside an included object file).
  * Returns the absolute path written so callers can verify location.
  */
 export async function writeNagiosConfig(workspaceId: number, config: string): Promise<{ written_path: string }> {
@@ -77,21 +109,7 @@ export async function writeNagiosConfig(workspaceId: number, config: string): Pr
   await fs.mkdir(configDir, { recursive: true })
   await fs.writeFile(writtenPath, config, 'utf-8')
 
-  const portshieldCfgPath = path.resolve(NAGIOS_CONFIG_DIR, 'portshield.cfg')
-  try {
-    await fs.access(portshieldCfgPath)
-  } catch {
-    const portshieldCfg = `# PortShield workspace configurations
-# This file is auto-generated - DO NOT EDIT MANUALLY
-# Workspace configs are loaded from the workspaces/ subdirectory
-
-# Include all workspace configs
-cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
-`
-    await fs.writeFile(portshieldCfgPath, portshieldCfg, 'utf-8')
-  }
-
-  await ensureNagiosIncludesPortshield()
+  await ensureNagiosIncludesWorkspacesCfgDir()
 
   console.log(`[nagios] Wrote config for workspace ${workspaceId} to resolved path: ${writtenPath} (NAGIOS_CONFIG_DIR=${NAGIOS_CONFIG_DIR})`)
   return { written_path: writtenPath }

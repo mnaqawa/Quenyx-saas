@@ -122,6 +122,12 @@ curl -X PUT http://127.0.0.1:8000/api/workspaces/84/observe/targets \
 
 After publish, the PUT `/internal/engines/nagios/config` response includes `written_path` (absolute path where the gateway wrote the file). Use it to confirm the file landed at the intended host path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`).
 
+**How workspace configs are loaded:** Nagios loads workspace configs via a **cfg_dir** directive in the **main** `/opt/nagios/etc/nagios.cfg`. The gateway ensures this line exists in `nagios.cfg`:
+
+- `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`
+
+Workspace configs are **not** loaded via `cfg_file=.../portshield.cfg`. The directive `cfg_dir` is valid only in the main `nagios.cfg`; if you put `cfg_dir` inside a file that is itself included via `cfg_file`, Nagios reports "Unexpected token or statement" and loads only localhost.
+
 ```bash
 # On host: check workspace config exists at the path returned in written_path
 ls -la /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
@@ -132,12 +138,10 @@ cat /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
 # Inside container: must see the same file (bind mount)
 docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg
 
-# Check portshield.cfg exists in container
-docker exec nagios-core cat /opt/nagios/etc/objects/portshield/portshield.cfg
-
-# Verify Nagios base config includes portshield.cfg
+# Verify nagios.cfg loads workspaces via cfg_dir (required)
 docker exec nagios-core grep -n "portshield" /opt/nagios/etc/nagios.cfg
-# Expected: Line showing cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg
+# Expected: A line containing cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
+# There must NOT be: cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg (see Issue 2 if present)
 ```
 
 ### Step 4: Verify Nagios Reload
@@ -254,6 +258,8 @@ php artisan observe:nagios:publish --workspace_id=84
 - Publish succeeds but Nagios hostlist only shows localhost
 - Workspace hosts (e.g. `ws84-*`) do not appear in `statusjson.cgi?query=hostlist`
 
+**Cause:** Workspace configs must be loaded via **cfg_dir** in the main `nagios.cfg`. The directive `cfg_dir` is valid only in the main config file. If `nagios.cfg` included `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` and that file contained `cfg_dir=...`, Nagios reports "Unexpected token or statement in file '...portshield.cfg' on line 6" and loads only localhost.
+
 **Verification steps:**
 
 1. **Confirm workspace cfg exists inside the container** (must match host path via bind mount):
@@ -262,37 +268,38 @@ php artisan observe:nagios:publish --workspace_id=84
    ```
    If "No such file", the host path is wrong or the gateway wrote elsewhere. Check PUT response `written_path` and `NAGIOS_CONFIG_DIR`.
 
-2. **Ensure `nagios.cfg` includes `portshield.cfg`:**
+2. **Ensure `nagios.cfg` loads workspaces via cfg_dir (not cfg_file to portshield.cfg):**
    ```bash
    docker exec nagios-core grep "portshield" /opt/nagios/etc/nagios.cfg
    ```
-   Expected: a line containing `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg`.
+   **Expected:** A line `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`.  
+   **Invalid (remove if present):** `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` — that pattern leads to "Unexpected token" because portshield.cfg would contain cfg_dir, which is not allowed inside an included object file.
 
-3. **Ensure `portshield.cfg` exists and includes the workspaces dir:**
-   ```bash
-   docker exec nagios-core cat /opt/nagios/etc/objects/portshield/portshield.cfg
-   ```
-   Expected: `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces` (or equivalent).
+**Troubleshooting: Remove old cfg_file line if present**
 
-**Auto-fix (idempotent):** If step 2 shows no match, append the include and reload:
+If you see `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` in `nagios.cfg`, remove it and ensure `cfg_dir=.../workspaces` is in `nagios.cfg` instead:
+
    ```bash
-   INC='cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg'
-   docker exec nagios-core sh -c "grep -qF '$INC' /opt/nagios/etc/nagios.cfg || (echo '' >> /opt/nagios/etc/nagios.cfg && echo '# PortShield workspace configs' >> /opt/nagios/etc/nagios.cfg && echo '$INC' >> /opt/nagios/etc/nagios.cfg)"
+   # Remove the legacy cfg_file line (invalid pattern)
+   docker exec nagios-core sed -i '\|cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg|d' /opt/nagios/etc/nagios.cfg
+
+   # Ensure cfg_dir for workspaces exists (add if missing)
+   docker exec nagios-core sh -c "grep -q 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces' /opt/nagios/etc/nagios.cfg || (echo '' >> /opt/nagios/etc/nagios.cfg && echo '# PortShield workspace configs (auto-added)' >> /opt/nagios/etc/nagios.cfg && echo 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces' >> /opt/nagios/etc/nagios.cfg)"
+
+   # Reload Nagios
    docker exec nagios-core kill -HUP 1
-   ```
-   Or reload via gateway (when Docker is available to the gateway user):
-   ```bash
-   curl -X POST http://127.0.0.1:4000/internal/engines/nagios/reload \
-     -H "x-internal-secret: dev-secret-change-in-production"
+   # or: curl -X POST http://127.0.0.1:4000/internal/engines/nagios/reload -H "x-internal-secret: ..."
    ```
 
-4. **Validate and reload:**
+   On minimal images without `sed -i`, edit in place or replace the file (e.g. `docker exec ... cat /opt/nagios/etc/nagios.cfg` on host, edit, then `docker cp` back).
+
+3. **Validate and reload:**
    ```bash
    docker exec nagios-core /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg
    docker exec nagios-core kill -HUP 1
    ```
 
-5. **Re-check hostlist:**
+4. **Re-check hostlist:**
    ```bash
    curl -s -u nagiosadmin:nagios "http://127.0.0.1:8080/nagios/cgi-bin/statusjson.cgi?query=hostlist" | jq '.data.hostlist[] | select(.name | startswith("ws84-"))'
    ```
@@ -406,7 +413,7 @@ php artisan observe:nagios:publish --workspace_id=84
 - [ ] Targets can be created via API (`PUT /observe/targets`)
 - [ ] **Publish:** PUT config returns `written_path`; file exists on host at that path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`)
 - [ ] **Container sees cfg:** `docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg` shows the file
-- [ ] `portshield.cfg` exists and includes workspace directory; Nagios base config includes `portshield.cfg` (see Issue 2 auto-fix if not)
+- [ ] **nagios.cfg** contains `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces` and does **not** contain `cfg_file=.../portshield.cfg` (see Issue 2 if hostlist only shows localhost)
 - [ ] Reload endpoint returns `validated: true, reloaded: true` (or reload manually after auto-fix)
 - [ ] **Nagios hostlist includes ws84-***: `statusjson.cgi?query=hostlist` shows workspace-prefixed hosts
 - [ ] **Gateway host_prefix=ws84- returns >0:** `.../internal/engines/nagios/services?host_prefix=ws84-` returns `.data` length > 0
