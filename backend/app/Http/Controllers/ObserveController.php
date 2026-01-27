@@ -95,7 +95,7 @@ class ObserveController extends Controller
         $services = $query->limit($limit)->get();
 
         // Calculate totals from actual data (workspace-scoped)
-        $allServices = ObserveService::where('workspace_id', $workspace->id)
+        $allServices = ObserveService::where('workspace_id', $project->id)
             ->where('engine_key', 'nagios')
             ->where('host_name', 'like', $workspacePrefix . '%')
             ->get();

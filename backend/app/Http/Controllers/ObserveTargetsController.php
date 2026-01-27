@@ -17,11 +17,11 @@ class ObserveTargetsController extends Controller
     /**
      * Get observe targets for a workspace
      */
-    public function index(Request $request, Project $workspace): JsonResponse
+    public function index(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $workspace);
+        $this->authorize('view', $project);
 
-        $hosts = ObserveTargetHost::where('workspace_id', $workspace->id)
+        $hosts = ObserveTargetHost::where('workspace_id', $project->id)
             ->with('services')
             ->orderBy('name')
             ->get()
@@ -56,9 +56,9 @@ class ObserveTargetsController extends Controller
     /**
      * Upsert observe targets (replace-style)
      */
-    public function update(Request $request, Project $workspace): JsonResponse
+    public function update(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('update', $workspace);
+        $this->authorize('update', $project);
 
         $validator = Validator::make($request->all(), [
             'hosts' => 'required|array',
@@ -149,10 +149,10 @@ class ObserveTargetsController extends Controller
         unset($hostData, $serviceData);
 
         try {
-            DB::transaction(function () use ($workspace, $request, $hostsData) {
+            DB::transaction(function () use ($project, $request, $hostsData) {
                 
                 // Get existing host IDs to track what to delete
-                $existingHostIds = ObserveTargetHost::where('workspace_id', $workspace->id)
+                $existingHostIds = ObserveTargetHost::where('workspace_id', $project->id)
                     ->pluck('id')
                     ->toArray();
                 $newHostIds = [];
@@ -160,7 +160,7 @@ class ObserveTargetsController extends Controller
                 foreach ($hostsData as $hostData) {
                     $host = ObserveTargetHost::updateOrCreate(
                         [
-                            'workspace_id' => $workspace->id,
+                            'workspace_id' => $project->id,
                             'name' => $hostData['name'],
                         ],
                         [
@@ -185,7 +185,7 @@ class ObserveTargetsController extends Controller
                                 'name' => $serviceData['name'],
                             ],
                             [
-                                'workspace_id' => $workspace->id,
+                                'workspace_id' => $project->id,
                                 'check_command' => $serviceData['check_command'],
                                 'check_args' => $serviceData['check_args'] ?? [],
                                 'enabled' => $serviceData['enabled'] ?? true,
@@ -215,17 +215,17 @@ class ObserveTargetsController extends Controller
             if ($autoPublish) {
                 try {
                     $publisher = new NagiosConfigPublisher();
-                    $publisher->publish($workspace->id);
+                    $publisher->publish($project->id);
                 } catch (\Exception $e) {
                     Log::warning('Failed to publish Nagios config after targets update', [
-                        'workspace_id' => $workspace->id,
+                        'workspace_id' => $project->id,
                         'error' => $e->getMessage(),
                     ]);
                     // Don't fail the request, just log
                 }
             } else {
                 Log::info('Auto-publish disabled, skipping Nagios config publish', [
-                    'workspace_id' => $workspace->id,
+                    'workspace_id' => $project->id,
                 ]);
             }
 
@@ -236,7 +236,7 @@ class ObserveTargetsController extends Controller
 
         } catch (\Exception $e) {
             Log::error('ObserveTargetsController@update failed', [
-                'workspace_id' => $workspace->id,
+                'workspace_id' => $project->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -251,9 +251,9 @@ class ObserveTargetsController extends Controller
     /**
      * Validate targets configuration payload
      */
-    public function validateTargetsPayload(Request $request, Project $workspace): JsonResponse
+    public function validateTargetsPayload(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $workspace);
+        $this->authorize('view', $project);
 
         $validator = Validator::make($request->all(), [
             'hosts' => 'required|array',
