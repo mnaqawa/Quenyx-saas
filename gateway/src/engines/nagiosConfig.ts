@@ -259,3 +259,89 @@ export async function reloadNagios(): Promise<{
     }
   }
 }
+
+const MAX_VALIDATION_ERRORS = 20
+const MAX_VALIDATION_WARNINGS = 20
+const ERROR_LINE_REG = /^\s*Error:\s*(.+)$/im
+const WARNING_LINE_REG = /^\s*Warning:\s*(.+)$/im
+
+/**
+ * Parse Nagios -v stdout/stderr into trimmed error and warning lines (max 20 each).
+ */
+function parseNagiosValidationOutput(stdout: string, stderr: string): { errors: string[]; warnings: string[] } {
+  const combined = (stdout + '\n' + stderr).split(/\r?\n/)
+  const errors: string[] = []
+  const warnings: string[] = []
+  for (const line of combined) {
+    const errMatch = line.match(ERROR_LINE_REG)
+    if (errMatch) {
+      const trimmed = (errMatch[1] ?? line).trim()
+      if (trimmed && errors.length < MAX_VALIDATION_ERRORS) errors.push(trimmed)
+      continue
+    }
+    const warnMatch = line.match(WARNING_LINE_REG)
+    if (warnMatch) {
+      const trimmed = (warnMatch[1] ?? line).trim()
+      if (trimmed && warnings.length < MAX_VALIDATION_WARNINGS) warnings.push(trimmed)
+    }
+  }
+  return { errors, warnings }
+}
+
+/**
+ * Run nagios -v and return parsed errors/warnings (trimmed, first 20 each).
+ * Used so the publish flow can surface exact reasons (unknown check_command, duplicate object, etc.).
+ */
+export async function validateNagiosConfig(): Promise<{
+  success: boolean
+  valid: boolean
+  message?: string
+  errors: string[]
+  warnings: string[]
+}> {
+  const dockerCheck = await checkDockerAccess()
+  if (!dockerCheck.accessible) {
+    return {
+      success: false,
+      valid: false,
+      message: dockerCheck.error ?? 'Docker access denied; cannot run nagios -v',
+      errors: [dockerCheck.error ?? 'Docker access denied; cannot run nagios -v'],
+      warnings: [],
+    }
+  }
+
+  const validateCmd = `docker exec ${NAGIOS_CONTAINER_NAME} /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg`
+  try {
+    const result = await execAsync(validateCmd, { timeout: 30000 })
+    const stdout = (result.stdout ?? '').trim()
+    const stderr = (result.stderr ?? '').trim()
+    const { errors, warnings } = parseNagiosValidationOutput(stdout, stderr)
+    const output = stdout + '\n' + stderr
+    const hasErrors = output.includes('Error:') || output.includes('Error processing config file')
+    const hasSuccess =
+      (output.includes('Things look okay') || output.includes('Configuration check completed')) &&
+      !hasErrors
+    const valid = !hasErrors && (hasSuccess || (errors.length === 0 && output.includes('Total Warnings:')))
+
+    return {
+      success: true,
+      valid,
+      message: valid ? undefined : 'Nagios config invalid',
+      errors,
+      warnings,
+    }
+  } catch (err: any) {
+    const stdout = (err.stdout ?? '').trim()
+    const stderr = (err.stderr ?? '').trim()
+    const { errors, warnings } = parseNagiosValidationOutput(stdout, stderr)
+    const fallback = err.message || 'Validation command failed'
+    if (errors.length === 0) errors.push(fallback)
+    return {
+      success: false,
+      valid: false,
+      message: 'Nagios config invalid',
+      errors: errors.slice(0, MAX_VALIDATION_ERRORS),
+      warnings: warnings.slice(0, MAX_VALIDATION_WARNINGS),
+    }
+  }
+}

@@ -70,13 +70,12 @@ class NagiosConfigPublisher
         $reloadData = $reloadResponse->json() ?? [];
         $reloadSkipped = !empty($reloadData['reload_skipped']);
 
-        // Config was written successfully. Publish success = reload succeeded OR reload was skipped (e.g. Docker unavailable).
         $publishSuccess = $reloadSuccess && (
             (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) ||
             $reloadSkipped
         );
-
         $publishError = null;
+
         if (!$publishSuccess) {
             if (!$reloadSuccess) {
                 $publishError = "Reload failed: HTTP {$reloadResponse->status()} - {$reloadResponse->body()}";
@@ -88,8 +87,49 @@ class NagiosConfigPublisher
             } else {
                 $publishError = 'Reload validation or execution failed';
             }
-        } elseif ($reloadSkipped) {
-            // Config written; reload skipped (e.g. Docker unavailable). Treat as success; do not set publishError.
+        }
+
+        // After reload, call validate so we get a parsed list of errors/warnings (unknown check_command, duplicate object, etc.)
+        $validateResponse = null;
+        if ($reloadSuccess && !$reloadSkipped) {
+            $validateResp = Http::timeout(30)
+                ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                ->get("{$this->gatewayUrl}/internal/engines/nagios/validate");
+            $validateResponse = $validateResp->json() ?? [];
+            $valid = ($validateResponse['valid'] ?? false) === true;
+            $validateErrors = $validateResponse['errors'] ?? [];
+            if (!$valid || !empty($validateErrors)) {
+                $publishSuccess = false;
+                $msg = $validateResponse['message'] ?? 'Nagios config invalid';
+                $errorsTrimmed = array_slice(is_array($validateErrors) ? $validateErrors : [], 0, 20);
+                $publishError = $msg . (\count($errorsTrimmed) > 0 ? ': ' . implode('; ', $errorsTrimmed) : '');
+            }
+        }
+
+        // Optionally assert ws{workspaceId}- hosts exist in Nagios hostlist after publish
+        if ($publishSuccess && !$reloadSkipped) {
+            $hostlistResp = Http::timeout(15)
+                ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                ->get("{$this->gatewayUrl}/internal/engines/nagios/hostlist");
+            if ($hostlistResp->successful()) {
+                $hostlistData = $hostlistResp->json() ?? [];
+                $hostlist = $hostlistData['data']['hostlist'] ?? [];
+                $prefix = 'ws' . $workspaceId . '-';
+                $hasWorkspaceHost = false;
+                foreach (is_array($hostlist) ? $hostlist : [] as $h) {
+                    if (is_string($h) && str_starts_with($h, $prefix)) {
+                        $hasWorkspaceHost = true;
+                        break;
+                    }
+                }
+                if (!$hasWorkspaceHost) {
+                    $publishSuccess = false;
+                    $publishError = ($publishError ? $publishError . ' ' : '') . "No ws{$workspaceId}- hosts in Nagios hostlist.";
+                }
+            }
+        }
+
+        if ($publishSuccess && $reloadSkipped) {
             $publishError = null;
         }
 

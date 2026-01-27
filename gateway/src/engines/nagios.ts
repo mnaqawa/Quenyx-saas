@@ -213,6 +213,26 @@ async function fetchServiceCount(): Promise<NagiosServiceCountResponse> {
   return nagiosRequest<NagiosServiceCountResponse>(url)
 }
 
+/** statusjson.cgi hostlist response: data.hostlist is object keyed by host name */
+interface NagiosHostlistResponse {
+  data?: {
+    hostlist?: Record<string, unknown>
+  }
+}
+
+/**
+ * Proxy statusjson.cgi?query=hostlist so the backend can assert ws{workspaceId}- hosts exist after publish.
+ * Returns { hostlist: string[] } of host names.
+ */
+export async function getNagiosHostlist(): Promise<{ hostlist: string[] }> {
+  const base = NAGIOS_BASE_URL.replace(/\?.*$/, '')
+  const url = `${base}?query=hostlist`
+  const json = await nagiosRequest<NagiosHostlistResponse>(url)
+  const raw = json?.data?.hostlist
+  const hostlist: string[] = typeof raw === 'object' && raw !== null ? Object.keys(raw) : []
+  return { hostlist }
+}
+
 /**
  * Fetch all services with details (with concurrency limit and host prefix filtering)
  */

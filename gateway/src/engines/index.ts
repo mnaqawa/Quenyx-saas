@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from 'express'
-import { getNagiosServices, getNagiosSummary } from './nagios'
-import { writeNagiosConfig, reloadNagios } from './nagiosConfig'
+import { getNagiosServices, getNagiosSummary, getNagiosHostlist } from './nagios'
+import { writeNagiosConfig, reloadNagios, validateNagiosConfig } from './nagiosConfig'
 
 const INTERNAL_SECRET = process.env.GATEWAY_INTERNAL_SECRET || 'dev-secret-change-in-production'
 
@@ -147,6 +147,53 @@ export function createEngineRouter(): Router {
       })
     }
   })
+
+  router.get('/nagios/validate', async (req: Request, res: Response) => {
+    try {
+      const result = await validateNagiosConfig()
+      if (result.valid) {
+        return res.json({
+          success: true,
+          valid: true,
+          errors: result.errors,
+          warnings: result.warnings,
+        })
+      }
+      res.json({
+        success: result.success,
+        valid: false,
+        message: result.message ?? 'Nagios config invalid',
+        errors: result.errors,
+        warnings: result.warnings,
+      })
+    } catch (err) {
+      console.error('Error validating Nagios config:', err)
+      res.status(500).json({
+        success: false,
+        valid: false,
+        message: err instanceof Error ? err.message : 'Nagios validation failed',
+        errors: [err instanceof Error ? err.message : 'Validation failed'],
+        warnings: [],
+      })
+    }
+  })
+
+  router.get('/nagios/hostlist', async (req: Request, res: Response) => {
+    try {
+      const data = await getNagiosHostlist()
+      res.json({
+        success: true,
+        data,
+      })
+    } catch (err) {
+      console.error('Error fetching Nagios hostlist:', err)
+      res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to fetch Nagios hostlist',
+        data: null,
+      })
+    }
+  })
   
   // Debug route (dev only)
   if (process.env.NODE_ENV !== 'production') {
@@ -156,6 +203,8 @@ export function createEngineRouter(): Router {
         'GET /internal/engines/nagios/services',
         'PUT /internal/engines/nagios/config',
         'POST /internal/engines/nagios/reload',
+        'GET /internal/engines/nagios/validate',
+        'GET /internal/engines/nagios/hostlist',
         'GET /internal/engines/_debug/routes',
       ]
       res.json({
