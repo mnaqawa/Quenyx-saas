@@ -526,6 +526,39 @@ Observe targets use **plural** table names. Models and code must reference these
 
 If you see "Table observe_target_hosts doesn't exist" (singular), the code is wrong; use `observe_targets_hosts`.
 
+### observe_services schema (real column names)
+
+The poller and API use **service_name** (not `service_description`). If you see "Unknown column 'service_description' in observe_services", ensure code and any raw SQL use the real column names below.
+
+```sql
+-- Real columns (e.g. MySQL)
+DESCRIBE observe_services;
+```
+
+| Field              | Type            | Null | Key | Default | Extra          |
+|--------------------|-----------------|------|-----|---------|----------------|
+| id                 | bigint unsigned | NO   | PRI | NULL    | auto_increment |
+| workspace_id       | bigint unsigned | NO   | MUL | NULL    |                |
+| engine_key         | varchar(50)     | NO   |     | nagios  |                |
+| engine_service_key | varchar(255)    | NO   |     | NULL    |                |
+| host_name          | varchar(255)    | NO   |     | NULL    |                |
+| **service_name**   | varchar(255)    | NO   |     | NULL    |                |
+| state              | varchar(20)     | NO   |     | NULL    |                |
+| last_check_at      | datetime        | YES  |     | NULL    |                |
+| duration_sec       | int             | YES  |     | NULL    |                |
+| attempt            | varchar(255)    | YES  |     | NULL    |                |
+| output             | text            | YES  |     | NULL    |                |
+| perfdata           | text            | YES  |     | NULL    |                |
+| created_at         | timestamp       | YES  |     | NULL    |                |
+| updated_at         | timestamp       | YES  |     | NULL    |                |
+
+Example insert aligned with schema (use `service_name`, not `service_description`):
+
+```sql
+INSERT INTO observe_services (workspace_id, engine_key, engine_service_key, host_name, service_name, state, last_check_at, duration_sec, attempt, output, perfdata, created_at, updated_at)
+VALUES (84, 'nagios', 'ws84-PortShield-SaaS::check live', 'ws84-PortShield-SaaS', 'check live', 'ok', NOW(), 0, '1/3', NULL, NULL, NOW(), NOW());
+```
+
 ## Frontend redeploy (use real API, not fixtures)
 
 For production and dev deployments, the Observe UI must call the real backend (`/api/workspaces/:id/observe/services` and `/observe/summary`), not fixtures.

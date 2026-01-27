@@ -12,22 +12,13 @@ interface NagiosService {
   perfdata?: string
 }
 
+/**
+ * statusjson.cgi?query=servicelist returns a nested map:
+ * data.servicelist = { "<hostname>": { "<service_description>": <state_int> } }
+ */
 interface NagiosServiceListResponse {
   data: {
-    servicelist: {
-      [key: string]: {
-        host_name: string
-        service_description: string
-        current_state: number
-        last_check: string
-        last_state_change: string
-        current_attempt: number
-        max_attempts: number
-        plugin_output: string
-        long_plugin_output?: string
-        perf_data?: string
-      }
-    }
+    servicelist: Record<string, Record<string, number>>
   }
 }
 
@@ -234,98 +225,59 @@ export async function getNagiosHostlist(): Promise<{ hostlist: string[] }> {
 }
 
 /**
- * Fetch all services with details (with concurrency limit and host prefix filtering)
+ * Flatten statusjson.cgi servicelist nested map into rows.
+ * Shape: data.servicelist[hostname][service_description] = state_int
  */
-async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: string): Promise<NagiosService[]> {
-  // Get service list
+function flattenServicelist(
+  servicelist: Record<string, Record<string, number>>,
+  hostPrefix?: string
+): Array<{ host_name: string; service_description: string; current_state: number }> {
+  const rows: Array<{ host_name: string; service_description: string; current_state: number }> = []
+  const prefix = hostPrefix != null && typeof hostPrefix === 'string' ? hostPrefix : undefined
+  for (const hostname of Object.keys(servicelist)) {
+    if (prefix && prefix !== '' && !hostname.startsWith(prefix)) {
+      continue
+    }
+    const hostData = servicelist[hostname]
+    if (hostData == null || typeof hostData !== 'object') {
+      continue
+    }
+    for (const serviceDesc of Object.keys(hostData)) {
+      const stateInt = hostData[serviceDesc]
+      if (typeof stateInt === 'number') {
+        rows.push({
+          host_name: hostname,
+          service_description: serviceDesc,
+          current_state: stateInt,
+        })
+      }
+    }
+  }
+  return rows
+}
+
+/**
+ * Fetch all services: parse nested servicelist, filter by host_prefix, map to NagiosService.
+ * Caching and host_prefix filtering are preserved; no per-service detail fetch (servicelist has state).
+ */
+async function fetchAllServices(_concurrencyLimit: number = 5, hostPrefix?: string): Promise<NagiosService[]> {
   const serviceListResponse = await fetchServiceList(hostPrefix)
   const servicelist = serviceListResponse?.data?.servicelist
   if (!servicelist || typeof servicelist !== 'object') {
     return []
   }
 
-  const prefixForFilter: string | undefined = hostPrefix != null && typeof hostPrefix === 'string' ? hostPrefix : undefined
-
-  const serviceKeys = new Set<string>()
-  for (const key in servicelist) {
-    try {
-      const service = servicelist[key]
-      if (service == null || typeof service !== 'object') {
-        if (process.env.NODE_ENV !== 'test') {
-          console.warn('[nagios] Skipping non-object servicelist entry:', { key, type: typeof service })
-        }
-        continue
-      }
-      let hostName: string | undefined =
-        typeof (service as Record<string, unknown>).host_name === 'string'
-          ? (service as Record<string, unknown>).host_name as string
-          : undefined
-      let serviceDesc: string | undefined =
-        typeof (service as Record<string, unknown>).service_description === 'string'
-          ? (service as Record<string, unknown>).service_description as string
-          : undefined
-      if (hostName == null || serviceDesc == null) {
-        const sep = String(key).includes(';') ? ';' : '::'
-        const parts = String(key).split(sep)
-        if (parts.length >= 2) {
-          hostName = hostName ?? parts[0]?.trim() ?? ''
-          serviceDesc = serviceDesc ?? parts[1]?.trim() ?? ''
-        }
-      }
-      if (hostName == null || serviceDesc == null || String(hostName) === '' || String(serviceDesc) === '') {
-        if (process.env.NODE_ENV !== 'test') {
-          console.warn('[nagios] Skipping servicelist entry with bad shape:', { key, hostName: hostName ?? 'null', serviceDesc: serviceDesc ?? 'null', keys: Object.keys(service as object).slice(0, 10) })
-        }
-        continue
-      }
-      const hostStr = String(hostName)
-      if (prefixForFilter != null && prefixForFilter !== '' && typeof hostStr === 'string' && !hostStr.startsWith(prefixForFilter)) {
-        continue
-      }
-      serviceKeys.add(`${hostStr}::${String(serviceDesc)}`)
-    } catch (err) {
-      const service = servicelist[key]
-      if (process.env.NODE_ENV !== 'test') {
-        console.warn('[nagios] Skipping servicelist entry after error:', { key, err: err instanceof Error ? err.message : String(err), shape: typeof service === 'object' && service != null ? Object.keys(service as object) : typeof service })
-      }
-    }
-  }
-  
-  // Fetch details for each service with concurrency limit
-  const services: NagiosService[] = []
-  const serviceArray = Array.from(serviceKeys)
-  
-  // Simple concurrency control
-  for (let i = 0; i < serviceArray.length; i += concurrencyLimit) {
-    const batch = serviceArray.slice(i, i + concurrencyLimit)
-    const promises = batch.map(async (key) => {
-      const [hostname, serviceDescription] = key.split('::')
-      try {
-        const detailResponse = await fetchServiceDetail(hostname, serviceDescription)
-        return normalizeService(detailResponse.data.service)
-      } catch (err) {
-        // Fallback to servicelist data if detail fetch fails (guard s.host_name / s.service_description)
-        const serviceKey = Object.keys(servicelist).find((k) => {
-          const s = servicelist[k]
-          const h = s?.host_name
-          const d = s?.service_description
-          return h != null && d != null && String(h) === hostname && String(d) === serviceDescription
-        })
-        if (serviceKey) {
-          const s = servicelist[serviceKey]
-          if (s?.host_name != null && s?.service_description != null) {
-            return normalizeService(s)
-          }
-        }
-        throw err
-      }
-    })
-    
-    const batchResults = await Promise.all(promises)
-    services.push(...batchResults)
-  }
-  
-  return services
+  const rows = flattenServicelist(servicelist, hostPrefix)
+  return rows.map((r) => ({
+    host_name: r.host_name,
+    service_name: r.service_description,
+    state: stateToString(r.current_state),
+    last_check_at: '',
+    duration_sec: 0,
+    attempt: '0/0',
+    output: '',
+    perfdata: undefined as string | undefined,
+  }))
 }
 
 /**
