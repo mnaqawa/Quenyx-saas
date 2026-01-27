@@ -33,13 +33,15 @@ class ObserveTest extends TestCase
             'name' => 'Test Workspace',
             'status' => 'active',
         ]);
-        
-        // Create sample observe data
+
+        $prefix = 'ws' . $this->workspace->id . '-';
+
+        // Create sample observe data with workspace-scoped host names (ObserveController filters by ws{id}- prefix)
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
             'engine_key' => 'nagios',
-            'engine_service_key' => 'host1::service1',
-            'host_name' => 'host1',
+            'engine_service_key' => $prefix . 'host1::service1',
+            'host_name' => $prefix . 'host1',
             'service_name' => 'service1',
             'state' => 'ok',
             'last_check_at' => now(),
@@ -47,12 +49,12 @@ class ObserveTest extends TestCase
             'attempt' => '1/3',
             'output' => 'OK - Service is running',
         ]);
-        
+
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
             'engine_key' => 'nagios',
-            'engine_service_key' => 'host1::service2',
-            'host_name' => 'host1',
+            'engine_service_key' => $prefix . 'host1::service2',
+            'host_name' => $prefix . 'host1',
             'service_name' => 'service2',
             'state' => 'critical',
             'last_check_at' => now(),
@@ -60,12 +62,12 @@ class ObserveTest extends TestCase
             'attempt' => '3/3',
             'output' => 'CRITICAL - Service is down',
         ]);
-        
+
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
             'engine_key' => 'nagios',
-            'engine_service_key' => 'host2::service1',
-            'host_name' => 'host2',
+            'engine_service_key' => $prefix . 'host2::service1',
+            'host_name' => $prefix . 'host2',
             'service_name' => 'service1',
             'state' => 'warning',
             'last_check_at' => now(),
@@ -117,8 +119,12 @@ class ObserveTest extends TestCase
 
     public function test_unauthorized_user_cannot_fetch_summary(): void
     {
-        $otherUser = User::factory()->create();
-        
+        $otherUser = User::create([
+            'name' => 'Other User',
+            'email' => 'other@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
         $response = $this->actingAs($otherUser)
             ->getJson("/api/workspaces/{$this->workspace->id}/observe/summary");
 
@@ -188,6 +194,7 @@ class ObserveTest extends TestCase
 
     public function test_services_filter_by_search_query(): void
     {
+        $prefix = 'ws' . $this->workspace->id . '-';
         $response = $this->actingAs($this->user)
             ->getJson("/api/workspaces/{$this->workspace->id}/observe/services?q=host1");
 
@@ -195,7 +202,7 @@ class ObserveTest extends TestCase
         $data = $response->json('data');
         $this->assertCount(2, $data['items']);
         foreach ($data['items'] as $item) {
-            $this->assertEquals('host1', $item['host']);
+            $this->assertEquals($prefix . 'host1', $item['host']);
         }
     }
 
