@@ -224,35 +224,51 @@ async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: strin
     return []
   }
 
-  // Extract unique host/service pairs; never call .startsWith on undefined.
-  // Nagios servicelist can be keyed by "hostname;servicedesc" or have per-entry host_name/service_description.
+  const prefixForFilter: string | undefined = hostPrefix != null && typeof hostPrefix === 'string' ? hostPrefix : undefined
+
   const serviceKeys = new Set<string>()
   for (const key in servicelist) {
-    const service = servicelist[key]
-    if (service == null || typeof service !== 'object') {
-      continue
-    }
-    let hostName: string | undefined = service.host_name
-    let serviceDesc: string | undefined = service.service_description
-    if (hostName == null || serviceDesc == null) {
-      const sep = key.includes(';') ? ';' : '::'
-      const parts = key.split(sep)
-      if (parts.length >= 2) {
-        hostName = hostName ?? String(parts[0]).trim()
-        serviceDesc = serviceDesc ?? String(parts[1]).trim()
+    try {
+      const service = servicelist[key]
+      if (service == null || typeof service !== 'object') {
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('[nagios] Skipping non-object servicelist entry:', { key, type: typeof service })
+        }
+        continue
       }
-    }
-    if (hostName == null || serviceDesc == null || hostName === '' || serviceDesc === '') {
+      let hostName: string | undefined =
+        typeof (service as Record<string, unknown>).host_name === 'string'
+          ? (service as Record<string, unknown>).host_name as string
+          : undefined
+      let serviceDesc: string | undefined =
+        typeof (service as Record<string, unknown>).service_description === 'string'
+          ? (service as Record<string, unknown>).service_description as string
+          : undefined
+      if (hostName == null || serviceDesc == null) {
+        const sep = String(key).includes(';') ? ';' : '::'
+        const parts = String(key).split(sep)
+        if (parts.length >= 2) {
+          hostName = hostName ?? parts[0]?.trim() ?? ''
+          serviceDesc = serviceDesc ?? parts[1]?.trim() ?? ''
+        }
+      }
+      if (hostName == null || serviceDesc == null || String(hostName) === '' || String(serviceDesc) === '') {
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn('[nagios] Skipping servicelist entry with bad shape:', { key, hostName: hostName ?? 'null', serviceDesc: serviceDesc ?? 'null', keys: Object.keys(service as object).slice(0, 10) })
+        }
+        continue
+      }
+      const hostStr = String(hostName)
+      if (prefixForFilter != null && prefixForFilter !== '' && typeof hostStr === 'string' && !hostStr.startsWith(prefixForFilter)) {
+        continue
+      }
+      serviceKeys.add(`${hostStr}::${String(serviceDesc)}`)
+    } catch (err) {
+      const service = servicelist[key]
       if (process.env.NODE_ENV !== 'test') {
-        console.warn('[nagios] Skipping servicelist entry with bad shape:', { key, hasHost: hostName != null, hasDesc: serviceDesc != null })
+        console.warn('[nagios] Skipping servicelist entry after error:', { key, err: err instanceof Error ? err.message : String(err), shape: typeof service === 'object' && service != null ? Object.keys(service as object) : typeof service })
       }
-      continue
     }
-    const hostStr = String(hostName)
-    if (hostPrefix && typeof hostPrefix === 'string' && !hostStr.startsWith(hostPrefix)) {
-      continue
-    }
-    serviceKeys.add(`${hostStr}::${String(serviceDesc)}`)
   }
   
   // Fetch details for each service with concurrency limit
@@ -296,16 +312,17 @@ async function fetchAllServices(concurrencyLimit: number = 5, hostPrefix?: strin
  * Get cached services or fetch fresh
  * @param hostPrefix Optional host name prefix to filter services (e.g., 'ws84-')
  */
-export async function getNagiosServices(hostPrefix?: string): Promise<NagiosService[]> {
-  const cacheKey = hostPrefix || 'all'
+export async function getNagiosServices(hostPrefix?: string | string[]): Promise<NagiosService[]> {
+  const prefixStr = hostPrefix == null ? undefined : typeof hostPrefix === 'string' ? hostPrefix : (Array.isArray(hostPrefix) ? hostPrefix[0] : undefined)
+  const cacheKey = prefixStr ?? 'all'
   const cached = servicesCache.get(cacheKey)
   const now = Date.now()
-  
+
   if (cached && cached.expiresAt > now) {
     return cached.data
   }
-  
-  const services = await fetchAllServices(10, hostPrefix)
+
+  const services = await fetchAllServices(10, prefixStr)
   servicesCache.set(cacheKey, {
     data: services,
     expiresAt: now + CACHE_TTL_MS,

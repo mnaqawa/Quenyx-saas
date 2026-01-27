@@ -51,8 +51,8 @@ export function createEngineRouter(): Router {
   
   router.get('/nagios/services', async (req: Request, res: Response) => {
     try {
-      // Support host_prefix query parameter for workspace scoping
-      const hostPrefix = req.query.host_prefix as string | undefined
+      const raw = req.query.host_prefix
+      const hostPrefix = typeof raw === 'string' ? raw : Array.isArray(raw) ? (raw[0] ?? undefined) : undefined
       const services = await getNagiosServices(hostPrefix)
       res.json({
         success: true,
@@ -101,11 +101,12 @@ export function createEngineRouter(): Router {
         })
       }
       
-      await writeNagiosConfig(workspaceIdNum, config)
-      
+      const { written_path } = await writeNagiosConfig(workspaceIdNum, config)
+
       res.json({
         success: true,
         message: 'Config written successfully',
+        written_path,
       })
     } catch (err) {
       console.error('Error writing Nagios config:', err)

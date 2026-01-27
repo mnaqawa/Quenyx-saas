@@ -67,23 +67,20 @@ async function ensureNagiosIncludesPortshield(): Promise<void> {
 }
 
 /**
- * Write Nagios config file for a workspace
+ * Write Nagios config file for a workspace.
+ * Returns the absolute path written so callers can verify location.
  */
-export async function writeNagiosConfig(workspaceId: number, config: string): Promise<void> {
-  // Ensure config directory exists
+export async function writeNagiosConfig(workspaceId: number, config: string): Promise<{ written_path: string }> {
   const configDir = path.resolve(NAGIOS_CONFIG_DIR, 'workspaces')
+  const writtenPath = path.resolve(configDir, `${workspaceId}.cfg`)
+
   await fs.mkdir(configDir, { recursive: true })
-  
-  // Write config file
-  const configPath = path.join(configDir, `${workspaceId}.cfg`)
-  await fs.writeFile(configPath, config, 'utf-8')
-  
-  // Ensure portshield.cfg exists and includes workspace directory
+  await fs.writeFile(writtenPath, config, 'utf-8')
+
   const portshieldCfgPath = path.resolve(NAGIOS_CONFIG_DIR, 'portshield.cfg')
   try {
     await fs.access(portshieldCfgPath)
   } catch {
-    // Create portshield.cfg if it doesn't exist
     const portshieldCfg = `# PortShield workspace configurations
 # This file is auto-generated - DO NOT EDIT MANUALLY
 # Workspace configs are loaded from the workspaces/ subdirectory
@@ -93,11 +90,11 @@ cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
 `
     await fs.writeFile(portshieldCfgPath, portshieldCfg, 'utf-8')
   }
-  
-  // Ensure Nagios base config includes portshield.cfg
+
   await ensureNagiosIncludesPortshield()
-  
-  console.log(`Wrote Nagios config for workspace ${workspaceId} to ${configPath}`)
+
+  console.log(`[nagios] Wrote config for workspace ${workspaceId} to resolved path: ${writtenPath} (NAGIOS_CONFIG_DIR=${NAGIOS_CONFIG_DIR})`)
+  return { written_path: writtenPath }
 }
 
 /**
