@@ -147,6 +147,8 @@ class ObserveTargetsController extends Controller
 
                 $serviceKey = $serviceData['service_key'] ?? null;
                 $overrides = $serviceData['overrides'] ?? null;
+                
+                // If service_key is provided, resolve it to check_command
                 if ($serviceKey !== null && $serviceKey !== '' && Schema::hasTable('observe_service_definitions')) {
                     $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
                     if ($def) {
@@ -154,11 +156,23 @@ class ObserveTargetsController extends Controller
                         $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
                     } else {
                         $errors["hosts.{$index}.services.{$serviceIndex}.service_key"] = ['Unknown service_key: ' . $serviceKey];
+                        // Continue validation but mark check_command as missing
+                        if (!isset($serviceData['check_command'])) {
+                            $serviceData['check_command'] = '';
+                        }
+                    }
+                } else {
+                    // If service_key is not provided, ensure check_command exists (may be empty, will be validated)
+                    if (!isset($serviceData['check_command'])) {
+                        $serviceData['check_command'] = '';
                     }
                 }
 
+                // Validate check_command if set
                 $serviceCheckCommand = $serviceData['check_command'] ?? '';
-                if ($serviceCheckCommand !== '' && !in_array($serviceCheckCommand, $allowedServiceCommands)) {
+                if (empty($serviceCheckCommand)) {
+                    $errors["hosts.{$index}.services.{$serviceIndex}.check_command"] = ['Either service_key or check_command must be provided'];
+                } elseif (!in_array($serviceCheckCommand, $allowedServiceCommands)) {
                     $errors["hosts.{$index}.services.{$serviceIndex}.check_command"] = ['Invalid check command. Allowed: ' . implode(', ', $allowedServiceCommands)];
                 }
             }
@@ -220,7 +234,7 @@ class ObserveTargetsController extends Controller
                             ],
                             [
                                 'workspace_id' => $project->id,
-                                'check_command' => $serviceData['check_command'],
+                                'check_command' => $serviceData['check_command'] ?? '',
                                 'check_args' => $serviceData['check_args'] ?? [],
                                 'enabled' => $serviceData['enabled'] ?? true,
                             ]
