@@ -22,8 +22,10 @@ function formatDuration(seconds: number): string {
   return parts.join(' ') || '0s'
 }
 
-function formatDateTime(dateString: string): string {
+function formatDateTime(dateString: string | null | undefined): string {
+  if (dateString == null || String(dateString).trim() === '') return '—'
   const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return '—'
   return date.toLocaleString('en-US', {
     month: '2-digit',
     day: '2-digit',

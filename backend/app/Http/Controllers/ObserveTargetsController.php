@@ -39,7 +39,10 @@ class ObserveTargetsController extends Controller
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
                     'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                        $service_key = $definitionsByCommand[$service->check_command] ?? null;
+                        $baseCommand = $service->check_command ? preg_replace('/!.*/', '', $service->check_command) : '';
+                        $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
+                            ? $definitionsByCommand[$baseCommand]
+                            : null;
                         $check_args = $service->check_args ?? [];
                         $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
                             ? $check_args
@@ -149,7 +152,8 @@ class ObserveTargetsController extends Controller
 
                 $serviceKey = $serviceData['service_key'] ?? null;
                 $overrides = $serviceData['overrides'] ?? null;
-                
+                $incomingCheckCommand = $serviceData['check_command'] ?? null;
+
                 // If service_key is provided, resolve it to check_command
                 if ($serviceKey !== null && $serviceKey !== '' && Schema::hasTable('observe_service_definitions')) {
                     $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
@@ -158,14 +162,16 @@ class ObserveTargetsController extends Controller
                         $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
                     } else {
                         $errors["hosts.{$index}.services.{$serviceIndex}.service_key"] = ['Unknown service_key: ' . $serviceKey];
-                        // Continue validation but mark check_command as missing
                         if (!isset($serviceData['check_command'])) {
                             $serviceData['check_command'] = '';
                         }
                     }
                 } else {
-                    // If service_key is not provided, ensure check_command exists (may be empty, will be validated)
-                    if (!isset($serviceData['check_command'])) {
+                    // Fallback: use check_command from request when service_key is empty (e.g. existing service from load)
+                    if ($incomingCheckCommand !== null && $incomingCheckCommand !== '') {
+                        $serviceData['check_command'] = $incomingCheckCommand;
+                        $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
+                    } elseif (!isset($serviceData['check_command'])) {
                         $serviceData['check_command'] = '';
                     }
                 }
@@ -308,7 +314,10 @@ class ObserveTargetsController extends Controller
                         'tags' => $host->tags ?? [],
                         'enabled' => $host->enabled,
                         'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                            $service_key = $definitionsByCommand[$service->check_command] ?? null;
+                            $baseCommand = $service->check_command ? preg_replace('/!.*/', '', $service->check_command) : '';
+                            $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
+                                ? $definitionsByCommand[$baseCommand]
+                                : null;
                             $check_args = $service->check_args ?? [];
                             $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
                                 ? $check_args

@@ -281,7 +281,8 @@ export default function Targets() {
           enabled: host.enabled,
           services: host.services.map((service) => ({
             name: service.name,
-            service_key: service.service_key,
+            service_key: service.service_key || undefined,
+            check_command: service.service_key ? undefined : (service.check_command || undefined),
             overrides: service.overrides || {},
             enabled: service.enabled,
           })),
@@ -303,9 +304,10 @@ export default function Targets() {
         setHosts(refreshResponse)
       }
     } catch (err: any) {
-      if (err.response?.data?.errors) {
-        setValidationErrors(err.response.data.errors)
-        setError('Validation failed. Please check the form.')
+      const fieldErrors = err?.errors ?? err?.response?.data?.errors
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        setValidationErrors(fieldErrors)
+        setError('Validation failed. Please fix the highlighted fields.')
       } else {
         setError(err instanceof Error ? err.message : 'Failed to save targets')
       }
@@ -663,7 +665,8 @@ export default function Targets() {
                                     onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'service_key', e.target.value)}
                                     disabled={saving}
                                     className={`flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 ${
-                                      getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.service_key`)
+                                      getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.service_key`) ||
+                                      getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.check_command`)
                                         ? 'border-rose-500/50 bg-rose-500/10'
                                         : 'border-white/10 bg-white/5'
                                     }`}
