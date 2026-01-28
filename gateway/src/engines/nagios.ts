@@ -337,3 +337,15 @@ export async function getNagiosSummary(): Promise<{
   
   return summary
 }
+
+/**
+ * Check if statusjson.cgi is reachable (for gateway readiness).
+ */
+export async function canReachStatusjson(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await getNagiosSummary()
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}

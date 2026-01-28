@@ -14,4 +14,8 @@ return [
             explode(',', env('OBSERVE_CUSTOM_COMMAND_ALLOWLIST', 'check_dns,check_ntp,check_ssh'))
         )
     ),
+
+    'stale_threshold_seconds' => (int) env('OBSERVE_STALE_THRESHOLD_SECONDS', 300),
+
+    'publish_lock_seconds' => (int) env('OBSERVE_PUBLISH_LOCK_SECONDS', 60),
 ];

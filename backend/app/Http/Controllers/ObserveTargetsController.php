@@ -277,7 +277,7 @@ class ObserveTargetsController extends Controller
             if ($autoPublish) {
                 try {
                     $publisher = new NagiosConfigPublisher();
-                    $publisher->publish($project->id);
+                    $publisher->publish($project->id, auth()->id());
                     // Poll so Services page reflects new/removed targets immediately
                     Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
                 } catch (\Exception $e) {

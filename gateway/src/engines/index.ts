@@ -108,12 +108,22 @@ export function createEngineRouter(): Router {
         })
       }
       
-      const { written_path } = await writeNagiosConfig(workspaceIdNum, config)
-
+      const result = await writeNagiosConfig(workspaceIdNum, config)
+      if (result.rolled_back || (result.validation_errors && result.validation_errors.length > 0)) {
+        res.status(400).json({
+          success: false,
+          message: 'Config validation failed; not activated. Last known good restored.',
+          written_path: result.written_path,
+          validated: result.validated,
+          validation_errors: result.validation_errors || [],
+        })
+        return
+      }
       res.json({
         success: true,
-        message: 'Config written successfully',
-        written_path,
+        message: 'Config written and validated; call reload to activate.',
+        written_path: result.written_path,
+        validated: result.validated,
       })
     } catch (err) {
       console.error('Error writing Nagios config:', err)

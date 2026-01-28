@@ -102,7 +102,7 @@ class ObserveController extends Controller
 
         // Apply problems filter
         if ($problemsOnly) {
-            $query->whereIn('state', ['warning', 'critical', 'unknown']);
+            $query->whereIn('state', ['warning', 'critical', 'unknown', 'unreachable']);
         }
 
         // Apply search query
@@ -115,15 +115,16 @@ class ObserveController extends Controller
             });
         }
 
-        // Sort by severity: critical > warning > unknown > pending > ok
+        // Sort by severity: critical > warning > unknown > unreachable > pending > ok
         $query->orderByRaw("
             CASE state
                 WHEN 'critical' THEN 1
                 WHEN 'warning' THEN 2
                 WHEN 'unknown' THEN 3
-                WHEN 'pending' THEN 4
-                WHEN 'ok' THEN 5
-                ELSE 6
+                WHEN 'unreachable' THEN 4
+                WHEN 'pending' THEN 5
+                WHEN 'ok' THEN 6
+                ELSE 7
             END
         ");
 
@@ -142,6 +143,7 @@ class ObserveController extends Controller
             'critical' => $allServices->where('state', 'critical')->count(),
             'unknown' => $allServices->where('state', 'unknown')->count(),
             'pending' => $allServices->where('state', 'pending')->count(),
+            'unreachable' => $allServices->where('state', 'unreachable')->count(),
         ];
 
         // Calculate host totals
@@ -158,12 +160,23 @@ class ObserveController extends Controller
             ->where('engine_key', 'nagios')
             ->first();
 
-        // Transform services to match frontend format
-        $items = $services->map(function ($service) {
+        // Normalized state code for UI (9 = UNREACHABLE per TPM)
+        $stateCode = fn (string $state): int => match ($state) {
+            'ok' => 0,
+            'warning' => 1,
+            'critical' => 2,
+            'unknown' => 3,
+            'pending' => 4,
+            'unreachable' => 9,
+            default => 4,
+        };
+
+        $items = $services->map(function ($service) use ($stateCode) {
             return [
                 'host' => $service->host_name,
                 'service' => $service->service_name,
                 'status' => $service->state,
+                'state_code' => $stateCode($service->state),
                 'lastCheckAt' => $service->last_check_at?->toIso8601String() ?? '',
                 'durationSec' => $service->duration_sec ?? 0,
                 'attempt' => $service->attempt ?? '1/3',
@@ -171,13 +184,24 @@ class ObserveController extends Controller
             ];
         })->toArray();
 
+        $lastPollAt = $meta?->last_poll_at?->toIso8601String();
+        $engineUnreachable = !empty($meta?->error);
+        $staleThresholdSeconds = (int) config('observe.stale_threshold_seconds', 300);
+        $sourceTimestamp = $lastPollAt;
+        $stale = $lastPollAt
+            ? (now()->parse($lastPollAt)->diffInSeconds(now(), false) > $staleThresholdSeconds)
+            : true;
+
         return response()->json([
             'success' => true,
             'data' => [
                 'hostTotals' => $hostTotals,
                 'serviceTotals' => $serviceTotals,
                 'items' => $items,
-                'last_poll_at' => $meta?->last_poll_at?->toIso8601String(),
+                'last_poll_at' => $lastPollAt,
+                'source_timestamp' => $sourceTimestamp,
+                'engine_unreachable' => $engineUnreachable,
+                'stale' => $stale,
             ],
         ]);
     }

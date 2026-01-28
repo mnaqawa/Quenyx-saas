@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\ObserveMeta;
 use App\Models\ObserveServiceDefinition;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -24,15 +26,17 @@ class NagiosConfigPublisher
     }
 
     /**
-     * Publish Nagios config for a workspace
+     * Publish Nagios config for a workspace (TPM: atomic, validated, reload-verified, locked, audited).
+     *
+     * @param int $workspaceId
+     * @param int|null $userId Optional; for audit trail.
      */
-    public function publish(int $workspaceId): void
+    public function publish(int $workspaceId, ?int $userId = null): void
     {
-        // Check if tables exist (migration guard)
-        if (!\Illuminate\Support\Facades\Schema::hasTable('observe_targets_hosts')) {
+        if (!Schema::hasTable('observe_targets_hosts')) {
             throw new \Exception('Database tables not found. Please run migrations first: php artisan migrate');
         }
-        
+
         $hosts = ObserveTargetHost::where('workspace_id', $workspaceId)
             ->where('enabled', true)
             ->with(['services' => function ($query) {
@@ -46,115 +50,167 @@ class NagiosConfigPublisher
         }
 
         $config = $this->buildConfig($hosts, $workspaceId);
+        $lockSeconds = config('observe.publish_lock_seconds', 60);
+        $lock = Cache::lock('nagios_publish', $lockSeconds);
 
-        // Write config via gateway
-        $response = Http::timeout(30)
-            ->withHeaders([
-                'x-internal-secret' => $this->internalSecret,
-                'x-workspace-id' => (string) $workspaceId,
-                'Content-Type' => 'application/json',
-            ])
-            ->put("{$this->gatewayUrl}/internal/engines/nagios/config", [
-                'config' => $config,
-            ]);
-
-        if (!$response->successful()) {
-            throw new \Exception("Gateway returned {$response->status()}: {$response->body()}");
+        if (!$lock->block($lockSeconds)) {
+            throw new \Exception('Could not acquire publish lock; another publish may be in progress.');
         }
 
-        // Reload Nagios
-        $reloadResponse = Http::timeout(30)
-            ->withHeaders([
-                'x-internal-secret' => $this->internalSecret,
-            ])
-            ->post("{$this->gatewayUrl}/internal/engines/nagios/reload");
-
-        $reloadSuccess = $reloadResponse->successful();
-        $reloadData = $reloadResponse->json() ?? [];
-        $reloadSkipped = !empty($reloadData['reload_skipped']);
-
-        $publishSuccess = $reloadSuccess && (
-            (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) ||
-            $reloadSkipped
-        );
+        $result = 'success';
         $publishError = null;
+        $validationErrors = [];
 
-        if (!$publishSuccess) {
-            if (!$reloadSuccess) {
-                $publishError = "Reload failed: HTTP {$reloadResponse->status()} - {$reloadResponse->body()}";
-            } elseif (isset($reloadData['message'])) {
-                $publishError = $reloadData['message'];
-                if (isset($reloadData['stderr'])) {
-                    $publishError .= ' - ' . substr($reloadData['stderr'], 0, 500);
+        try {
+            $writeResponse = Http::timeout(30)
+                ->withHeaders([
+                    'x-internal-secret' => $this->internalSecret,
+                    'x-workspace-id' => (string) $workspaceId,
+                    'Content-Type' => 'application/json',
+                ])
+                ->put("{$this->gatewayUrl}/internal/engines/nagios/config", [
+                    'config' => $config,
+                ]);
+
+            if ($writeResponse->status() === 400) {
+                $body = $writeResponse->json() ?? [];
+                $validationErrors = $body['validation_errors'] ?? [];
+                $msg = $body['message'] ?? 'Config validation failed';
+                $publishError = $msg . (\count($validationErrors) > 0 ? ': ' . implode('; ', array_slice($validationErrors, 0, 5)) : '');
+                $this->auditPublish($workspaceId, $userId, 'failure', $publishError, $validationErrors);
+                ObserveMeta::updateOrCreate(
+                    ['workspace_id' => $workspaceId, 'engine_key' => 'nagios'],
+                    ['last_publish_at' => now(), 'last_publish_success' => false, 'last_publish_error' => $publishError]
+                );
+                throw new \Exception($publishError);
+            }
+
+            if (!$writeResponse->successful()) {
+                $publishError = "Gateway returned {$writeResponse->status()}: {$writeResponse->body()}";
+                $this->auditPublish($workspaceId, $userId, 'failure', $publishError);
+                throw new \Exception($publishError);
+            }
+
+            $reloadResponse = Http::timeout(30)
+                ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                ->post("{$this->gatewayUrl}/internal/engines/nagios/reload");
+
+            $reloadSuccess = $reloadResponse->successful();
+            $reloadData = $reloadResponse->json() ?? [];
+            $reloadSkipped = !empty($reloadData['reload_skipped']);
+
+            $publishSuccess = $reloadSuccess && (
+                (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) ||
+                $reloadSkipped
+            );
+
+            if (!$publishSuccess) {
+                $result = 'failure';
+                if (!$reloadSuccess) {
+                    $publishError = "Reload failed: HTTP {$reloadResponse->status()} - {$reloadResponse->body()}";
+                } elseif (isset($reloadData['message'])) {
+                    $publishError = $reloadData['message'];
+                    if (isset($reloadData['stderr'])) {
+                        $publishError .= ' - ' . substr($reloadData['stderr'], 0, 500);
+                    }
+                } else {
+                    $publishError = 'Reload validation or execution failed';
                 }
-            } else {
-                $publishError = 'Reload validation or execution failed';
             }
-        }
 
-        // After reload, call validate so we get a parsed list of errors/warnings (unknown check_command, duplicate object, etc.)
-        $validateResponse = null;
-        if ($reloadSuccess && !$reloadSkipped) {
-            $validateResp = Http::timeout(30)
-                ->withHeaders(['x-internal-secret' => $this->internalSecret])
-                ->get("{$this->gatewayUrl}/internal/engines/nagios/validate");
-            $validateResponse = $validateResp->json() ?? [];
-            $valid = ($validateResponse['valid'] ?? false) === true;
-            $validateErrors = $validateResponse['errors'] ?? [];
-            if (!$valid || !empty($validateErrors)) {
-                $publishSuccess = false;
-                $msg = $validateResponse['message'] ?? 'Nagios config invalid';
-                $errorsTrimmed = array_slice(is_array($validateErrors) ? $validateErrors : [], 0, 20);
-                $publishError = $msg . (\count($errorsTrimmed) > 0 ? ': ' . implode('; ', $errorsTrimmed) : '');
+            if ($reloadSuccess && !$reloadSkipped) {
+                $validateResp = Http::timeout(30)
+                    ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                    ->get("{$this->gatewayUrl}/internal/engines/nagios/validate");
+                $validateResponse = $validateResp->json() ?? [];
+                $valid = ($validateResponse['valid'] ?? false) === true;
+                $validateErrors = $validateResponse['errors'] ?? [];
+                if (!$valid || !empty($validateErrors)) {
+                    $publishSuccess = false;
+                    $result = 'failure';
+                    $msg = $validateResponse['message'] ?? 'Nagios config invalid';
+                    $errorsTrimmed = array_slice(is_array($validateErrors) ? $validateErrors : [], 0, 20);
+                    $publishError = $msg . (\count($errorsTrimmed) > 0 ? ': ' . implode('; ', $errorsTrimmed) : '');
+                }
             }
-        }
 
-        // Optionally assert ws{workspaceId}- hosts exist in Nagios hostlist after publish
-        if ($publishSuccess && !$reloadSkipped) {
-            $hostlistResp = Http::timeout(15)
-                ->withHeaders(['x-internal-secret' => $this->internalSecret])
-                ->get("{$this->gatewayUrl}/internal/engines/nagios/hostlist");
-            if ($hostlistResp->successful()) {
-                $hostlistData = $hostlistResp->json() ?? [];
-                $hostlist = $hostlistData['data']['hostlist'] ?? [];
-                $prefix = 'ws' . $workspaceId . '-';
-                $hasWorkspaceHost = false;
-                foreach (is_array($hostlist) ? $hostlist : [] as $h) {
-                    if (is_string($h) && str_starts_with($h, $prefix)) {
-                        $hasWorkspaceHost = true;
-                        break;
+            if ($publishSuccess && !$reloadSkipped) {
+                $hostlistResp = Http::timeout(15)
+                    ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                    ->get("{$this->gatewayUrl}/internal/engines/nagios/hostlist");
+                if ($hostlistResp->successful()) {
+                    $hostlistData = $hostlistResp->json() ?? [];
+                    $hostlist = $hostlistData['data']['hostlist'] ?? [];
+                    $prefix = 'ws' . $workspaceId . '-';
+                    $hasWorkspaceHost = false;
+                    foreach (is_array($hostlist) ? $hostlist : [] as $h) {
+                        if (is_string($h) && str_starts_with($h, $prefix)) {
+                            $hasWorkspaceHost = true;
+                            break;
+                        }
+                    }
+                    if (!$hasWorkspaceHost) {
+                        $publishSuccess = false;
+                        $result = 'failure';
+                        $publishError = ($publishError ? $publishError . ' ' : '') . "No ws{$workspaceId}- hosts in Nagios hostlist.";
                     }
                 }
-                if (!$hasWorkspaceHost) {
-                    $publishSuccess = false;
-                    $publishError = ($publishError ? $publishError . ' ' : '') . "No ws{$workspaceId}- hosts in Nagios hostlist.";
-                }
             }
+
+            if ($publishSuccess && $reloadSkipped) {
+                $publishError = null;
+            }
+
+            ObserveMeta::updateOrCreate(
+                ['workspace_id' => $workspaceId, 'engine_key' => 'nagios'],
+                [
+                    'last_publish_at' => now(),
+                    'last_publish_success' => $publishSuccess,
+                    'last_publish_error' => $publishError,
+                ]
+            );
+
+            $this->auditPublish($workspaceId, $userId, $publishSuccess ? 'success' : 'failure', $publishError, $validationErrors);
+
+            if (!$publishSuccess && !$reloadSuccess) {
+                throw new \Exception($publishError ?? 'Reload failed');
+            }
+            if (!$publishSuccess) {
+                Log::warning("Publish completed with errors", [
+                    'workspace_id' => $workspaceId,
+                    'message' => $publishError,
+                ]);
+            }
+        } finally {
+            $lock->release();
         }
+    }
 
-        if ($publishSuccess && $reloadSkipped) {
-            $publishError = null;
-        }
-
-        ObserveMeta::updateOrCreate(
-            [
-                'workspace_id' => $workspaceId,
-                'engine_key' => 'nagios',
-            ],
-            [
-                'last_publish_at' => now(),
-                'last_publish_success' => $publishSuccess,
-                'last_publish_error' => $publishError,
-            ]
-        );
-
-        if (!$reloadSuccess) {
-            Log::warning("Failed to reload Nagios after config publish", [
-                'workspace_id' => $workspaceId,
-                'status' => $reloadResponse->status(),
-                'body' => $reloadResponse->body(),
-            ]);
-            // Don't throw - config was written, reload can be done manually
+    private function auditPublish(int $workspaceId, ?int $userId, string $result, ?string $error = null, array $validationErrors = []): void
+    {
+        Log::info('observe_nagios_publish', [
+            'workspace_id' => $workspaceId,
+            'user_id' => $userId,
+            'result' => $result,
+            'error' => $error,
+            'validation_errors' => array_slice($validationErrors, 0, 10),
+        ]);
+        if (class_exists(AuditLog::class) && Schema::hasTable('audit_logs')) {
+            try {
+                AuditLog::create([
+                    'user_id' => $userId,
+                    'project_id' => $workspaceId,
+                    'action' => 'observe_nagios_publish',
+                    'metadata' => [
+                        'result' => $result,
+                        'error' => $error,
+                        'validation_errors' => array_slice($validationErrors, 0, 10),
+                    ],
+                    'timestamp' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to write publish audit log', ['message' => $e->getMessage()]);
+            }
         }
     }
 

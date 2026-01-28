@@ -3,6 +3,7 @@ import { enforceEntitlements } from './entitlementGuard'
 import { createBackendProxy } from './proxy'
 import { clearCache } from './cache'
 import { registerEngineRoutes } from './engines'
+import { runReadinessChecks } from './health'
 
 const app = express()
 const PORT = process.env.GATEWAY_PORT || 4000
@@ -36,9 +37,27 @@ app.use(enforceEntitlements)
 // Proxy all /api/* requests to backend (BEFORE any body parsing middleware)
 app.use('/api', createBackendProxy())
 
-// Health check endpoint (no body parsing needed for GET)
+// Liveness
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'gateway' })
+})
+
+// Readiness: can reach Nagios, can write config dir, can read statusjson.cgi
+app.get('/ready', async (req: Request, res: Response) => {
+  try {
+    const result = await runReadinessChecks()
+    if (result.ready) {
+      res.json({ status: 'ready', checks: result.checks })
+    } else {
+      res.status(503).json({ status: 'not_ready', checks: result.checks })
+    }
+  } catch (err) {
+    res.status(503).json({
+      status: 'not_ready',
+      error: err instanceof Error ? err.message : 'Readiness check failed',
+      checks: {},
+    })
+  }
 })
 
 // Start server

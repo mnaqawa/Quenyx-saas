@@ -175,19 +175,28 @@ class PollObserveData extends Command
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Store error in meta (don't delete existing data)
+            // Degraded mode (TPM E): persist UNREACHABLE state so UI shows "Engine unreachable"
             try {
+                $engineKey = 'nagios';
+                ObserveService::where('workspace_id', $workspace->id)
+                    ->where('engine_key', $engineKey)
+                    ->update([
+                        'state' => 'unreachable',
+                        'output' => 'Engine unreachable',
+                        'last_check_at' => null,
+                    ]);
                 ObserveMeta::updateOrCreate(
                     [
                         'workspace_id' => $workspace->id,
-                        'engine_key' => 'nagios',
+                        'engine_key' => $engineKey,
                     ],
                     [
                         'error' => $errorMessage,
+                        'last_poll_at' => now(),
                     ]
                 );
             } catch (\Exception $metaError) {
-                Log::error("Failed to store error in meta", [
+                Log::error("Failed to persist unreachable state", [
                     'workspace_id' => $workspace->id,
                     'error' => $metaError->getMessage(),
                 ]);
