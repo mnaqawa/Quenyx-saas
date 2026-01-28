@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
+use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
 use App\Services\NagiosConfigPublisher;
@@ -268,6 +269,9 @@ class ObserveTargetsController extends Controller
                 }
             }
 
+            // Sync targets → observe_services immediately so Services page updates without waiting for Nagios poll
+            $this->syncTargetsToObserveServices($project);
+
             // Auto-publish config to Nagios if enabled
             $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);
             if ($autoPublish) {
@@ -406,6 +410,65 @@ class ObserveTargetsController extends Controller
             'valid' => true,
             'message' => 'Configuration is valid',
         ]);
+    }
+
+    /**
+     * Sync current targets (hosts + services) into observe_services so the Services page
+     * reflects add/remove/modify immediately without waiting for Nagios poll.
+     */
+    private function syncTargetsToObserveServices(Project $project): void
+    {
+        if (!Schema::hasTable('observe_services')) {
+            return;
+        }
+
+        $workspaceId = $project->id;
+        $prefix = 'ws' . $workspaceId . '-';
+        $engineKey = 'nagios';
+
+        $hosts = ObserveTargetHost::where('workspace_id', $workspaceId)
+            ->where('enabled', true)
+            ->with(['services' => fn ($q) => $q->where('enabled', true)])
+            ->get();
+
+        $receivedKeys = [];
+
+        foreach ($hosts as $host) {
+            $scopedHostName = $prefix . $host->name;
+            foreach ($host->services as $service) {
+                $engineServiceKey = $scopedHostName . '::' . $service->name;
+                $receivedKeys[] = $engineServiceKey;
+
+                ObserveService::updateOrCreate(
+                    [
+                        'workspace_id' => $workspaceId,
+                        'engine_key' => $engineKey,
+                        'engine_service_key' => $engineServiceKey,
+                    ],
+                    [
+                        'host_name' => $scopedHostName,
+                        'service_name' => $service->name,
+                        'state' => 'pending',
+                        'last_check_at' => null,
+                        'duration_sec' => null,
+                        'attempt' => null,
+                        'output' => 'Pending first check',
+                        'perfdata' => null,
+                    ]
+                );
+            }
+        }
+
+        if (!empty($receivedKeys)) {
+            ObserveService::where('workspace_id', $workspaceId)
+                ->where('engine_key', $engineKey)
+                ->whereNotIn('engine_service_key', $receivedKeys)
+                ->delete();
+        } else {
+            ObserveService::where('workspace_id', $workspaceId)
+                ->where('engine_key', $engineKey)
+                ->delete();
+        }
     }
 
     /**
