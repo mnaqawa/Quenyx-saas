@@ -90,10 +90,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Observe endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
-    
+    Route::get('/workspaces/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
+
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
+    Route::get('/projects/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
     
     // Observe targets endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);

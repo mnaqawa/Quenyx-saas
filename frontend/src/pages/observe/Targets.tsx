@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { gatewayClient } from '../../services/gatewayClient'
+import { observeService } from '../../services/observeService'
+import type { ServiceDefinition, ArgsSchemaEntry, CAPABILITY_SECTIONS } from '../../types/observe'
 
 interface TargetHost {
   id?: number
@@ -17,8 +19,10 @@ interface TargetHost {
 interface TargetService {
   id?: number
   name: string
-  check_command: string
-  check_args: string[]
+  check_command?: string
+  check_args?: unknown[]
+  service_key?: string
+  overrides?: Record<string, unknown>
   enabled: boolean
 }
 
@@ -26,11 +30,14 @@ export default function Targets() {
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [hosts, setHosts] = useState<TargetHost[]>([])
+  const [definitions, setDefinitions] = useState<ServiceDefinition[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({})
   const [expandedHosts, setExpandedHosts] = useState<Set<number | string>>(new Set())
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
 
   const workspaceId = id || selectedWorkspaceId
 
@@ -38,24 +45,37 @@ export default function Targets() {
     ? !allowedByKey['shieldobserve']
     : false
 
-  // Can edit if module is unlocked (admin/owner can edit, member/viewer can view)
-  // For now, we'll allow edit if module is accessible (simplified - can be enhanced with role checks)
   const canEdit = !isLocked && (allowedByKey['shieldobserve'] ?? false)
+
+  const definitionsByKey = useMemo(() => {
+    const map = new Map<string, ServiceDefinition>()
+    definitions.forEach((d) => map.set(d.service_key, d))
+    return map
+  }, [definitions])
 
   useEffect(() => {
     if (!workspaceId) return
 
-    const fetchTargets = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await gatewayClient.get<TargetHost[]>(
-          `workspaces/${workspaceId}/observe/targets`,
-          { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
-        )
-        // apiClient unwraps { success, data } -> returns data directly
-        if (Array.isArray(response)) {
-          setHosts(response)
+        const [targetsResponse, defsResponse] = await Promise.all([
+          gatewayClient.get<TargetHost[]>(`workspaces/${workspaceId}/observe/targets`, {
+            workspaceId: String(workspaceId),
+            moduleKey: 'shieldobserve',
+          }),
+          observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
+        ])
+        if (Array.isArray(targetsResponse)) {
+          setHosts(targetsResponse)
+        }
+        if (Array.isArray(defsResponse)) {
+          setDefinitions(defsResponse)
+          const cacheKey = `observe_defs_${workspaceId}`
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({ data: defsResponse, version: '1.0', timestamp: Date.now() }))
+          } catch {}
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load targets')
@@ -64,7 +84,7 @@ export default function Targets() {
       }
     }
 
-    fetchTargets()
+    fetchData()
   }, [workspaceId])
 
   const handleAddHost = () => {
@@ -87,8 +107,8 @@ export default function Targets() {
       ...newHosts[hostIndex].services,
       {
         name: '',
-        check_command: 'check_ping',
-        check_args: [],
+        service_key: '',
+        overrides: {},
         enabled: true,
       },
     ]
@@ -105,7 +125,7 @@ export default function Targets() {
     setHosts(newHosts)
   }
 
-  const handleUpdateHost = (hostIndex: number, field: keyof TargetHost, value: any) => {
+  const handleUpdateHost = (hostIndex: number, field: keyof TargetHost, value: unknown) => {
     const newHosts = [...hosts]
     ;(newHosts[hostIndex] as any)[field] = value
     setHosts(newHosts)
@@ -115,43 +135,166 @@ export default function Targets() {
     hostIndex: number,
     serviceIndex: number,
     field: keyof TargetService,
-    value: any
+    value: unknown
   ) => {
     const newHosts = [...hosts]
     ;(newHosts[hostIndex].services[serviceIndex] as any)[field] = value
+    if (field === 'service_key' && typeof value === 'string') {
+      const def = definitionsByKey.get(value)
+      if (def) {
+        const defaults: Record<string, unknown> = {}
+        def.args_schema.forEach((arg) => {
+          if (arg.default !== null && arg.default !== undefined) {
+            defaults[arg.key] = arg.default
+          }
+        })
+        newHosts[hostIndex].services[serviceIndex].overrides = defaults
+      }
+    }
     setHosts(newHosts)
+  }
+
+  const handleUpdateOverride = (
+    hostIndex: number,
+    serviceIndex: number,
+    key: string,
+    value: unknown
+  ) => {
+    const newHosts = [...hosts]
+    const service = newHosts[hostIndex].services[serviceIndex]
+    const overrides = { ...(service.overrides || {}) }
+    if (value === null || value === undefined || value === '') {
+      delete overrides[key]
+    } else {
+      overrides[key] = value
+    }
+    service.overrides = overrides
+    setHosts(newHosts)
+  }
+
+  const handleResetToDefaults = (hostIndex: number, serviceIndex: number) => {
+    const service = hosts[hostIndex].services[serviceIndex]
+    const def = service.service_key ? definitionsByKey.get(service.service_key) : null
+    if (def) {
+      const defaults: Record<string, unknown> = {}
+      def.args_schema.forEach((arg) => {
+        if (arg.default !== null && arg.default !== undefined) {
+          defaults[arg.key] = arg.default
+        }
+      })
+      handleUpdateService(hostIndex, serviceIndex, 'overrides', defaults)
+    }
+  }
+
+  const handleClearOverride = (hostIndex: number, serviceIndex: number, key: string) => {
+    handleUpdateOverride(hostIndex, serviceIndex, key, null)
+  }
+
+  const validateClient = (): boolean => {
+    const errors: Record<string, string[]> = {}
+    for (let hi = 0; hi < hosts.length; hi++) {
+      const host = hosts[hi]
+      if (!host.name.trim() || !host.address.trim()) {
+        errors[`hosts.${hi}.name`] = ['Host name and address are required']
+      }
+      for (let si = 0; si < host.services.length; si++) {
+        const service = host.services[si]
+        if (!service.name.trim()) {
+          errors[`hosts.${hi}.services.${si}.name`] = ['Service name is required']
+        }
+        if (!service.service_key) {
+          errors[`hosts.${hi}.services.${si}.service_key`] = ['Service type is required']
+        } else {
+          const def = definitionsByKey.get(service.service_key)
+          if (def) {
+            def.args_schema.forEach((arg) => {
+              if (arg.required) {
+                const val = service.overrides?.[arg.key]
+                if (val === null || val === undefined || val === '') {
+                  errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = [`${arg.key} is required`]
+                }
+              }
+              const val = service.overrides?.[arg.key]
+              if (val !== null && val !== undefined && val !== '') {
+                const inferredType = inferType(arg, val)
+                if (inferredType === 'int' || inferredType === 'float') {
+                  const num = Number(val)
+                  if (isNaN(num)) {
+                    errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = [`${arg.key} must be a number`]
+                  }
+                  if (def.capability_flags.includes('supports_ports') && arg.key === 'port') {
+                    const port = Number(val)
+                    if (port < 1 || port > 65535) {
+                      errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = ['Port must be 1-65535']
+                    }
+                  }
+                }
+                if (service.service_key === 'ping' && (arg.key === 'warn_rta_ms' || arg.key === 'crit_rta_ms')) {
+                  const plKey = arg.key === 'warn_rta_ms' ? 'warn_pl_pct' : 'crit_pl_pct'
+                  const pl = service.overrides?.[plKey]
+                  if (pl !== null && pl !== undefined && pl !== '') {
+                    const rta = Number(val)
+                    const plNum = Number(pl)
+                    if (isNaN(rta) || isNaN(plNum) || rta < 0 || plNum < 0 || plNum > 100) {
+                      errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = ['Invalid format: must be rta,pl% (e.g. 100.0,20%)']
+                    }
+                  }
+                }
+              }
+            })
+          }
+        }
+      }
+    }
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const inferType = (arg: ArgsSchemaEntry, val: unknown): string => {
+    if (arg.type) return arg.type
+    if (typeof val === 'number') return Number.isInteger(val) ? 'int' : 'float'
+    if (typeof val === 'boolean') return 'bool'
+    if (typeof val === 'object' && val !== null) return 'json'
+    return 'string'
   }
 
   const handleSave = async () => {
     if (!workspaceId) return
 
-    // Validate
-    for (const host of hosts) {
-      if (!host.name.trim() || !host.address.trim()) {
-        setError('All hosts must have a name and address')
-        return
-      }
-      for (const service of host.services) {
-        if (!service.name.trim() || !service.check_command.trim()) {
-          setError('All services must have a name and check command')
-          return
-        }
-      }
+    if (!validateClient()) {
+      setError('Please fix validation errors before saving')
+      return
     }
 
     try {
       setSaving(true)
       setError(null)
       setSuccess(null)
+      setValidationErrors({})
+
+      const payload = {
+        hosts: hosts.map((host) => ({
+          name: host.name,
+          address: host.address,
+          check_command: host.check_command,
+          tags: host.tags,
+          enabled: host.enabled,
+          services: host.services.map((service) => ({
+            name: service.name,
+            service_key: service.service_key,
+            overrides: service.overrides || {},
+            enabled: service.enabled,
+          })),
+        })),
+      }
 
       await gatewayClient.put<{ message?: string }>(
         `workspaces/${workspaceId}/observe/targets`,
-        { hosts },
+        payload,
         { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
       )
 
       setSuccess('Targets saved and published to Nagios')
-      // Refresh data
       const refreshResponse = await gatewayClient.get<TargetHost[]>(
         `workspaces/${workspaceId}/observe/targets`,
         { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
@@ -159,9 +302,13 @@ export default function Targets() {
       if (Array.isArray(refreshResponse)) {
         setHosts(refreshResponse)
       }
-    } catch (err) {
-      // apiClient throws on 4xx/5xx and when response.success === false; show that message
-      setError(err instanceof Error ? err.message : 'Failed to save targets')
+    } catch (err: any) {
+      if (err.response?.data?.errors) {
+        setValidationErrors(err.response.data.errors)
+        setError('Validation failed. Please check the form.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to save targets')
+      }
     } finally {
       setSaving(false)
     }
@@ -175,6 +322,151 @@ export default function Targets() {
       newExpanded.add(hostKey)
     }
     setExpandedHosts(newExpanded)
+  }
+
+  const toggleServiceExpanded = (serviceKey: string) => {
+    const newExpanded = new Set(expandedServices)
+    if (newExpanded.has(serviceKey)) {
+      newExpanded.delete(serviceKey)
+    } else {
+      newExpanded.add(serviceKey)
+    }
+    setExpandedServices(newExpanded)
+  }
+
+  const getFieldError = (path: string): string | undefined => {
+    const errs = validationErrors[path]
+    return errs && errs.length > 0 ? errs[0] : undefined
+  }
+
+  const groupFieldsByCapability = (def: ServiceDefinition): Record<string, ArgsSchemaEntry[]> => {
+    const groups: Record<string, ArgsSchemaEntry[]> = {}
+    const sorted = [...def.args_schema].sort((a, b) => a.position - b.position)
+    sorted.forEach((arg) => {
+      let assigned = false
+      for (const flag of def.capability_flags) {
+        if (flag === 'supports_thresholds' && (arg.key.includes('warn') || arg.key.includes('crit') || arg.key.includes('threshold'))) {
+          if (!groups['Thresholds']) groups['Thresholds'] = []
+          groups['Thresholds'].push(arg)
+          assigned = true
+          break
+        }
+        if (flag === 'supports_ports' && (arg.key === 'port' || arg.key.includes('port'))) {
+          if (!groups['Port']) groups['Port'] = []
+          groups['Port'].push(arg)
+          assigned = true
+          break
+        }
+        if (flag === 'supports_urls' && (arg.key === 'path' || arg.key === 'url' || arg.key.includes('url'))) {
+          if (!groups['URL']) groups['URL'] = []
+          groups['URL'].push(arg)
+          assigned = true
+          break
+        }
+        if (flag === 'supports_auth' && (arg.key === 'basic_auth' || arg.key.includes('auth') || arg.key.includes('credential'))) {
+          if (!groups['Auth']) groups['Auth'] = []
+          groups['Auth'].push(arg)
+          assigned = true
+          break
+        }
+        if (flag === 'supports_payload' && (arg.key.includes('payload') || arg.key.includes('body'))) {
+          if (!groups['Payload']) groups['Payload'] = []
+          groups['Payload'].push(arg)
+          assigned = true
+          break
+        }
+      }
+      if (!assigned) {
+        if (!groups['General']) groups['General'] = []
+        groups['General'].push(arg)
+      }
+    })
+    return groups
+  }
+
+  const renderField = (
+    arg: ArgsSchemaEntry,
+    value: unknown,
+    onChange: (val: unknown) => void,
+    onClear: () => void,
+    error?: string,
+    hostIndex: number = 0,
+    serviceIndex: number = 0
+  ) => {
+    const inferredType = inferType(arg, value ?? arg.default)
+    const hasOverride = value !== null && value !== undefined && value !== ''
+    const displayValue = hasOverride ? value : arg.default
+
+    return (
+      <div key={arg.key} className="space-y-1">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-white/70 flex-1">
+            {arg.key}
+            {arg.required && <span className="text-rose-400 ml-1">*</span>}
+            {arg.help && (
+              <span className="text-white/40 ml-2 text-[10px]">({arg.help})</span>
+            )}
+          </label>
+          {hasOverride && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-sky-400 hover:text-sky-300"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        {inferredType === 'bool' ? (
+          <input
+            type="checkbox"
+            checked={displayValue === true}
+            onChange={(e) => onChange(e.target.checked)}
+            disabled={saving}
+            className="rounded border-white/20"
+          />
+        ) : inferredType === 'int' || inferredType === 'float' ? (
+          <input
+            type="number"
+            step={inferredType === 'float' ? 'any' : '1'}
+            value={displayValue !== null && displayValue !== undefined ? String(displayValue) : ''}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === '') {
+                onChange(null)
+              } else {
+                onChange(inferredType === 'int' ? parseInt(v, 10) : parseFloat(v))
+              }
+            }}
+            disabled={saving}
+            className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+          />
+        ) : inferredType === 'json' ? (
+          <textarea
+            value={displayValue !== null && displayValue !== undefined ? JSON.stringify(displayValue, null, 2) : ''}
+            onChange={(e) => {
+              try {
+                onChange(e.target.value ? JSON.parse(e.target.value) : null)
+              } catch {
+                onChange(e.target.value)
+              }
+            }}
+            disabled={saving}
+            rows={3}
+            className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50 font-mono"
+          />
+        ) : (
+          <input
+            type="text"
+            value={displayValue !== null && displayValue !== undefined ? String(displayValue) : ''}
+            onChange={(e) => onChange(e.target.value || null)}
+            disabled={saving}
+            className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+          />
+        )}
+        {error && <div className="text-xs text-rose-400">{error}</div>}
+      </div>
+    )
   }
 
   if (loading) {
@@ -247,154 +539,227 @@ export default function Targets() {
           hosts.map((host, hostIndex) => {
             const hostKey = host.id ?? `new-${hostIndex}`
             return (
-            <div key={hostKey} className="rounded-lg border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <button
-                    onClick={() => toggleHostExpanded(hostKey)}
-                    className="text-white/60 hover:text-white transition"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className={expandedHosts.has(hostKey) ? 'rotate-90' : ''}
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-                  {canEdit ? (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Host name"
-                        value={host.name}
-                        onChange={(e) => handleUpdateHost(hostIndex, 'name', e.target.value)}
-                        disabled={saving}
-                        className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Address (IP/hostname)"
-                        value={host.address}
-                        onChange={(e) => handleUpdateHost(hostIndex, 'address', e.target.value)}
-                        disabled={saving}
-                        className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Check command"
-                        value={host.check_command}
-                        onChange={(e) => handleUpdateHost(hostIndex, 'check_command', e.target.value)}
-                        disabled={saving}
-                        className="w-48 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm font-medium text-white">{host.name}</span>
-                      <span className="text-xs text-white/60">{host.address}</span>
-                      <span className="text-xs text-white/50">{host.check_command}</span>
-                    </>
-                  )}
-                  <label className="flex items-center gap-2 text-xs text-white/70">
-                    <input
-                      type="checkbox"
-                      checked={host.enabled}
-                      onChange={(e) => handleUpdateHost(hostIndex, 'enabled', e.target.checked)}
-                      disabled={saving || !canEdit}
-                      className="rounded border-white/20"
-                    />
-                    Enabled
-                  </label>
-                  {canEdit && (
+              <div key={hostKey} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
                     <button
-                      onClick={() => handleRemoveHost(hostIndex)}
-                      disabled={saving}
-                      className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
+                      onClick={() => toggleHostExpanded(hostKey)}
+                      className="text-white/60 hover:text-white transition"
                     >
-                      Remove
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={expandedHosts.has(hostKey) ? 'rotate-90' : ''}
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </button>
-                  )}
-                </div>
-              </div>
-
-              {expandedHosts.has(hostKey) && (
-                <div className="mt-4 space-y-2 pl-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-white/70">Services</span>
+                    {canEdit ? (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Host name"
+                          value={host.name}
+                          onChange={(e) => handleUpdateHost(hostIndex, 'name', e.target.value)}
+                          disabled={saving}
+                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                            getFieldError(`hosts.${hostIndex}.name`)
+                              ? 'border-rose-500/50 bg-rose-500/10'
+                              : 'border-white/10 bg-white/5'
+                          }`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Address (IP/hostname)"
+                          value={host.address}
+                          onChange={(e) => handleUpdateHost(hostIndex, 'address', e.target.value)}
+                          disabled={saving}
+                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                            getFieldError(`hosts.${hostIndex}.address`)
+                              ? 'border-rose-500/50 bg-rose-500/10'
+                              : 'border-white/10 bg-white/5'
+                          }`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Check command"
+                          value={host.check_command}
+                          onChange={(e) => handleUpdateHost(hostIndex, 'check_command', e.target.value)}
+                          disabled={saving}
+                          className="w-48 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium text-white">{host.name}</span>
+                        <span className="text-xs text-white/60">{host.address}</span>
+                        <span className="text-xs text-white/50">{host.check_command}</span>
+                      </>
+                    )}
+                    <label className="flex items-center gap-2 text-xs text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={host.enabled}
+                        onChange={(e) => handleUpdateHost(hostIndex, 'enabled', e.target.checked)}
+                        disabled={saving || !canEdit}
+                        className="rounded border-white/20"
+                      />
+                      Enabled
+                    </label>
                     {canEdit && (
                       <button
-                        onClick={() => handleAddService(hostIndex)}
+                        onClick={() => handleRemoveHost(hostIndex)}
                         disabled={saving}
-                        className="text-xs text-sky-400 hover:text-sky-300 disabled:opacity-50"
+                        className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
                       >
-                        + Add Service
+                        Remove
                       </button>
                     )}
                   </div>
-                  {host.services.length === 0 ? (
-                    <div className="text-xs text-white/50">No services defined</div>
-                  ) : (
-                    host.services.map((service, serviceIndex) => (
-                      <div key={serviceIndex} className="flex items-center gap-2 rounded border border-white/5 bg-white/5 p-2">
-                        {canEdit ? (
-                          <>
-                            <input
-                              type="text"
-                              placeholder="Service name"
-                              value={service.name}
-                              onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'name', e.target.value)}
-                              disabled={saving}
-                              className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Check command"
-                              value={service.check_command}
-                              onChange={(e) =>
-                                handleUpdateService(hostIndex, serviceIndex, 'check_command', e.target.value)
-                              }
-                              disabled={saving}
-                              className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <span className="flex-1 text-xs text-white">{service.name}</span>
-                            <span className="flex-1 text-xs text-white/60">{service.check_command}</span>
-                          </>
-                        )}
-                        <label className="flex items-center gap-1 text-xs text-white/70">
-                          <input
-                            type="checkbox"
-                            checked={service.enabled}
-                            onChange={(e) =>
-                              handleUpdateService(hostIndex, serviceIndex, 'enabled', e.target.checked)
-                            }
-                            disabled={saving || !canEdit}
-                            className="rounded border-white/20"
-                          />
-                          Enabled
-                        </label>
-                        {canEdit && (
-                          <button
-                            onClick={() => handleRemoveService(hostIndex, serviceIndex)}
-                            disabled={saving}
-                            className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  )}
                 </div>
-              )}
-            </div>
+
+                {expandedHosts.has(hostKey) && (
+                  <div className="mt-4 space-y-2 pl-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-white/70">Services</span>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleAddService(hostIndex)}
+                          disabled={saving}
+                          className="text-xs text-sky-400 hover:text-sky-300 disabled:opacity-50"
+                        >
+                          + Add Service
+                        </button>
+                      )}
+                    </div>
+                    {host.services.length === 0 ? (
+                      <div className="text-xs text-white/50">No services defined</div>
+                    ) : (
+                      host.services.map((service, serviceIndex) => {
+                        const serviceKey = `${hostIndex}-${serviceIndex}`
+                        const def = service.service_key ? definitionsByKey.get(service.service_key) : null
+                        const groups = def ? groupFieldsByCapability(def) : {}
+                        return (
+                          <div key={serviceIndex} className="rounded border border-white/5 bg-white/5 p-3 space-y-3">
+                            <div className="flex items-center gap-2">
+                              {canEdit ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    placeholder="Service name"
+                                    value={service.name}
+                                    onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'name', e.target.value)}
+                                    disabled={saving}
+                                    className={`flex-1 rounded border px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                                      getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.name`)
+                                        ? 'border-rose-500/50 bg-rose-500/10'
+                                        : 'border-white/10 bg-white/5'
+                                    }`}
+                                  />
+                                  <select
+                                    value={service.service_key || ''}
+                                    onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'service_key', e.target.value)}
+                                    disabled={saving}
+                                    className={`flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 ${
+                                      getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.service_key`)
+                                        ? 'border-rose-500/50 bg-rose-500/10'
+                                        : 'border-white/10 bg-white/5'
+                                    }`}
+                                  >
+                                    <option value="">Select service type...</option>
+                                    {definitions.map((d) => (
+                                      <option key={d.service_key} value={d.service_key}>
+                                        {d.display_name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="flex-1 text-xs text-white">{service.name}</span>
+                                  <span className="flex-1 text-xs text-white/60">
+                                    {def ? def.display_name : service.check_command}
+                                  </span>
+                                </>
+                              )}
+                              <label className="flex items-center gap-1 text-xs text-white/70">
+                                <input
+                                  type="checkbox"
+                                  checked={service.enabled}
+                                  onChange={(e) =>
+                                    handleUpdateService(hostIndex, serviceIndex, 'enabled', e.target.checked)
+                                  }
+                                  disabled={saving || !canEdit}
+                                  className="rounded border-white/20"
+                                />
+                                Enabled
+                              </label>
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleRemoveService(hostIndex, serviceIndex)}
+                                  disabled={saving}
+                                  className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            {def && service.service_key && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleServiceExpanded(serviceKey)}
+                                  className="text-xs text-sky-400 hover:text-sky-300"
+                                >
+                                  {expandedServices.has(serviceKey) ? '▼' : '▶'} Configuration
+                                </button>
+                                {expandedServices.has(serviceKey) && (
+                                  <div className="space-y-4 pl-4 border-l border-white/10">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium text-white/70">Service Configuration</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetToDefaults(hostIndex, serviceIndex)}
+                                        className="text-xs text-sky-400 hover:text-sky-300"
+                                      >
+                                        Reset to defaults
+                                      </button>
+                                    </div>
+                                    {Object.entries(groups).map(([sectionName, fields]) => (
+                                      <div key={sectionName} className="space-y-2">
+                                        <div className="text-xs font-medium text-white/60">{sectionName}</div>
+                                        {fields.map((arg) => {
+                                          const value = service.overrides?.[arg.key]
+                                          const error = getFieldError(
+                                            `hosts.${hostIndex}.services.${serviceIndex}.overrides.${arg.key}`
+                                          )
+                                          return renderField(
+                                            arg,
+                                            value,
+                                            (val) => handleUpdateOverride(hostIndex, serviceIndex, arg.key, val),
+                                            () => handleClearOverride(hostIndex, serviceIndex, arg.key),
+                                            error,
+                                            hostIndex,
+                                            serviceIndex
+                                          )
+                                        })}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             )
           })
         )}

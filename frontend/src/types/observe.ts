@@ -239,3 +239,35 @@ export interface ObserveMeta {
   total_hosts?: number
   total_services?: number
 }
+
+// Service definitions (capability-driven UI); no engine syntax
+export type ArgsSchemaType = 'string' | 'int' | 'float' | 'bool' | 'json'
+
+export interface ArgsSchemaEntry {
+  position: number
+  key: string
+  default: unknown
+  required: boolean
+  type?: ArgsSchemaType
+  help?: string
+}
+
+export interface ServiceDefinition {
+  engine: string
+  service_key: string
+  display_name: string
+  check_command: string
+  args_schema: ArgsSchemaEntry[]
+  capability_flags: string[]
+  status: string
+}
+
+export const CAPABILITY_SECTIONS: Record<string, string> = {
+  supports_thresholds: 'Thresholds',
+  supports_ports: 'Port',
+  supports_urls: 'URL',
+  supports_auth: 'Auth',
+  supports_payload: 'Payload',
+  supports_intervals: 'Intervals',
+  supports_retries: 'Retries',
+}

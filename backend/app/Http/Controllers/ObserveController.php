@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
+use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,41 @@ use Illuminate\Support\Facades\Log;
 
 class ObserveController extends Controller
 {
+    /**
+     * Get active service definitions for capability-driven UI.
+     * GET /api/workspaces/{project}/observe/service-definitions?engine=nagios&status=active
+     */
+    public function serviceDefinitions(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        if (!class_exists(ObserveServiceDefinition::class) || !\Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        $engine = $request->query('engine', 'nagios');
+        $status = $request->query('status', 'active');
+
+        $definitions = ObserveServiceDefinition::query()
+            ->where('engine', $engine)
+            ->when($status !== '', fn ($q) => $q->where('status', $status))
+            ->orderBy('service_key')
+            ->get()
+            ->map(fn ($d) => [
+                'engine' => $d->engine,
+                'service_key' => $d->service_key,
+                'display_name' => $d->display_name,
+                'check_command' => $d->check_command,
+                'args_schema' => $d->args_schema ?? [],
+                'capability_flags' => $d->capability_flags ?? [],
+                'status' => $d->status,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $definitions->values()->all(),
+        ]);
+    }
     /**
      * Get observe summary for a workspace
      */

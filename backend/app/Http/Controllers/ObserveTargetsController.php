@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
+use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
 use App\Services\NagiosConfigPublisher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class ObserveTargetsController extends Controller
@@ -21,11 +23,12 @@ class ObserveTargetsController extends Controller
     {
         $this->authorize('view', $project);
 
+        $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
         $hosts = ObserveTargetHost::where('workspace_id', $project->id)
             ->with('services')
             ->orderBy('name')
             ->get()
-            ->map(function ($host) {
+            ->map(function ($host) use ($definitionsByCommand) {
                 return [
                     'id' => $host->id,
                     'name' => $host->name,
@@ -33,12 +36,19 @@ class ObserveTargetsController extends Controller
                     'check_command' => $host->check_command,
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
-                    'services' => $host->services->map(function ($service) {
+                    'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
+                        $service_key = $definitionsByCommand[$service->check_command] ?? null;
+                        $check_args = $service->check_args ?? [];
+                        $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
+                            ? $check_args
+                            : (array) $check_args;
                         return [
                             'id' => $service->id,
                             'name' => $service->name,
                             'check_command' => $service->check_command,
-                            'check_args' => $service->check_args ?? [],
+                            'check_args' => $check_args,
+                            'service_key' => $service_key,
+                            'overrides' => $overrides,
                             'enabled' => $service->enabled,
                         ];
                     }),
@@ -78,8 +88,10 @@ class ObserveTargetsController extends Controller
             'hosts.*.enabled' => 'nullable|boolean',
             'hosts.*.services' => 'nullable|array',
             'hosts.*.services.*.name' => 'required|string|max:255',
-            'hosts.*.services.*.check_command' => 'required|string|max:255',
+            'hosts.*.services.*.check_command' => 'nullable|string|max:255',
             'hosts.*.services.*.check_args' => 'nullable|array',
+            'hosts.*.services.*.service_key' => 'nullable|string|max:100',
+            'hosts.*.services.*.overrides' => 'nullable|array',
             'hosts.*.services.*.enabled' => 'nullable|boolean',
         ]);
 
@@ -91,16 +103,16 @@ class ObserveTargetsController extends Controller
             ], 422);
         }
 
-        // Allowed check commands (dev allowlist)
+        // Allowed check commands (dev allowlist; used when service_key not provided)
         $allowedHostCommands = ['check-host-alive', 'check_ping'];
-        $allowedServiceCommands = ['check_ping', 'check_http', 'check_load', 'check_users', 'check_disk'];
+        $allowedServiceCommands = ['check_ping', 'check_http', 'check_load', 'check_users', 'check_disk', 'check_tcp'];
 
-        // Sanitize and validate hosts
+        // Sanitize and validate hosts; resolve service_key -> check_command + overrides -> check_args
         $hostsData = $request->input('hosts', []);
         $sanitizedHostNames = [];
         $errors = [];
 
-        foreach ($hostsData as $index => $hostData) {
+        foreach ($hostsData as $index => &$hostData) {
             // Sanitize host name
             $originalName = $hostData['name'] ?? '';
             $sanitizedName = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $originalName));
@@ -123,8 +135,8 @@ class ObserveTargetsController extends Controller
                 $errors["hosts.{$index}.check_command"] = ['Invalid check command. Allowed: ' . implode(', ', $allowedHostCommands)];
             }
 
-            // Sanitize and validate services
-            foreach ($hostData['services'] ?? [] as $serviceIndex => $serviceData) {
+            // Resolve and validate services (service_key + overrides -> check_command + check_args)
+            foreach ($hostData['services'] ?? [] as $serviceIndex => &$serviceData) {
                 $originalServiceName = $serviceData['name'] ?? '';
                 $sanitizedServiceName = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $originalServiceName));
                 
@@ -133,12 +145,26 @@ class ObserveTargetsController extends Controller
                     continue;
                 }
 
+                $serviceKey = $serviceData['service_key'] ?? null;
+                $overrides = $serviceData['overrides'] ?? null;
+                if ($serviceKey !== null && $serviceKey !== '' && Schema::hasTable('observe_service_definitions')) {
+                    $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
+                    if ($def) {
+                        $serviceData['check_command'] = $def->check_command;
+                        $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
+                    } else {
+                        $errors["hosts.{$index}.services.{$serviceIndex}.service_key"] = ['Unknown service_key: ' . $serviceKey];
+                    }
+                }
+
                 $serviceCheckCommand = $serviceData['check_command'] ?? '';
-                if (!in_array($serviceCheckCommand, $allowedServiceCommands)) {
+                if ($serviceCheckCommand !== '' && !in_array($serviceCheckCommand, $allowedServiceCommands)) {
                     $errors["hosts.{$index}.services.{$serviceIndex}.check_command"] = ['Invalid check command. Allowed: ' . implode(', ', $allowedServiceCommands)];
                 }
             }
+            unset($serviceData);
         }
+        unset($hostData);
 
         if (!empty($errors)) {
             return response()->json([
@@ -247,11 +273,12 @@ class ObserveTargetsController extends Controller
             }
 
             // Return updated targets (frontend expects success responses to include data)
+            $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
             $hosts = ObserveTargetHost::where('workspace_id', $project->id)
                 ->with('services')
                 ->orderBy('name')
                 ->get()
-                ->map(function ($host) {
+                ->map(function ($host) use ($definitionsByCommand) {
                     return [
                         'id' => $host->id,
                         'name' => $host->name,
@@ -259,12 +286,19 @@ class ObserveTargetsController extends Controller
                         'check_command' => $host->check_command,
                         'tags' => $host->tags ?? [],
                         'enabled' => $host->enabled,
-                        'services' => $host->services->map(function ($service) {
+                        'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
+                            $service_key = $definitionsByCommand[$service->check_command] ?? null;
+                            $check_args = $service->check_args ?? [];
+                            $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
+                                ? $check_args
+                                : (array) $check_args;
                             return [
                                 'id' => $service->id,
                                 'name' => $service->name,
                                 'check_command' => $service->check_command,
-                                'check_args' => $service->check_args ?? [],
+                                'check_args' => $check_args,
+                                'service_key' => $service_key,
+                                'overrides' => $overrides,
                                 'enabled' => $service->enabled,
                             ];
                         }),
@@ -355,5 +389,19 @@ class ObserveTargetsController extends Controller
             'valid' => true,
             'message' => 'Configuration is valid',
         ]);
+    }
+
+    /**
+     * @return array<string, string> check_command => service_key
+     */
+    private function definitionsByCheckCommand(int $workspaceId): array
+    {
+        if (!Schema::hasTable('observe_service_definitions')) {
+            return [];
+        }
+        return ObserveServiceDefinition::forEngine('nagios')
+            ->get()
+            ->mapWithKeys(fn ($d) => [$d->check_command => $d->service_key])
+            ->all();
     }
 }

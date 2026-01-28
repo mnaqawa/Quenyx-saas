@@ -14,6 +14,7 @@ import type {
   DataSource,
   DataSourceSummary,
   ObserveServicesResponse,
+  ServiceDefinition,
 } from '../types/observe'
 
 export const observeService = {
@@ -156,5 +157,20 @@ export const observeService = {
       `workspaces/${workspaceId}/observe/data-sources/summary`,
       { workspaceId, moduleKey: 'shieldobserve' }
     )
+  },
+
+  // Service definitions (capability-driven UI)
+  async getServiceDefinitions(
+    workspaceId: number,
+    params?: { engine?: string; status?: string }
+  ): Promise<ServiceDefinition[]> {
+    const queryParams = new URLSearchParams()
+    if (params?.engine) queryParams.append('engine', params.engine)
+    if (params?.status) queryParams.append('status', params.status)
+
+    const endpoint = `workspaces/${workspaceId}/observe/service-definitions${
+      queryParams.toString() ? `?${queryParams.toString()}` : ''
+    }`
+    return gatewayClient.get<ServiceDefinition[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
   },
 }
