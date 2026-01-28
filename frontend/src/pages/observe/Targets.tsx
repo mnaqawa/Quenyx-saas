@@ -4,7 +4,7 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
-import type { ServiceDefinition, ArgsSchemaEntry, CAPABILITY_SECTIONS } from '../../types/observe'
+import type { ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
 
 interface TargetHost {
   id?: number
@@ -389,9 +389,7 @@ export default function Targets() {
     value: unknown,
     onChange: (val: unknown) => void,
     onClear: () => void,
-    error?: string,
-    hostIndex: number = 0,
-    serviceIndex: number = 0
+    error?: string
   ) => {
     const inferredType = inferType(arg, value ?? arg.default)
     const hasOverride = value !== null && value !== undefined && value !== ''
@@ -742,9 +740,7 @@ export default function Targets() {
                                             value,
                                             (val) => handleUpdateOverride(hostIndex, serviceIndex, arg.key, val),
                                             () => handleClearOverride(hostIndex, serviceIndex, arg.key),
-                                            error,
-                                            hostIndex,
-                                            serviceIndex
+                                            error
                                           )
                                         })}
                                       </div>
