@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Services\NagiosConfigPublisher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -273,6 +274,8 @@ class ObserveTargetsController extends Controller
                 try {
                     $publisher = new NagiosConfigPublisher();
                     $publisher->publish($project->id);
+                    // Poll so Services page reflects new/removed targets immediately
+                    Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
                 } catch (\Exception $e) {
                     Log::warning('Failed to publish Nagios config after targets update', [
                         'workspace_id' => $project->id,

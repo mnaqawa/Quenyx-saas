@@ -214,15 +214,21 @@ class NagiosConfigPublisher
     /**
      * Resolve service check_command via ObserveServiceCommandResolver when a definition exists.
      * Overrides come from check_args (keyed by arg key, or positional mapped to schema).
+     * Do not use custom path when check_command is empty (avoids "Custom service denied" and invalid config).
      */
     private function resolveServiceCheckCommand(ObserveTargetService $service, int $workspaceId): string
     {
+        $checkCommand = $service->check_command ?? '';
+        if ($checkCommand === '') {
+            return $this->legacyCheckCommand($service);
+        }
+
         if (!Schema::hasTable('observe_service_definitions')) {
             return $this->legacyCheckCommand($service);
         }
 
         $definition = ObserveServiceDefinition::forEngine('nagios')
-            ->where('check_command', $service->check_command)
+            ->where('check_command', $checkCommand)
             ->first();
 
         if ($definition === null) {
@@ -231,7 +237,7 @@ class NagiosConfigPublisher
                 ->first();
             if ($definition !== null) {
                 $overrides = [
-                    'command' => $service->check_command,
+                    'command' => $checkCommand,
                     'args' => is_array($service->check_args ?? null) ? $service->check_args : [],
                 ];
             } else {
@@ -282,15 +288,19 @@ class NagiosConfigPublisher
 
     private function legacyCheckCommand(ObserveTargetService $service): string
     {
-        $checkCmd = $service->check_command;
-        if (!empty($service->check_args) && is_array($service->check_args)) {
-            $args = implode('!', array_map(function ($arg) {
-                return str_replace(['!', ';', "\n", "\r"], ['', '', '', ''], (string) $arg);
-            }, $service->check_args));
-            if ($args !== '') {
-                $checkCmd .= '!' . $args;
+        $checkCmd = $service->check_command ?? '';
+        if ($checkCmd !== '') {
+            if (!empty($service->check_args) && is_array($service->check_args)) {
+                $args = implode('!', array_map(function ($arg) {
+                    return str_replace(['!', ';', "\n", "\r"], ['', '', '', ''], (string) $arg);
+                }, $service->check_args));
+                if ($args !== '') {
+                    $checkCmd .= '!' . $args;
+                }
             }
+            return $checkCmd;
         }
-        return $checkCmd;
+        // Fallback when check_command is empty (e.g. old/bad data) so Nagios config stays valid
+        return 'check_ping!100.0,5%!500.0,20%!5';
     }
 }

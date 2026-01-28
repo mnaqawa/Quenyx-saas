@@ -106,7 +106,8 @@ class PollObserveData extends Command
             $workspacePrefix = 'ws' . $workspace->id . '-';
             DB::transaction(function () use ($workspace, $services, $summary, $workspacePrefix) {
                 $engineKey = 'nagios';
-                
+                $receivedKeys = [];
+
                 foreach ($services as $service) {
                     // Gateway should have already filtered, but verify for safety
                     if (!str_starts_with($service['host_name'], $workspacePrefix)) {
@@ -114,6 +115,7 @@ class PollObserveData extends Command
                     }
                     
                     $engineServiceKey = "{$service['host_name']}::{$service['service_name']}";
+                    $receivedKeys[] = $engineServiceKey;
                     
                     ObserveService::updateOrCreate(
                         [
@@ -132,6 +134,19 @@ class PollObserveData extends Command
                             'perfdata' => $service['perfdata'] ?? null,
                         ]
                     );
+                }
+
+                // Remove services no longer in Nagios (e.g. after target/host removal) so Services page reflects removals
+                if (!empty($receivedKeys)) {
+                    ObserveService::where('workspace_id', $workspace->id)
+                        ->where('engine_key', $engineKey)
+                        ->whereNotIn('engine_service_key', $receivedKeys)
+                        ->delete();
+                } else {
+                    // No services from Nagios for this workspace: clear all for this workspace/engine
+                    ObserveService::where('workspace_id', $workspace->id)
+                        ->where('engine_key', $engineKey)
+                        ->delete();
                 }
 
                 // Update meta
