@@ -289,19 +289,16 @@ export default function Targets() {
         })),
       }
 
-      await gatewayClient.put<{ message?: string }>(
+      const updatedHosts = await gatewayClient.put<TargetHost[]>(
         `workspaces/${workspaceId}/observe/targets`,
         payload,
         { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
       )
 
       setSuccess('Targets saved and published to Nagios')
-      const refreshResponse = await gatewayClient.get<TargetHost[]>(
-        `workspaces/${workspaceId}/observe/targets`,
-        { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
-      )
-      if (Array.isArray(refreshResponse)) {
-        setHosts(refreshResponse)
+      // Use PUT response so service_key (and all saved fields) are shown immediately without re-entering
+      if (Array.isArray(updatedHosts)) {
+        setHosts(updatedHosts)
       }
     } catch (err: any) {
       const fieldErrors = err?.errors ?? err?.response?.data?.errors

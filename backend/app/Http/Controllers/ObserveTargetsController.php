@@ -481,16 +481,33 @@ class ObserveTargetsController extends Controller
     }
 
     /**
+     * Fallback map when observe_service_definitions is missing or not seeded.
+     * Ensures service_key is always restored from check_command for known types.
+     *
+     * @return array<string, string> check_command (base) => service_key
+     */
+    private function fallbackDefinitionsByCheckCommand(): array
+    {
+        return [
+            'check_ping' => 'ping',
+            'check_http' => 'http',
+            'check_tcp' => 'tcp_port',
+        ];
+    }
+
+    /**
      * @return array<string, string> check_command => service_key
      */
     private function definitionsByCheckCommand(int $workspaceId): array
     {
+        $fallback = $this->fallbackDefinitionsByCheckCommand();
         if (!Schema::hasTable('observe_service_definitions')) {
-            return [];
+            return $fallback;
         }
-        return ObserveServiceDefinition::forEngine('nagios')
+        $fromDb = ObserveServiceDefinition::forEngine('nagios')
             ->get()
             ->mapWithKeys(fn ($d) => [$d->check_command => $d->service_key])
             ->all();
+        return array_merge($fallback, $fromDb);
     }
 }
