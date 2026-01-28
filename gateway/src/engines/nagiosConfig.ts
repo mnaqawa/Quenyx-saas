@@ -6,6 +6,22 @@ import * as path from 'path'
 
 const execAsync = promisify(exec)
 
+/** Run a command and always capture stdout/stderr (even on non-zero exit). */
+function execCapture(
+  command: string,
+  options: { timeout?: number } = {}
+): Promise<{ stdout: string; stderr: string; code: number | null }> {
+  return new Promise((resolve) => {
+    const cb = (err: Error | null, stdout: string | Buffer, stderr: string | Buffer) => {
+      const out = (typeof stdout === 'string' ? stdout : stdout?.toString?.() ?? '').trim()
+      const errOut = (typeof stderr === 'string' ? stderr : stderr?.toString?.() ?? '').trim()
+      const code = err && (err as any).code != null ? (err as any).code : 0
+      resolve({ stdout: out, stderr: errOut, code: err ? (err as any).code ?? 1 : 0 })
+    }
+    exec(command, { timeout: options.timeout ?? 30000, maxBuffer: 2 * 1024 * 1024 }, cb)
+  })
+}
+
 // Resolve config dir: use absolute path, or resolve relative to process.cwd()
 const rawConfigDir = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
 const NAGIOS_CONFIG_DIR = path.isAbsolute(rawConfigDir) ? rawConfigDir : path.resolve(process.cwd(), rawConfigDir)
@@ -95,26 +111,22 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
 
 /**
  * Run validation only (nagios -v). Does not swap or reload.
+ * Uses execCapture so we always get stdout/stderr even when nagios -v exits non-zero.
  */
 async function runValidateOnly(): Promise<{ valid: boolean; stdout: string; stderr: string; errors: string[] }> {
   const validateCmd = `docker exec ${NAGIOS_CONTAINER_NAME} /usr/local/nagios/bin/nagios -v ${NAGIOS_CFG_PATH}`
-  try {
-    const result = await execAsync(validateCmd, { timeout: 30000 })
-    const stdout = (result.stdout ?? '').trim()
-    const stderr = (result.stderr ?? '').trim()
-    const { errors } = parseNagiosValidationOutput(stdout, stderr)
-    const output = stdout + '\n' + stderr
-    const hasErrors = output.includes('Error:') || output.includes('Error processing config file')
-    const hasSuccess = output.includes('Things look okay') || output.includes('Configuration check completed')
-    const valid = !hasErrors && !!hasSuccess
-    return { valid, stdout, stderr, errors }
-  } catch (err: any) {
-    const stdout = (err.stdout ?? '').trim()
-    const stderr = (err.stderr ?? '').trim()
-    const { errors } = parseNagiosValidationOutput(stdout, stderr)
-    if (errors.length === 0) errors.push(err.message || 'Validation command failed')
-    return { valid: false, stdout, stderr, errors }
+  const { stdout, stderr, code } = await execCapture(validateCmd, { timeout: 30000 })
+  const { errors } = parseNagiosValidationOutput(stdout, stderr)
+  const output = stdout + '\n' + stderr
+  const hasErrors = output.includes('Error:') || output.includes('Error processing config file')
+  const hasSuccess = output.includes('Things look okay') || output.includes('Configuration check completed')
+  const valid = code === 0 && !hasErrors && !!hasSuccess
+  if (!valid && errors.length === 0) {
+    // No parsed "Error:" lines; include a snippet so user sees something
+    const snippet = [stdout.slice(-800), stderr.slice(-800)].filter(Boolean).join('\n').trim()
+    errors.push(snippet || `Nagios validation failed (exit code ${code})`)
   }
+  return { valid, stdout, stderr, errors }
 }
 
 /**
