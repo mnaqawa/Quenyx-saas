@@ -122,8 +122,9 @@ async function runValidateOnly(): Promise<{ valid: boolean; stdout: string; stde
   const hasSuccess = output.includes('Things look okay') || output.includes('Configuration check completed')
   const valid = code === 0 && !hasErrors && !!hasSuccess
   if (!valid && errors.length === 0) {
-    // No parsed "Error:" lines; include a snippet so user sees something
-    const snippet = [stdout.slice(-800), stderr.slice(-800)].filter(Boolean).join('\n').trim()
+    // No parsed "Error:" lines; include raw output so user sees actual Nagios/Docker output
+    const combined = [stdout, stderr].filter(Boolean).join('\n').trim()
+    const snippet = combined.length > 2000 ? combined.slice(-2000) : combined
     errors.push(snippet || `Nagios validation failed (exit code ${code})`)
   }
   return { valid, stdout, stderr, errors }

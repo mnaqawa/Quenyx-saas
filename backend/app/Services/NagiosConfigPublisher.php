@@ -77,6 +77,27 @@ class NagiosConfigPublisher
                 $validationErrors = $body['validation_errors'] ?? [];
                 $msg = $body['message'] ?? 'Config validation failed';
                 $publishError = $msg . (\count($validationErrors) > 0 ? ': ' . implode('; ', array_slice($validationErrors, 0, 5)) : '');
+                // If we only got the generic "Command failed: docker exec" message, gateway may be old; fetch current validation and log a hint
+                $singleGeneric = \count($validationErrors) === 1
+                    && str_contains($validationErrors[0] ?? '', 'Command failed: docker exec')
+                    && str_contains($validationErrors[0] ?? '', 'nagios -v');
+                if ($singleGeneric) {
+                    try {
+                        $validateResp = Http::timeout(15)
+                            ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                            ->get("{$this->gatewayUrl}/internal/engines/nagios/validate");
+                        $validateBody = $validateResp->json() ?? [];
+                        $validateErrors = $validateBody['errors'] ?? [];
+                        Log::warning('Nagios config validation failed with generic gateway message. Current config validation result:', [
+                            'workspace_id' => $workspaceId,
+                            'validate_valid' => $validateBody['valid'] ?? null,
+                            'validate_errors' => array_slice(is_array($validateErrors) ? $validateErrors : [], 0, 10),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('Could not fetch Nagios validate after config failure', ['workspace_id' => $workspaceId, 'error' => $e->getMessage()]);
+                    }
+                    Log::info('Restart the gateway service to get detailed Nagios validation output (Error: ... lines) in validation_errors.');
+                }
                 $this->auditPublish($workspaceId, $userId, 'failure', $publishError, $validationErrors);
                 ObserveMeta::updateOrCreate(
                     ['workspace_id' => $workspaceId, 'engine_key' => 'nagios'],
