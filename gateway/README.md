@@ -42,6 +42,14 @@ npm run build
 npm start
 ```
 
+**Deploy / Restart (e.g. systemd):** After any code change you must rebuild so `dist/` is updated, then restart:
+
+```bash
+cd /path/to/gateway && npm run build && systemctl restart portshield-gateway
+```
+
+Restarting without rebuilding will keep running the old compiled code.
+
 ## How It Works
 
 1. **Request Reception**: Gateway receives all `/api/*` requests

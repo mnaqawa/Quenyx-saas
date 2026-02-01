@@ -1,4 +1,4 @@
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs/promises'
 import * as os from 'os'
@@ -6,19 +6,48 @@ import * as path from 'path'
 
 const execAsync = promisify(exec)
 
-/** Run a command and always capture stdout/stderr (even on non-zero exit). */
-function execCapture(
-  command: string,
-  options: { timeout?: number } = {}
+/**
+ * Run nagios -v via spawn and read stdout/stderr streams so we always get full output
+ * even when the process exits non-zero (avoids exec callback quirks on some systems).
+ */
+function runNagiosValidateInContainer(
+  containerName: string,
+  cfgPath: string,
+  timeoutMs: number = 30000
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve) => {
-    const cb = (err: Error | null, stdout: string | Buffer, stderr: string | Buffer) => {
-      const out = (typeof stdout === 'string' ? stdout : stdout?.toString?.() ?? '').trim()
-      const errOut = (typeof stderr === 'string' ? stderr : stderr?.toString?.() ?? '').trim()
-      const code = err && (err as any).code != null ? (err as any).code : 0
-      resolve({ stdout: out, stderr: errOut, code: err ? (err as any).code ?? 1 : 0 })
+    const child = spawn('docker', [
+      'exec',
+      containerName,
+      '/usr/local/nagios/bin/nagios',
+      '-v',
+      cfgPath,
+    ])
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const finish = (out: string, err: string, code: number | null) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ stdout: out.trim(), stderr: err.trim(), code })
     }
-    exec(command, { timeout: options.timeout ?? 30000, maxBuffer: 2 * 1024 * 1024 }, cb)
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL')
+      finish(stdout, stderr + '\n(validation timed out)', -1)
+    }, timeoutMs)
+    child.stdout?.on('data', (chunk: Buffer | string) => {
+      stdout += typeof chunk === 'string' ? chunk : chunk.toString()
+    })
+    child.stderr?.on('data', (chunk: Buffer | string) => {
+      stderr += typeof chunk === 'string' ? chunk : chunk.toString()
+    })
+    child.on('close', (code, signal) => {
+      finish(stdout, stderr, code ?? (signal ? -1 : 0))
+    })
+    child.on('error', (err) => {
+      finish(stdout, stderr || (err?.message ?? 'Spawn error'), -1)
+    })
   })
 }
 
@@ -111,11 +140,14 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
 
 /**
  * Run validation only (nagios -v). Does not swap or reload.
- * Uses execCapture so we always get stdout/stderr even when nagios -v exits non-zero.
+ * Uses spawn so we always capture full stdout/stderr regardless of exit code.
  */
 async function runValidateOnly(): Promise<{ valid: boolean; stdout: string; stderr: string; errors: string[] }> {
-  const validateCmd = `docker exec ${NAGIOS_CONTAINER_NAME} /usr/local/nagios/bin/nagios -v ${NAGIOS_CFG_PATH}`
-  const { stdout, stderr, code } = await execCapture(validateCmd, { timeout: 30000 })
+  const { stdout, stderr, code } = await runNagiosValidateInContainer(
+    NAGIOS_CONTAINER_NAME,
+    NAGIOS_CFG_PATH,
+    30000
+  )
   const { errors } = parseNagiosValidationOutput(stdout, stderr)
   const output = stdout + '\n' + stderr
   const hasErrors = output.includes('Error:') || output.includes('Error processing config file')
