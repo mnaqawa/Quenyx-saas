@@ -223,10 +223,11 @@ export default function Targets() {
         if (!service.name.trim()) {
           errors[`hosts.${hi}.services.${si}.name`] = ['Service name is required']
         }
-        if (!service.service_key) {
+        const effectiveServiceKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
+        if (!effectiveServiceKey) {
           errors[`hosts.${hi}.services.${si}.service_key`] = ['Service type is required']
         } else {
-          const def = definitionsByKey.get(service.service_key)
+          const def = definitionsByKey.get(effectiveServiceKey)
           if (def) {
             def.args_schema.forEach((arg) => {
               if (arg.required) {
