@@ -39,7 +39,8 @@ class ObserveTargetsController extends Controller
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
                     'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                        $baseCommand = $service->check_command ? preg_replace('/!.*/', '', $service->check_command) : '';
+                        $raw = trim($service->check_command ?? '');
+                        $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
                         $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
                             ? $definitionsByCommand[$baseCommand]
                             : null;
@@ -314,7 +315,8 @@ class ObserveTargetsController extends Controller
                         'tags' => $host->tags ?? [],
                         'enabled' => $host->enabled,
                         'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                            $baseCommand = $service->check_command ? preg_replace('/!.*/', '', $service->check_command) : '';
+                            $raw = trim($service->check_command ?? '');
+                            $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
                             $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
                                 ? $definitionsByCommand[$baseCommand]
                                 : null;
@@ -506,7 +508,7 @@ class ObserveTargetsController extends Controller
         }
         $fromDb = ObserveServiceDefinition::forEngine('nagios')
             ->get()
-            ->mapWithKeys(fn ($d) => [$d->check_command => $d->service_key])
+            ->mapWithKeys(fn ($d) => [strtolower(trim($d->check_command ?? '')) => $d->service_key])
             ->all();
         return array_merge($fallback, $fromDb);
     }

@@ -26,6 +26,27 @@ interface TargetService {
   enabled: boolean
 }
 
+/** Infer service_key from check_command when API does not send it (so dropdown shows saved type). */
+function inferServiceKeyFromCheckCommand(checkCommand: string | undefined): string {
+  if (!checkCommand || typeof checkCommand !== 'string') return ''
+  const base = checkCommand.split('!')[0].trim().toLowerCase()
+  if (base === 'check_http') return 'http'
+  if (base === 'check_tcp') return 'tcp_port'
+  if (base === 'check_ping') return 'ping'
+  return ''
+}
+
+/** Ensure each service has service_key set from check_command when missing (so dropdown displays correctly). */
+function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
+  return hosts.map((host) => ({
+    ...host,
+    services: host.services.map((svc) => {
+      const key = svc.service_key || inferServiceKeyFromCheckCommand(svc.check_command)
+      return key ? { ...svc, service_key: key } : svc
+    }),
+  }))
+}
+
 export default function Targets() {
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
@@ -68,7 +89,7 @@ export default function Targets() {
           observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
         ])
         if (Array.isArray(targetsResponse)) {
-          setHosts(targetsResponse)
+          setHosts(normalizeHostsServiceKeys(targetsResponse))
         }
         if (Array.isArray(defsResponse)) {
           setDefinitions(defsResponse)
@@ -229,7 +250,7 @@ export default function Targets() {
                     }
                   }
                 }
-                if (service.service_key === 'ping' && (arg.key === 'warn_rta_ms' || arg.key === 'crit_rta_ms')) {
+                if (effectiveServiceKey === 'ping' && (arg.key === 'warn_rta_ms' || arg.key === 'crit_rta_ms')) {
                   const plKey = arg.key === 'warn_rta_ms' ? 'warn_pl_pct' : 'crit_pl_pct'
                   const pl = service.overrides?.[plKey]
                   if (pl !== null && pl !== undefined && pl !== '') {
@@ -279,13 +300,16 @@ export default function Targets() {
           check_command: host.check_command,
           tags: host.tags,
           enabled: host.enabled,
-          services: host.services.map((service) => ({
-            name: service.name,
-            service_key: service.service_key || undefined,
-            check_command: service.service_key ? undefined : (service.check_command || undefined),
-            overrides: service.overrides || {},
-            enabled: service.enabled,
-          })),
+          services: host.services.map((service) => {
+            const effectiveKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
+            return {
+              name: service.name,
+              service_key: effectiveKey || undefined,
+              check_command: effectiveKey ? undefined : (service.check_command || undefined),
+              overrides: service.overrides || {},
+              enabled: service.enabled,
+            }
+          }),
         })),
       }
 
@@ -298,7 +322,7 @@ export default function Targets() {
       setSuccess('Targets saved and published to Nagios')
       // Use PUT response so service_key (and all saved fields) are shown immediately without re-entering
       if (Array.isArray(updatedHosts)) {
-        setHosts(updatedHosts)
+        setHosts(normalizeHostsServiceKeys(updatedHosts))
       }
     } catch (err: any) {
       const fieldErrors = err?.errors ?? err?.response?.data?.errors
@@ -638,7 +662,8 @@ export default function Targets() {
                     ) : (
                       host.services.map((service, serviceIndex) => {
                         const serviceKey = `${hostIndex}-${serviceIndex}`
-                        const def = service.service_key ? definitionsByKey.get(service.service_key) : null
+                        const displayedServiceKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
+                        const def = displayedServiceKey ? definitionsByKey.get(displayedServiceKey) : null
                         const groups = def ? groupFieldsByCapability(def) : {}
                         return (
                           <div key={serviceIndex} className="rounded border border-white/5 bg-white/5 p-3 space-y-3">
@@ -658,7 +683,7 @@ export default function Targets() {
                                     }`}
                                   />
                                   <select
-                                    value={service.service_key || ''}
+                                    value={displayedServiceKey || ''}
                                     onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'service_key', e.target.value)}
                                     disabled={saving}
                                     className={`flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 ${
@@ -706,7 +731,7 @@ export default function Targets() {
                                 </button>
                               )}
                             </div>
-                            {def && service.service_key && (
+                            {def && displayedServiceKey && (
                               <>
                                 <button
                                   type="button"
