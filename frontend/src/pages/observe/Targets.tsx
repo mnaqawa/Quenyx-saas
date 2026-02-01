@@ -111,14 +111,20 @@ export default function Targets() {
         setLoading(true)
         setError(null)
         const [targetsResponse, defsResponse] = await Promise.all([
-          gatewayClient.get<TargetHost[]>(`workspaces/${workspaceId}/observe/targets`, {
+          gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(`workspaces/${workspaceId}/observe/targets`, {
             workspaceId: String(workspaceId),
             moduleKey: 'shieldobserve',
           }),
           observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
         ])
-        if (Array.isArray(targetsResponse)) {
-          setHosts(normalizeHostsServiceKeys(targetsResponse))
+        // Handle both raw array and gateway-wrapped { data: hosts } so service types show after nav/signout
+        const hostsList = Array.isArray(targetsResponse)
+          ? targetsResponse
+          : (targetsResponse && typeof targetsResponse === 'object' && Array.isArray((targetsResponse as any).data)
+              ? (targetsResponse as any).data
+              : [])
+        if (hostsList.length >= 0) {
+          setHosts(normalizeHostsServiceKeys(hostsList))
         }
         if (Array.isArray(defsResponse)) {
           setDefinitions(defsResponse)

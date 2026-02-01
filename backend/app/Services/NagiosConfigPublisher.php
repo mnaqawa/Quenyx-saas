@@ -304,9 +304,19 @@ class NagiosConfigPublisher
             return $this->legacyCheckCommand($service);
         }
 
-        $definition = ObserveServiceDefinition::forEngine('nagios')
-            ->where('check_command', $checkCommand)
-            ->first();
+        // Match by base command (strip args after !) so we find definition even if check_command has args
+        $baseCommand = trim($checkCommand) !== '' ? strtolower(preg_replace('/!.*/', '', $checkCommand)) : '';
+        $definition = null;
+        if ($baseCommand !== '') {
+            $definition = ObserveServiceDefinition::forEngine('nagios')
+                ->where('check_command', $baseCommand)
+                ->first();
+        }
+        if ($definition === null && trim($checkCommand) !== '') {
+            $definition = ObserveServiceDefinition::forEngine('nagios')
+                ->where('check_command', $checkCommand)
+                ->first();
+        }
 
         if ($definition === null) {
             $definition = ObserveServiceDefinition::forEngine('nagios')
