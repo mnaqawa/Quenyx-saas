@@ -47,6 +47,35 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
   }))
 }
 
+/**
+ * Merge PUT response with current state so we never lose service_key or overrides
+ * when the API omits them (avoids config "disappearing" after save).
+ */
+function mergeResponseWithCurrent(
+  currentHosts: TargetHost[],
+  responseHosts: TargetHost[]
+): TargetHost[] {
+  return responseHosts.map((host, hi) => ({
+    ...host,
+    services: host.services.map((svc, si) => {
+      const currentSvc = currentHosts[hi]?.services[si]
+      const serviceKey =
+        svc.service_key ||
+        currentSvc?.service_key ||
+        inferServiceKeyFromCheckCommand(svc.check_command ?? currentSvc?.check_command)
+      const overrides =
+        svc.overrides && Object.keys(svc.overrides).length > 0
+          ? svc.overrides
+          : (currentSvc?.overrides ?? {})
+      return {
+        ...svc,
+        service_key: serviceKey || svc.service_key,
+        overrides,
+      }
+    }),
+  }))
+}
+
 export default function Targets() {
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
@@ -321,9 +350,10 @@ export default function Targets() {
       )
 
       setSuccess('Targets saved and published to Nagios')
-      // Use PUT response so service_key (and all saved fields) are shown immediately without re-entering
+      // Merge response with current state so service_key and overrides never disappear after save
       if (Array.isArray(updatedHosts)) {
-        setHosts(normalizeHostsServiceKeys(updatedHosts))
+        const merged = mergeResponseWithCurrent(hosts, updatedHosts)
+        setHosts(normalizeHostsServiceKeys(merged))
       }
     } catch (err: any) {
       const fieldErrors = err?.errors ?? err?.response?.data?.errors
