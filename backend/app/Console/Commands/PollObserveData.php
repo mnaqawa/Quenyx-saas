@@ -187,7 +187,17 @@ class PollObserveData extends Command
                     $receivedKeys[] = $engineServiceKey;
 
                     $state = $service['state'] ?? $service['status'] ?? 'unknown';
-                    $state = is_string($state) ? strtolower(trim($state)) : 'unknown';
+                    if (is_numeric($state)) {
+                        $state = match ((int) $state) {
+                            0 => 'ok',
+                            1 => 'warning',
+                            2 => 'critical',
+                            3 => 'unknown',
+                            default => 'pending',
+                        };
+                    } else {
+                        $state = is_string($state) ? strtolower(trim($state)) : 'unknown';
+                    }
                     if (!in_array($state, ['ok', 'warning', 'critical', 'unknown', 'pending', 'unreachable'], true)) {
                         $state = 'unknown';
                     }

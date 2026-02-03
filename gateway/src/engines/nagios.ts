@@ -204,11 +204,13 @@ function normalizeService(
     ''
   const latency = detail.check_latency != null ? Number(detail.check_latency) : undefined
   const execTime = detail.execution_time != null ? Number(detail.execution_time) : undefined
+  // Nagios may return current_state as string (e.g. "1"); ensure number so stateToString doesn't fall through to 'pending'
+  const stateNum = Number(detail.current_state ?? (detail as Record<string, unknown>).status ?? -1)
   return {
     host_name: detail.host_name,
     service_name: serviceDesc,
     service_description: serviceDesc,
-    state: stateToString(detail.current_state),
+    state: stateToString(Number.isFinite(stateNum) ? stateNum : -1),
     last_check_at: lastCheck,
     next_check_at: nextCheck ? nextCheck : undefined,
     last_state_change_at: lastStateChange ? lastStateChange : undefined,
