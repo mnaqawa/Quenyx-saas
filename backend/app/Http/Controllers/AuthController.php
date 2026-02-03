@@ -161,11 +161,28 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated',
             ], 401);
+        }
+
+        $user->refresh();
+        $projectIds = ProjectMembership::where('user_id', $user->id)->pluck('project_id');
+        $activeModules = $projectIds->count(); // workspaces with access as proxy for "active modules"
+        $integrations = DB::table('integration_configurations')
+            ->whereIn('project_id', $projectIds)
+            ->whereNotNull('project_id')
+            ->count();
+        $apiCalls30d = 0;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'api_calls_30d')) {
+            $apiCalls30d = (int) ($user->getAttribute('api_calls_30d') ?? 0);
+        }
+
+        $preferences = $user->preferences ?? [];
+        if (! is_array($preferences)) {
+            $preferences = [];
         }
 
         return response()->json([
@@ -174,6 +191,14 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'created_at' => $user->created_at?->toIso8601String(),
+                'last_login_at' => $user->last_login_at?->toIso8601String(),
+                'preferences' => $preferences,
+                'stats' => [
+                    'active_modules' => $activeModules,
+                    'integrations' => $integrations,
+                    'api_calls_30d' => $apiCalls30d,
+                ],
             ],
         ]);
     }
@@ -182,18 +207,37 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated',
             ], 401);
         }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+        $validator = Validator::make($request->all(), [
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'preferences' => ['sometimes', 'array'],
+            'preferences.theme' => ['sometimes', 'string', 'in:light,dark,system'],
+            'preferences.language' => ['sometimes', 'string', 'in:en,ar'],
+            'preferences.notifications' => ['sometimes', 'array'],
         ]);
 
-        $user->name = $validated['name'];
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        if (isset($validated['name'])) {
+            $user->name = $validated['name'];
+        }
+        if (array_key_exists('preferences', $validated) && \Illuminate\Support\Facades\Schema::hasColumn($user->getTable(), 'preferences')) {
+            $current = is_array($user->preferences) ? $user->preferences : [];
+            $user->preferences = array_merge($current, $validated['preferences']);
+        }
         $user->save();
 
         return response()->json([
@@ -202,7 +246,62 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'created_at' => $user->created_at?->toIso8601String(),
+                'last_login_at' => $user->last_login_at?->toIso8601String(),
+                'preferences' => $user->preferences ?? [],
+                'stats' => $this->statsForUser($user),
             ],
         ]);
+    }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => ['message' => 'Password updated successfully.'],
+        ]);
+    }
+
+    private function statsForUser(User $user): array
+    {
+        $projectIds = ProjectMembership::where('user_id', $user->id)->pluck('project_id');
+        $activeModules = $projectIds->count();
+        $integrations = DB::table('integration_configurations')
+            ->whereIn('project_id', $projectIds)
+            ->whereNotNull('project_id')
+            ->count();
+        $apiCalls30d = 0;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'api_calls_30d')) {
+            $apiCalls30d = (int) ($user->getAttribute('api_calls_30d') ?? 0);
+        }
+        return [
+            'active_modules' => $activeModules,
+            'integrations' => $integrations,
+            'api_calls_30d' => $apiCalls30d,
+        ];
     }
 }
