@@ -17,7 +17,7 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping(90);
 
-        // Run native checks (no Nagios): updates ObserveService so Services UI stays fresh
+        // ShieldObserve engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
         $schedule->command('observe:run-checks')
             ->everyMinute()
             ->withoutOverlapping(90);

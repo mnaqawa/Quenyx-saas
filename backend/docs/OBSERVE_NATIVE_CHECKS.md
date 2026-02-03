@@ -1,5 +1,7 @@
 # In-Platform Monitoring (No Nagios Daemon)
 
+ShieldObserve is the **observe engine** microservice. All access must go **via the gateway**. Auto-checks run via `observe:run-checks` on the scheduler. See **docs/SHIELDOBSERVE_ENGINE_ARCHITECTURE.md** for architecture and gateway-only access.
+
 ## Validation: Will it work?
 
 **Yes.** You do **not** need to reimplement or analyze the full Nagios Core codebase. The platform already has:

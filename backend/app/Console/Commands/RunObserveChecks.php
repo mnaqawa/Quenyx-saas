@@ -61,6 +61,12 @@ class RunObserveChecks extends Command
 
                 $checkArgs = is_array($service->check_args) ? $service->check_args : [];
                 $serviceKey = $service->service_key ?? '';
+                $checkCommand = $service->check_command ?? '';
+                // NRPE-style types (disk, load, swap, ssh, etc.): run as plugin with script name = check_command
+                if (!in_array($serviceKey, ['http', 'tcp_port', 'ping', 'plugin'], true) && $checkCommand !== '') {
+                    $checkArgs = array_merge($checkArgs, ['plugin' => $checkCommand]);
+                    $serviceKey = 'plugin';
+                }
                 $context = [
                     'workspace_id' => $workspaceId,
                     'host_name' => $hostName,

@@ -4,6 +4,13 @@ import { createProxyMiddleware } from 'http-proxy-middleware'
 import { hashToken } from './cache'
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'
+const OBSERVE_ENGINE_URL = process.env.OBSERVE_ENGINE_URL || ''
+
+/** True if path (under /api) is an observe API (ShieldObserve microservice). */
+function isObservePath(req: Request): boolean {
+  const path = (req.url || req.path || '').split('?')[0]
+  return /^\/?(workspaces|projects)\/[^/]+\/observe(\/|$)/.test(path)
+}
 
 // Create keep-alive agent for better connection reuse
 const keepAliveAgent = new http.Agent({
@@ -14,11 +21,14 @@ const keepAliveAgent = new http.Agent({
 })
 
 /**
- * Create proxy middleware for forwarding requests to backend
+ * Create proxy middleware for forwarding requests to backend.
+ * When OBSERVE_ENGINE_URL is set, observe API requests (/api/workspaces/:id/observe/*, /api/projects/:id/observe/*)
+ * are sent to the observe engine service; all other /api requests go to BACKEND_BASE_URL.
  */
 export function createBackendProxy() {
   return createProxyMiddleware({
     target: BACKEND_BASE_URL,
+    router: (req: Request) => (OBSERVE_ENGINE_URL && isObservePath(req) ? OBSERVE_ENGINE_URL : BACKEND_BASE_URL),
     changeOrigin: true,
     xfwd: true,
     proxyTimeout: 60000,
