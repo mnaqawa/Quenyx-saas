@@ -55,6 +55,32 @@ class PollObserveData extends Command
         return $failCount > 0 ? 1 : 0;
     }
 
+    /**
+     * Parse gateway timestamp to DateTime. Accepts ISO string or Unix timestamp (seconds or milliseconds).
+     */
+    private function parseDateTime(mixed $value): ?\DateTime
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        try {
+            if (is_numeric($value)) {
+                $ts = (float) $value;
+                // If value looks like seconds (<= 10 digits), treat as seconds
+                $ts = $ts <= 9999999999 ? $ts : $ts / 1000;
+                $dt = new \DateTime();
+                $dt->setTimestamp((int) $ts);
+                return $dt;
+            }
+            if (is_string($value)) {
+                return new \DateTime($value);
+            }
+        } catch (\Exception $e) {
+            // ignore invalid date
+        }
+        return null;
+    }
+
     private function pollWorkspace(Project $workspace): bool
     {
         try {
@@ -166,30 +192,9 @@ class PollObserveData extends Command
                         $state = 'unknown';
                     }
 
-                    $lastCheckAt = null;
-                    if (!empty($service['last_check_at']) && is_string($service['last_check_at'])) {
-                        try {
-                            $lastCheckAt = new \DateTime($service['last_check_at']);
-                        } catch (\Exception $e) {
-                            // ignore invalid date
-                        }
-                    }
-                    $nextCheckAt = null;
-                    if (!empty($service['next_check_at']) && is_string($service['next_check_at'])) {
-                        try {
-                            $nextCheckAt = new \DateTime($service['next_check_at']);
-                        } catch (\Exception $e) {
-                            // ignore invalid date
-                        }
-                    }
-                    $lastStateChangeAt = null;
-                    if (!empty($service['last_state_change_at']) && is_string($service['last_state_change_at'])) {
-                        try {
-                            $lastStateChangeAt = new \DateTime($service['last_state_change_at']);
-                        } catch (\Exception $e) {
-                            // ignore invalid date
-                        }
-                    }
+                    $lastCheckAt = $this->parseDateTime($service['last_check_at'] ?? null);
+                    $nextCheckAt = $this->parseDateTime($service['next_check_at'] ?? null);
+                    $lastStateChangeAt = $this->parseDateTime($service['last_state_change_at'] ?? null);
 
                     ObserveService::updateOrCreate(
                         [

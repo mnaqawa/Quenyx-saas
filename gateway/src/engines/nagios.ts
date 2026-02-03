@@ -167,6 +167,20 @@ function calculateDuration(lastStateChange: string): number {
 }
 
 /**
+ * Normalize Nagios timestamp to ISO string for backend.
+ * Nagios statusjson.cgi returns last_check/next_check as Unix timestamp (seconds or milliseconds).
+ */
+function timestampToIso(value: string | number | undefined): string {
+  if (value == null || value === '') return ''
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return ''
+  // If value is in seconds (e.g. 10 digits), treat as seconds; else milliseconds
+  const ms = n <= 9999999999 ? n * 1000 : n
+  const d = new Date(ms)
+  return isNaN(d.getTime()) ? '' : d.toISOString()
+}
+
+/**
  * Normalize Nagios service detail to our structure (full fields for poll/API).
  * Includes service_description so backend can use it if service_name is missing.
  * @param fallbackServiceDescription - from servicelist row when detail omits or uses different key (e.g. some Nagios versions)
@@ -177,9 +191,9 @@ function normalizeService(
 ): NagiosService {
   const cur = detail.current_attempt ?? 0
   const max = detail.max_attempts ?? 0
-  const lastCheck = detail.last_check ?? ''
-  const lastStateChange = detail.last_state_change ?? ''
-  const nextCheck = detail.next_check ?? ''
+  const lastCheck = timestampToIso(detail.last_check ?? '')
+  const lastStateChange = timestampToIso(detail.last_state_change ?? '') || (detail.last_state_change as string) || ''
+  const nextCheck = timestampToIso(detail.next_check ?? '')
   const pluginOutput = detail.plugin_output ?? ''
   const longOutput = detail.long_plugin_output ?? ''
   const serviceDesc =
@@ -196,8 +210,8 @@ function normalizeService(
     service_description: serviceDesc,
     state: stateToString(detail.current_state),
     last_check_at: lastCheck,
-    next_check_at: nextCheck || undefined,
-    last_state_change_at: lastStateChange || undefined,
+    next_check_at: nextCheck ? nextCheck : undefined,
+    last_state_change_at: lastStateChange ? lastStateChange : undefined,
     duration_sec: lastStateChange ? calculateDuration(lastStateChange) : 0,
     attempt: `${cur}/${max}`,
     current_attempt: cur,
