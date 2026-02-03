@@ -169,8 +169,12 @@ function calculateDuration(lastStateChange: string): number {
 /**
  * Normalize Nagios service detail to our structure (full fields for poll/API).
  * Includes service_description so backend can use it if service_name is missing.
+ * @param fallbackServiceDescription - from servicelist row when detail omits or uses different key (e.g. some Nagios versions)
  */
-function normalizeService(detail: NagiosServiceDetailResponse['data']['service']): NagiosService {
+function normalizeService(
+  detail: NagiosServiceDetailResponse['data']['service'],
+  fallbackServiceDescription?: string
+): NagiosService {
   const cur = detail.current_attempt ?? 0
   const max = detail.max_attempts ?? 0
   const lastCheck = detail.last_check ?? ''
@@ -178,7 +182,12 @@ function normalizeService(detail: NagiosServiceDetailResponse['data']['service']
   const nextCheck = detail.next_check ?? ''
   const pluginOutput = detail.plugin_output ?? ''
   const longOutput = detail.long_plugin_output ?? ''
-  const serviceDesc = detail.service_description ?? ''
+  const serviceDesc =
+    (detail.service_description as string | undefined) ??
+    (detail.description as string | undefined) ??
+    (detail.service_desc as string | undefined) ??
+    fallbackServiceDescription ??
+    ''
   const latency = detail.check_latency != null ? Number(detail.check_latency) : undefined
   const execTime = detail.execution_time != null ? Number(detail.execution_time) : undefined
   return {
@@ -321,7 +330,7 @@ async function fetchAllServices(hostPrefix?: string): Promise<NagiosService[]> {
     try {
       const res = await fetchServiceDetail(r.host_name, r.service_description)
       const svc = res?.data?.service
-      if (svc) return normalizeService(svc)
+      if (svc) return normalizeService(svc, r.service_description)
     } catch {
       // Fallback to state-only row if detail fetch fails
     }

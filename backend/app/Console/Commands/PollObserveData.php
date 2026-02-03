@@ -120,15 +120,22 @@ class PollObserveData extends Command
                     $serviceName = $service['service_name'] ?? $service['service_description'] ?? $service['description'] ?? $service['service'] ?? $service['name'] ?? '';
                     $hostName = is_string($hostName) ? trim($hostName) : '';
                     $serviceName = is_string($serviceName) ? trim($serviceName) : '';
-                    if ($hostName === '' || $serviceName === '') {
-                        // Log once per workspace at debug with raw row shape so we can see gateway response (remove after validation)
-                        Log::debug('PollObserveData: skipping row missing host or service identifier', [
+                    if ($hostName === '') {
+                        Log::debug('PollObserveData: skipping row missing host identifier', [
                             'workspace_id' => $workspace->id,
                             'index' => $index,
                             'keys' => array_keys($service),
-                            'sample' => array_intersect_key($service, array_flip(['host_name', 'host', 'hostname', 'service_name', 'service_description', 'description', 'service', 'name', 'state'])),
                         ]);
                         continue;
+                    }
+                    // Gateway sometimes returns empty service_name/service_description (e.g. Nagios detail uses different key or pending state). Use stable placeholder so we still persist the row.
+                    if ($serviceName === '') {
+                        $serviceName = 'service-' . $index;
+                        Log::debug('PollObserveData: using placeholder service name for row with empty identifier', [
+                            'workspace_id' => $workspace->id,
+                            'index' => $index,
+                            'placeholder' => $serviceName,
+                        ]);
                     }
                     // Gateway should have already filtered, but verify for safety
                     if (!str_starts_with($hostName, $workspacePrefix)) {
