@@ -25,11 +25,15 @@ class ObserveTargetService extends Model
         'check_command',
         'check_args',
         'enabled',
+        'check_interval',
+        'retry_interval',
     ];
 
     protected $casts = [
         'check_args' => 'array',
         'enabled' => 'boolean',
+        'check_interval' => 'integer',
+        'retry_interval' => 'integer',
     ];
 
     public function workspace(): BelongsTo

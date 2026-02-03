@@ -165,6 +165,9 @@ class NagiosConfigPublisher
             ]);
             if (!$cfgIncludesOk) {
                 $publishError = $verifyIncludesData['message'] ?? 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).';
+                if (str_contains($publishError, 'cfg_dir') && !str_contains($publishError, 'Add cfg_dir')) {
+                    $publishError .= ' Add cfg_dir=/opt/nagios/etc/objects/portshield/workspaces to the main nagios.cfg, or ensure the gateway has Docker access to auto-add it.';
+                }
                 $result = 'failure';
             }
 
@@ -347,9 +350,11 @@ class NagiosConfigPublisher
                 $checkCmd = $this->resolveServiceCheckCommand($service, $workspaceId);
                 $lines[] = "    check_command           {$checkCmd}";
 
+                $checkInterval = $service->check_interval ?? 5;
+                $retryInterval = $service->retry_interval ?? 1;
                 $lines[] = "    max_check_attempts      3";
-                $lines[] = "    check_interval          5";
-                $lines[] = "    retry_interval          1";
+                $lines[] = "    check_interval          " . max(1, (int) $checkInterval);
+                $lines[] = "    retry_interval         " . max(1, (int) $retryInterval);
                 $lines[] = "    notification_interval   60";
                 $lines[] = "    notification_options    w,u,c,r";
                 $lines[] = "    contact_groups          admins";

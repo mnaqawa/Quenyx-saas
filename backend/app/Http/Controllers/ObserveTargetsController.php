@@ -147,7 +147,7 @@ class ObserveTargetsController extends Controller
                             'check_args_raw' => $check_args,
                             'response_overrides' => $responseOverrides,
                         ]);
-                        return [
+                        $row = [
                             'id' => $service->id,
                             'name' => $service->name,
                             'service_key' => $service_key,
@@ -156,6 +156,13 @@ class ObserveTargetsController extends Controller
                             'overrides' => $responseOverrides,
                             'enabled' => $service->enabled,
                         ];
+                        if (Schema::hasColumn($service->getTable(), 'check_interval')) {
+                            $row['check_interval'] = $service->check_interval;
+                        }
+                        if (Schema::hasColumn($service->getTable(), 'retry_interval')) {
+                            $row['retry_interval'] = $service->retry_interval;
+                        }
+                        return $row;
                     }),
                     'created_at' => $host->created_at->toIso8601String(),
                     'updated_at' => $host->updated_at->toIso8601String(),
@@ -198,6 +205,8 @@ class ObserveTargetsController extends Controller
             'hosts.*.services.*.service_key' => 'nullable|string|max:100',
             'hosts.*.services.*.overrides' => 'nullable|array',
             'hosts.*.services.*.enabled' => 'nullable|boolean',
+            'hosts.*.services.*.check_interval' => 'nullable|integer|min:1|max:86400',
+            'hosts.*.services.*.retry_interval' => 'nullable|integer|min:1|max:86400',
         ]);
 
         if ($validator->fails()) {
@@ -378,6 +387,12 @@ class ObserveTargetsController extends Controller
                             'check_args' => $checkArgsToStore,
                             'enabled' => $serviceData['enabled'] ?? true,
                         ];
+                        if (Schema::hasColumn($serviceTable, 'check_interval')) {
+                            $updateData['check_interval'] = isset($serviceData['check_interval']) ? (int) $serviceData['check_interval'] : null;
+                        }
+                        if (Schema::hasColumn($serviceTable, 'retry_interval')) {
+                            $updateData['retry_interval'] = isset($serviceData['retry_interval']) ? (int) $serviceData['retry_interval'] : null;
+                        }
                         Log::debug('ObserveTargets PUT check_args assignment (updateData)', [
                             'workspace_id' => $project->id,
                             'service_name' => $serviceData['name'] ?? null,

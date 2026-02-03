@@ -24,6 +24,10 @@ interface TargetService {
   service_key?: string
   overrides?: Record<string, unknown>
   enabled: boolean
+  /** Seconds between checks (Nagios check_interval). Configurable per service. */
+  check_interval?: number | null
+  /** Seconds before retry (Nagios retry_interval). Configurable per service. */
+  retry_interval?: number | null
 }
 
 /** Infer service_key from check_command when API does not send it (so dropdown shows saved type). */
@@ -376,6 +380,8 @@ export default function Targets() {
               check_command: effectiveKey ? undefined : (service.check_command || undefined),
               overrides: ensureOverridesObject(service.overrides),
               enabled: service.enabled,
+              check_interval: service.check_interval ?? undefined,
+              retry_interval: service.retry_interval ?? undefined,
             }
           }),
         })),
@@ -845,6 +851,42 @@ export default function Targets() {
                                       >
                                         Reset to defaults
                                       </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="text-xs font-medium text-white/60">Polling (check interval)</div>
+                                      <div className="flex flex-wrap items-center gap-3">
+                                        <label className="flex items-center gap-2 text-xs text-white/80">
+                                          Check interval (sec):
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={86400}
+                                            value={service.check_interval ?? ''}
+                                            onChange={(e) => {
+                                              const v = e.target.value
+                                              handleUpdateService(hostIndex, serviceIndex, 'check_interval', v === '' ? null : parseInt(v, 10))
+                                            }}
+                                            className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-white"
+                                            placeholder="5"
+                                          />
+                                        </label>
+                                        <label className="flex items-center gap-2 text-xs text-white/80">
+                                          Retry interval (sec):
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={86400}
+                                            value={service.retry_interval ?? ''}
+                                            onChange={(e) => {
+                                              const v = e.target.value
+                                              handleUpdateService(hostIndex, serviceIndex, 'retry_interval', v === '' ? null : parseInt(v, 10))
+                                            }}
+                                            className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-white"
+                                            placeholder="1"
+                                          />
+                                        </label>
+                                      </div>
+                                      <p className="text-[10px] text-white/50">How often Nagios runs this check and retries on failure. Leave empty for defaults (5s / 1s).</p>
                                     </div>
                                     {Object.entries(groups).map(([sectionName, fields]) => (
                                       <div key={sectionName} className="space-y-2">

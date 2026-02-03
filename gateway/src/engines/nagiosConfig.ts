@@ -196,33 +196,49 @@ function lineMatchesCfgDir(s: string): boolean {
 
 /**
  * Verify that nagios.cfg includes our published config path (cfg_dir or cfg_file).
- * Runs inside container: cat nagios.cfg and parse. Does not modify.
+ * If not included and Docker is accessible, tries to add cfg_dir and re-verifies.
  */
 export async function verifyNagiosCfgIncludesWorkspaces(): Promise<{ ok: boolean; message?: string }> {
   const dockerCheck = await checkDockerAccess()
   if (!dockerCheck.accessible) {
-    return { ok: false, message: dockerCheck.error ?? 'Docker access denied' }
-  }
-  try {
-    const catCmd = `docker exec ${NAGIOS_CONTAINER_NAME} cat ${NAGIOS_CFG_PATH}`
-    const { stdout } = await execAsync(catCmd, { timeout: 5000 })
-    const lines = (stdout || '').split(/\r?\n/)
-    const hasCfgDir = lines.some(lineMatchesCfgDir)
-    const hasCfgFileWorkspaces = lines.some((l) => {
-      const m = l.match(/^\s*cfg_file\s*=\s*(.+)\s*$/)
-      return m ? (m[1] ?? '').trim().includes('portshield/workspaces') : false
-    })
-    if (hasCfgDir || hasCfgFileWorkspaces) {
-      return { ok: true }
-    }
     return {
       ok: false,
-      message: 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).',
+      message: (dockerCheck.error ?? 'Docker access denied') + ' Add cfg_dir=/opt/nagios/etc/objects/portshield/workspaces to nagios.cfg manually.',
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return { ok: false, message: `Could not read nagios.cfg: ${msg}` }
   }
+  const checkOnce = async (): Promise<{ ok: boolean; message?: string }> => {
+    try {
+      const catCmd = `docker exec ${NAGIOS_CONTAINER_NAME} cat ${NAGIOS_CFG_PATH}`
+      const { stdout } = await execAsync(catCmd, { timeout: 5000 })
+      const lines = (stdout || '').split(/\r?\n/)
+      const hasCfgDir = lines.some(lineMatchesCfgDir)
+      const hasCfgFileWorkspaces = lines.some((l) => {
+        const m = l.match(/^\s*cfg_file\s*=\s*(.+)\s*$/)
+        return m ? (m[1] ?? '').trim().includes('portshield/workspaces') : false
+      })
+      if (hasCfgDir || hasCfgFileWorkspaces) {
+        return { ok: true }
+      }
+      return {
+        ok: false,
+        message: 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).',
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return { ok: false, message: `Could not read nagios.cfg: ${msg}` }
+    }
+  }
+
+  const first = await checkOnce()
+  if (first.ok) return first
+
+  // Auto-fix: ensure cfg_dir is present, then re-verify
+  await ensureNagiosIncludesWorkspacesCfgDir()
+  const second = await checkOnce()
+  if (second.ok) {
+    console.log('[nagios] verify-includes: cfg_dir was missing; auto-added and re-verified OK')
+  }
+  return second
 }
 
 const NAGIOS_OBJECTS_CACHE_PATH = process.env.NAGIOS_OBJECTS_CACHE_PATH || '/opt/nagios/var/objects.cache'
