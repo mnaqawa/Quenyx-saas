@@ -158,6 +158,23 @@ function stateToString(state: number): 'ok' | 'warning' | 'critical' | 'unknown'
 }
 
 /**
+ * Normalize state from detail: Nagios may return current_state, status, or state as number or string (e.g. "1", "WARNING").
+ */
+function normalizeState(detail: Record<string, unknown>): 'ok' | 'warning' | 'critical' | 'unknown' | 'pending' {
+  const raw = detail.current_state ?? detail.status ?? detail.state
+  if (raw === undefined || raw === null) return 'pending'
+  const n = Number(raw)
+  if (Number.isFinite(n)) return stateToString(n)
+  const s = String(raw).toLowerCase()
+  if (s === 'ok' || s === '0') return 'ok'
+  if (s === 'warning' || s === 'warn' || s === '1') return 'warning'
+  if (s === 'critical' || s === 'crit' || s === '2') return 'critical'
+  if (s === 'unknown' || s === '3') return 'unknown'
+  if (s === 'pending' || s === '4') return 'pending'
+  return 'pending'
+}
+
+/**
  * Calculate duration in seconds from last_state_change
  */
 function calculateDuration(lastStateChange: string): number {
@@ -204,13 +221,12 @@ function normalizeService(
     ''
   const latency = detail.check_latency != null ? Number(detail.check_latency) : undefined
   const execTime = detail.execution_time != null ? Number(detail.execution_time) : undefined
-  // Nagios may return current_state as string (e.g. "1"); ensure number so stateToString doesn't fall through to 'pending'
-  const stateNum = Number(detail.current_state ?? (detail as Record<string, unknown>).status ?? -1)
+  const state = normalizeState(detail as Record<string, unknown>)
   return {
     host_name: detail.host_name,
     service_name: serviceDesc,
     service_description: serviceDesc,
-    state: stateToString(Number.isFinite(stateNum) ? stateNum : -1),
+    state,
     last_check_at: lastCheck,
     next_check_at: nextCheck ? nextCheck : undefined,
     last_state_change_at: lastStateChange ? lastStateChange : undefined,

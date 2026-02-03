@@ -56,6 +56,31 @@ class PollObserveData extends Command
     }
 
     /**
+     * Infer service state from plugin/output text when gateway sends pending.
+     * Matches common Nagios plugin output (e.g. "PING OK", "HTTP WARNING", "CRITICAL", "Connection refused").
+     */
+    private function inferStateFromOutput(string $output): ?string
+    {
+        if ($output === '') {
+            return null;
+        }
+        $lower = strtolower($output);
+        if (str_contains($lower, 'critical') || str_contains($lower, 'connection refused') || str_contains($lower, 'connection timed out')) {
+            return 'critical';
+        }
+        if (str_contains($lower, 'warning') || str_contains($lower, 'warn ')) {
+            return 'warning';
+        }
+        if (str_contains($lower, ' ok ') || str_contains($lower, 'ok -') || preg_match('/\bok\b/i', $lower)) {
+            return 'ok';
+        }
+        if (str_contains($lower, 'unknown')) {
+            return 'unknown';
+        }
+        return null;
+    }
+
+    /**
      * Parse gateway timestamp to DateTime. Accepts ISO string or Unix timestamp (seconds or milliseconds).
      */
     private function parseDateTime(mixed $value): ?\DateTime
@@ -200,6 +225,15 @@ class PollObserveData extends Command
                     }
                     if (!in_array($state, ['ok', 'warning', 'critical', 'unknown', 'pending', 'unreachable'], true)) {
                         $state = 'unknown';
+                    }
+                    // If gateway still sends pending but we have plugin output, infer state from output so UI shows correct status
+                    if ($state === 'pending') {
+                        $inferred = $this->inferStateFromOutput(
+                            $service['plugin_output'] ?? $service['output'] ?? ''
+                        );
+                        if ($inferred !== null) {
+                            $state = $inferred;
+                        }
                     }
 
                     $lastCheckAt = $this->parseDateTime($service['last_check_at'] ?? null);
