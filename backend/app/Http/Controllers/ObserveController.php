@@ -199,7 +199,9 @@ class ObserveController extends Controller
 
         $lastPollAt = $meta?->last_poll_at?->toIso8601String();
         $engineUnreachable = !empty($meta?->error);
-        $engineUnreachableReason = $engineUnreachable ? (string) $meta->error : null;
+        $engineUnreachableReason = $engineUnreachable
+            ? (trim((string) ($meta->error ?? '')) !== '' ? (string) $meta->error : 'Monitoring engine could not be reached. Check gateway and observe:poll logs.')
+            : null;
         $staleThresholdSeconds = (int) config('observe.stale_threshold_seconds', 300);
         $sourceTimestamp = $lastPollAt;
         $stale = $lastPollAt

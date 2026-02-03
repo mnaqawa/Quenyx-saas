@@ -197,9 +197,9 @@ export default function Services() {
           {data.engine_unreachable ? (
             <span>
               Monitoring engine is unreachable. Status may be outdated.
-              {data.engine_unreachable_reason && (
-                <span className="block mt-1 opacity-90">Reason: {data.engine_unreachable_reason}</span>
-              )}
+              <span className="block mt-1 opacity-90">
+                Reason: {data.engine_unreachable_reason || 'Check gateway and observe:poll logs.'}
+              </span>
             </span>
           ) : (
             <span>Data may be stale (last poll: {data.last_poll_at ? new Date(data.last_poll_at).toLocaleString() : 'never'}).</span>

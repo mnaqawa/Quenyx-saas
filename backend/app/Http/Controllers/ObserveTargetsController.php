@@ -230,7 +230,9 @@ class ObserveTargetsController extends Controller
                 }
 
                 // Always persist overrides as check_args (JSON object). Never allow numeric-array to overwrite.
-                $overrides = $this->normalizeIncomingOverrides($serviceData['overrides'] ?? null);
+                // Accept both 'overrides' and 'check_args' from request (some clients may send either).
+                $rawOverrides = $serviceData['overrides'] ?? $serviceData['check_args'] ?? null;
+                $overrides = $this->normalizeIncomingOverrides($rawOverrides);
                 $serviceData['check_args'] = $overrides;
 
                 $serviceKey = $serviceData['service_key'] ?? null;
@@ -321,6 +323,16 @@ class ObserveTargetsController extends Controller
                         $checkArgsToStore = $serviceData['check_args'] ?? [];
                         if (is_array($checkArgsToStore) && array_keys($checkArgsToStore) === range(0, count($checkArgsToStore) - 1)) {
                             $checkArgsToStore = [];
+                        }
+                        // When request sent empty overrides, preserve existing DB value so we don't wipe saved config
+                        if ($checkArgsToStore === []) {
+                            $existing = ObserveTargetService::where('host_id', $host->id)
+                                ->where('name', $serviceData['name'])
+                                ->first();
+                            if ($existing && is_array($existing->check_args) && $existing->check_args !== []
+                                && ! (array_keys($existing->check_args) === range(0, count($existing->check_args) - 1))) {
+                                $checkArgsToStore = $existing->check_args;
+                            }
                         }
                         $serviceKeyToStore = isset($serviceData['service_key']) && $serviceData['service_key'] !== '' ? $serviceData['service_key'] : null;
 
