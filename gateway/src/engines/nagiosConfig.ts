@@ -19,7 +19,7 @@ function runNagiosValidateInContainer(
     const child = spawn('docker', [
       'exec',
       containerName,
-      '/usr/local/nagios/bin/nagios',
+      NAGIOS_BIN_PATH,
       '-v',
       cfgPath,
     ])
@@ -86,6 +86,7 @@ export async function checkDockerAccess(): Promise<{ accessible: boolean; error?
 }
 
 const NAGIOS_CFG_PATH = '/opt/nagios/etc/nagios.cfg'
+const NAGIOS_BIN_PATH = process.env.NAGIOS_BIN_PATH || '/usr/local/nagios/bin/nagios'
 const WORKSPACES_CFG_DIR_LINE = 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces'
 
 function lineMatchesCfgFile(s: string): boolean {

@@ -21,6 +21,18 @@ BACKEND_BASE_URL=http://127.0.0.1:8000  # Laravel backend URL
 ENTITLEMENTS_CACHE_TTL_MS=30000      # Cache TTL in milliseconds (default: 30s)
 ```
 
+### Observe / Nagios (ShieldObserve)
+
+If Save & Publish fails with `stat /usr/local/nagios/bin/nagios: no such file or directory`, set the path to the Nagios binary **inside the Nagios container**:
+
+```bash
+NAGIOS_BIN_PATH=/usr/local/nagios/bin/nagios   # default; override if your image uses another path, e.g. /usr/bin/nagios
+NAGIOS_CONFIG_DIR=./nagios/config              # host path for generated configs
+NAGIOS_CONTAINER_NAME=nagios-core              # Docker container name for validation/reload
+```
+
+Rebuild and restart the gateway after changing these.
+
 ## Installation
 
 ```bash

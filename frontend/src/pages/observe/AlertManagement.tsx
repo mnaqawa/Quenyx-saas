@@ -32,10 +32,10 @@ export default function AlertManagement() {
         subtitle="Configure alerts, manage notification channels, and track alert history"
         actions={
           <>
-            <button className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-1.5 text-xs text-sky-200">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-sky-500/20 bg-sky-500/5 px-4 py-1.5 text-xs text-sky-200/60">
               Global Settings
             </button>
-            <button className="rounded-lg bg-sky-500 px-4 py-1.5 text-xs font-semibold text-white">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg bg-sky-500/50 px-4 py-1.5 text-xs font-semibold text-white/70">
               + Create Alert Rule
             </button>
           </>
@@ -81,7 +81,9 @@ export default function AlertManagement() {
               >
                 <div className="flex items-center gap-3">
                   <button
-                    className={`h-6 w-12 rounded-full transition ${
+                    title="Coming soon"
+                    disabled
+                    className={`cursor-not-allowed h-6 w-12 rounded-full transition opacity-60 ${
                       rule.enabled ? 'bg-sky-500' : 'bg-white/10'
                     }`}
                   >
@@ -116,10 +118,10 @@ export default function AlertManagement() {
                       status={rule.severity}
                       label={`▲ ${rule.severity.charAt(0).toUpperCase() + rule.severity.slice(1)}`}
                     />
-                    <button className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10">
+                    <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 p-1.5 text-white/40">
                       ✏️
                     </button>
-                    <button className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10">
+                    <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 p-1.5 text-white/40">
                       🗑️
                     </button>
                   </div>

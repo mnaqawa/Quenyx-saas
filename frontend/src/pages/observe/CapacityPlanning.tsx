@@ -43,10 +43,10 @@ export default function CapacityPlanning() {
               <option value="6 Months" className="bg-slate-900 text-white">6 Months</option>
               <option value="3 Months" className="bg-slate-900 text-white">3 Months</option>
             </select>
-            <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40">
               Export Report
             </button>
-            <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40">
               Configure
             </button>
           </>

@@ -37,10 +37,10 @@ export default function PerformanceAnalytics() {
               <option value="Last 7 Days" className="bg-slate-900 text-white">Last 7 Days</option>
               <option value="Last 30 Days" className="bg-slate-900 text-white">Last 30 Days</option>
             </select>
-            <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40">
               Export
             </button>
-            <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
+            <button title="Coming soon" disabled className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40">
               Configure
             </button>
           </>
