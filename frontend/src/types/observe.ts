@@ -274,6 +274,8 @@ export interface ServiceDefinition {
   engine: string
   service_key: string
   display_name: string
+  /** Short description of what this plugin does and how it helps monitor services. */
+  description?: string | null
   check_command: string
   args_schema: ArgsSchemaEntry[]
   capability_flags: string[]

@@ -19,6 +19,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'engine' => 'nagios',
                 'service_key' => 'ping',
                 'display_name' => 'Ping',
+                'description' => 'Checks host reachability and latency using ICMP. Alerts on packet loss or high round-trip time. Use this to ensure the host is online and responsive.',
                 'check_command' => 'check_ping',
                 'args_schema' => [
                     ['position' => 0, 'key' => 'warn_rta_ms', 'default' => 100, 'required' => false],
@@ -33,6 +34,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'engine' => 'nagios',
                 'service_key' => 'http',
                 'display_name' => 'HTTP',
+                'description' => 'Performs an HTTP GET to the given URL and checks the response status. Use this to monitor web apps, APIs, or any HTTP service. You can set path, port, and expected status code.',
                 'check_command' => 'check_http',
                 'args_schema' => [
                     ['position' => 0, 'key' => 'path', 'default' => '/', 'required' => false],
@@ -46,6 +48,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'engine' => 'nagios',
                 'service_key' => 'tcp_port',
                 'display_name' => 'TCP Port',
+                'description' => 'Checks if a TCP port is open and accepting connections. Ideal for databases, SSH, mail, or any service that listens on a port.',
                 'check_command' => 'check_tcp',
                 'args_schema' => [
                     ['position' => 0, 'key' => 'port', 'default' => 80, 'required' => true],
@@ -56,7 +59,8 @@ class ObserveServiceDefinitionSeeder extends Seeder
             [
                 'engine' => 'nagios',
                 'service_key' => 'plugin',
-                'display_name' => 'Plugin',
+                'display_name' => 'Custom Script',
+                'description' => 'Runs your own monitoring script by name. Place the script (e.g. my_check.sh or my_check.php) in the observe plugins directory and enter its name here. The script receives the host address and your args via environment variables and must exit 0=OK, 1=Warning, 2=Critical, 3=Unknown.',
                 'check_command' => 'check_plugin',
                 'args_schema' => [
                     ['position' => 0, 'key' => 'plugin', 'default' => null, 'required' => true],
@@ -68,6 +72,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'engine' => 'nagios',
                 'service_key' => 'custom',
                 'display_name' => 'Custom',
+                'description' => null,
                 'check_command' => '',
                 'args_schema' => [],
                 'capability_flags' => [],

@@ -387,36 +387,24 @@ export default function Targets() {
         })),
       }
 
-      type PutResult = { targets?: TargetHost[]; nagios_publish_success?: boolean; nagios_publish_error?: string; nagios_validation_errors?: string[] }
+      type PutResult = { targets?: TargetHost[] }
       const result = await gatewayClient.put<TargetHost[] | PutResult>(
         `workspaces/${workspaceId}/observe/targets`,
         payload,
         { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
       )
 
-      // Response shape: either array (legacy) or { targets, nagios_publish_success, nagios_publish_error, nagios_validation_errors }
       const hostsFromResponse = Array.isArray(result) ? result : (result?.targets ?? [])
       const merged = mergeResponseWithCurrent(hosts, hostsFromResponse)
       setHosts(normalizeHostsServiceKeys(merged))
 
-      const publishSuccess = Array.isArray(result) ? true : (result?.nagios_publish_success !== false)
-      if (!publishSuccess && result && typeof result === 'object' && 'nagios_publish_error' in result) {
-        const putResult = result as PutResult
-        setSuccess(null)
-        setError(putResult.nagios_publish_error || 'Nagios publish failed. Targets saved but config was not applied.')
-        const nagiosErrs = putResult.nagios_validation_errors
-        if (nagiosErrs?.length) {
-          setValidationErrors((prev) => ({ ...prev, nagios: nagiosErrs }))
-        }
-      } else {
-        setSuccess('Targets saved and published to Nagios')
-        setError(null)
-        setValidationErrors((prev) => {
-          const next = { ...prev }
-          delete next.nagios
-          return next
-        })
-      }
+      setSuccess('Targets saved. Checks run by ShieldObserve.')
+      setError(null)
+      setValidationErrors((prev) => {
+        const next = { ...prev }
+        delete next.nagios
+        return next
+      })
     } catch (err: any) {
       const fieldErrors = err?.errors ?? err?.response?.data?.errors
       if (fieldErrors && typeof fieldErrors === 'object') {
@@ -607,7 +595,7 @@ export default function Targets() {
 
       <PageHeader
         title="Monitored Targets"
-        subtitle="Define hosts and services to monitor in Nagios"
+        subtitle="Define hosts and services to monitor with ShieldObserve"
         actions={
           <>
             {canEdit && (
@@ -624,7 +612,7 @@ export default function Targets() {
                   disabled={saving || isLocked}
                   className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-4 py-1.5 text-xs font-medium text-sky-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sky-500/30"
                 >
-                  {saving ? 'Saving...' : 'Save & Publish'}
+                  {saving ? 'Saving...' : 'Save'}
                 </button>
               </>
             )}
@@ -833,6 +821,11 @@ export default function Targets() {
                             </div>
                             {def && displayedServiceKey && (
                               <>
+                                {def.description && (
+                                  <p className="text-xs text-white/60 leading-relaxed max-w-2xl">
+                                    {def.description}
+                                  </p>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => toggleServiceExpanded(serviceKey)}

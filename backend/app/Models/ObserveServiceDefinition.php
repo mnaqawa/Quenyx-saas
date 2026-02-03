@@ -30,6 +30,7 @@ class ObserveServiceDefinition extends Model
         'engine',
         'service_key',
         'display_name',
+        'description',
         'check_command',
         'args_schema',
         'capability_flags',

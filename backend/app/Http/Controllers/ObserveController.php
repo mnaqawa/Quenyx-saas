@@ -36,6 +36,7 @@ class ObserveController extends Controller
                 'engine' => $d->engine,
                 'service_key' => $d->service_key,
                 'display_name' => $d->display_name,
+                'description' => $d->description,
                 'check_command' => $d->check_command,
                 'args_schema' => $d->args_schema ?? [],
                 'capability_flags' => $d->capability_flags ?? [],

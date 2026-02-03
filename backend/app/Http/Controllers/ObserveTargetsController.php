@@ -7,7 +7,6 @@ use App\Models\ObserveTargetService;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
-use App\Services\NagiosConfigPublisher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -455,66 +454,20 @@ class ObserveTargetsController extends Controller
                 }
             }
 
-            // Sync targets → observe_services immediately so Services page updates without waiting for Nagios poll
+            // Sync targets → observe_services (native engine) so Services page shows targets; run-checks will update state
             $this->syncTargetsToObserveServices($project);
 
-            $nagiosPublishSuccess = true;
-            $nagiosPublishError = null;
-            $nagiosValidationErrors = [];
-            $nagiosPostPublishChecks = [
-                'cfg_includes_ok' => true,
-                'validate_ok' => true,
-                'reload_ok' => true,
-                'objects_cache_contains_new_objects' => true,
-            ];
-
-            // Auto-publish config to Nagios if enabled; capture result for UI (do not pretend success)
-            $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);
-            if ($autoPublish) {
-                try {
-                    $publisher = new NagiosConfigPublisher();
-                    $publishResult = $publisher->publish($project->id, auth()->id());
-                    $nagiosPublishSuccess = $publishResult['nagios_publish_success'];
-                    $nagiosPublishError = $publishResult['nagios_publish_error'];
-                    $nagiosValidationErrors = $publishResult['nagios_validation_errors'];
-                    $nagiosPostPublishChecks = $publishResult['nagios_post_publish_checks'];
-                    if ($nagiosPublishSuccess) {
-                        Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
-                    }
-                } catch (\App\Exceptions\NagiosPublishException $e) {
-                    $nagiosPublishSuccess = false;
-                    $nagiosPublishError = $e->getMessage();
-                    $nagiosValidationErrors = $e->validationErrors;
-                    $nagiosPostPublishChecks = [
-                        'cfg_includes_ok' => false,
-                        'validate_ok' => false,
-                        'reload_ok' => false,
-                        'objects_cache_contains_new_objects' => false,
-                    ];
-                    Log::warning('Failed to publish Nagios config after targets update', [
-                        'workspace_id' => $project->id,
-                        'error' => $nagiosPublishError,
-                    ]);
-                } catch (\Exception $e) {
-                    $nagiosPublishSuccess = false;
-                    $nagiosPublishError = $e->getMessage();
-                    $nagiosValidationErrors = [];
-                    $nagiosPostPublishChecks = [
-                        'cfg_includes_ok' => false,
-                        'validate_ok' => false,
-                        'reload_ok' => false,
-                        'objects_cache_contains_new_objects' => false,
-                    ];
-                    Log::warning('Failed to publish Nagios config after targets update', [
-                        'workspace_id' => $project->id,
-                        'error' => $nagiosPublishError,
-                    ]);
-                }
-            } else {
-                Log::info('Auto-publish disabled, skipping Nagios config publish', ['workspace_id' => $project->id]);
+            // Run native checks once for this workspace so Services page updates immediately
+            try {
+                Artisan::call('observe:run-checks', ['--workspace_id' => (string) $project->id]);
+            } catch (\Exception $e) {
+                Log::warning('observe:run-checks after save failed', [
+                    'workspace_id' => $project->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
-            // Return updated targets + publish result so frontend can show success/failure
+            // Return updated targets (no Nagios publish; we use ShieldObserve native engine only)
             $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
             $hosts = ObserveTargetHost::where('workspace_id', $project->id)
                 ->with('services')
@@ -548,13 +501,9 @@ class ObserveTargetsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $nagiosPublishSuccess ? 'Targets saved and published to Nagios' : 'Targets saved; Nagios publish failed',
+                'message' => 'Targets saved. Checks run by ShieldObserve engine.',
                 'data' => [
                     'targets' => $hosts,
-                    'nagios_publish_success' => $nagiosPublishSuccess,
-                    'nagios_publish_error' => $nagiosPublishError,
-                    'nagios_validation_errors' => $nagiosValidationErrors,
-                    'nagios_post_publish_checks' => $nagiosPostPublishChecks,
                 ],
             ]);
 
@@ -638,7 +587,7 @@ class ObserveTargetsController extends Controller
 
     /**
      * Sync current targets (hosts + services) into observe_services so the Services page
-     * reflects add/remove/modify immediately without waiting for Nagios poll.
+     * reflects them. Uses native engine; observe:run-checks will run checks and update state.
      */
     private function syncTargetsToObserveServices(Project $project): void
     {
@@ -648,7 +597,7 @@ class ObserveTargetsController extends Controller
 
         $workspaceId = $project->id;
         $prefix = 'ws' . $workspaceId . '-';
-        $engineKey = 'nagios';
+        $engineKey = 'native';
 
         $hosts = ObserveTargetHost::where('workspace_id', $workspaceId)
             ->where('enabled', true)
@@ -676,7 +625,7 @@ class ObserveTargetsController extends Controller
                         'last_check_at' => null,
                         'duration_sec' => null,
                         'attempt' => null,
-                        'output' => 'Pending first check',
+                        'output' => 'Pending first check (ShieldObserve)',
                         'perfdata' => null,
                     ]
                 );
