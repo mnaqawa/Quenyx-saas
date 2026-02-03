@@ -21,6 +21,7 @@ class ObserveTargetService extends Model
         'workspace_id',
         'host_id',
         'name',
+        'service_key',
         'check_command',
         'check_args',
         'enabled',

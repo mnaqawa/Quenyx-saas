@@ -59,6 +59,25 @@ class ObserveTargetsController extends Controller
     }
 
     /**
+     * Resolve service_key for response: DB column when present, else infer from check_command/name.
+     */
+    private function serviceKeyForResponse(ObserveTargetService $service, array $definitionsByCommand): string
+    {
+        if (Schema::hasColumn($service->getTable(), 'service_key')) {
+            $dbKey = $service->service_key;
+            if ($dbKey !== null && $dbKey !== '') {
+                return $dbKey;
+            }
+        }
+        $raw = trim($service->check_command ?? '');
+        $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
+        if ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand])) {
+            return $definitionsByCommand[$baseCommand];
+        }
+        return $this->inferServiceKeyFromServiceName($service->name ?? '') ?? '';
+    }
+
+    /**
      * Get observe targets for a workspace
      */
     public function index(Request $request, Project $project): JsonResponse
@@ -79,14 +98,9 @@ class ObserveTargetsController extends Controller
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
                     'services' => $host->services->map(function ($service) use ($definitionsByCommand, $project) {
-                        $raw = trim($service->check_command ?? '');
-                        $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
-                        $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
-                            ? $definitionsByCommand[$baseCommand]
-                            : $this->inferServiceKeyFromServiceName($service->name ?? '');
                         $check_args = $service->check_args ?? [];
                         $responseOverrides = $this->overridesForResponse($check_args);
-                        // Deterministic tracing: GET overrides pipeline
+                        $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
                         Log::debug('ObserveTargets GET overrides', [
                             'workspace_id' => $project->id,
                             'service_id' => $service->id,
@@ -97,9 +111,9 @@ class ObserveTargetsController extends Controller
                         return [
                             'id' => $service->id,
                             'name' => $service->name,
+                            'service_key' => $service_key,
                             'check_command' => $service->check_command,
                             'check_args' => $check_args,
-                            'service_key' => $service_key,
                             'overrides' => $responseOverrides,
                             'enabled' => $service->enabled,
                         ];
@@ -130,6 +144,12 @@ class ObserveTargetsController extends Controller
         }
         $hostsInput = is_array($hostsInput) ? $hostsInput : [];
         $request->merge(['hosts' => $hostsInput]);
+
+        // One-time debug: confirm DB connection (remove after verification)
+        Log::debug('ObserveTargets PUT DB', [
+            'connection' => DB::connection()->getName(),
+            'database' => DB::connection()->getDatabaseName(),
+        ]);
 
         $validator = Validator::make($request->all(), [
             'hosts' => 'present|array',
@@ -197,8 +217,11 @@ class ObserveTargetsController extends Controller
                     continue;
                 }
 
-                $serviceKey = $serviceData['service_key'] ?? null;
+                // Always persist overrides as check_args (JSON object). Never allow numeric-array to overwrite.
                 $overrides = $this->normalizeIncomingOverrides($serviceData['overrides'] ?? null);
+                $serviceData['check_args'] = $overrides;
+
+                $serviceKey = $serviceData['service_key'] ?? null;
                 $incomingCheckCommand = $serviceData['check_command'] ?? null;
 
                 // If service_key is provided, resolve it to check_command
@@ -217,7 +240,7 @@ class ObserveTargetsController extends Controller
                     // Fallback: use check_command from request when service_key is empty (e.g. existing service from load)
                     if ($incomingCheckCommand !== null && $incomingCheckCommand !== '') {
                         $serviceData['check_command'] = $incomingCheckCommand;
-                        $serviceData['check_args'] = $overrides;
+                        // check_args already set from overrides above
                     } elseif (!isset($serviceData['check_command'])) {
                         $serviceData['check_command'] = '';
                     }
@@ -282,7 +305,12 @@ class ObserveTargetsController extends Controller
                     $newServiceIds = [];
 
                     foreach ($servicesData as $serviceData) {
+                        // check_args was set in validation loop from normalized overrides; ensure we never store numeric array
                         $checkArgsToStore = $serviceData['check_args'] ?? [];
+                        if (is_array($checkArgsToStore) && array_keys($checkArgsToStore) === range(0, count($checkArgsToStore) - 1)) {
+                            $checkArgsToStore = [];
+                        }
+                        $serviceKeyToStore = isset($serviceData['service_key']) && $serviceData['service_key'] !== '' ? $serviceData['service_key'] : null;
 
                         Log::debug('ObserveTargets PUT overrides (before save)', [
                             'workspace_id' => $project->id,
@@ -298,6 +326,7 @@ class ObserveTargetsController extends Controller
                             ],
                             [
                                 'workspace_id' => $project->id,
+                                'service_key' => $serviceKeyToStore,
                                 'check_command' => $serviceData['check_command'] ?? '',
                                 'check_args' => $checkArgsToStore,
                                 'enabled' => $serviceData['enabled'] ?? true,
@@ -393,18 +422,14 @@ class ObserveTargetsController extends Controller
                         'tags' => $host->tags ?? [],
                         'enabled' => $host->enabled,
                         'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                            $raw = trim($service->check_command ?? '');
-                            $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
-                            $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
-                                ? $definitionsByCommand[$baseCommand]
-                                : $this->inferServiceKeyFromServiceName($service->name ?? '');
                             $check_args = $service->check_args ?? [];
+                            $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
                             return [
                                 'id' => $service->id,
                                 'name' => $service->name,
+                                'service_key' => $service_key,
                                 'check_command' => $service->check_command,
                                 'check_args' => $check_args,
-                                'service_key' => $service_key,
                                 'overrides' => $this->overridesForResponse($check_args),
                                 'enabled' => $service->enabled,
                             ];
