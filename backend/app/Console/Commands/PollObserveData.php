@@ -128,14 +128,29 @@ class PollObserveData extends Command
                         ]);
                         continue;
                     }
-                    // Gateway sometimes returns empty service_name/service_description (e.g. Nagios detail uses different key or pending state). Use stable placeholder so we still persist the row.
+                    // Gateway sometimes returns empty service_name (e.g. Nagios detail uses different key). Match by host + row index to existing observe_services so we update sync-created rows (HTTP Check, etc.) instead of creating service-0, service-1.
                     if ($serviceName === '') {
-                        $serviceName = 'service-' . $index;
-                        Log::debug('PollObserveData: using placeholder service name for row with empty identifier', [
-                            'workspace_id' => $workspace->id,
-                            'index' => $index,
-                            'placeholder' => $serviceName,
-                        ]);
+                        $existingForHost = ObserveService::where('workspace_id', $workspace->id)
+                            ->where('engine_key', $engineKey)
+                            ->where('host_name', $hostName)
+                            ->orderBy('id')
+                            ->get();
+                        $existing = $existingForHost->get($index);
+                        if ($existing !== null) {
+                            $serviceName = $existing->service_name;
+                            Log::debug('PollObserveData: resolved empty service name from existing row by index', [
+                                'workspace_id' => $workspace->id,
+                                'index' => $index,
+                                'service_name' => $serviceName,
+                            ]);
+                        } else {
+                            $serviceName = 'service-' . $index;
+                            Log::debug('PollObserveData: using placeholder service name for row with empty identifier', [
+                                'workspace_id' => $workspace->id,
+                                'index' => $index,
+                                'placeholder' => $serviceName,
+                            ]);
+                        }
                     }
                     // Gateway should have already filtered, but verify for safety
                     if (!str_starts_with($hostName, $workspacePrefix)) {
