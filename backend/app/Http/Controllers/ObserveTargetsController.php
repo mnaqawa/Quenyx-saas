@@ -205,8 +205,8 @@ class ObserveTargetsController extends Controller
             'hosts.*.services.*.service_key' => 'nullable|string|max:100',
             'hosts.*.services.*.overrides' => 'nullable|array',
             'hosts.*.services.*.enabled' => 'nullable|boolean',
-            'hosts.*.services.*.check_interval' => 'nullable|integer|min:1|max:86400',
-            'hosts.*.services.*.retry_interval' => 'nullable|integer|min:1|max:86400',
+            'hosts.*.services.*.check_interval' => 'nullable|integer|min:1|max:10080',
+            'hosts.*.services.*.retry_interval' => 'nullable|integer|min:1|max:10080',
         ]);
 
         if ($validator->fails()) {
