@@ -24,9 +24,9 @@ interface TargetService {
   service_key?: string
   overrides?: Record<string, unknown>
   enabled: boolean
-  /** Minutes between checks (Nagios check_interval). Configurable per service. */
+  /** Seconds between checks (Nagios check_interval). Configurable per service. */
   check_interval?: number | null
-  /** Minutes before retry (Nagios retry_interval). Configurable per service. */
+  /** Seconds before retry (Nagios retry_interval). Configurable per service. */
   retry_interval?: number | null
 }
 
@@ -860,7 +860,7 @@ export default function Targets() {
                                           <input
                                             type="number"
                                             min={1}
-                                            max={10080}
+                                            max={86400}
                                             value={service.check_interval ?? ''}
                                             onChange={(e) => {
                                               const v = e.target.value
@@ -875,7 +875,7 @@ export default function Targets() {
                                           <input
                                             type="number"
                                             min={1}
-                                            max={10080}
+                                            max={86400}
                                             value={service.retry_interval ?? ''}
                                             onChange={(e) => {
                                               const v = e.target.value
@@ -886,7 +886,7 @@ export default function Targets() {
                                           />
                                         </label>
                                       </div>
-                                      <p className="text-[10px] text-white/50">How often Nagios runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).</p>
+                                      <p className="text-[10px] text-white/50">How often Nagios runs this check and retries on failure. Leave empty for defaults (5s / 1s).</p>
                                     </div>
                                     {Object.entries(groups).map(([sectionName, fields]) => (
                                       <div key={sectionName} className="space-y-2">

@@ -350,12 +350,15 @@ class NagiosConfigPublisher
                 $checkCmd = $this->resolveServiceCheckCommand($service, $workspaceId);
                 $lines[] = "    check_command           {$checkCmd}";
 
-                // UI/DB store intervals in minutes (same units Nagios uses: value × interval_length, default 60s)
-                $checkInterval = max(1, (int) ($service->check_interval ?? 5));
-                $retryInterval = max(1, (int) ($service->retry_interval ?? 1));
+                // UI/DB store intervals in seconds; Nagios uses (value × interval_length) where interval_length default is 60s
+                $checkIntervalSec = (int) ($service->check_interval ?? 5);
+                $retryIntervalSec = (int) ($service->retry_interval ?? 1);
+                $nagiosIntervalLength = 60; // seconds per Nagios unit (nagios.cfg default)
+                $checkIntervalNagios = max(0.0167, $checkIntervalSec / $nagiosIntervalLength); // min ~1 sec
+                $retryIntervalNagios = max(0.0167, $retryIntervalSec / $nagiosIntervalLength);
                 $lines[] = "    max_check_attempts      3";
-                $lines[] = "    check_interval          {$checkInterval}";
-                $lines[] = "    retry_interval         {$retryInterval}";
+                $lines[] = "    check_interval          " . round($checkIntervalNagios, 4);
+                $lines[] = "    retry_interval         " . round($retryIntervalNagios, 4);
                 $lines[] = "    notification_interval   60";
                 $lines[] = "    notification_options    w,u,c,r";
                 $lines[] = "    contact_groups          admins";
