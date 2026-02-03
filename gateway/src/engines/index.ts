@@ -232,8 +232,9 @@ export function createEngineRouter(): Router {
   router.get('/nagios/objects-cache-check', async (req: Request, res: Response) => {
     try {
       const raw = req.query.host_prefix
-      const hostPrefix = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined
-      const result = await checkObjectsCacheForHostPrefix(hostPrefix ?? '')
+      const hostPrefix: string =
+        typeof raw === 'string' ? raw : Array.isArray(raw) && typeof raw[0] === 'string' ? raw[0] : ''
+      const result = await checkObjectsCacheForHostPrefix(hostPrefix)
       res.json({
         success: true,
         contains_new_objects: result.contains_new_objects,
