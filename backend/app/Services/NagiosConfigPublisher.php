@@ -26,13 +26,36 @@ class NagiosConfigPublisher
     }
 
     /**
+     * Build default post-publish checks (all true = skipped or N/A).
+     */
+    private function defaultPostPublishChecks(): array
+    {
+        return [
+            'cfg_includes_ok' => true,
+            'validate_ok' => true,
+            'reload_ok' => true,
+            'objects_cache_contains_new_objects' => true,
+        ];
+    }
+
+    /**
      * Publish Nagios config for a workspace (TPM: atomic, validated, reload-verified, locked, audited).
+     * Post-publish verification: cfg included in nagios.cfg, nagios -v, reload, objects.cache contains new hosts.
      *
      * @param int $workspaceId
      * @param int|null $userId Optional; for audit trail.
+     * @return array{nagios_publish_success: bool, nagios_publish_error: string|null, nagios_validation_errors: array, nagios_post_publish_checks: array}
      */
-    public function publish(int $workspaceId, ?int $userId = null): void
+    public function publish(int $workspaceId, ?int $userId = null): array
     {
+        $defaultChecks = $this->defaultPostPublishChecks();
+        $emptyResult = [
+            'nagios_publish_success' => true,
+            'nagios_publish_error' => null,
+            'nagios_validation_errors' => [],
+            'nagios_post_publish_checks' => $defaultChecks,
+        ];
+
         if (!Schema::hasTable('observe_targets_hosts')) {
             throw new \Exception('Database tables not found. Please run migrations first: php artisan migrate');
         }
@@ -46,7 +69,7 @@ class NagiosConfigPublisher
 
         if ($hosts->isEmpty()) {
             Log::info("No enabled targets for workspace {$workspaceId}, skipping config publish");
-            return;
+            return $emptyResult;
         }
 
         $config = $this->buildConfig($hosts, $workspaceId);
@@ -60,6 +83,12 @@ class NagiosConfigPublisher
         $result = 'success';
         $publishError = null;
         $validationErrors = [];
+        $postChecks = [
+            'cfg_includes_ok' => false,
+            'validate_ok' => false,
+            'reload_ok' => false,
+            'objects_cache_contains_new_objects' => false,
+        ];
 
         try {
             $writeResponse = Http::timeout(30)
@@ -77,11 +106,10 @@ class NagiosConfigPublisher
                 $validationErrors = $body['validation_errors'] ?? [];
                 $msg = $body['message'] ?? 'Config validation failed';
                 $publishError = $msg . (\count($validationErrors) > 0 ? ': ' . implode('; ', array_slice($validationErrors, 0, 5)) : '');
-                // If we only got the generic "Command failed: docker exec" message, gateway may be old; fetch current validation and log a hint
-                $singleGeneric = \count($validationErrors) === 1
+                $postChecks['validate_ok'] = false;
+                if (\count($validationErrors) === 1
                     && str_contains($validationErrors[0] ?? '', 'Command failed: docker exec')
-                    && str_contains($validationErrors[0] ?? '', 'nagios -v');
-                if ($singleGeneric) {
+                    && str_contains($validationErrors[0] ?? '', 'nagios -v')) {
                     try {
                         $validateResp = Http::timeout(15)
                             ->withHeaders(['x-internal-secret' => $this->internalSecret])
@@ -103,13 +131,41 @@ class NagiosConfigPublisher
                     ['workspace_id' => $workspaceId, 'engine_key' => 'nagios'],
                     ['last_publish_at' => now(), 'last_publish_success' => false, 'last_publish_error' => $publishError]
                 );
-                throw new \App\Exceptions\NagiosPublishException($publishError, $validationErrors);
+                Log::info('Nagios post-publish checks (config write failed)', [
+                    'workspace_id' => $workspaceId,
+                    'nagios_post_publish_checks' => $postChecks,
+                ]);
+                return [
+                    'nagios_publish_success' => false,
+                    'nagios_publish_error' => $publishError,
+                    'nagios_validation_errors' => $validationErrors,
+                    'nagios_post_publish_checks' => $postChecks,
+                ];
             }
 
             if (!$writeResponse->successful()) {
                 $publishError = "Gateway returned {$writeResponse->status()}: {$writeResponse->body()}";
                 $this->auditPublish($workspaceId, $userId, 'failure', $publishError);
                 throw new \Exception($publishError);
+            }
+
+            $postChecks['validate_ok'] = true;
+
+            // Verify generated workspace config is referenced by nagios.cfg
+            $verifyIncludesResp = Http::timeout(15)
+                ->withHeaders(['x-internal-secret' => $this->internalSecret])
+                ->get("{$this->gatewayUrl}/internal/engines/nagios/verify-includes");
+            $verifyIncludesData = $verifyIncludesResp->json() ?? [];
+            $cfgIncludesOk = ($verifyIncludesData['ok'] ?? false) === true;
+            $postChecks['cfg_includes_ok'] = $cfgIncludesOk;
+            Log::info('Nagios post-publish check: cfg_includes_ok', [
+                'workspace_id' => $workspaceId,
+                'cfg_includes_ok' => $cfgIncludesOk,
+                'message' => $verifyIncludesData['message'] ?? null,
+            ]);
+            if (!$cfgIncludesOk) {
+                $publishError = $verifyIncludesData['message'] ?? 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).';
+                $result = 'failure';
             }
 
             $reloadResponse = Http::timeout(30)
@@ -119,14 +175,18 @@ class NagiosConfigPublisher
             $reloadSuccess = $reloadResponse->successful();
             $reloadData = $reloadResponse->json() ?? [];
             $reloadSkipped = !empty($reloadData['reload_skipped']);
+            $reloaded = (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) || $reloadSkipped;
+            $postChecks['reload_ok'] = $reloadSuccess && $reloaded;
 
-            $publishSuccess = $reloadSuccess && (
-                (isset($reloadData['reloaded']) && $reloadData['reloaded'] === true) ||
-                $reloadSkipped
-            );
+            Log::info('Nagios post-publish check: reload_ok', [
+                'workspace_id' => $workspaceId,
+                'reload_ok' => $postChecks['reload_ok'],
+                'reload_skipped' => $reloadSkipped,
+            ]);
 
-            if (!$publishSuccess) {
-                $result = 'failure';
+            $publishSuccess = $cfgIncludesOk && $reloadSuccess && $reloaded;
+
+            if (!$publishSuccess && !isset($publishError)) {
                 if (!$reloadSuccess) {
                     $publishError = "Reload failed: HTTP {$reloadResponse->status()} - {$reloadResponse->body()}";
                 } elseif (isset($reloadData['message'])) {
@@ -137,6 +197,7 @@ class NagiosConfigPublisher
                 } else {
                     $publishError = 'Reload validation or execution failed';
                 }
+                $result = 'failure';
             }
 
             if ($reloadSuccess && !$reloadSkipped) {
@@ -155,27 +216,30 @@ class NagiosConfigPublisher
                 }
             }
 
-            if ($publishSuccess && !$reloadSkipped) {
-                $hostlistResp = Http::timeout(15)
+            // After reload: verify objects.cache contains workspace host name(s)
+            if ($publishSuccess && $reloadSuccess && !$reloadSkipped) {
+                $hostPrefix = 'ws' . $workspaceId . '-';
+                $objectsCacheResp = Http::timeout(15)
                     ->withHeaders(['x-internal-secret' => $this->internalSecret])
-                    ->get("{$this->gatewayUrl}/internal/engines/nagios/hostlist");
-                if ($hostlistResp->successful()) {
-                    $hostlistData = $hostlistResp->json() ?? [];
-                    $hostlist = $hostlistData['data']['hostlist'] ?? [];
-                    $prefix = 'ws' . $workspaceId . '-';
-                    $hasWorkspaceHost = false;
-                    foreach (is_array($hostlist) ? $hostlist : [] as $h) {
-                        if (is_string($h) && str_starts_with($h, $prefix)) {
-                            $hasWorkspaceHost = true;
-                            break;
-                        }
-                    }
-                    if (!$hasWorkspaceHost) {
-                        $publishSuccess = false;
-                        $result = 'failure';
-                        $publishError = ($publishError ? $publishError . ' ' : '') . "No ws{$workspaceId}- hosts in Nagios hostlist.";
-                    }
+                    ->get("{$this->gatewayUrl}/internal/engines/nagios/objects-cache-check", [
+                        'host_prefix' => $hostPrefix,
+                    ]);
+                $objectsCacheData = $objectsCacheResp->json() ?? [];
+                $containsNew = ($objectsCacheData['contains_new_objects'] ?? false) === true;
+                $postChecks['objects_cache_contains_new_objects'] = $containsNew;
+                Log::info('Nagios post-publish check: objects_cache_contains_new_objects', [
+                    'workspace_id' => $workspaceId,
+                    'host_prefix' => $hostPrefix,
+                    'objects_cache_contains_new_objects' => $containsNew,
+                    'message' => $objectsCacheData['message'] ?? null,
+                ]);
+                if (!$containsNew) {
+                    $publishSuccess = false;
+                    $result = 'failure';
+                    $publishError = $objectsCacheData['message'] ?? 'Reload completed but objects.cache does not include newly published objects — config likely not loaded.';
                 }
+            } elseif ($reloadSkipped) {
+                $postChecks['objects_cache_contains_new_objects'] = true;
             }
 
             if ($publishSuccess && $reloadSkipped) {
@@ -193,15 +257,24 @@ class NagiosConfigPublisher
 
             $this->auditPublish($workspaceId, $userId, $publishSuccess ? 'success' : 'failure', $publishError, $validationErrors);
 
-            if (!$publishSuccess && !$reloadSuccess) {
-                throw new \Exception($publishError ?? 'Reload failed');
-            }
+            Log::info('Nagios post-publish checks (final)', [
+                'workspace_id' => $workspaceId,
+                'nagios_post_publish_checks' => $postChecks,
+            ]);
+
             if (!$publishSuccess) {
-                Log::warning("Publish completed with errors", [
+                Log::warning('Publish completed with errors', [
                     'workspace_id' => $workspaceId,
                     'message' => $publishError,
                 ]);
             }
+
+            return [
+                'nagios_publish_success' => $publishSuccess,
+                'nagios_publish_error' => $publishError,
+                'nagios_validation_errors' => $validationErrors,
+                'nagios_post_publish_checks' => $postChecks,
+            ];
         } finally {
             $lock->release();
         }

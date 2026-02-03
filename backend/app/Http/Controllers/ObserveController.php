@@ -173,6 +173,8 @@ class ObserveController extends Controller
 
         $items = $services->map(function ($service) use ($stateCode) {
             $output = $service->output ?? '';
+            $pluginOutput = $service->plugin_output ?? '';
+            $statusInfo = $output !== '' ? $output : $pluginOutput;
             return [
                 'host' => $service->host_name,
                 'service' => $service->service_name,
@@ -185,9 +187,9 @@ class ObserveController extends Controller
                 'currentAttempt' => $service->current_attempt,
                 'maxAttempts' => $service->max_attempts,
                 'stateType' => $service->state_type ?? '',
-                'info' => $output,
-                'status_information' => $output,
-                'pluginOutput' => $service->plugin_output ?? '',
+                'info' => $statusInfo,
+                'status_information' => $statusInfo,
+                'pluginOutput' => $pluginOutput,
                 'longPluginOutput' => $service->long_plugin_output ?? '',
                 'perfData' => $service->perfdata ?? '',
                 'checkCommand' => $service->check_command ?? '',

@@ -39,12 +39,16 @@ interface NagiosServiceDetailResponse {
       service_description: string
       current_state: number
       last_check?: string
+      next_check?: string
       last_state_change?: string
       current_attempt?: number
       max_attempts?: number
       plugin_output?: string
       long_plugin_output?: string
       perf_data?: string
+      check_command?: string
+      check_latency?: string | number
+      execution_time?: string | number
       [key: string]: unknown
     }
   }
@@ -314,9 +318,15 @@ async function fetchAllServices(hostPrefix?: string): Promise<NagiosService[]> {
       service_name: r.service_description,
       state: stateToString(r.current_state),
       last_check_at: '',
+      next_check_at: undefined,
       duration_sec: 0,
       attempt: '0/0',
+      current_attempt: 0,
+      max_attempts: 0,
       output: '',
+      plugin_output: undefined,
+      long_plugin_output: undefined,
+      last_state_change_at: undefined,
     } as NagiosService
   })
 

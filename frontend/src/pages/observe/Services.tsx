@@ -400,6 +400,7 @@ export default function Services() {
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Service</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-28">Status</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Last Check</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Next Check</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Duration</th>
                 <th className="px-3 py-2 text-center text-xs font-semibold text-white/70 w-20">Attempt</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Status Information</th>
@@ -409,7 +410,7 @@ export default function Services() {
             <tbody>
               {data.items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-sm text-white/60">
+                  <td colSpan={9} className="px-3 py-8 text-center text-sm text-white/60">
                     No services found
                   </td>
                 </tr>
@@ -489,7 +490,7 @@ export default function Services() {
                       </tr>
                       {isExpanded && hasPerf && (
                         <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
-                          <td colSpan={8} className="px-3 py-2 text-xs text-white/60">
+                          <td colSpan={9} className="px-3 py-2 text-xs text-white/60">
                             <div className="space-y-1">
                               {item.perfData && (
                                 <div>

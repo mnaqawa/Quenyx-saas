@@ -446,18 +446,36 @@ class ObserveTargetsController extends Controller
             $nagiosPublishSuccess = true;
             $nagiosPublishError = null;
             $nagiosValidationErrors = [];
+            $nagiosPostPublishChecks = [
+                'cfg_includes_ok' => true,
+                'validate_ok' => true,
+                'reload_ok' => true,
+                'objects_cache_contains_new_objects' => true,
+            ];
 
             // Auto-publish config to Nagios if enabled; capture result for UI (do not pretend success)
             $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);
             if ($autoPublish) {
                 try {
                     $publisher = new NagiosConfigPublisher();
-                    $publisher->publish($project->id, auth()->id());
-                    Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
+                    $publishResult = $publisher->publish($project->id, auth()->id());
+                    $nagiosPublishSuccess = $publishResult['nagios_publish_success'];
+                    $nagiosPublishError = $publishResult['nagios_publish_error'];
+                    $nagiosValidationErrors = $publishResult['nagios_validation_errors'];
+                    $nagiosPostPublishChecks = $publishResult['nagios_post_publish_checks'];
+                    if ($nagiosPublishSuccess) {
+                        Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
+                    }
                 } catch (\App\Exceptions\NagiosPublishException $e) {
                     $nagiosPublishSuccess = false;
                     $nagiosPublishError = $e->getMessage();
                     $nagiosValidationErrors = $e->validationErrors;
+                    $nagiosPostPublishChecks = [
+                        'cfg_includes_ok' => false,
+                        'validate_ok' => false,
+                        'reload_ok' => false,
+                        'objects_cache_contains_new_objects' => false,
+                    ];
                     Log::warning('Failed to publish Nagios config after targets update', [
                         'workspace_id' => $project->id,
                         'error' => $nagiosPublishError,
@@ -466,6 +484,12 @@ class ObserveTargetsController extends Controller
                     $nagiosPublishSuccess = false;
                     $nagiosPublishError = $e->getMessage();
                     $nagiosValidationErrors = [];
+                    $nagiosPostPublishChecks = [
+                        'cfg_includes_ok' => false,
+                        'validate_ok' => false,
+                        'reload_ok' => false,
+                        'objects_cache_contains_new_objects' => false,
+                    ];
                     Log::warning('Failed to publish Nagios config after targets update', [
                         'workspace_id' => $project->id,
                         'error' => $nagiosPublishError,
@@ -515,6 +539,7 @@ class ObserveTargetsController extends Controller
                     'nagios_publish_success' => $nagiosPublishSuccess,
                     'nagios_publish_error' => $nagiosPublishError,
                     'nagios_validation_errors' => $nagiosValidationErrors,
+                    'nagios_post_publish_checks' => $nagiosPostPublishChecks,
                 ],
             ]);
 

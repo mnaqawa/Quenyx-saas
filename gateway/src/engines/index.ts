@@ -1,6 +1,12 @@
 import express, { Request, Response, Router } from 'express'
 import { getNagiosServices, getNagiosSummary, getNagiosHostlist } from './nagios'
-import { writeNagiosConfig, reloadNagios, validateNagiosConfig } from './nagiosConfig'
+import {
+  writeNagiosConfig,
+  reloadNagios,
+  validateNagiosConfig,
+  verifyNagiosCfgIncludesWorkspaces,
+  checkObjectsCacheForHostPrefix,
+} from './nagiosConfig'
 
 const INTERNAL_SECRET = process.env.GATEWAY_INTERNAL_SECRET || 'dev-secret-change-in-production'
 
@@ -204,7 +210,45 @@ export function createEngineRouter(): Router {
       })
     }
   })
-  
+
+  router.get('/nagios/verify-includes', async (req: Request, res: Response) => {
+    try {
+      const result = await verifyNagiosCfgIncludesWorkspaces()
+      res.json({
+        success: result.ok,
+        ok: result.ok,
+        message: result.message,
+      })
+    } catch (err) {
+      console.error('Error verifying nagios.cfg includes:', err)
+      res.status(500).json({
+        success: false,
+        ok: false,
+        message: err instanceof Error ? err.message : 'Verify includes failed',
+      })
+    }
+  })
+
+  router.get('/nagios/objects-cache-check', async (req: Request, res: Response) => {
+    try {
+      const raw = req.query.host_prefix
+      const hostPrefix = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined
+      const result = await checkObjectsCacheForHostPrefix(hostPrefix ?? '')
+      res.json({
+        success: true,
+        contains_new_objects: result.contains_new_objects,
+        message: result.message,
+      })
+    } catch (err) {
+      console.error('Error checking objects.cache:', err)
+      res.status(500).json({
+        success: false,
+        contains_new_objects: false,
+        message: err instanceof Error ? err.message : 'Objects cache check failed',
+      })
+    }
+  })
+
   // Debug route (dev only)
   if (process.env.NODE_ENV !== 'production') {
     router.get('/_debug/routes', (req: Request, res: Response) => {
@@ -215,6 +259,8 @@ export function createEngineRouter(): Router {
         'POST /internal/engines/nagios/reload',
         'GET /internal/engines/nagios/validate',
         'GET /internal/engines/nagios/hostlist',
+        'GET /internal/engines/nagios/verify-includes',
+        'GET /internal/engines/nagios/objects-cache-check',
         'GET /internal/engines/_debug/routes',
       ]
       res.json({

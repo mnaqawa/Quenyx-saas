@@ -195,6 +195,79 @@ function lineMatchesCfgDir(s: string): boolean {
 }
 
 /**
+ * Verify that nagios.cfg includes our published config path (cfg_dir or cfg_file).
+ * Runs inside container: cat nagios.cfg and parse. Does not modify.
+ */
+export async function verifyNagiosCfgIncludesWorkspaces(): Promise<{ ok: boolean; message?: string }> {
+  const dockerCheck = await checkDockerAccess()
+  if (!dockerCheck.accessible) {
+    return { ok: false, message: dockerCheck.error ?? 'Docker access denied' }
+  }
+  try {
+    const catCmd = `docker exec ${NAGIOS_CONTAINER_NAME} cat ${NAGIOS_CFG_PATH}`
+    const { stdout } = await execAsync(catCmd, { timeout: 5000 })
+    const lines = (stdout || '').split(/\r?\n/)
+    const hasCfgDir = lines.some(lineMatchesCfgDir)
+    const hasCfgFileWorkspaces = lines.some((l) => {
+      const m = l.match(/^\s*cfg_file\s*=\s*(.+)\s*$/)
+      return m ? (m[1] ?? '').trim().includes('portshield/workspaces') : false
+    })
+    if (hasCfgDir || hasCfgFileWorkspaces) {
+      return { ok: true }
+    }
+    return {
+      ok: false,
+      message: 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).',
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, message: `Could not read nagios.cfg: ${msg}` }
+  }
+}
+
+const NAGIOS_OBJECTS_CACHE_PATH = process.env.NAGIOS_OBJECTS_CACHE_PATH || '/opt/nagios/var/objects.cache'
+
+/**
+ * After reload: verify objects.cache contains at least one host matching the given prefix (e.g. ws84-).
+ * Runs inside container: cat objects.cache and grep for prefix.
+ */
+export async function checkObjectsCacheForHostPrefix(hostPrefix: string): Promise<{
+  contains_new_objects: boolean
+  message?: string
+}> {
+  const dockerCheck = await checkDockerAccess()
+  if (!dockerCheck.accessible) {
+    return { contains_new_objects: false, message: dockerCheck.error ?? 'Docker access denied' }
+  }
+  if (!hostPrefix || typeof hostPrefix !== 'string') {
+    return { contains_new_objects: false, message: 'Missing or invalid host_prefix' }
+  }
+  try {
+    // Grep in container; avoid injecting prefix into shell (use safe exec)
+    const escPath = NAGIOS_OBJECTS_CACHE_PATH.replace(/'/g, "'\\''")
+    const escPrefix = hostPrefix.replace(/'/g, "'\\''")
+    const script = `cat '${escPath}' 2>/dev/null | grep -F '${escPrefix}' || true`
+    const { stdout } = await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} sh -c ${JSON.stringify(script)}`, {
+      timeout: 10000,
+    })
+    const found = (stdout || '').trim().length > 0
+    if (found) {
+      console.log(`[nagios] Post-publish check: objects_cache_contains_new_objects=true (prefix ${hostPrefix})`)
+      return { contains_new_objects: true }
+    }
+    console.log(`[nagios] Post-publish check: objects_cache_contains_new_objects=false (prefix ${hostPrefix})`)
+    return {
+      contains_new_objects: false,
+      message:
+        'Reload completed but objects.cache does not include newly published objects — config likely not loaded.',
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { contains_new_objects: false, message: `Could not check objects.cache: ${msg}` }
+  }
+}
+
+/**
  * Ensure nagios.cfg loads workspace configs via cfg_dir. Idempotent.
  * After updating nagios.cfg, does NOT reload here (reload is separate in publish flow).
  */
@@ -392,17 +465,35 @@ export async function reloadNagios(): Promise<{
     }
   }
 
+  const NAGIOS_LOCK_PATH = process.env.NAGIOS_LOCK_PATH || '/opt/nagios/var/nagios.lock'
+
   let lastErr: any
   for (let attempt = 0; attempt <= RELOAD_RETRIES; attempt++) {
     try {
       let nagiosPid: string | null = null
+      // Prefer lock file (single PID); avoid multi-line output being interpreted as multiple args
       try {
-        const pgrepResult = await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} pgrep -x nagios`, { timeout: 5000 })
-        // pgrep can return multiple PIDs (one per line); use only the first (main process)
-        const firstLine = pgrepResult.stdout.trim().split(/\r?\n/)[0]?.trim()
-        nagiosPid = firstLine || null
+        const lockResult = await execAsync(
+          `docker exec ${NAGIOS_CONTAINER_NAME} cat ${NAGIOS_LOCK_PATH} 2>/dev/null || true`,
+          { timeout: 5000 }
+        )
+        const firstLine = lockResult.stdout.trim().split(/\r?\n/)[0]?.trim()
+        if (firstLine && /^\d+$/.test(firstLine)) {
+          nagiosPid = firstLine
+        }
       } catch {
-        nagiosPid = '1'
+        // lock file missing or unreadable
+      }
+      if (!nagiosPid) {
+        try {
+          const pgrepResult = await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} pgrep -x nagios`, { timeout: 5000 })
+          const firstLine = pgrepResult.stdout.trim().split(/\r?\n/)[0]?.trim()
+          if (firstLine && /^\d+$/.test(firstLine)) {
+            nagiosPid = firstLine
+          }
+        } catch {
+          // fallback: restart container
+        }
       }
 
       if (nagiosPid) {

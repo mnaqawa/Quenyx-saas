@@ -305,6 +305,53 @@ If you see `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` in `nagi
    ```
    Expect at least one host. Then `.../services?host_prefix=ws84-` should return >0 and poll should insert `observe_services` rows.
 
+### Post-publish verification (hard checks)
+
+After Save & Publish, the backend runs four checks and returns `nagios_post_publish_checks` in the API response. If Nagios UI still doesn't update, the failing step is visible there and in logs.
+
+**Where to look in logs**
+
+- **Laravel (backend):** `storage/logs/laravel.log`
+  - `Nagios post-publish check: cfg_includes_ok` — whether `nagios.cfg` includes the workspace config path
+  - `Nagios post-publish check: reload_ok` — whether reload succeeded
+  - `Nagios post-publish check: objects_cache_contains_new_objects` — whether `objects.cache` contains `ws{id}-` hosts
+  - `Nagios post-publish checks (final)` — full `nagios_post_publish_checks` object
+  - `observe_nagios_publish` — audit line with `result`, `error`, `validation_errors`
+- **Gateway (stdout):** Gateway process logs (e.g. journalctl if run by systemd)
+  - `[nagios] Post-publish check: cfg_includes_ok=true|false`
+  - `[nagios] Post-publish check: objects_cache_contains_new_objects=true|false`
+
+**How to manually reproduce using docker exec inside nagios-core**
+
+1. **Verify config is included in nagios.cfg**
+   ```bash
+   docker exec nagios-core cat /opt/nagios/etc/nagios.cfg | grep -E "cfg_dir|cfg_file" | grep portshield
+   ```
+   Expected: a line like `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`. If missing, publish will report `cfg_includes_ok: false`.
+
+2. **Run Nagios validation (same as gateway after write)**
+   ```bash
+   docker exec nagios-core nagios -v /opt/nagios/etc/nagios.cfg
+   ```
+   Or with full path to binary: `docker exec nagios-core /usr/local/nagios/bin/nagios -v /opt/nagios/etc/nagios.cfg`.  
+   If this fails, `validate_ok` will be false and the gateway returns validation output in `nagios_validation_errors`.
+
+3. **Reload using lock file (preferred) or single PID**
+   ```bash
+   # Prefer: single PID from lock file (avoids multi-line PID as command)
+   docker exec nagios-core sh -c 'PID=$(cat /opt/nagios/var/nagios.lock 2>/dev/null); [ -n "$PID" ] && kill -HUP "$PID"'
+   # Fallback: first PID from pgrep only
+   docker exec nagios-core sh -c 'kill -HUP $(pgrep -x nagios | head -1)'
+   ```
+
+4. **Check objects.cache for workspace hosts**
+   ```bash
+   docker exec nagios-core cat /opt/nagios/var/objects.cache | grep -F "ws84-"
+   ```
+   Replace `ws84-` with your workspace prefix (e.g. `ws1-`). If no lines, `objects_cache_contains_new_objects` is false and the UI will show the config likely not loaded.
+
+**Expected result:** If Nagios UI still doesn't update, the API response and logs will show exactly which step failed: `cfg_includes_ok`, `validate_ok`, `reload_ok`, or `objects_cache_contains_new_objects`.
+
 ### Issue 3: Reload Method Not Working
 
 **Symptoms:**

@@ -32,6 +32,8 @@ class ObserveService extends Model
         'check_latency_sec',
         'execution_time_sec',
         'last_state_change_at',
+        'check_interval',
+        'retry_interval',
     ];
 
     protected $casts = [
@@ -43,6 +45,8 @@ class ObserveService extends Model
         'max_attempts' => 'integer',
         'check_latency_sec' => 'float',
         'execution_time_sec' => 'float',
+        'check_interval' => 'integer',
+        'retry_interval' => 'integer',
     ];
 
     public function workspace(): BelongsTo

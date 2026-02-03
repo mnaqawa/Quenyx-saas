@@ -179,6 +179,7 @@ export interface ObserveServiceRow {
   maxAttempts?: number
   stateType?: string
   info: string
+  status_information?: string
   pluginOutput?: string
   longPluginOutput?: string
   perfData?: string

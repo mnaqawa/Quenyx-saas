@@ -85,6 +85,9 @@ class PollObserveData extends Command
             }
 
             $services = $servicesData['data'];
+            if (!is_array($services)) {
+                $services = [];
+            }
 
             // Fetch summary
             $summaryUrl = "{$this->gatewayUrl}/internal/engines/nagios/summary";
@@ -108,20 +111,62 @@ class PollObserveData extends Command
                 $engineKey = 'nagios';
                 $receivedKeys = [];
 
-                foreach ($services as $service) {
-                    $hostName = $service['host_name'] ?? $service['host'] ?? '';
-                    $serviceName = $service['service_name'] ?? $service['service_description'] ?? $service['description'] ?? '';
+                foreach ($services as $index => $service) {
+                    if (!is_array($service)) {
+                        Log::warning('PollObserveData: skipping non-array service row', ['workspace_id' => $workspace->id, 'index' => $index]);
+                        continue;
+                    }
+                    $hostName = $service['host_name'] ?? $service['host'] ?? $service['hostname'] ?? $service['name'] ?? '';
+                    $serviceName = $service['service_name'] ?? $service['service_description'] ?? $service['description'] ?? $service['service'] ?? $service['name'] ?? '';
+                    $hostName = is_string($hostName) ? trim($hostName) : '';
+                    $serviceName = is_string($serviceName) ? trim($serviceName) : '';
                     if ($hostName === '' || $serviceName === '') {
+                        Log::warning('PollObserveData: skipping row missing host or service identifier', [
+                            'workspace_id' => $workspace->id,
+                            'index' => $index,
+                            'keys' => array_keys($service),
+                        ]);
                         continue;
                     }
                     // Gateway should have already filtered, but verify for safety
                     if (!str_starts_with($hostName, $workspacePrefix)) {
                         continue;
                     }
-                    
+
                     $engineServiceKey = "{$hostName}::{$serviceName}";
                     $receivedKeys[] = $engineServiceKey;
-                    
+
+                    $state = $service['state'] ?? $service['status'] ?? 'unknown';
+                    $state = is_string($state) ? strtolower(trim($state)) : 'unknown';
+                    if (!in_array($state, ['ok', 'warning', 'critical', 'unknown', 'pending', 'unreachable'], true)) {
+                        $state = 'unknown';
+                    }
+
+                    $lastCheckAt = null;
+                    if (!empty($service['last_check_at']) && is_string($service['last_check_at'])) {
+                        try {
+                            $lastCheckAt = new \DateTime($service['last_check_at']);
+                        } catch (\Exception $e) {
+                            // ignore invalid date
+                        }
+                    }
+                    $nextCheckAt = null;
+                    if (!empty($service['next_check_at']) && is_string($service['next_check_at'])) {
+                        try {
+                            $nextCheckAt = new \DateTime($service['next_check_at']);
+                        } catch (\Exception $e) {
+                            // ignore invalid date
+                        }
+                    }
+                    $lastStateChangeAt = null;
+                    if (!empty($service['last_state_change_at']) && is_string($service['last_state_change_at'])) {
+                        try {
+                            $lastStateChangeAt = new \DateTime($service['last_state_change_at']);
+                        } catch (\Exception $e) {
+                            // ignore invalid date
+                        }
+                    }
+
                     ObserveService::updateOrCreate(
                         [
                             'workspace_id' => $workspace->id,
@@ -131,22 +176,22 @@ class PollObserveData extends Command
                         [
                             'host_name' => $hostName,
                             'service_name' => $serviceName,
-                            'state' => $service['state'],
-                            'last_check_at' => !empty($service['last_check_at']) ? new \DateTime($service['last_check_at']) : null,
-                            'next_check_at' => !empty($service['next_check_at']) ? new \DateTime($service['next_check_at']) : null,
-                            'duration_sec' => $service['duration_sec'] ?? null,
-                            'attempt' => $service['attempt'] ?? null,
-                            'current_attempt' => $service['current_attempt'] ?? null,
-                            'max_attempts' => $service['max_attempts'] ?? null,
-                            'state_type' => $service['state_type'] ?? null,
-                            'output' => $service['output'] ?? null,
-                            'plugin_output' => $service['plugin_output'] ?? null,
-                            'long_plugin_output' => $service['long_plugin_output'] ?? null,
-                            'perfdata' => $service['perfdata'] ?? null,
-                            'check_command' => $service['check_command'] ?? null,
+                            'state' => $state,
+                            'last_check_at' => $lastCheckAt,
+                            'next_check_at' => $nextCheckAt,
+                            'duration_sec' => isset($service['duration_sec']) ? (int) $service['duration_sec'] : null,
+                            'attempt' => isset($service['attempt']) ? (string) $service['attempt'] : null,
+                            'current_attempt' => isset($service['current_attempt']) ? (int) $service['current_attempt'] : null,
+                            'max_attempts' => isset($service['max_attempts']) ? (int) $service['max_attempts'] : null,
+                            'state_type' => isset($service['state_type']) ? (string) $service['state_type'] : null,
+                            'output' => isset($service['output']) ? (string) $service['output'] : null,
+                            'plugin_output' => isset($service['plugin_output']) ? (string) $service['plugin_output'] : null,
+                            'long_plugin_output' => isset($service['long_plugin_output']) ? (string) $service['long_plugin_output'] : null,
+                            'perfdata' => isset($service['perfdata']) ? (string) $service['perfdata'] : null,
+                            'check_command' => isset($service['check_command']) ? (string) $service['check_command'] : null,
                             'check_latency_sec' => isset($service['check_latency_sec']) ? (float) $service['check_latency_sec'] : null,
                             'execution_time_sec' => isset($service['execution_time_sec']) ? (float) $service['execution_time_sec'] : null,
-                            'last_state_change_at' => !empty($service['last_state_change_at']) ? new \DateTime($service['last_state_change_at']) : null,
+                            'last_state_change_at' => $lastStateChangeAt,
                         ]
                     );
                 }
