@@ -145,8 +145,8 @@ class ObserveTargetsController extends Controller
         $hostsInput = is_array($hostsInput) ? $hostsInput : [];
         $request->merge(['hosts' => $hostsInput]);
 
-        // One-time debug: confirm DB connection (remove after verification)
-        Log::debug('ObserveTargets PUT DB', [
+        // Temporary: confirm we are writing to the DB you are inspecting (remove after verification)
+        Log::info('ObserveTargets PUT active DB', [
             'connection' => DB::connection()->getName(),
             'database' => DB::connection()->getDatabaseName(),
         ]);
@@ -319,18 +319,24 @@ class ObserveTargetsController extends Controller
                             'normalized_check_args' => $checkArgsToStore,
                         ]);
 
+                        // Build update data; only include service_key if column exists (remove after migration is run everywhere)
+                        $serviceTable = (new ObserveTargetService)->getTable();
+                        $updateData = [
+                            'workspace_id' => $project->id,
+                            'check_command' => $serviceData['check_command'] ?? '',
+                            'check_args' => $checkArgsToStore,
+                            'enabled' => $serviceData['enabled'] ?? true,
+                        ];
+                        if (Schema::hasColumn($serviceTable, 'service_key')) {
+                            $updateData['service_key'] = $serviceKeyToStore;
+                        }
+
                         $service = ObserveTargetService::updateOrCreate(
                             [
                                 'host_id' => $host->id,
                                 'name' => $serviceData['name'],
                             ],
-                            [
-                                'workspace_id' => $project->id,
-                                'service_key' => $serviceKeyToStore,
-                                'check_command' => $serviceData['check_command'] ?? '',
-                                'check_args' => $checkArgsToStore,
-                                'enabled' => $serviceData['enabled'] ?? true,
-                            ]
+                            $updateData
                         );
 
                         $afterSave = $service->fresh();

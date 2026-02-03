@@ -10,14 +10,14 @@ return new class extends Migration
     {
         Schema::table('observe_targets_services', function (Blueprint $table) {
             $table->string('service_key', 64)->nullable()->after('name');
-            $table->index('service_key');
+            $table->index(['workspace_id', 'service_key']);
         });
     }
 
     public function down(): void
     {
         Schema::table('observe_targets_services', function (Blueprint $table) {
-            $table->dropIndex(['service_key']);
+            $table->dropIndex(['workspace_id', 'service_key']);
             $table->dropColumn('service_key');
         });
     }

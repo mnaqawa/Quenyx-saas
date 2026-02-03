@@ -528,14 +528,17 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
 
           setData(filtered)
         } else {
-          // Use real API via observeService
+          // Use real API via observeService (backend returns { success, data: { items, hostTotals, ... } })
           const response = await observeService.getServices(Number(workspaceId), {
             q,
             status: statuses,
             limit,
             problemsOnly,
           })
-          setData(response)
+          const payload = response && typeof response === 'object' && 'data' in response
+            ? (response as { data: ObserveServicesResponse }).data
+            : (response as ObserveServicesResponse)
+          setData(payload)
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load services'
