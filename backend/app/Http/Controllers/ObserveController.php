@@ -222,4 +222,159 @@ class ObserveController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Stub: performance metrics (no backend implementation yet). Returns empty array.
+     */
+    public function performanceMetrics(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: capacity metrics (no backend implementation yet). Returns empty array.
+     */
+    public function capacityMetrics(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: alert rules (no backend implementation yet). Returns empty array.
+     */
+    public function alertRules(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: alert summary (no backend implementation yet). Returns empty summary.
+     */
+    public function alertSummary(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => 0,
+                'by_severity' => [],
+                'by_status' => [],
+            ],
+        ]);
+    }
+
+    /**
+     * Stub: instances list (no backend implementation yet). Returns empty array.
+     */
+    public function instances(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: instances summary (no backend implementation yet). Returns empty summary.
+     */
+    public function instanceSummary(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => 0,
+                'running' => 0,
+                'warning' => 0,
+                'avgCpuUsage' => 0,
+            ],
+        ]);
+    }
+
+    /**
+     * Stub: reports list (no backend implementation yet). Returns empty array.
+     */
+    public function reports(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: reports summary (no backend implementation yet). Returns empty summary.
+     */
+    public function reportSummary(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => 0,
+                'by_type' => [],
+            ],
+        ]);
+    }
+
+    /**
+     * Stub: data sources list (no backend implementation yet). Returns empty array.
+     */
+    public function dataSources(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: data sources summary (no backend implementation yet). Returns empty summary.
+     */
+    public function dataSourceSummary(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'connected' => 0,
+                'totalRecords' => '0',
+                'syncStatus' => 0,
+                'lastUpdate' => '',
+            ],
+        ]);
+    }
+
+    /**
+     * Stub: real-time metrics (no backend implementation yet). Returns empty object.
+     */
+    public function realTimeMetrics(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => (object) []]);
+    }
+
+    /**
+     * Stub: system info (no backend implementation yet). Returns empty object.
+     */
+    public function systemInfo(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => (object) []]);
+    }
+
+    /**
+     * Stub: performance thresholds (no backend implementation yet). Returns empty array.
+     */
+    public function performanceThresholds(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
+
+    /**
+     * Stub: network topology (no backend implementation yet). Returns empty array.
+     */
+    public function networkTopology(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        return response()->json(['success' => true, 'data' => []]);
+    }
 }

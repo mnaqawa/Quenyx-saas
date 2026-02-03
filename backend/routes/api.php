@@ -92,11 +92,39 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::get('/workspaces/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
+    Route::get('/workspaces/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
+    Route::get('/workspaces/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
+    Route::get('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
+    Route::get('/workspaces/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
+    Route::get('/workspaces/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);
+    Route::get('/workspaces/{project}/observe/instances/summary', [\App\Http\Controllers\ObserveController::class, 'instanceSummary']);
+    Route::get('/workspaces/{project}/observe/reports', [\App\Http\Controllers\ObserveController::class, 'reports']);
+    Route::get('/workspaces/{project}/observe/reports/summary', [\App\Http\Controllers\ObserveController::class, 'reportSummary']);
+    Route::get('/workspaces/{project}/observe/data-sources', [\App\Http\Controllers\ObserveController::class, 'dataSources']);
+    Route::get('/workspaces/{project}/observe/data-sources/summary', [\App\Http\Controllers\ObserveController::class, 'dataSourceSummary']);
+    Route::get('/workspaces/{project}/observe/real-time/metrics', [\App\Http\Controllers\ObserveController::class, 'realTimeMetrics']);
+    Route::get('/workspaces/{project}/observe/real-time/system-info', [\App\Http\Controllers\ObserveController::class, 'systemInfo']);
+    Route::get('/workspaces/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
+    Route::get('/workspaces/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
 
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::get('/projects/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
+    Route::get('/projects/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
+    Route::get('/projects/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
+    Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
+    Route::get('/projects/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
+    Route::get('/projects/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);
+    Route::get('/projects/{project}/observe/instances/summary', [\App\Http\Controllers\ObserveController::class, 'instanceSummary']);
+    Route::get('/projects/{project}/observe/reports', [\App\Http\Controllers\ObserveController::class, 'reports']);
+    Route::get('/projects/{project}/observe/reports/summary', [\App\Http\Controllers\ObserveController::class, 'reportSummary']);
+    Route::get('/projects/{project}/observe/data-sources', [\App\Http\Controllers\ObserveController::class, 'dataSources']);
+    Route::get('/projects/{project}/observe/data-sources/summary', [\App\Http\Controllers\ObserveController::class, 'dataSourceSummary']);
+    Route::get('/projects/{project}/observe/real-time/metrics', [\App\Http\Controllers\ObserveController::class, 'realTimeMetrics']);
+    Route::get('/projects/{project}/observe/real-time/system-info', [\App\Http\Controllers\ObserveController::class, 'systemInfo']);
+    Route::get('/projects/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
+    Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     
     // Observe targets endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
