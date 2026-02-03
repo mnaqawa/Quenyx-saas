@@ -199,6 +199,7 @@ class ObserveController extends Controller
 
         $lastPollAt = $meta?->last_poll_at?->toIso8601String();
         $engineUnreachable = !empty($meta?->error);
+        $engineUnreachableReason = $engineUnreachable ? (string) $meta->error : null;
         $staleThresholdSeconds = (int) config('observe.stale_threshold_seconds', 300);
         $sourceTimestamp = $lastPollAt;
         $stale = $lastPollAt
@@ -214,6 +215,7 @@ class ObserveController extends Controller
                 'last_poll_at' => $lastPollAt,
                 'source_timestamp' => $sourceTimestamp,
                 'engine_unreachable' => $engineUnreachable,
+                'engine_unreachable_reason' => $engineUnreachableReason,
                 'stale' => $stale,
             ],
         ]);

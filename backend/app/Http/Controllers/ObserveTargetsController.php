@@ -41,14 +41,32 @@ class ObserveTargetsController extends Controller
     }
 
     /**
-     * Normalize incoming overrides from request: array list -> empty array (persist as {}).
+     * Normalize incoming overrides from request so we always persist a JSON object (associative array).
+     * - null → []
+     * - stdClass (JSON object) → associative array via json_decode(json_encode(...), true)
+     * - array list (numeric keys) → [] (treat as "no overrides")
+     * - associative array → preserved (never collapse to [])
      *
      * @param mixed $overrides
      * @return array<string, mixed>
      */
     private function normalizeIncomingOverrides($overrides): array
     {
+        if ($overrides === null) {
+            return [];
+        }
+        // JSON objects decoded without JSON_BIGINT_AS_STRING come as stdClass; convert to associative array
+        if (is_object($overrides)) {
+            $overrides = json_decode(json_encode($overrides), true);
+            if (! is_array($overrides)) {
+                return [];
+            }
+        }
         if (! is_array($overrides)) {
+            return [];
+        }
+        // Treat numeric list as "no overrides" so we never store [] as object overwriting real overrides
+        if (function_exists('array_is_list') && array_is_list($overrides)) {
             return [];
         }
         $keys = array_keys($overrides);
@@ -145,12 +163,6 @@ class ObserveTargetsController extends Controller
         $hostsInput = is_array($hostsInput) ? $hostsInput : [];
         $request->merge(['hosts' => $hostsInput]);
 
-        // Temporary: confirm we are writing to the DB you are inspecting (remove after verification)
-        Log::info('ObserveTargets PUT active DB', [
-            'connection' => DB::connection()->getName(),
-            'database' => DB::connection()->getDatabaseName(),
-        ]);
-
         $validator = Validator::make($request->all(), [
             'hosts' => 'present|array',
             'hosts.*.name' => 'required|string|max:255',
@@ -229,7 +241,7 @@ class ObserveTargetsController extends Controller
                     $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
                     if ($def) {
                         $serviceData['check_command'] = $def->check_command;
-                        $serviceData['check_args'] = $overrides;
+                        // check_args already set once above; do not overwrite
                     } else {
                         $errors["hosts.{$index}.services.{$serviceIndex}.service_key"] = ['Unknown service_key: ' . $serviceKey];
                         if (!isset($serviceData['check_command'])) {

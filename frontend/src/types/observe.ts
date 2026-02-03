@@ -211,6 +211,7 @@ export interface ObserveServicesResponse {
   last_poll_at?: string | null
   source_timestamp?: string | null
   engine_unreachable?: boolean
+  engine_unreachable_reason?: string | null
   stale?: boolean
 }
 
