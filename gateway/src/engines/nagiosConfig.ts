@@ -6,6 +6,105 @@ import * as path from 'path'
 
 const execAsync = promisify(exec)
 
+// Env: NAGIOS_BIN or NAGIOS_BINARY_PATH; default 'nagios' (resolves via PATH in container)
+const NAGIOS_BIN_ENV = process.env.NAGIOS_BIN || process.env.NAGIOS_BINARY_PATH || 'nagios'
+const NAGIOS_BIN_FALLBACKS = ['/usr/local/bin/nagios', '/opt/nagios/bin/nagios']
+const NAGIOS_BIN_CANDIDATES = [
+  NAGIOS_BIN_ENV,
+  ...NAGIOS_BIN_FALLBACKS.filter((p) => p !== NAGIOS_BIN_ENV),
+]
+
+const NAGIOS_CONTAINER_NAME = process.env.NAGIOS_CONTAINER_NAME || 'nagios-core'
+const NAGIOS_CFG_PATH = '/opt/nagios/etc/nagios.cfg'
+
+let resolvedNagiosBin: string | null = null
+
+/**
+ * Probe container: run <candidate> -v <cfgPath>. Returns true if binary executed (no "no such file").
+ */
+function tryNagiosBinaryInContainer(
+  containerName: string,
+  candidate: string,
+  cfgPath: string,
+  timeoutMs: number = 10000
+): Promise<{ works: boolean; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const child = spawn('docker', ['exec', containerName, candidate, '-v', cfgPath])
+    let stdout = ''
+    let stderr = ''
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL')
+      resolve({
+        works: false,
+        stdout,
+        stderr: stderr + '\n(probe timed out)',
+      })
+    }, timeoutMs)
+    child.stdout?.on('data', (chunk: Buffer | string) => {
+      stdout += typeof chunk === 'string' ? chunk : chunk.toString()
+    })
+    child.stderr?.on('data', (chunk: Buffer | string) => {
+      stderr += typeof chunk === 'string' ? chunk : chunk.toString()
+    })
+    child.on('close', () => {
+      clearTimeout(timer)
+      const combined = (stdout + '\n' + stderr).toLowerCase()
+      const noSuchFile =
+        combined.includes('no such file or directory') ||
+        combined.includes('not found') ||
+        /exec\s+failed.*no such file/i.test(combined)
+      resolve({ works: !noSuchFile, stdout, stderr })
+    })
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      resolve({ works: false, stdout, stderr: stderr || err?.message || 'Spawn error' })
+    })
+  })
+}
+
+/**
+ * Resolve which Nagios binary to use inside the container. Tries env candidate then fallbacks.
+ * @throws Error with message "Nagios binary not found. Attempted: ..." if none work
+ */
+export async function resolveNagiosBinaryInContainer(containerName: string, cfgPath: string): Promise<string> {
+  for (const candidate of NAGIOS_BIN_CANDIDATES) {
+    const { works } = await tryNagiosBinaryInContainer(containerName, candidate, cfgPath)
+    if (works) {
+      resolvedNagiosBin = candidate
+      return candidate
+    }
+  }
+  const attempted = NAGIOS_BIN_CANDIDATES.join(', ')
+  throw new Error(`Nagios binary not found. Attempted: ${attempted}`)
+}
+
+/**
+ * Get resolved Nagios binary path (cached). Resolves on first use if not yet resolved.
+ */
+async function getOrResolveNagiosBinary(): Promise<string> {
+  if (resolvedNagiosBin) return resolvedNagiosBin
+  return resolveNagiosBinaryInContainer(NAGIOS_CONTAINER_NAME, NAGIOS_CFG_PATH)
+}
+
+/**
+ * Return currently resolved Nagios binary path for readiness (or null if not yet resolved).
+ */
+export function getResolvedNagiosBinaryPath(): string | null {
+  return resolvedNagiosBin
+}
+
+/**
+ * For readiness: resolve Nagios binary and return path or error (does not throw).
+ */
+export async function getNagiosBinaryForReadiness(): Promise<{ path: string | null; error?: string }> {
+  try {
+    const p = await getOrResolveNagiosBinary()
+    return { path: p }
+  } catch (e) {
+    return { path: null, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 /**
  * Run nagios -v via spawn and read stdout/stderr streams so we always get full output
  * even when the process exits non-zero (avoids exec callback quirks on some systems).
@@ -13,13 +112,14 @@ const execAsync = promisify(exec)
 function runNagiosValidateInContainer(
   containerName: string,
   cfgPath: string,
+  nagiosBin: string,
   timeoutMs: number = 30000
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve) => {
     const child = spawn('docker', [
       'exec',
       containerName,
-      NAGIOS_BIN_PATH,
+      nagiosBin,
       '-v',
       cfgPath,
     ])
@@ -54,7 +154,6 @@ function runNagiosValidateInContainer(
 // Resolve config dir: use absolute path, or resolve relative to process.cwd()
 const rawConfigDir = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
 const NAGIOS_CONFIG_DIR = path.isAbsolute(rawConfigDir) ? rawConfigDir : path.resolve(process.cwd(), rawConfigDir)
-const NAGIOS_CONTAINER_NAME = process.env.NAGIOS_CONTAINER_NAME || 'nagios-core'
 const NAGIOS_CONTAINER_WORKSPACES_DIR = process.env.NAGIOS_CONTAINER_WORKSPACES_DIR || '/opt/nagios/etc/objects/portshield/workspaces'
 
 // Reload verification: timeout and retry (TPM hardening gate C)
@@ -85,8 +184,6 @@ export async function checkDockerAccess(): Promise<{ accessible: boolean; error?
   }
 }
 
-const NAGIOS_CFG_PATH = '/opt/nagios/etc/nagios.cfg'
-const NAGIOS_BIN_PATH = process.env.NAGIOS_BIN_PATH || '/usr/local/nagios/bin/nagios'
 const WORKSPACES_CFG_DIR_LINE = 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces'
 
 function lineMatchesCfgFile(s: string): boolean {
@@ -140,13 +237,22 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
 }
 
 /**
- * Run validation only (nagios -v). Does not swap or reload.
+ * Run validation only (nagios -v <cfgPath>). Does not swap or reload.
  * Uses spawn so we always capture full stdout/stderr regardless of exit code.
+ * Resolves Nagios binary (env + fallbacks) on first use; on resolution failure returns clear error.
  */
 async function runValidateOnly(): Promise<{ valid: boolean; stdout: string; stderr: string; errors: string[] }> {
+  let nagiosBin: string
+  try {
+    nagiosBin = await getOrResolveNagiosBinary()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { valid: false, stdout: '', stderr: '', errors: [msg] }
+  }
   const { stdout, stderr, code } = await runNagiosValidateInContainer(
     NAGIOS_CONTAINER_NAME,
     NAGIOS_CFG_PATH,
+    nagiosBin,
     30000
   )
   const { errors } = parseNagiosValidationOutput(stdout, stderr)

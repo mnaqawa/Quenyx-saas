@@ -23,12 +23,19 @@ ENTITLEMENTS_CACHE_TTL_MS=30000      # Cache TTL in milliseconds (default: 30s)
 
 ### Observe / Nagios (ShieldObserve)
 
-If Save & Publish fails with `stat /usr/local/nagios/bin/nagios: no such file or directory`, set the path to the Nagios binary **inside the Nagios container**:
+The gateway resolves the Nagios binary **inside the Nagios container** automatically:
+
+- **Env:** `NAGIOS_BIN` or `NAGIOS_BINARY_PATH` (default: `nagios`, which uses the container PATH, e.g. `/usr/local/bin/nagios`).
+- **Fallbacks:** If the env candidate fails (e.g. "no such file"), the gateway tries `/usr/local/bin/nagios` then `/opt/nagios/bin/nagios`.
+- **Validation:** Runs `<nagiosBin> -v <nagiosCfgPath>` in the container. If no binary is found, the API returns: `Nagios binary not found. Attempted: nagios, /usr/local/bin/nagios, /opt/nagios/bin/nagios`.
+- **Readiness:** `GET /ready` includes `checks.nagios_binary.path` with the resolved path.
+
+Optional env:
 
 ```bash
-NAGIOS_BIN_PATH=/usr/local/nagios/bin/nagios   # default; override if your image uses another path, e.g. /usr/bin/nagios
-NAGIOS_CONFIG_DIR=./nagios/config              # host path for generated configs
-NAGIOS_CONTAINER_NAME=nagios-core              # Docker container name for validation/reload
+NAGIOS_BIN=nagios                                    # or exact path, e.g. /opt/nagios/bin/nagios
+NAGIOS_CONFIG_DIR=./nagios/config                    # host path for generated configs
+NAGIOS_CONTAINER_NAME=nagios-core                    # Docker container name for validation/reload
 ```
 
 Rebuild and restart the gateway after changing these.
