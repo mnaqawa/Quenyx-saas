@@ -166,15 +166,26 @@ export interface DataSourceSummary {
   lastUpdate: string
 }
 
-// Services page types
+// Services page types (Nagios-derived fields)
 export interface ObserveServiceRow {
   host: string
   service: string
   status: 'ok' | 'warning' | 'critical' | 'unknown' | 'pending'
   lastCheckAt: string
+  nextCheckAt?: string
   durationSec: number
   attempt: string
+  currentAttempt?: number
+  maxAttempts?: number
+  stateType?: string
   info: string
+  pluginOutput?: string
+  longPluginOutput?: string
+  perfData?: string
+  checkCommand?: string
+  checkLatencySec?: number
+  executionTimeSec?: number
+  lastStateChangeAt?: string
 }
 
 export interface ObserveServicesResponse {

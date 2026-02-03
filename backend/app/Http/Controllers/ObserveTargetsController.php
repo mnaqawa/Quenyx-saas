@@ -70,7 +70,7 @@ class ObserveTargetsController extends Controller
             ->with('services')
             ->orderBy('name')
             ->get()
-            ->map(function ($host) use ($definitionsByCommand) {
+            ->map(function ($host) use ($definitionsByCommand, $project) {
                 return [
                     'id' => $host->id,
                     'name' => $host->name,
@@ -78,20 +78,29 @@ class ObserveTargetsController extends Controller
                     'check_command' => $host->check_command,
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
-                    'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
+                    'services' => $host->services->map(function ($service) use ($definitionsByCommand, $project) {
                         $raw = trim($service->check_command ?? '');
                         $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
                         $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
                             ? $definitionsByCommand[$baseCommand]
                             : $this->inferServiceKeyFromServiceName($service->name ?? '');
                         $check_args = $service->check_args ?? [];
+                        $responseOverrides = $this->overridesForResponse($check_args);
+                        // Deterministic tracing: GET overrides pipeline
+                        Log::debug('ObserveTargets GET overrides', [
+                            'workspace_id' => $project->id,
+                            'service_id' => $service->id,
+                            'service_name' => $service->name,
+                            'check_args_raw' => $check_args,
+                            'response_overrides' => $responseOverrides,
+                        ]);
                         return [
                             'id' => $service->id,
                             'name' => $service->name,
                             'check_command' => $service->check_command,
                             'check_args' => $check_args,
                             'service_key' => $service_key,
-                            'overrides' => $this->overridesForResponse($check_args),
+                            'overrides' => $responseOverrides,
                             'enabled' => $service->enabled,
                         ];
                     }),
@@ -273,6 +282,15 @@ class ObserveTargetsController extends Controller
                     $newServiceIds = [];
 
                     foreach ($servicesData as $serviceData) {
+                        $checkArgsToStore = $serviceData['check_args'] ?? [];
+
+                        Log::debug('ObserveTargets PUT overrides (before save)', [
+                            'workspace_id' => $project->id,
+                            'service_name' => $serviceData['name'] ?? null,
+                            'incoming_overrides' => $serviceData['overrides'] ?? null,
+                            'normalized_check_args' => $checkArgsToStore,
+                        ]);
+
                         $service = ObserveTargetService::updateOrCreate(
                             [
                                 'host_id' => $host->id,
@@ -281,11 +299,23 @@ class ObserveTargetsController extends Controller
                             [
                                 'workspace_id' => $project->id,
                                 'check_command' => $serviceData['check_command'] ?? '',
-                                'check_args' => $serviceData['check_args'] ?? [],
+                                'check_args' => $checkArgsToStore,
                                 'enabled' => $serviceData['enabled'] ?? true,
                             ]
                         );
-                        
+
+                        $afterSave = $service->fresh();
+                        $storedRaw = $afterSave ? $afterSave->getRawOriginal('check_args') : null;
+                        $storedDecoded = $afterSave ? ($afterSave->check_args ?? []) : [];
+
+                        Log::debug('ObserveTargets PUT overrides (after save)', [
+                            'workspace_id' => $project->id,
+                            'service_id' => $service->id,
+                            'service_name' => $service->name,
+                            'db_check_args_raw' => $storedRaw,
+                            'db_check_args_decoded' => $storedDecoded,
+                        ]);
+
                         $newServiceIds[] = $service->id;
                     }
 

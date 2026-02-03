@@ -1,15 +1,25 @@
 import http from 'http'
 import https from 'https'
 
-interface NagiosService {
+export interface NagiosService {
   host_name: string
   service_name: string
   state: 'ok' | 'warning' | 'critical' | 'unknown' | 'pending'
   last_check_at: string
+  next_check_at?: string
   duration_sec: number
   attempt: string
+  current_attempt?: number
+  max_attempts?: number
+  state_type?: string
   output: string
+  plugin_output?: string
+  long_plugin_output?: string
   perfdata?: string
+  check_command?: string
+  check_latency_sec?: number
+  execution_time_sec?: number
+  last_state_change_at?: string
 }
 
 /**
@@ -28,13 +38,14 @@ interface NagiosServiceDetailResponse {
       host_name: string
       service_description: string
       current_state: number
-      last_check: string
-      last_state_change: string
-      current_attempt: number
-      max_attempts: number
-      plugin_output: string
+      last_check?: string
+      last_state_change?: string
+      current_attempt?: number
+      max_attempts?: number
+      plugin_output?: string
       long_plugin_output?: string
       perf_data?: string
+      [key: string]: unknown
     }
   }
 }
@@ -150,29 +161,29 @@ function calculateDuration(lastStateChange: string): number {
 }
 
 /**
- * Normalize Nagios service data to our structure
+ * Normalize Nagios service detail to our structure (full fields for poll/API).
  */
-function normalizeService(serviceData: {
-  host_name: string
-  service_description: string
-  current_state: number
-  last_check: string
-  last_state_change: string
-  current_attempt: number
-  max_attempts: number
-  plugin_output: string
-  long_plugin_output?: string
-  perf_data?: string
-}): NagiosService {
+function normalizeService(detail: NagiosServiceDetailResponse['data']['service']): NagiosService {
+  const cur = detail.current_attempt ?? 0
+  const max = detail.max_attempts ?? 0
+  const lastCheck = detail.last_check ?? ''
+  const lastStateChange = detail.last_state_change ?? ''
+  const pluginOutput = detail.plugin_output ?? ''
+  const longOutput = detail.long_plugin_output ?? ''
   return {
-    host_name: serviceData.host_name,
-    service_name: serviceData.service_description,
-    state: stateToString(serviceData.current_state),
-    last_check_at: serviceData.last_check,
-    duration_sec: calculateDuration(serviceData.last_state_change),
-    attempt: `${serviceData.current_attempt}/${serviceData.max_attempts}`,
-    output: serviceData.long_plugin_output || serviceData.plugin_output,
-    perfdata: serviceData.perf_data,
+    host_name: detail.host_name,
+    service_name: detail.service_description,
+    state: stateToString(detail.current_state),
+    last_check_at: lastCheck,
+    last_state_change_at: lastStateChange || undefined,
+    duration_sec: lastStateChange ? calculateDuration(lastStateChange) : 0,
+    attempt: `${cur}/${max}`,
+    current_attempt: cur,
+    max_attempts: max,
+    output: longOutput || pluginOutput,
+    plugin_output: pluginOutput || undefined,
+    long_plugin_output: longOutput || undefined,
+    perfdata: detail.perf_data,
   }
 }
 
@@ -256,11 +267,31 @@ function flattenServicelist(
   return rows
 }
 
+const CONCURRENCY = 5
+
 /**
- * Fetch all services: parse nested servicelist, filter by host_prefix, map to NagiosService.
- * Caching and host_prefix filtering are preserved; no per-service detail fetch (servicelist has state).
+ * Run up to CONCURRENCY promises at a time.
  */
-async function fetchAllServices(_concurrencyLimit: number = 5, hostPrefix?: string): Promise<NagiosService[]> {
+async function runWithConcurrency<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = []
+  let index = 0
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, () => worker()))
+  return results
+}
+
+/**
+ * Fetch all services: servicelist for state + per-service detail for last_check, plugin_output, attempt, etc.
+ */
+async function fetchAllServices(hostPrefix?: string): Promise<NagiosService[]> {
   const serviceListResponse = await fetchServiceList(hostPrefix)
   const servicelist = serviceListResponse?.data?.servicelist
   if (!servicelist || typeof servicelist !== 'object') {
@@ -268,16 +299,28 @@ async function fetchAllServices(_concurrencyLimit: number = 5, hostPrefix?: stri
   }
 
   const rows = flattenServicelist(servicelist, hostPrefix)
-  return rows.map((r) => ({
-    host_name: r.host_name,
-    service_name: r.service_description,
-    state: stateToString(r.current_state),
-    last_check_at: '',
-    duration_sec: 0,
-    attempt: '0/0',
-    output: '',
-    perfdata: undefined as string | undefined,
-  }))
+  if (rows.length === 0) return []
+
+  const details = await runWithConcurrency(rows, async (r) => {
+    try {
+      const res = await fetchServiceDetail(r.host_name, r.service_description)
+      const svc = res?.data?.service
+      if (svc) return normalizeService(svc)
+    } catch {
+      // Fallback to state-only row if detail fetch fails
+    }
+    return {
+      host_name: r.host_name,
+      service_name: r.service_description,
+      state: stateToString(r.current_state),
+      last_check_at: '',
+      duration_sec: 0,
+      attempt: '0/0',
+      output: '',
+    } as NagiosService
+  })
+
+  return details
 }
 
 /**
@@ -294,7 +337,7 @@ export async function getNagiosServices(hostPrefix?: string | string[]): Promise
     return cached.data
   }
 
-  const services = await fetchAllServices(10, prefixStr)
+  const services = await fetchAllServices(prefixStr)
   servicesCache.set(cacheKey, {
     data: services,
     expiresAt: now + CACHE_TTL_MS,

@@ -18,15 +18,31 @@ class ObserveService extends Model
         'service_name',
         'state',
         'last_check_at',
+        'next_check_at',
         'duration_sec',
         'attempt',
+        'current_attempt',
+        'max_attempts',
+        'state_type',
         'output',
+        'plugin_output',
+        'long_plugin_output',
         'perfdata',
+        'check_command',
+        'check_latency_sec',
+        'execution_time_sec',
+        'last_state_change_at',
     ];
 
     protected $casts = [
         'last_check_at' => 'datetime',
+        'next_check_at' => 'datetime',
+        'last_state_change_at' => 'datetime',
         'duration_sec' => 'integer',
+        'current_attempt' => 'integer',
+        'max_attempts' => 'integer',
+        'check_latency_sec' => 'float',
+        'execution_time_sec' => 'float',
     ];
 
     public function workspace(): BelongsTo

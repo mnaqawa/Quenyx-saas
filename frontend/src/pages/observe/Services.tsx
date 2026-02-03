@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
@@ -59,7 +59,8 @@ export default function Services() {
     const intervalParam = searchParams.get('interval')
     return intervalParam ? `${intervalParam} seconds` : '90 seconds'
   })
-  
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null)
+
   // Sync state changes to URL query params
   useEffect(() => {
     const params = new URLSearchParams()
@@ -408,64 +409,103 @@ export default function Services() {
                   </td>
                 </tr>
               ) : (
-                data.items.map((item, index) => (
-                  <tr
-                    key={`${item.host}-${item.service}-${index}`}
-                    className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
-                  >
-                    <td className="px-3 py-2.5 text-[13px]">
-                      <button
-                        onClick={() => {
-                          if (selectedWorkspaceId) {
-                            navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
-                          }
-                        }}
-                        className="hover:text-sky-200 transition"
+                data.items.map((item, index) => {
+                  const rowKey = `${item.host}-${item.service}-${index}`
+                  const isExpanded = expandedRowKey === rowKey
+                  const hasPerf = !!(item.perfData || item.longPluginOutput)
+                  return (
+                    <>
+                      <tr
+                        key={rowKey}
+                        className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
                       >
-                        {item.host}
-                      </button>
-                    </td>
-                    <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
-                      >
-                        {item.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
-                    <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
-                    <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
-                    <td className="px-3 py-2.5 text-[13px] text-white/70">
-                      <div className="line-clamp-2" title={item.info}>
-                        {item.info}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          disabled
-                          title="Acknowledge (Coming soon)"
-                          className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        </button>
-                        <button
-                          disabled
-                          title="Schedule Downtime (Coming soon)"
-                          className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        <td className="px-3 py-2.5 text-[13px]">
+                          <button
+                            onClick={() => {
+                              if (selectedWorkspaceId) {
+                                navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
+                              }
+                            }}
+                            className="hover:text-sky-200 transition"
+                          >
+                            {item.host}
+                          </button>
+                        </td>
+                        <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
+                          >
+                            {item.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
+                        <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
+                        <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
+                        <td className="px-3 py-2.5 text-[13px] text-white/70">
+                          <div className="line-clamp-2" title={item.info}>
+                            {item.info || '—'}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center justify-end gap-2">
+                            {hasPerf && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedRowKey(isExpanded ? null : rowKey)}
+                                title={isExpanded ? 'Hide perf data' : 'Show perf data'}
+                                className="rounded border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotate-180' : ''}>
+                                  <path d="M6 9l6 6 6-6" />
+                                </svg>
+                              </button>
+                            )}
+                            <button
+                              disabled
+                              title="Acknowledge (Coming soon)"
+                              className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            </button>
+                            <button
+                              disabled
+                              title="Schedule Downtime (Coming soon)"
+                              className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && hasPerf && (
+                        <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
+                          <td colSpan={8} className="px-3 py-2 text-xs text-white/60">
+                            <div className="space-y-1">
+                              {item.perfData && (
+                                <div>
+                                  <span className="font-medium text-white/70">Perf data:</span>{' '}
+                                  <span className="font-mono">{item.perfData}</span>
+                                </div>
+                              )}
+                              {item.longPluginOutput && (
+                                <div>
+                                  <span className="font-medium text-white/70">Long output:</span>{' '}
+                                  <span className="whitespace-pre-wrap">{item.longPluginOutput}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })
               )}
             </tbody>
           </table>

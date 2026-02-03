@@ -178,9 +178,20 @@ class ObserveController extends Controller
                 'status' => $service->state,
                 'state_code' => $stateCode($service->state),
                 'lastCheckAt' => $service->last_check_at?->toIso8601String() ?? '',
+                'nextCheckAt' => $service->next_check_at?->toIso8601String() ?? '',
                 'durationSec' => $service->duration_sec ?? 0,
                 'attempt' => $service->attempt ?? '1/3',
+                'currentAttempt' => $service->current_attempt,
+                'maxAttempts' => $service->max_attempts,
+                'stateType' => $service->state_type ?? '',
                 'info' => $service->output ?? '',
+                'pluginOutput' => $service->plugin_output ?? '',
+                'longPluginOutput' => $service->long_plugin_output ?? '',
+                'perfData' => $service->perfdata ?? '',
+                'checkCommand' => $service->check_command ?? '',
+                'checkLatencySec' => $service->check_latency_sec,
+                'executionTimeSec' => $service->execution_time_sec,
+                'lastStateChangeAt' => $service->last_state_change_at?->toIso8601String() ?? '',
             ];
         })->toArray();
 

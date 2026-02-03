@@ -127,11 +127,21 @@ class PollObserveData extends Command
                             'host_name' => $service['host_name'],
                             'service_name' => $service['service_name'],
                             'state' => $service['state'],
-                            'last_check_at' => $service['last_check_at'] ? new \DateTime($service['last_check_at']) : null,
+                            'last_check_at' => !empty($service['last_check_at']) ? new \DateTime($service['last_check_at']) : null,
+                            'next_check_at' => !empty($service['next_check_at']) ? new \DateTime($service['next_check_at']) : null,
                             'duration_sec' => $service['duration_sec'] ?? null,
                             'attempt' => $service['attempt'] ?? null,
+                            'current_attempt' => $service['current_attempt'] ?? null,
+                            'max_attempts' => $service['max_attempts'] ?? null,
+                            'state_type' => $service['state_type'] ?? null,
                             'output' => $service['output'] ?? null,
+                            'plugin_output' => $service['plugin_output'] ?? null,
+                            'long_plugin_output' => $service['long_plugin_output'] ?? null,
                             'perfdata' => $service['perfdata'] ?? null,
+                            'check_command' => $service['check_command'] ?? null,
+                            'check_latency_sec' => isset($service['check_latency_sec']) ? (float) $service['check_latency_sec'] : null,
+                            'execution_time_sec' => isset($service['execution_time_sec']) ? (float) $service['execution_time_sec'] : null,
+                            'last_state_change_at' => !empty($service['last_state_change_at']) ? new \DateTime($service['last_state_change_at']) : null,
                         ]
                     );
                 }
