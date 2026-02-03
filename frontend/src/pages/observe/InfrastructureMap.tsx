@@ -57,7 +57,7 @@ export default function InfrastructureMap() {
           <h3 className="mb-4 text-sm font-semibold">Hosts</h3>
           <p className="mb-4 text-xs text-white/60">Status is derived from the worst service state per host.</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {hosts.map((h) => (
+            {hosts.map((h: { name: string; address: string; status: string }) => (
               <div
                 key={h.name}
                 className="rounded-lg border border-white/10 bg-white/5 p-4 flex items-center justify-between"
