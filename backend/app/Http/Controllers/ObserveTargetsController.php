@@ -15,27 +15,41 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Collection;
 
 class ObserveTargetsController extends Controller
 {
     /**
-     * Normalize overrides for JSON response: always return an object (associative array or stdClass).
-     * Rejects list/empty array so frontend receives {} not [].
+     * Normalize overrides for JSON response: return array (empty [] or associative) so JSON encodes as {} or object.
+     * Do NOT return stdClass to avoid log/encoding showing {"stdClass":[]}.
      *
      * @param mixed $check_args
-     * @return array<string, mixed>|object
+     * @return array<string, mixed>
      */
-    private function overridesForResponse($check_args)
+    private function overridesForResponse($check_args): array
     {
+        if ($check_args === null) {
+            return [];
+        }
+        if (is_string($check_args)) {
+            $decoded = json_decode($check_args, true);
+            if (! is_array($decoded)) {
+                return [];
+            }
+            $check_args = $decoded;
+        }
         if (! is_array($check_args)) {
-            return (object) [];
+            return [];
         }
         if ($check_args === []) {
-            return (object) [];
+            return [];
+        }
+        if (function_exists('array_is_list') && array_is_list($check_args)) {
+            return [];
         }
         $keys = array_keys($check_args);
         if ($keys === range(0, count($check_args) - 1)) {
-            return (object) [];
+            return [];
         }
         return $check_args;
     }
@@ -43,9 +57,10 @@ class ObserveTargetsController extends Controller
     /**
      * Normalize incoming overrides from request so we always persist a JSON object (associative array).
      * - null → []
-     * - stdClass (JSON object) → associative array via json_decode(json_encode(...), true)
-     * - array list (numeric keys) → [] (treat as "no overrides")
-     * - associative array → preserved (never collapse to [])
+     * - Collection → ->all()
+     * - object → get_object_vars() (no json_encode/decode)
+     * - array list → [] (no overrides)
+     * - associative array → as-is
      *
      * @param mixed $overrides
      * @return array<string, mixed>
@@ -55,7 +70,6 @@ class ObserveTargetsController extends Controller
         if ($overrides === null) {
             return [];
         }
-        // Request middleware or gateway may leave nested JSON as string; decode once
         if (is_string($overrides)) {
             $decoded = json_decode($overrides, true);
             if (is_array($decoded)) {
@@ -64,42 +78,20 @@ class ObserveTargetsController extends Controller
                 return [];
             }
         }
-        // JSON objects decoded without JSON_BIGINT_AS_STRING come as stdClass; convert to associative array
+        if ($overrides instanceof Collection) {
+            $overrides = $overrides->all();
+        }
         if (is_object($overrides)) {
-            $overrides = json_decode(json_encode($overrides), true);
-            if (! is_array($overrides)) {
-                return [];
-            }
+            $overrides = get_object_vars($overrides);
         }
         if (! is_array($overrides)) {
             return [];
         }
-        $keys = array_keys($overrides);
-        $n = count($overrides);
-        // Clearly associative (string keys or non-sequential) → use as-is
-        if ($n === 0) {
+        if (function_exists('array_is_list') && array_is_list($overrides)) {
             return [];
         }
-        if ($keys !== range(0, $n - 1)) {
-            return $overrides;
-        }
-        // Numeric list: convert key-value shapes or return []
-        $isList = true;
-        if ($isList) {
-            // Single pair [key, value] → associative
-            if (count($overrides) === 2 && array_key_exists(0, $overrides) && array_key_exists(1, $overrides)) {
-                return [ (string) $overrides[0] => $overrides[1] ];
-            }
-            // List of pairs [[k,v],[k,v],...] → associative
-            $out = [];
-            foreach ($overrides as $pair) {
-                if (is_array($pair) && count($pair) === 2 && array_key_exists(0, $pair) && array_key_exists(1, $pair)) {
-                    $out[(string) $pair[0]] = $pair[1];
-                }
-            }
-            if ($out !== []) {
-                return $out;
-            }
+        $keys = array_keys($overrides);
+        if ($keys === range(0, count($overrides) - 1)) {
             return [];
         }
         return $overrides;
@@ -258,11 +250,40 @@ class ObserveTargetsController extends Controller
                     continue;
                 }
 
-                // Always persist overrides as check_args (JSON object). Never allow numeric-array to overwrite.
-                // Accept both 'overrides' and 'check_args' from request (some clients may send either).
+                // Always persist overrides as check_args (JSON object). Accept both keys from request.
                 $rawOverrides = $serviceData['overrides'] ?? $serviceData['check_args'] ?? null;
+                // Debug: exact variable passed to normalizer (cannot lie)
+                $debugType = gettype($rawOverrides);
+                $debugIsArray = is_array($rawOverrides);
+                $debugIsObject = is_object($rawOverrides);
+                $debugClass = $debugIsObject ? get_class($rawOverrides) : null;
+                $debugKeys = $debugIsArray ? array_keys($rawOverrides) : null;
+                $debugIsList = $debugIsArray && function_exists('array_is_list') ? array_is_list($rawOverrides) : null;
+                $debugObjVarsKeys = $debugIsObject ? array_keys(get_object_vars($rawOverrides)) : null;
+                Log::debug('ObserveTargets PUT overrides (before normalize)', [
+                    'workspace_id' => $project->id,
+                    'service_name' => $serviceData['name'] ?? null,
+                    'raw_var_export' => var_export($rawOverrides, true),
+                    'gettype' => $debugType,
+                    'is_array' => $debugIsArray,
+                    'is_object' => $debugIsObject,
+                    'class' => $debugClass,
+                    'array_keys' => $debugKeys,
+                    'array_is_list' => $debugIsList,
+                    'get_object_vars_keys' => $debugObjVarsKeys,
+                ]);
                 $overrides = $this->normalizeIncomingOverrides($rawOverrides);
+                Log::debug('ObserveTargets PUT overrides (after normalize)', [
+                    'workspace_id' => $project->id,
+                    'service_name' => $serviceData['name'] ?? null,
+                    'normalized_var_export' => var_export($overrides, true),
+                ]);
                 $serviceData['check_args'] = $overrides;
+                Log::debug('ObserveTargets PUT check_args assigned (validation loop)', [
+                    'workspace_id' => $project->id,
+                    'service_name' => $serviceData['name'] ?? null,
+                    'final_check_args_var_export' => var_export($serviceData['check_args'], true),
+                ]);
 
                 $serviceKey = $serviceData['service_key'] ?? null;
                 $incomingCheckCommand = $serviceData['check_command'] ?? null;
@@ -348,8 +369,9 @@ class ObserveTargetsController extends Controller
                     $newServiceIds = [];
 
                     foreach ($servicesData as $serviceData) {
-                        // check_args was set in validation loop from normalized overrides; ensure we never store numeric array
+                        // Single source: check_args set in validation loop from normalizeIncomingOverrides(); do not overwrite.
                         $checkArgsToStore = $serviceData['check_args'] ?? [];
+                        // Only coerce numeric list to [] so we never store [] as object; do not touch associative
                         if (is_array($checkArgsToStore) && array_keys($checkArgsToStore) === range(0, count($checkArgsToStore) - 1)) {
                             $checkArgsToStore = [];
                         }
@@ -368,8 +390,7 @@ class ObserveTargetsController extends Controller
                         Log::debug('ObserveTargets PUT overrides (before save)', [
                             'workspace_id' => $project->id,
                             'service_name' => $serviceData['name'] ?? null,
-                            'incoming_overrides' => $serviceData['overrides'] ?? null,
-                            'normalized_check_args' => $checkArgsToStore,
+                            'final_check_args_to_store_var_export' => var_export($checkArgsToStore, true),
                         ]);
 
                         // Build update data; only include service_key if column exists (remove after migration is run everywhere)
@@ -380,6 +401,11 @@ class ObserveTargetsController extends Controller
                             'check_args' => $checkArgsToStore,
                             'enabled' => $serviceData['enabled'] ?? true,
                         ];
+                        Log::debug('ObserveTargets PUT check_args assignment (updateData)', [
+                            'workspace_id' => $project->id,
+                            'service_name' => $serviceData['name'] ?? null,
+                            'updateData_check_args_var_export' => var_export($updateData['check_args'], true),
+                        ]);
                         if (Schema::hasColumn($serviceTable, 'service_key')) {
                             $updateData['service_key'] = $serviceKeyToStore;
                         }
