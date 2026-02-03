@@ -12,8 +12,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Poll Nagios (via gateway) so Services UI shows up-to-date status. Runs in all environments.
+        // Poll Nagios (via gateway) when using Nagios daemon
         $schedule->command('observe:poll')
+            ->everyMinute()
+            ->withoutOverlapping(90);
+
+        // Run native checks (no Nagios): updates ObserveService so Services UI stays fresh
+        $schedule->command('observe:run-checks')
             ->everyMinute()
             ->withoutOverlapping(90);
     }

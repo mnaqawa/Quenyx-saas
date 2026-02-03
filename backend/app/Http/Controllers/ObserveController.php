@@ -55,15 +55,22 @@ class ObserveController extends Controller
         $this->authorize('view', $project);
 
         $meta = ObserveMeta::where('workspace_id', $project->id)
-            ->where('engine_key', 'nagios')
+            ->whereIn('engine_key', ['nagios', 'native'])
+            ->orderByDesc('last_poll_at')
             ->first();
 
-        $totals = $meta?->service_totals_json ?? [
-            'ok' => 0,
-            'warning' => 0,
-            'critical' => 0,
-            'unknown' => 0,
-            'pending' => 0,
+        $prefix = 'ws' . $project->id . '-';
+        $allServices = ObserveService::where('workspace_id', $project->id)
+            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('host_name', 'like', $prefix . '%')
+            ->get();
+        $totals = [
+            'ok' => $allServices->where('state', 'ok')->count(),
+            'warning' => $allServices->where('state', 'warning')->count(),
+            'critical' => $allServices->where('state', 'critical')->count(),
+            'unknown' => $allServices->where('state', 'unknown')->count(),
+            'pending' => $allServices->where('state', 'pending')->count(),
+            'unreachable' => $allServices->where('state', 'unreachable')->count(),
         ];
 
         return response()->json([
@@ -88,10 +95,10 @@ class ObserveController extends Controller
         $limit = (int) ($request->query('limit', 100));
         $problemsOnly = $request->query('problems') === '1' || $request->query('problemsOnly') === 'true';
 
-        // Build query with workspace scoping (only include hosts with ws{workspaceId}- prefix)
+        // Build query with workspace scoping (include both nagios and native engine data)
         $workspacePrefix = 'ws' . $project->id . '-';
         $query = ObserveService::where('workspace_id', $project->id)
-            ->where('engine_key', 'nagios')
+            ->whereIn('engine_key', ['nagios', 'native'])
             ->where('host_name', 'like', $workspacePrefix . '%');
 
         // Apply status filter
@@ -115,27 +122,28 @@ class ObserveController extends Controller
             });
         }
 
-        // Sort by severity: critical > warning > unknown > unreachable > pending > ok
-        $query->orderByRaw("
-            CASE state
-                WHEN 'critical' THEN 1
-                WHEN 'warning' THEN 2
-                WHEN 'unknown' THEN 3
-                WHEN 'unreachable' THEN 4
-                WHEN 'pending' THEN 5
-                WHEN 'ok' THEN 6
-                ELSE 7
-            END
-        ");
+        // Fetch all matching services (both engines); dedupe by (host_name, service_name), prefer native
+        $allRows = $query->get();
+        $keyFn = fn ($s) => $s->host_name . '::' . $s->service_name;
+        $deduped = $allRows->groupBy($keyFn)->map(function ($group) {
+            $native = $group->firstWhere('engine_key', 'native');
+            return $native ?? $group->first();
+        })->values();
 
-        // Apply limit
-        $services = $query->limit($limit)->get();
+        // Apply severity sort and limit
+        $sorted = $deduped->sortBy(fn ($s) => match ($s->state) {
+            'critical' => 1,
+            'warning' => 2,
+            'unknown' => 3,
+            'unreachable' => 4,
+            'pending' => 5,
+            'ok' => 6,
+            default => 7,
+        });
+        $services = $sorted->take($limit)->values();
 
-        // Calculate totals from actual data (workspace-scoped)
-        $allServices = ObserveService::where('workspace_id', $project->id)
-            ->where('engine_key', 'nagios')
-            ->where('host_name', 'like', $workspacePrefix . '%')
-            ->get();
+        // Totals from deduped set (same scope as list)
+        $allServices = $deduped;
 
         $serviceTotals = [
             'ok' => $allServices->where('state', 'ok')->count(),
@@ -155,10 +163,11 @@ class ObserveController extends Controller
             'pending' => 0,
         ];
 
-        // Get meta for last_poll_at
-        $meta = ObserveMeta::where('workspace_id', $project->id)
-            ->where('engine_key', 'nagios')
-            ->first();
+        // Get meta for last_poll_at (prefer latest from nagios or native)
+        $metas = ObserveMeta::where('workspace_id', $project->id)
+            ->whereIn('engine_key', ['nagios', 'native'])
+            ->get();
+        $meta = $metas->sortByDesc(fn ($m) => $m->last_poll_at?->getTimestamp() ?? 0)->first();
 
         // Normalized state code for UI (9 = UNREACHABLE per TPM)
         $stateCode = fn (string $state): int => match ($state) {

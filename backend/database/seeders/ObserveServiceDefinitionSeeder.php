@@ -55,6 +55,17 @@ class ObserveServiceDefinitionSeeder extends Seeder
             ],
             [
                 'engine' => 'nagios',
+                'service_key' => 'plugin',
+                'display_name' => 'Plugin',
+                'check_command' => 'check_plugin',
+                'args_schema' => [
+                    ['position' => 0, 'key' => 'plugin', 'default' => null, 'required' => true],
+                ],
+                'capability_flags' => ['supports_custom_scripts'],
+                'status' => 'active',
+            ],
+            [
+                'engine' => 'nagios',
                 'service_key' => 'custom',
                 'display_name' => 'Custom',
                 'check_command' => '',
