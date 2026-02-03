@@ -414,9 +414,8 @@ export default function Services() {
                   const isExpanded = expandedRowKey === rowKey
                   const hasPerf = !!(item.perfData || item.longPluginOutput)
                   return (
-                    <>
+                    <Fragment key={rowKey}>
                       <tr
-                        key={rowKey}
                         className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
                       >
                         <td className="px-3 py-2.5 text-[13px]">
