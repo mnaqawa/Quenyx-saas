@@ -445,6 +445,7 @@ export default function Services() {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
+                        <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.nextCheckAt)}</td>
                         <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
                         <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
                         <td className="px-3 py-2.5 text-[13px] text-white/70">

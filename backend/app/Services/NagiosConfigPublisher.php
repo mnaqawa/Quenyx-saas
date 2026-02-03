@@ -363,39 +363,46 @@ class NagiosConfigPublisher
 
     /**
      * Resolve service check_command via ObserveServiceCommandResolver when a definition exists.
+     * Prefer service_key for deterministic mapping (http→check_http, tcp_port→check_tcp, ping→check_ping).
      * Overrides come from check_args (keyed by arg key, or positional mapped to schema).
      * Do not use custom path when check_command is empty (avoids "Custom service denied" and invalid config).
      */
     private function resolveServiceCheckCommand(ObserveTargetService $service, int $workspaceId): string
     {
         $checkCommand = $service->check_command ?? '';
-        if ($checkCommand === '') {
-            return $this->legacyCheckCommand($service);
-        }
-
         if (!Schema::hasTable('observe_service_definitions')) {
             return $this->legacyCheckCommand($service);
         }
 
-        // Match by base command (strip args after !) so we find definition even if check_command has args
-        $baseCommand = trim($checkCommand) !== '' ? strtolower(preg_replace('/!.*/', '', $checkCommand)) : '';
+        // Prefer service_key so type is deterministic (avoids wrong command when check_command is missing/wrong)
+        $serviceKey = $service->service_key ?? null;
         $definition = null;
-        if ($baseCommand !== '') {
+        if ($serviceKey !== null && $serviceKey !== '') {
             $definition = ObserveServiceDefinition::forEngine('nagios')
-                ->where('check_command', $baseCommand)
+                ->where('service_key', $serviceKey)
                 ->first();
         }
-        if ($definition === null && trim($checkCommand) !== '') {
-            $definition = ObserveServiceDefinition::forEngine('nagios')
-                ->where('check_command', $checkCommand)
-                ->first();
+
+        if ($definition === null && $checkCommand !== '') {
+            // Fallback: match by base command (strip args after !)
+            $baseCommand = strtolower(preg_replace('/!.*/', '', trim($checkCommand)));
+            if ($baseCommand !== '') {
+                $definition = ObserveServiceDefinition::forEngine('nagios')
+                    ->where('check_command', $baseCommand)
+                    ->first();
+            }
+            if ($definition === null) {
+                $definition = ObserveServiceDefinition::forEngine('nagios')
+                    ->where('check_command', trim($checkCommand))
+                    ->first();
+            }
         }
 
         if ($definition === null) {
             $definition = ObserveServiceDefinition::forEngine('nagios')
                 ->where('service_key', 'custom')
                 ->first();
-            if ($definition !== null) {
+            if ($definition !== null && $checkCommand !== '') {
                 $overrides = [
                     'command' => $checkCommand,
                     'args' => is_array($service->check_args ?? null) ? $service->check_args : [],

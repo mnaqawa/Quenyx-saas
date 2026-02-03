@@ -21,7 +21,9 @@ portshield-saas/
 ├── backend/          # Laravel API-only backend
 ├── frontend/         # React + TypeScript + Vite frontend
 ├── gateway/          # Node.js API gateway with entitlement enforcement
-└── docs/             # Documentation
+├── docs/             # Documentation
+├── DEPLOYMENT.md      # Full deployment guide (single-node & multi-node)
+└── README.md         # This file
 ```
 
 ## Features
@@ -38,9 +40,9 @@ portshield-saas/
 ### Prerequisites
 
 - PHP 8.1+ with Composer
-- Node.js 18+ with npm
+- Node.js 18+ LTS (or 20+) with npm
 - MySQL 8.0+
-- Nginx (for production)
+- Nginx (for production deployment)
 
 ### Backend Setup
 
@@ -94,9 +96,10 @@ Backend will be available at `http://localhost:8000`
    cd frontend
    ```
 
-2. Install dependencies:
+2. Install dependencies (use `npm ci` for reproducible installs; lockfile is committed):
    ```bash
    npm install
+   # or: npm ci
    ```
 
 3. Configure environment (optional):
@@ -106,7 +109,13 @@ Backend will be available at `http://localhost:8000`
    
    Set `VITE_API_BASE_URL` if backend is not on `http://localhost:8000`
 
-4. Start the development server:
+4. Build (optional, for production bundle):
+   ```bash
+   npm run build
+   ```
+   Output: `frontend/dist/`
+
+5. Start the development server:
    ```bash
    npm run dev
    ```
@@ -183,227 +192,12 @@ Gateway will be available at `http://localhost:4000`
 
 ## Deployment
 
-### Single Node Deployment (Development)
+Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, and ShieldObserve/Nagios gateway options are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
-**Requirements:**
-- Single server with PHP, Node.js, MySQL, and Nginx
-
-**Steps:**
-
-1. **Clone Repository:**
-   ```bash
-   git clone <repository-url>
-   cd portshield-saas
-   ```
-
-2. **Backend Setup:**
-   ```bash
-   cd backend
-   composer install --no-dev --optimize-autoloader
-   cp .env.example .env
-   # Edit .env with production database credentials
-   php artisan key:generate
-   php artisan migrate --force
-   php artisan db:seed --force
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
-
-3. **Frontend Build:**
-   ```bash
-   cd ../frontend
-   npm ci
-   npm run build
-   # Output in frontend/dist/
-   ```
-
-4. **Gateway Setup:**
-   ```bash
-   cd ../gateway
-   npm ci
-   npm run build
-   ```
-
-5. **Nginx Configuration:**
-   ```nginx
-   server {
-       listen 80;
-       server_name dev.portshield.net;
-       root /var/www/portshield/portshield-saas/frontend/dist;
-       index index.html;
-
-       # Frontend static files
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-
-       # API requests go through gateway
-       location /api/ {
-           proxy_pass http://127.0.0.1:4000;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_set_header Authorization $http_authorization;
-           proxy_cache_bypass $http_upgrade;
-           
-           # Timeouts
-           proxy_connect_timeout 60s;
-           proxy_send_timeout 60s;
-           proxy_read_timeout 60s;
-       }
-   }
-   ```
-
-6. **Systemd Services:**
-
-   **Backend (Laravel):**
-   ```ini
-   # /etc/systemd/system/portshield-backend.service
-   [Unit]
-   Description=PortShield Backend API
-   After=network.target
-
-   [Service]
-   Type=simple
-   User=www-data
-   WorkingDirectory=/var/www/portshield/portshield-saas/backend
-   ExecStart=/usr/bin/php artisan serve --host=127.0.0.1 --port=8000
-   Restart=always
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-   **Gateway:**
-   ```ini
-   # /etc/systemd/system/portshield-gateway.service
-   [Unit]
-   Description=PortShield API Gateway
-   After=network.target
-
-   [Service]
-   Type=simple
-   User=www-data
-   WorkingDirectory=/var/www/portshield/portshield-saas/gateway
-   Environment="GATEWAY_PORT=4000"
-   Environment="BACKEND_BASE_URL=http://127.0.0.1:8000"
-   Environment="ENTITLEMENTS_CACHE_TTL_MS=30000"
-   ExecStart=/usr/bin/node dist/server.js
-   Restart=always
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-7. **Start Services:**
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable portshield-backend
-   sudo systemctl enable portshield-gateway
-   sudo systemctl start portshield-backend
-   sudo systemctl start portshield-gateway
-   sudo systemctl reload nginx
-   ```
-
-### Multi-Node Deployment (Production)
-
-**Architecture:**
-- **Load Balancer**: Nginx (terminates SSL, routes traffic)
-- **Frontend Nodes**: Serve static files (can be CDN)
-- **Gateway Nodes**: API gateway instances (load balanced)
-- **Backend Nodes**: Laravel API instances (load balanced)
-- **Database**: MySQL (master-slave or cluster)
-
-**Node Roles:**
-
-1. **Load Balancer Node:**
-   - Nginx with SSL termination
-   - Routes `/api/*` to gateway nodes
-   - Routes `/` to frontend nodes or CDN
-
-2. **Gateway Nodes (2+):**
-   - Run gateway service
-   - Stateless (except in-memory cache)
-   - Health check endpoint: `/health`
-
-3. **Backend Nodes (2+):**
-   - Run Laravel API
-   - Shared database
-   - Session storage (Redis/DB)
-
-**Steps:**
-
-1. **Load Balancer Nginx Config:**
-   ```nginx
-   upstream gateway {
-       least_conn;
-       server gateway1.internal:4000;
-       server gateway2.internal:4000;
-   }
-
-   upstream backend {
-       least_conn;
-       server backend1.internal:8000;
-       server backend2.internal:8000;
-   }
-
-   server {
-       listen 443 ssl http2;
-       server_name portshield.net;
-       
-       ssl_certificate /path/to/cert.pem;
-       ssl_certificate_key /path/to/key.pem;
-
-       # Frontend (or CDN)
-       location / {
-           proxy_pass http://frontend-cdn;
-       }
-
-       # API through gateway
-       location /api/ {
-           proxy_pass http://gateway;
-           proxy_http_version 1.1;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_set_header Authorization $http_authorization;
-       }
-   }
-   ```
-
-2. **Gateway Node Setup:**
-   ```bash
-   cd gateway
-   npm ci
-   npm run build
-   # Set BACKEND_BASE_URL to load balancer or backend cluster
-   ```
-
-3. **Backend Node Setup:**
-   ```bash
-   cd backend
-   composer install --no-dev --optimize-autoloader
-   # Configure .env with shared database
-   php artisan migrate --force
-   php artisan config:cache
-   php artisan route:cache
-   ```
-
-4. **Health Checks:**
-   - Gateway: `GET /health` → `{"status":"ok","service":"gateway"}`
-   - Backend: `GET /api/health` → Check Laravel health endpoint
-
-5. **Monitoring:**
-   - Monitor gateway nodes (port 4000)
-   - Monitor backend nodes (port 8000)
-   - Monitor database connections
-   - Set up alerts for 502/503 errors
+**Summary:**
+- **Single-node**: Backend (Laravel), Gateway (Node), Frontend (static build), Nginx, MySQL. Use `npm ci` and `composer install --no-dev` for reproducible installs.
+- **Multi-node**: Load balancer → Gateway pool and Backend pool; shared MySQL; optional CDN for frontend.
+- **Gateway**: After code changes, rebuild (`npm run build`) and restart the gateway service so `dist/` is updated.
 
 ## Database Maintenance
 

@@ -4,6 +4,8 @@ import https from 'https'
 export interface NagiosService {
   host_name: string
   service_name: string
+  /** Alias for backend poll; same as service_name (Nagios service_description). */
+  service_description?: string
   state: 'ok' | 'warning' | 'critical' | 'unknown' | 'pending'
   last_check_at: string
   next_check_at?: string
@@ -166,19 +168,26 @@ function calculateDuration(lastStateChange: string): number {
 
 /**
  * Normalize Nagios service detail to our structure (full fields for poll/API).
+ * Includes service_description so backend can use it if service_name is missing.
  */
 function normalizeService(detail: NagiosServiceDetailResponse['data']['service']): NagiosService {
   const cur = detail.current_attempt ?? 0
   const max = detail.max_attempts ?? 0
   const lastCheck = detail.last_check ?? ''
   const lastStateChange = detail.last_state_change ?? ''
+  const nextCheck = detail.next_check ?? ''
   const pluginOutput = detail.plugin_output ?? ''
   const longOutput = detail.long_plugin_output ?? ''
+  const serviceDesc = detail.service_description ?? ''
+  const latency = detail.check_latency != null ? Number(detail.check_latency) : undefined
+  const execTime = detail.execution_time != null ? Number(detail.execution_time) : undefined
   return {
     host_name: detail.host_name,
-    service_name: detail.service_description,
+    service_name: serviceDesc,
+    service_description: serviceDesc,
     state: stateToString(detail.current_state),
     last_check_at: lastCheck,
+    next_check_at: nextCheck || undefined,
     last_state_change_at: lastStateChange || undefined,
     duration_sec: lastStateChange ? calculateDuration(lastStateChange) : 0,
     attempt: `${cur}/${max}`,
@@ -188,6 +197,9 @@ function normalizeService(detail: NagiosServiceDetailResponse['data']['service']
     plugin_output: pluginOutput || undefined,
     long_plugin_output: longOutput || undefined,
     perfdata: detail.perf_data,
+    check_command: detail.check_command,
+    check_latency_sec: latency,
+    execution_time_sec: execTime,
   }
 }
 
@@ -316,6 +328,7 @@ async function fetchAllServices(hostPrefix?: string): Promise<NagiosService[]> {
     return {
       host_name: r.host_name,
       service_name: r.service_description,
+      service_description: r.service_description,
       state: stateToString(r.current_state),
       last_check_at: '',
       next_check_at: undefined,

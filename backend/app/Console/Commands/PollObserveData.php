@@ -121,10 +121,12 @@ class PollObserveData extends Command
                     $hostName = is_string($hostName) ? trim($hostName) : '';
                     $serviceName = is_string($serviceName) ? trim($serviceName) : '';
                     if ($hostName === '' || $serviceName === '') {
-                        Log::warning('PollObserveData: skipping row missing host or service identifier', [
+                        // Log once per workspace at debug with raw row shape so we can see gateway response (remove after validation)
+                        Log::debug('PollObserveData: skipping row missing host or service identifier', [
                             'workspace_id' => $workspace->id,
                             'index' => $index,
                             'keys' => array_keys($service),
+                            'sample' => array_intersect_key($service, array_flip(['host_name', 'host', 'hostname', 'service_name', 'service_description', 'description', 'service', 'name', 'state'])),
                         ]);
                         continue;
                     }

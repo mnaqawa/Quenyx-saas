@@ -180,6 +180,24 @@ class ObserveServiceCommandResolverTest extends TestCase
         $this->assertFalse($result->success);
     }
 
+    // --- Service key → check_command mapping (publish correctness) ---
+
+    public function test_service_key_http_resolves_to_check_http(): void
+    {
+        $def = $this->httpDefinition();
+        $result = $this->resolver->resolve($def, ['port' => 80, 'path' => '/']);
+        $this->assertTrue($result->success);
+        $this->assertStringStartsWith('check_http!', $result->check_command);
+    }
+
+    public function test_service_key_tcp_port_resolves_to_check_tcp(): void
+    {
+        $def = $this->tcpPortDefinition();
+        $result = $this->resolver->resolve($def, ['port' => 443]);
+        $this->assertTrue($result->success);
+        $this->assertSame('check_tcp!443', $result->check_command);
+    }
+
     // --- TCP ---
 
     public function test_tcp_port_invalid_port_rejected(): void
