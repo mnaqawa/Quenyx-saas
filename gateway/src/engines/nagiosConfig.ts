@@ -398,7 +398,9 @@ export async function reloadNagios(): Promise<{
       let nagiosPid: string | null = null
       try {
         const pgrepResult = await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} pgrep -x nagios`, { timeout: 5000 })
-        nagiosPid = pgrepResult.stdout.trim()
+        // pgrep can return multiple PIDs (one per line); use only the first (main process)
+        const firstLine = pgrepResult.stdout.trim().split(/\r?\n/)[0]?.trim()
+        nagiosPid = firstLine || null
       } catch {
         nagiosPid = '1'
       }

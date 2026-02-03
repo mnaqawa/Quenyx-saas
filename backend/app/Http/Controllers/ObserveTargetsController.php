@@ -74,12 +74,32 @@ class ObserveTargetsController extends Controller
         if (! is_array($overrides)) {
             return [];
         }
-        // Treat numeric list as "no overrides" so we never store [] as object overwriting real overrides
-        if (function_exists('array_is_list') && array_is_list($overrides)) {
+        $keys = array_keys($overrides);
+        $n = count($overrides);
+        // Clearly associative (string keys or non-sequential) → use as-is
+        if ($n === 0) {
             return [];
         }
-        $keys = array_keys($overrides);
-        if ($keys === range(0, count($overrides) - 1)) {
+        if ($keys !== range(0, $n - 1)) {
+            return $overrides;
+        }
+        // Numeric list: convert key-value shapes or return []
+        $isList = true;
+        if ($isList) {
+            // Single pair [key, value] → associative
+            if (count($overrides) === 2 && array_key_exists(0, $overrides) && array_key_exists(1, $overrides)) {
+                return [ (string) $overrides[0] => $overrides[1] ];
+            }
+            // List of pairs [[k,v],[k,v],...] → associative
+            $out = [];
+            foreach ($overrides as $pair) {
+                if (is_array($pair) && count($pair) === 2 && array_key_exists(0, $pair) && array_key_exists(1, $pair)) {
+                    $out[(string) $pair[0]] = $pair[1];
+                }
+            }
+            if ($out !== []) {
+                return $out;
+            }
             return [];
         }
         return $overrides;

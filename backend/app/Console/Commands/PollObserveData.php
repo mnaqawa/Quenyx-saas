@@ -109,12 +109,17 @@ class PollObserveData extends Command
                 $receivedKeys = [];
 
                 foreach ($services as $service) {
+                    $hostName = $service['host_name'] ?? $service['host'] ?? '';
+                    $serviceName = $service['service_name'] ?? $service['service_description'] ?? $service['description'] ?? '';
+                    if ($hostName === '' || $serviceName === '') {
+                        continue;
+                    }
                     // Gateway should have already filtered, but verify for safety
-                    if (!str_starts_with($service['host_name'], $workspacePrefix)) {
+                    if (!str_starts_with($hostName, $workspacePrefix)) {
                         continue;
                     }
                     
-                    $engineServiceKey = "{$service['host_name']}::{$service['service_name']}";
+                    $engineServiceKey = "{$hostName}::{$serviceName}";
                     $receivedKeys[] = $engineServiceKey;
                     
                     ObserveService::updateOrCreate(
@@ -124,8 +129,8 @@ class PollObserveData extends Command
                             'engine_service_key' => $engineServiceKey,
                         ],
                         [
-                            'host_name' => $service['host_name'],
-                            'service_name' => $service['service_name'],
+                            'host_name' => $hostName,
+                            'service_name' => $serviceName,
                             'state' => $service['state'],
                             'last_check_at' => !empty($service['last_check_at']) ? new \DateTime($service['last_check_at']) : null,
                             'next_check_at' => !empty($service['next_check_at']) ? new \DateTime($service['next_check_at']) : null,
