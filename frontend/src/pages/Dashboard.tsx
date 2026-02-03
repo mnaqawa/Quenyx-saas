@@ -21,15 +21,7 @@ const getHealthLabel = (activeRatio: number): string => {
 const toPercent = (value: number): string => `${Math.round(value * 10) / 10}%`
 
 const buildAlerts = (modules: Module[]) => {
-  if (modules.length === 0) {
-    return [
-      { label: 'ShieldObserve', primary: 6, secondary: 2 },
-      { label: 'ShieldRespond', primary: 4, secondary: 1 },
-      { label: 'ShieldSecure', primary: 5, secondary: 2 },
-      { label: 'ShieldNotify', primary: 6, secondary: 2 },
-      { label: 'Others', primary: 5, secondary: 1 },
-    ]
-  }
+  if (modules.length === 0) return []
 
   return modules.slice(0, 5).map((module) => {
     const primary =
@@ -71,7 +63,8 @@ const buildPerformanceSeries = (modules: Module[]): PerformanceSeries[] => {
 }
 
 const buildWeeklyUptime = (modules: Module[]): number[] => {
-  const activeRatio = modules.length ? modules.filter((module) => module.status === 'active').length / modules.length : 0.5
+  if (modules.length === 0) return [0, 0, 0, 0, 0, 0, 0]
+  const activeRatio = modules.filter((module) => module.status === 'active').length / modules.length
   const base = 98.8 + activeRatio * 1.1
   return [base - 0.4, base - 0.6, base - 0.3, base + 0.1, base - 0.7, base - 0.2, base].map((value) =>
     Math.round(value * 10) / 10

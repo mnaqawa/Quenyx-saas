@@ -51,13 +51,21 @@ export function useRealTimeMetrics() {
       return
     }
 
-    // Simulate API call delay
-    const timer = setTimeout(() => {
-      setMetrics(realTimeMetricsFixture)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setMetrics(realTimeMetricsFixture)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getRealTimeMetrics(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setMetrics(data) })
+      .catch(() => { if (!cancelled) setMetrics(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { metrics, loading }
@@ -75,12 +83,21 @@ export function useSystemInfo() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setInfo(systemInfoFixture)
-      setLoading(false)
-    }, 200)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setInfo(systemInfoFixture)
+        setLoading(false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getSystemInfo(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setInfo(data) })
+      .catch(() => { if (!cancelled) setInfo(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { info, loading }
@@ -115,12 +132,21 @@ export function usePerformanceMetrics(timeRange?: string) {
       return
     }
 
-    const timer = setTimeout(() => {
-      setMetrics(performanceMetricsFixture)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setMetrics(performanceMetricsFixture)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getPerformanceMetrics(Number(selectedWorkspaceId), timeRange)
+      .then((data) => { if (!cancelled) setMetrics(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setMetrics([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId, timeRange])
 
   return { metrics, loading }
@@ -139,12 +165,21 @@ export function useNetworkTopology() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setTopology(networkTopologyFixture)
-      setLoading(false)
-    }, 400)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setTopology(networkTopologyFixture)
+        setLoading(false)
+      }, 400)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getNetworkTopology(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setTopology(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setTopology([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { topology, loading }
@@ -187,12 +222,21 @@ export function useAlertRules() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setRules(alertRulesFixture)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setRules(alertRulesFixture)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getAlertRules(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setRules(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setRules([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { rules, loading }
@@ -210,12 +254,21 @@ export function useAlertSummary() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setSummary(alertSummaryFixture)
-      setLoading(false)
-    }, 200)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setSummary(alertSummaryFixture)
+        setLoading(false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getAlertSummary(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setSummary(data ?? null) })
+      .catch(() => { if (!cancelled) setSummary(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { summary, loading }
@@ -234,16 +287,25 @@ export function useInstances(status?: string) {
       return
     }
 
-    const timer = setTimeout(() => {
-      let filtered = instancesFixture
-      if (status && status !== 'All Status') {
-        filtered = instancesFixture.filter((i) => i.status === status.toLowerCase())
-      }
-      setInstances(filtered)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        let filtered = instancesFixture
+        if (status && status !== 'All Status') {
+          filtered = instancesFixture.filter((i) => i.status === status.toLowerCase())
+        }
+        setInstances(filtered)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getInstances(Number(selectedWorkspaceId), status && status !== 'All Status' ? status : undefined)
+      .then((data) => { if (!cancelled) setInstances(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setInstances([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId, status])
 
   return { instances, loading }
@@ -261,12 +323,21 @@ export function useInstanceSummary() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setSummary(instanceSummaryFixture)
-      setLoading(false)
-    }, 200)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setSummary(instanceSummaryFixture)
+        setLoading(false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getInstanceSummary(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setSummary(data ?? null) })
+      .catch(() => { if (!cancelled) setSummary(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { summary, loading }
@@ -332,12 +403,21 @@ export function useDataSources() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setSources(dataSourcesFixture)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setSources(dataSourcesFixture)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getDataSources(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setSources(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setSources([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { sources, loading }
@@ -355,12 +435,21 @@ export function useDataSourceSummary() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setSummary(dataSourceSummaryFixture)
-      setLoading(false)
-    }, 200)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setSummary(dataSourceSummaryFixture)
+        setLoading(false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getDataSourceSummary(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setSummary(data ?? null) })
+      .catch(() => { if (!cancelled) setSummary(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { summary, loading }

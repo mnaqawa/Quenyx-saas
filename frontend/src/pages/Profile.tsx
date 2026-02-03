@@ -54,6 +54,24 @@ export default function Profile() {
     fetchProfile()
   }, [])
 
+  // Apply saved preferences when profile loads (theme + language); fallback to localStorage for theme
+  useEffect(() => {
+    const prefs = profile?.preferences
+    const prefLang = prefs?.language
+    const theme = prefs?.theme ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('portshield.theme') : null)
+    if (prefLang === 'en' || prefLang === 'ar') {
+      setLanguage(prefLang)
+    }
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.classList.remove('light', 'dark')
+      document.documentElement.classList.add(theme)
+      if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', theme)
+    } else if (theme === 'system') {
+      document.documentElement.classList.remove('light', 'dark')
+      if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', 'system')
+    }
+  }, [profile?.preferences, setLanguage])
+
   const handleSaveName = async () => {
     if (!nameValue.trim()) return
     setSaving(true)
@@ -137,7 +155,7 @@ export default function Profile() {
   }
 
   const stats = profile?.stats ?? { active_modules: 0, integrations: 0, api_calls_30d: 0 }
-  const theme = profile?.preferences?.theme ?? 'system'
+  const theme = profile?.preferences?.theme ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('portshield.theme') : null) ?? 'system'
 
   return (
     <div className="space-y-6">

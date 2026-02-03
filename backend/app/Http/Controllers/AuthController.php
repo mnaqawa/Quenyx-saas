@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\ProjectMembership;
+use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -170,7 +171,7 @@ class AuthController extends Controller
 
         $user->refresh();
         $projectIds = ProjectMembership::where('user_id', $user->id)->pluck('project_id');
-        $activeModules = $projectIds->count(); // workspaces with access as proxy for "active modules"
+        $activeModules = $this->countActiveModulesForUser($user->id);
         $integrations = DB::table('integration_configurations')
             ->whereIn('project_id', $projectIds)
             ->whereNotNull('project_id')
@@ -289,7 +290,7 @@ class AuthController extends Controller
     private function statsForUser(User $user): array
     {
         $projectIds = ProjectMembership::where('user_id', $user->id)->pluck('project_id');
-        $activeModules = $projectIds->count();
+        $activeModules = $this->countActiveModulesForUser($user->id);
         $integrations = DB::table('integration_configurations')
             ->whereIn('project_id', $projectIds)
             ->whereNotNull('project_id')
@@ -303,5 +304,25 @@ class AuthController extends Controller
             'integrations' => $integrations,
             'api_calls_30d' => $apiCalls30d,
         ];
+    }
+
+    /**
+     * Count total number of modules the user has access to across all their workspaces (real data from entitlements).
+     */
+    private function countActiveModulesForUser(int $userId): int
+    {
+        $memberships = ProjectMembership::where('user_id', $userId)->with('project')->get();
+        $entitlementService = app(EntitlementService::class);
+        $total = 0;
+        foreach ($memberships as $membership) {
+            $project = $membership->project;
+            if (! $project) {
+                continue;
+            }
+            $entitlements = $entitlementService->getEntitlements($project);
+            $modulesAllowed = $entitlements['modules_allowed'] ?? [];
+            $total += is_array($modulesAllowed) ? count($modulesAllowed) : 0;
+        }
+        return $total;
     }
 }
