@@ -36,12 +36,32 @@ function inferServiceKeyFromCheckCommand(checkCommand: string | undefined): stri
   return ''
 }
 
-/** Ensure each service has service_key set from check_command when missing (so dropdown displays correctly). */
+/** Infer service_key from service name when check_command is missing (legacy or edge-case data). */
+function inferServiceKeyFromServiceName(serviceName: string | undefined): string {
+  if (!serviceName || typeof serviceName !== 'string') return ''
+  const n = serviceName.trim().toLowerCase().replace(/\s+/g, ' ')
+  if (n.includes('http') && !n.includes('tcp') && !/port\s*\d+/.test(n)) return 'http'
+  if (n.includes('tcp') || /port\s*\d+/.test(n) || n.includes('port 8080')) return 'tcp_port'
+  if (n.includes('ping') || n.includes('live')) return 'ping'
+  return ''
+}
+
+/** Effective service_key: API, then check_command, then service name (so dropdown always shows when possible). */
+function effectiveServiceKey(svc: TargetService): string {
+  return (
+    svc.service_key ||
+    inferServiceKeyFromCheckCommand(svc.check_command) ||
+    inferServiceKeyFromServiceName(svc.name) ||
+    ''
+  )
+}
+
+/** Ensure each service has service_key set when missing (so dropdown displays correctly after load). */
 function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
   return hosts.map((host) => ({
     ...host,
     services: host.services.map((svc) => {
-      const key = svc.service_key || inferServiceKeyFromCheckCommand(svc.check_command)
+      const key = effectiveServiceKey(svc)
       return key ? { ...svc, service_key: key } : svc
     }),
   }))
@@ -111,10 +131,10 @@ export default function Targets() {
         setLoading(true)
         setError(null)
         const [targetsResponse, defsResponse] = await Promise.all([
-          gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(`workspaces/${workspaceId}/observe/targets`, {
-            workspaceId: String(workspaceId),
-            moduleKey: 'shieldobserve',
-          }),
+          gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(
+            `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
+            { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
+          ),
           observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
         ])
         // Handle both raw array and gateway-wrapped { data: hosts } so service types show after nav/signout
@@ -258,11 +278,11 @@ export default function Targets() {
         if (!service.name.trim()) {
           errors[`hosts.${hi}.services.${si}.name`] = ['Service name is required']
         }
-        const effectiveServiceKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
-        if (!effectiveServiceKey) {
+        const effectiveKey = effectiveServiceKey(service)
+        if (!effectiveKey) {
           errors[`hosts.${hi}.services.${si}.service_key`] = ['Service type is required']
         } else {
-          const def = definitionsByKey.get(effectiveServiceKey)
+          const def = definitionsByKey.get(effectiveKey)
           if (def) {
             def.args_schema.forEach((arg) => {
               if (arg.required) {
@@ -286,7 +306,7 @@ export default function Targets() {
                     }
                   }
                 }
-                if (effectiveServiceKey === 'ping' && (arg.key === 'warn_rta_ms' || arg.key === 'crit_rta_ms')) {
+                if (effectiveKey === 'ping' && (arg.key === 'warn_rta_ms' || arg.key === 'crit_rta_ms')) {
                   const plKey = arg.key === 'warn_rta_ms' ? 'warn_pl_pct' : 'crit_pl_pct'
                   const pl = service.overrides?.[plKey]
                   if (pl !== null && pl !== undefined && pl !== '') {
@@ -337,7 +357,7 @@ export default function Targets() {
           tags: host.tags,
           enabled: host.enabled,
           services: host.services.map((service) => {
-            const effectiveKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
+            const effectiveKey = effectiveServiceKey(service)
             return {
               name: service.name,
               service_key: effectiveKey || undefined,
@@ -349,17 +369,35 @@ export default function Targets() {
         })),
       }
 
-      const updatedHosts = await gatewayClient.put<TargetHost[]>(
+      type PutResult = { targets?: TargetHost[]; nagios_publish_success?: boolean; nagios_publish_error?: string; nagios_validation_errors?: string[] }
+      const result = await gatewayClient.put<TargetHost[] | PutResult>(
         `workspaces/${workspaceId}/observe/targets`,
         payload,
         { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
       )
 
-      setSuccess('Targets saved and published to Nagios')
-      // Merge response with current state so service_key and overrides never disappear after save
-      if (Array.isArray(updatedHosts)) {
-        const merged = mergeResponseWithCurrent(hosts, updatedHosts)
-        setHosts(normalizeHostsServiceKeys(merged))
+      // Response shape: either array (legacy) or { targets, nagios_publish_success, nagios_publish_error, nagios_validation_errors }
+      const hostsFromResponse = Array.isArray(result) ? result : (result?.targets ?? [])
+      const merged = mergeResponseWithCurrent(hosts, hostsFromResponse)
+      setHosts(normalizeHostsServiceKeys(merged))
+
+      const publishSuccess = Array.isArray(result) ? true : (result?.nagios_publish_success !== false)
+      if (!publishSuccess && result && typeof result === 'object' && 'nagios_publish_error' in result) {
+        const putResult = result as PutResult
+        setSuccess(null)
+        setError(putResult.nagios_publish_error || 'Nagios publish failed. Targets saved but config was not applied.')
+        const nagiosErrs = putResult.nagios_validation_errors
+        if (nagiosErrs?.length) {
+          setValidationErrors((prev) => ({ ...prev, nagios: nagiosErrs }))
+        }
+      } else {
+        setSuccess('Targets saved and published to Nagios')
+        setError(null)
+        setValidationErrors((prev) => {
+          const next = { ...prev }
+          delete next.nagios
+          return next
+        })
       }
     } catch (err: any) {
       const fieldErrors = err?.errors ?? err?.response?.data?.errors
@@ -577,8 +615,15 @@ export default function Targets() {
       />
 
       {error && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 space-y-2">
+          <div>{error}</div>
+          {validationErrors.nagios?.length > 0 && (
+            <ul className="list-disc list-inside text-rose-200/90 text-xs space-y-1">
+              {validationErrors.nagios.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -699,7 +744,7 @@ export default function Targets() {
                     ) : (
                       host.services.map((service, serviceIndex) => {
                         const serviceKey = `${hostIndex}-${serviceIndex}`
-                        const displayedServiceKey = service.service_key || inferServiceKeyFromCheckCommand(service.check_command)
+                        const displayedServiceKey = effectiveServiceKey(service)
                         const def = displayedServiceKey ? definitionsByKey.get(displayedServiceKey) : null
                         const groups = def ? groupFieldsByCapability(def) : {}
                         return (

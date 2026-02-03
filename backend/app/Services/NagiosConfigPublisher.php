@@ -103,7 +103,7 @@ class NagiosConfigPublisher
                     ['workspace_id' => $workspaceId, 'engine_key' => 'nagios'],
                     ['last_publish_at' => now(), 'last_publish_success' => false, 'last_publish_error' => $publishError]
                 );
-                throw new \Exception($publishError);
+                throw new \App\Exceptions\NagiosPublishException($publishError, $validationErrors);
             }
 
             if (!$writeResponse->successful()) {

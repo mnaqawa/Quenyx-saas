@@ -190,12 +190,17 @@ export interface ObserveServicesResponse {
     unknown: number
     critical: number
     pending: number
+    unreachable?: number
   }
   items: ObserveServiceRow[]
   meta?: {
     last_poll_at: string
     source_version?: string
   }
+  last_poll_at?: string | null
+  source_timestamp?: string | null
+  engine_unreachable?: boolean
+  stale?: boolean
 }
 
 // Normalized data model contract (Option A - Normalized state)

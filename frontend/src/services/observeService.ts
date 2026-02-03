@@ -89,6 +89,15 @@ export const observeService = {
     return gatewayClient.get<Instance[]>(endpoint, { workspaceId })
   },
 
+  // Monitored targets (for Infrastructure Map and others)
+  async getTargets(workspaceId: number): Promise<Array<{ name: string; address: string; [k: string]: unknown }>> {
+    const res = await gatewayClient.get<Array<{ name: string; address: string }> | { targets?: Array<{ name: string; address: string }> }>(
+      `workspaces/${workspaceId}/observe/targets`,
+      { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
+    )
+    return Array.isArray(res) ? res : res?.targets ?? []
+  },
+
   // Observe summary (backend /api/workspaces/:id/observe/summary)
   async getObserveSummary(workspaceId: number): Promise<{
     totals: { ok: number; warning: number; critical: number; unknown: number; pending: number }

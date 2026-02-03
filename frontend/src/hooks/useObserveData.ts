@@ -366,6 +366,88 @@ export function useDataSourceSummary() {
   return { summary, loading }
 }
 
+// Observe KPIs for Real-time Monitoring (host/service totals, problems, unreachable, stale, last poll)
+// Map: real target hosts with status from services (for Infrastructure Map)
+export function useObserveMapHosts(workspaceId: string | null) {
+  const { data: servicesData, loading: servicesLoading } = useObserveServices({ workspaceId, limit: 500 })
+  const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
+  const [targetsLoading, setTargetsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setTargets([])
+      setTargetsLoading(false)
+      return
+    }
+    let cancelled = false
+    observeService
+      .getTargets(Number(workspaceId))
+      .then((list) => {
+        if (!cancelled) setTargets(Array.isArray(list) ? list : (list as any)?.targets ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setTargets([])
+      })
+      .finally(() => {
+        if (!cancelled) setTargetsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [workspaceId])
+
+  const statusOrder = (s: string) =>
+    ['critical', 'warning', 'unknown', 'unreachable', 'pending', 'ok'].indexOf(s.toLowerCase())
+  const worstStatus = (statuses: string[]) =>
+    statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b), 'pending')
+
+  const hostToStatus = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!servicesData?.items) return map
+    const prefix = workspaceId ? `ws${workspaceId}-` : ''
+    for (const item of servicesData.items) {
+      const hostName = item.host?.startsWith(prefix) ? item.host.slice(prefix.length) : item.host
+      const current = map.get(hostName)
+      const s = (item as any).status ?? 'pending'
+      map.set(hostName, current ? worstStatus([current, s]) : s)
+    }
+    return map
+  }, [servicesData?.items, workspaceId])
+
+  const hosts = useMemo(() => {
+    return targets.map((t) => ({
+      name: t.name,
+      address: t.address,
+      status: hostToStatus.get(t.name) || 'pending',
+    }))
+  }, [targets, hostToStatus])
+
+  return { hosts, loading: targetsLoading || servicesLoading }
+}
+
+export function useObserveKpis(workspaceId: string | null, refreshKey = 0) {
+  const { data, loading, error } = useObserveServices({
+    workspaceId,
+    limit: 1,
+    refreshKey,
+  })
+  const problems =
+    data != null
+      ? (data.serviceTotals.warning ?? 0) +
+        (data.serviceTotals.critical ?? 0) +
+        (data.serviceTotals.unknown ?? 0) +
+        (data.serviceTotals.unreachable ?? 0)
+      : 0
+  return {
+    hostTotals: data?.hostTotals ?? { up: 0, down: 0, unreachable: 0, pending: 0 },
+    serviceTotals: data?.serviceTotals ?? { ok: 0, warning: 0, unknown: 0, critical: 0, pending: 0, unreachable: 0 },
+    problems,
+    engineUnreachable: data?.engine_unreachable ?? false,
+    stale: data?.stale ?? true,
+    lastPollAt: data?.last_poll_at ?? null,
+    loading,
+    error,
+  }
+}
+
 // Services hooks
 interface UseObserveServicesParams {
   workspaceId: string | null

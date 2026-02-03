@@ -43,7 +43,7 @@ class ObserveTargetsController extends Controller
                         $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
                         $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
                             ? $definitionsByCommand[$baseCommand]
-                            : null;
+                            : $this->inferServiceKeyFromServiceName($service->name ?? '');
                         $check_args = $service->check_args ?? [];
                         $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
                             ? $check_args
@@ -66,7 +66,7 @@ class ObserveTargetsController extends Controller
         return response()->json([
             'success' => true,
             'data' => $hosts,
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /**
@@ -279,28 +279,39 @@ class ObserveTargetsController extends Controller
             // Sync targets → observe_services immediately so Services page updates without waiting for Nagios poll
             $this->syncTargetsToObserveServices($project);
 
-            // Auto-publish config to Nagios if enabled
+            $nagiosPublishSuccess = true;
+            $nagiosPublishError = null;
+            $nagiosValidationErrors = [];
+
+            // Auto-publish config to Nagios if enabled; capture result for UI (do not pretend success)
             $autoPublish = filter_var(env('OBSERVE_AUTO_PUBLISH_NAGIOS', 'true'), FILTER_VALIDATE_BOOLEAN);
             if ($autoPublish) {
                 try {
                     $publisher = new NagiosConfigPublisher();
                     $publisher->publish($project->id, auth()->id());
-                    // Poll so Services page reflects new/removed targets immediately
                     Artisan::call('observe:poll', ['--workspace_id' => (string) $project->id]);
-                } catch (\Exception $e) {
+                } catch (\App\Exceptions\NagiosPublishException $e) {
+                    $nagiosPublishSuccess = false;
+                    $nagiosPublishError = $e->getMessage();
+                    $nagiosValidationErrors = $e->validationErrors;
                     Log::warning('Failed to publish Nagios config after targets update', [
                         'workspace_id' => $project->id,
-                        'error' => $e->getMessage(),
+                        'error' => $nagiosPublishError,
                     ]);
-                    // Don't fail the request, just log
+                } catch (\Exception $e) {
+                    $nagiosPublishSuccess = false;
+                    $nagiosPublishError = $e->getMessage();
+                    $nagiosValidationErrors = [];
+                    Log::warning('Failed to publish Nagios config after targets update', [
+                        'workspace_id' => $project->id,
+                        'error' => $nagiosPublishError,
+                    ]);
                 }
             } else {
-                Log::info('Auto-publish disabled, skipping Nagios config publish', [
-                    'workspace_id' => $project->id,
-                ]);
+                Log::info('Auto-publish disabled, skipping Nagios config publish', ['workspace_id' => $project->id]);
             }
 
-            // Return updated targets (frontend expects success responses to include data)
+            // Return updated targets + publish result so frontend can show success/failure
             $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
             $hosts = ObserveTargetHost::where('workspace_id', $project->id)
                 ->with('services')
@@ -319,7 +330,7 @@ class ObserveTargetsController extends Controller
                             $baseCommand = $raw !== '' ? strtolower(preg_replace('/!.*/', '', $raw)) : '';
                             $service_key = ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand]))
                                 ? $definitionsByCommand[$baseCommand]
-                                : null;
+                                : $this->inferServiceKeyFromServiceName($service->name ?? '');
                             $check_args = $service->check_args ?? [];
                             $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
                                 ? $check_args
@@ -341,8 +352,13 @@ class ObserveTargetsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Targets updated and published to Nagios',
-                'data' => $hosts,
+                'message' => $nagiosPublishSuccess ? 'Targets saved and published to Nagios' : 'Targets saved; Nagios publish failed',
+                'data' => [
+                    'targets' => $hosts,
+                    'nagios_publish_success' => $nagiosPublishSuccess,
+                    'nagios_publish_error' => $nagiosPublishError,
+                    'nagios_validation_errors' => $nagiosValidationErrors,
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -480,6 +496,29 @@ class ObserveTargetsController extends Controller
                 ->where('engine_key', $engineKey)
                 ->delete();
         }
+    }
+
+    /**
+     * Infer service_key from service name when check_command is empty (legacy/edge-case).
+     *
+     * @return string|null service_key or null
+     */
+    private function inferServiceKeyFromServiceName(string $name): ?string
+    {
+        $n = strtolower(trim(preg_replace('/\s+/', ' ', $name)));
+        if ($n === '') {
+            return null;
+        }
+        if (str_contains($n, 'http') && !str_contains($n, 'tcp') && !preg_match('/port\s*\d+/', $n)) {
+            return 'http';
+        }
+        if (str_contains($n, 'tcp') || preg_match('/port\s*\d+/', $n) || str_contains($n, 'port 8080')) {
+            return 'tcp_port';
+        }
+        if (str_contains($n, 'ping') || str_contains($n, 'live')) {
+            return 'ping';
+        }
+        return null;
     }
 
     /**

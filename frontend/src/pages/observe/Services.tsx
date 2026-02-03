@@ -187,6 +187,20 @@ export default function Services() {
         </div>
       )}
 
+      {(data.engine_unreachable || data.stale) && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${
+          data.engine_unreachable
+            ? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+            : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-100'
+        }`}>
+          {data.engine_unreachable ? (
+            <span>Monitoring engine is unreachable. Status may be outdated.</span>
+          ) : (
+            <span>Data may be stale (last poll: {data.last_poll_at ? new Date(data.last_poll_at).toLocaleString() : 'never'}).</span>
+          )}
+        </div>
+      )}
+
       <PageHeader
         title="Services"
         subtitle="All monitored services across the workspace"
@@ -213,8 +227,9 @@ export default function Services() {
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
-              disabled={isLocked}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
+              title="Coming soon"
+              disabled
+              className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40"
             >
               Configure
             </button>
@@ -256,7 +271,7 @@ export default function Services() {
 
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
           <h3 className="mb-3 text-xs font-semibold text-white/70">Service Status Totals</h3>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-6 gap-2">
             <div>
               <div className="mb-1 text-xs text-white/60">OK</div>
               <div className="rounded bg-emerald-500/20 px-2 py-1 text-center text-sm font-semibold text-emerald-200">
@@ -285,6 +300,12 @@ export default function Services() {
               <div className="mb-1 text-xs text-white/60">Pending</div>
               <div className="rounded bg-sky-500/20 px-2 py-1 text-center text-sm font-semibold text-sky-200">
                 {data.serviceTotals.pending}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-xs text-white/60">Unreachable</div>
+              <div className="rounded bg-rose-500/20 px-2 py-1 text-center text-sm font-semibold text-rose-200">
+                {data.serviceTotals.unreachable ?? 0}
               </div>
             </div>
           </div>
