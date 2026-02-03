@@ -20,36 +20,36 @@ use Illuminate\Support\Collection;
 class ObserveTargetsController extends Controller
 {
     /**
-     * Normalize overrides for JSON response: return array (empty [] or associative) so JSON encodes as {} or object.
-     * Do NOT return stdClass to avoid log/encoding showing {"stdClass":[]}.
+     * Normalize overrides for JSON response: return empty object or associative array so JSON encodes as {} or object.
+     * Do NOT return stdClass that would encode as {"stdClass":[]}.
      *
      * @param mixed $check_args
-     * @return array<string, mixed>
+     * @return array<string, mixed>|object
      */
-    private function overridesForResponse($check_args): array
+    private function overridesForResponse($check_args): array|object
     {
         if ($check_args === null) {
-            return [];
+            return (object) [];
         }
         if (is_string($check_args)) {
             $decoded = json_decode($check_args, true);
             if (! is_array($decoded)) {
-                return [];
+                return (object) [];
             }
             $check_args = $decoded;
         }
         if (! is_array($check_args)) {
-            return [];
+            return (object) [];
         }
         if ($check_args === []) {
-            return [];
+            return (object) [];
         }
         if (function_exists('array_is_list') && array_is_list($check_args)) {
-            return [];
+            return (object) [];
         }
         $keys = array_keys($check_args);
         if ($keys === range(0, count($check_args) - 1)) {
-            return [];
+            return (object) [];
         }
         return $check_args;
     }
@@ -217,6 +217,9 @@ class ObserveTargetsController extends Controller
         $sanitizedHostNames = [];
         $errors = [];
 
+        // Single source of truth for check_args: computed once here, used at save. Key: hostIndex => [ serviceIndex => normalized array ]
+        $normalizedCheckArgsByIndex = [];
+
         foreach ($hostsData as $index => &$hostData) {
             // Sanitize host name
             $originalName = $hostData['name'] ?? '';
@@ -241,6 +244,7 @@ class ObserveTargetsController extends Controller
             }
 
             // Resolve and validate services (service_key + overrides -> check_command + check_args)
+            $normalizedCheckArgsByIndex[$index] = [];
             foreach ($hostData['services'] ?? [] as $serviceIndex => &$serviceData) {
                 $originalServiceName = $serviceData['name'] ?? '';
                 $sanitizedServiceName = preg_replace('/[^A-Za-z0-9_-]/', '', str_replace(' ', '-', $originalServiceName));
@@ -250,39 +254,16 @@ class ObserveTargetsController extends Controller
                     continue;
                 }
 
-                // Always persist overrides as check_args (JSON object). Accept both keys from request.
+                // Compute normalized check_args ONCE; store in our map and in $serviceData (for any code that reads it).
                 $rawOverrides = $serviceData['overrides'] ?? $serviceData['check_args'] ?? null;
-                // Debug: exact variable passed to normalizer (cannot lie)
-                $debugType = gettype($rawOverrides);
-                $debugIsArray = is_array($rawOverrides);
-                $debugIsObject = is_object($rawOverrides);
-                $debugClass = $debugIsObject ? get_class($rawOverrides) : null;
-                $debugKeys = $debugIsArray ? array_keys($rawOverrides) : null;
-                $debugIsList = $debugIsArray && function_exists('array_is_list') ? array_is_list($rawOverrides) : null;
-                $debugObjVarsKeys = $debugIsObject ? array_keys(get_object_vars($rawOverrides)) : null;
-                Log::debug('ObserveTargets PUT overrides (before normalize)', [
-                    'workspace_id' => $project->id,
-                    'service_name' => $serviceData['name'] ?? null,
-                    'raw_var_export' => var_export($rawOverrides, true),
-                    'gettype' => $debugType,
-                    'is_array' => $debugIsArray,
-                    'is_object' => $debugIsObject,
-                    'class' => $debugClass,
-                    'array_keys' => $debugKeys,
-                    'array_is_list' => $debugIsList,
-                    'get_object_vars_keys' => $debugObjVarsKeys,
-                ]);
-                $overrides = $this->normalizeIncomingOverrides($rawOverrides);
-                Log::debug('ObserveTargets PUT overrides (after normalize)', [
-                    'workspace_id' => $project->id,
-                    'service_name' => $serviceData['name'] ?? null,
-                    'normalized_var_export' => var_export($overrides, true),
-                ]);
-                $serviceData['check_args'] = $overrides;
+                $normalizedCheckArgs = $this->normalizeIncomingOverrides($rawOverrides);
+                $normalizedCheckArgsByIndex[$index][$serviceIndex] = $normalizedCheckArgs;
+                $serviceData['check_args'] = $normalizedCheckArgs;
+
                 Log::debug('ObserveTargets PUT check_args assigned (validation loop)', [
                     'workspace_id' => $project->id,
                     'service_name' => $serviceData['name'] ?? null,
-                    'final_check_args_var_export' => var_export($serviceData['check_args'], true),
+                    'final_check_args_var_export' => var_export($normalizedCheckArgs, true),
                 ]);
 
                 $serviceKey = $serviceData['service_key'] ?? null;
@@ -340,14 +321,14 @@ class ObserveTargetsController extends Controller
         unset($hostData, $serviceData);
 
         try {
-            DB::transaction(function () use ($project, $hostsData) {
+            DB::transaction(function () use ($project, $hostsData, $normalizedCheckArgsByIndex) {
                 // Get existing host IDs to track what to delete
                 $existingHostIds = ObserveTargetHost::where('workspace_id', $project->id)
                     ->pluck('id')
                     ->toArray();
                 $newHostIds = [];
 
-                foreach ($hostsData as $hostData) {
+                foreach ($hostsData as $hostIndex => $hostData) {
                     $host = ObserveTargetHost::updateOrCreate(
                         [
                             'workspace_id' => $project->id,
@@ -368,13 +349,9 @@ class ObserveTargetsController extends Controller
                     $existingServiceIds = $host->services()->pluck('id')->toArray();
                     $newServiceIds = [];
 
-                    foreach ($servicesData as $serviceData) {
-                        // Single source: check_args set in validation loop from normalizeIncomingOverrides(); do not overwrite.
-                        $checkArgsToStore = $serviceData['check_args'] ?? [];
-                        // Only coerce numeric list to [] so we never store [] as object; do not touch associative
-                        if (is_array($checkArgsToStore) && array_keys($checkArgsToStore) === range(0, count($checkArgsToStore) - 1)) {
-                            $checkArgsToStore = [];
-                        }
+                    foreach ($servicesData as $serviceIndex => $serviceData) {
+                        // Single source of truth: use normalized value from validation loop; do not read from $serviceData (can be lost in closure).
+                        $checkArgsToStore = $normalizedCheckArgsByIndex[$hostIndex][$serviceIndex] ?? [];
                         // When request sent empty overrides, preserve existing DB value so we don't wipe saved config
                         if ($checkArgsToStore === []) {
                             $existing = ObserveTargetService::where('host_id', $host->id)
@@ -405,6 +382,12 @@ class ObserveTargetsController extends Controller
                             'workspace_id' => $project->id,
                             'service_name' => $serviceData['name'] ?? null,
                             'updateData_check_args_var_export' => var_export($updateData['check_args'], true),
+                        ]);
+                        Log::debug('ObserveTargets PUT (right before save) serviceData.check_args vs updateData.check_args', [
+                            'workspace_id' => $project->id,
+                            'service_name' => $serviceData['name'] ?? null,
+                            'serviceData_check_args' => $serviceData['check_args'] ?? null,
+                            'updateData_check_args' => $updateData['check_args'],
                         ]);
                         if (Schema::hasColumn($serviceTable, 'service_key')) {
                             $updateData['service_key'] = $serviceKeyToStore;
