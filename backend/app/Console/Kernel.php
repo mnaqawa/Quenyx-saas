@@ -12,13 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Schedule observe polling (every minute in dev)
-        if (app()->environment('local', 'testing')) {
-            $schedule->command('observe:poll')
-                ->everyMinute()
-                ->withoutOverlapping()
-                ->runInBackground();
-        }
+        // Poll Nagios (via gateway) so Services UI shows up-to-date status. Runs in all environments.
+        $schedule->command('observe:poll')
+            ->everyMinute()
+            ->withoutOverlapping(90);
     }
 
     /**
