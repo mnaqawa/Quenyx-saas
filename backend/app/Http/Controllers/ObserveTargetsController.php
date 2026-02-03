@@ -55,6 +55,15 @@ class ObserveTargetsController extends Controller
         if ($overrides === null) {
             return [];
         }
+        // Request middleware or gateway may leave nested JSON as string; decode once
+        if (is_string($overrides)) {
+            $decoded = json_decode($overrides, true);
+            if (is_array($decoded)) {
+                $overrides = $decoded;
+            } else {
+                return [];
+            }
+        }
         // JSON objects decoded without JSON_BIGINT_AS_STRING come as stdClass; convert to associative array
         if (is_object($overrides)) {
             $overrides = json_decode(json_encode($overrides), true);
