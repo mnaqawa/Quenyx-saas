@@ -19,6 +19,46 @@ use Illuminate\Support\Facades\Validator;
 class ObserveTargetsController extends Controller
 {
     /**
+     * Normalize overrides for JSON response: always return an object (associative array or stdClass).
+     * Rejects list/empty array so frontend receives {} not [].
+     *
+     * @param mixed $check_args
+     * @return array<string, mixed>|object
+     */
+    private function overridesForResponse($check_args)
+    {
+        if (! is_array($check_args)) {
+            return (object) [];
+        }
+        if ($check_args === []) {
+            return (object) [];
+        }
+        $keys = array_keys($check_args);
+        if ($keys === range(0, count($check_args) - 1)) {
+            return (object) [];
+        }
+        return $check_args;
+    }
+
+    /**
+     * Normalize incoming overrides from request: array list -> empty array (persist as {}).
+     *
+     * @param mixed $overrides
+     * @return array<string, mixed>
+     */
+    private function normalizeIncomingOverrides($overrides): array
+    {
+        if (! is_array($overrides)) {
+            return [];
+        }
+        $keys = array_keys($overrides);
+        if ($keys === range(0, count($overrides) - 1)) {
+            return [];
+        }
+        return $overrides;
+    }
+
+    /**
      * Get observe targets for a workspace
      */
     public function index(Request $request, Project $project): JsonResponse
@@ -45,16 +85,13 @@ class ObserveTargetsController extends Controller
                             ? $definitionsByCommand[$baseCommand]
                             : $this->inferServiceKeyFromServiceName($service->name ?? '');
                         $check_args = $service->check_args ?? [];
-                        $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
-                            ? $check_args
-                            : (array) $check_args;
                         return [
                             'id' => $service->id,
                             'name' => $service->name,
                             'check_command' => $service->check_command,
                             'check_args' => $check_args,
                             'service_key' => $service_key,
-                            'overrides' => $overrides,
+                            'overrides' => $this->overridesForResponse($check_args),
                             'enabled' => $service->enabled,
                         ];
                     }),
@@ -152,7 +189,7 @@ class ObserveTargetsController extends Controller
                 }
 
                 $serviceKey = $serviceData['service_key'] ?? null;
-                $overrides = $serviceData['overrides'] ?? null;
+                $overrides = $this->normalizeIncomingOverrides($serviceData['overrides'] ?? null);
                 $incomingCheckCommand = $serviceData['check_command'] ?? null;
 
                 // If service_key is provided, resolve it to check_command
@@ -160,7 +197,7 @@ class ObserveTargetsController extends Controller
                     $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
                     if ($def) {
                         $serviceData['check_command'] = $def->check_command;
-                        $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
+                        $serviceData['check_args'] = $overrides;
                     } else {
                         $errors["hosts.{$index}.services.{$serviceIndex}.service_key"] = ['Unknown service_key: ' . $serviceKey];
                         if (!isset($serviceData['check_command'])) {
@@ -171,7 +208,7 @@ class ObserveTargetsController extends Controller
                     // Fallback: use check_command from request when service_key is empty (e.g. existing service from load)
                     if ($incomingCheckCommand !== null && $incomingCheckCommand !== '') {
                         $serviceData['check_command'] = $incomingCheckCommand;
-                        $serviceData['check_args'] = is_array($overrides) ? $overrides : [];
+                        $serviceData['check_args'] = $overrides;
                     } elseif (!isset($serviceData['check_command'])) {
                         $serviceData['check_command'] = '';
                     }
@@ -332,16 +369,13 @@ class ObserveTargetsController extends Controller
                                 ? $definitionsByCommand[$baseCommand]
                                 : $this->inferServiceKeyFromServiceName($service->name ?? '');
                             $check_args = $service->check_args ?? [];
-                            $overrides = is_array($check_args) && (array_keys($check_args) !== range(0, count($check_args) - 1))
-                                ? $check_args
-                                : (array) $check_args;
                             return [
                                 'id' => $service->id,
                                 'name' => $service->name,
                                 'check_command' => $service->check_command,
                                 'check_args' => $check_args,
                                 'service_key' => $service_key,
-                                'overrides' => $overrides,
+                                'overrides' => $this->overridesForResponse($check_args),
                                 'enabled' => $service->enabled,
                             ];
                         }),

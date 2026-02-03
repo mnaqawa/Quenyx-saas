@@ -134,6 +134,16 @@ class ObserveServiceCommandResolverTest extends TestCase
         $this->assertSame('443', $parts[2]);
     }
 
+    public function test_http_overrides_port_8080_uses_8080(): void
+    {
+        $def = $this->httpDefinition();
+        $result = $this->resolver->resolve($def, ['port' => 8080]);
+        $this->assertTrue($result->success);
+        $parts = explode('!', $result->check_command);
+        $this->assertSame('check_http', $parts[0]);
+        $this->assertSame('8080', $parts[2], 'HTTP overrides.port=8080 must produce port 8080 in check args');
+    }
+
     public function test_http_path_normalized_to_start_with_slash(): void
     {
         $def = $this->httpDefinition();

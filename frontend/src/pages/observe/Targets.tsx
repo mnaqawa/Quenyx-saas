@@ -46,6 +46,14 @@ function inferServiceKeyFromServiceName(serviceName: string | undefined): string
   return ''
 }
 
+/** Ensure overrides is always a plain object (never null, undefined, or array). */
+function ensureOverridesObject(o: unknown): Record<string, unknown> {
+  if (o != null && typeof o === 'object' && !Array.isArray(o)) {
+    return o as Record<string, unknown>
+  }
+  return {}
+}
+
 /** Effective service_key: API, then check_command, then service name (so dropdown always shows when possible). */
 function effectiveServiceKey(svc: TargetService): string {
   return (
@@ -56,13 +64,18 @@ function effectiveServiceKey(svc: TargetService): string {
   )
 }
 
-/** Ensure each service has service_key set when missing (so dropdown displays correctly after load). */
+/** Ensure each service has service_key set and overrides is always an object (hydrate from GET/PUT). */
 function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
   return hosts.map((host) => ({
     ...host,
     services: host.services.map((svc) => {
       const key = effectiveServiceKey(svc)
-      return key ? { ...svc, service_key: key } : svc
+      const overrides = ensureOverridesObject(svc.overrides)
+      return {
+        ...svc,
+        ...(key ? { service_key: key } : {}),
+        overrides,
+      }
     }),
   }))
 }
@@ -83,10 +96,9 @@ function mergeResponseWithCurrent(
         svc.service_key ||
         currentSvc?.service_key ||
         inferServiceKeyFromCheckCommand(svc.check_command ?? currentSvc?.check_command)
-      const overrides =
-        svc.overrides && Object.keys(svc.overrides).length > 0
-          ? svc.overrides
-          : (currentSvc?.overrides ?? {})
+      const fromSvc = ensureOverridesObject(svc.overrides)
+      const fromCurrent = ensureOverridesObject(currentSvc?.overrides)
+      const overrides = Object.keys(fromSvc).length > 0 ? fromSvc : fromCurrent
       return {
         ...svc,
         service_key: serviceKey || svc.service_key,
@@ -224,7 +236,7 @@ export default function Targets() {
             defaults[arg.key] = arg.default
           }
         })
-        newHosts[hostIndex].services[serviceIndex].overrides = defaults
+        newHosts[hostIndex].services[serviceIndex].overrides = ensureOverridesObject(defaults)
       }
     }
     setHosts(newHosts)
@@ -238,7 +250,7 @@ export default function Targets() {
   ) => {
     const newHosts = [...hosts]
     const service = newHosts[hostIndex].services[serviceIndex]
-    const overrides = { ...(service.overrides || {}) }
+    const overrides = { ...ensureOverridesObject(service.overrides) }
     if (value === null || value === undefined || value === '') {
       delete overrides[key]
     } else {
@@ -258,7 +270,7 @@ export default function Targets() {
           defaults[arg.key] = arg.default
         }
       })
-      handleUpdateService(hostIndex, serviceIndex, 'overrides', defaults)
+      handleUpdateService(hostIndex, serviceIndex, 'overrides', ensureOverridesObject(defaults))
     }
   }
 
@@ -362,7 +374,7 @@ export default function Targets() {
               name: service.name,
               service_key: effectiveKey || undefined,
               check_command: effectiveKey ? undefined : (service.check_command || undefined),
-              overrides: service.overrides || {},
+              overrides: ensureOverridesObject(service.overrides),
               enabled: service.enabled,
             }
           }),
