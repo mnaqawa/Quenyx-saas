@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ObserveMeta;
 use App\Models\ObserveService;
+use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Services\NativeObserveCheckRunner;
@@ -62,6 +63,13 @@ class RunObserveChecks extends Command
                 $checkArgs = is_array($service->check_args) ? $service->check_args : [];
                 $serviceKey = $service->service_key ?? '';
                 $checkCommand = $service->check_command ?? '';
+                // Resolve check_command from definition when missing (e.g. disk, load, cpu)
+                if ($checkCommand === '' && $serviceKey !== '' && \Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
+                    $def = ObserveServiceDefinition::where('engine', 'nagios')->where('service_key', $serviceKey)->first();
+                    if ($def && $def->check_command !== '') {
+                        $checkCommand = $def->check_command;
+                    }
+                }
                 // NRPE-style types (disk, load, swap, ssh, etc.): run as plugin with script name = check_command
                 if (!in_array($serviceKey, ['http', 'tcp_port', 'ping', 'plugin'], true) && $checkCommand !== '') {
                     $checkArgs = array_merge($checkArgs, ['plugin' => $checkCommand]);

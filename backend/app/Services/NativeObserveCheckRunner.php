@@ -30,13 +30,24 @@ class NativeObserveCheckRunner
             return ['state' => 'unknown', 'output' => 'No host address', 'perfdata' => null];
         }
 
-        return match (strtolower($serviceKey)) {
-            'http' => $this->runHttp($hostAddress, $checkArgs),
-            'tcp_port' => $this->runTcp($hostAddress, $checkArgs),
-            'ping' => $this->runPing($hostAddress, $checkArgs),
-            'plugin' => $this->runPlugin($hostAddress, $checkArgs, $context),
-            default => ['state' => 'unknown', 'output' => "Unsupported service_key: {$serviceKey}", 'perfdata' => null],
-        };
+        $key = strtolower($serviceKey);
+        if ($key === 'http') {
+            return $this->runHttp($hostAddress, $checkArgs);
+        }
+        if ($key === 'tcp_port') {
+            return $this->runTcp($hostAddress, $checkArgs);
+        }
+        if ($key === 'ping') {
+            return $this->runPing($hostAddress, $checkArgs);
+        }
+        if ($key === 'plugin') {
+            return $this->runPlugin($hostAddress, $checkArgs, $context);
+        }
+        // Any other service_key (disk, load, cpu, etc.) is run as plugin: script name must be in check_args.plugin (caller sets it from check_command)
+        if (($checkArgs['plugin'] ?? $checkArgs['script'] ?? '') !== '') {
+            return $this->runPlugin($hostAddress, $checkArgs, $context);
+        }
+        return ['state' => 'unknown', 'output' => "Unsupported service_key: {$serviceKey}. Missing plugin script name (check_command).", 'perfdata' => null];
     }
 
     /**

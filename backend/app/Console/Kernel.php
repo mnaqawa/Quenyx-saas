@@ -12,10 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Poll Nagios (via gateway) when using Nagios daemon
-        $schedule->command('observe:poll')
-            ->everyMinute()
-            ->withoutOverlapping(90);
+        // Optional: poll Nagios via gateway when Nagios daemon is running (data merged with native; native preferred)
+        // $schedule->command('observe:poll')->everyMinute()->withoutOverlapping(90);
 
         // ShieldObserve engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
         $schedule->command('observe:run-checks')

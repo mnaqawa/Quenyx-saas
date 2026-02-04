@@ -114,7 +114,7 @@ export default function RealTimeMonitoring() {
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         <h3 className="mb-4 text-sm font-semibold">Observe status</h3>
         <p className="text-xs text-white/60">
-          Host and service totals are driven by Nagios via the Observe poll. Use <strong>Monitored Targets</strong> to
+          Host and service totals are driven by ShieldObserve. Use <strong>Monitored Targets</strong> to
           add hosts and services, then <strong>Services</strong> for the full list and filters.
         </p>
       </div>

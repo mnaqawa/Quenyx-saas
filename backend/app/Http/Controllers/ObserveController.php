@@ -165,10 +165,12 @@ class ObserveController extends Controller
         ];
 
         // Get meta for last_poll_at (prefer latest from nagios or native)
-        $metas = ObserveMeta::where('workspace_id', $project->id)
-            ->whereIn('engine_key', ['nagios', 'native'])
-            ->get();
-        $meta = $metas->sortByDesc(fn ($m) => $m->last_poll_at?->getTimestamp() ?? 0)->first();
+        $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
+        $nagiosMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'nagios')->first();
+        $meta = $nativeMeta ?? $nagiosMeta;
+        if ($nativeMeta && $nagiosMeta && ($nagiosMeta->last_poll_at?->getTimestamp() ?? 0) > ($nativeMeta->last_poll_at?->getTimestamp() ?? 0)) {
+            $meta = $nagiosMeta;
+        }
 
         // Normalized state code for UI (9 = UNREACHABLE per TPM)
         $stateCode = fn (string $state): int => match ($state) {
@@ -210,9 +212,10 @@ class ObserveController extends Controller
         })->toArray();
 
         $lastPollAt = $meta?->last_poll_at?->toIso8601String();
-        $engineUnreachable = !empty($meta?->error);
+        // Only report unreachable from native engine (ShieldObserve). Nagios poll failures are ignored.
+        $engineUnreachable = $nativeMeta && trim((string) ($nativeMeta->error ?? '')) !== '';
         $engineUnreachableReason = $engineUnreachable
-            ? (trim((string) ($meta->error ?? '')) !== '' ? (string) $meta->error : 'Monitoring engine could not be reached. Check gateway and observe:poll logs.')
+            ? (trim((string) ($nativeMeta->error ?? '')) ?: 'Monitoring engine could not be reached.')
             : null;
         $staleThresholdSeconds = (int) config('observe.stale_threshold_seconds', 300);
         $sourceTimestamp = $lastPollAt;

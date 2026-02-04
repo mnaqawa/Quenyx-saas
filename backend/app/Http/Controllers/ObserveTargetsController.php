@@ -216,9 +216,8 @@ class ObserveTargetsController extends Controller
             ], 422);
         }
 
-        // Allowed check commands (dev allowlist; used when service_key not provided)
         $allowedHostCommands = ['check-host-alive', 'check_ping'];
-        $allowedServiceCommands = ['check_ping', 'check_http', 'check_load', 'check_users', 'check_disk', 'check_tcp'];
+        $allowedServiceCommands = $this->getAllowedServiceCheckCommands();
 
         // Sanitize and validate hosts; resolve service_key -> check_command + overrides -> check_args
         $hostsData = $request->input('hosts', []);
@@ -658,7 +657,7 @@ class ObserveTargetsController extends Controller
         if (str_contains($n, 'http') && !str_contains($n, 'tcp') && !preg_match('/port\s*\d+/', $n)) {
             return 'http';
         }
-        if (str_contains($n, 'tcp') || preg_match('/port\s*\d+/', $n) || str_contains($n, 'port 8080')) {
+        if (str_contains($n, 'tcp') || preg_match('/port\s*\d+/', $n)) {
             return 'tcp_port';
         }
         if (str_contains($n, 'ping') || str_contains($n, 'live')) {
@@ -680,6 +679,28 @@ class ObserveTargetsController extends Controller
             'check_http' => 'http',
             'check_tcp' => 'tcp_port',
         ];
+    }
+
+    /**
+     * Allowed check_command values for validation (from definitions + base).
+     *
+     * @return array<int, string>
+     */
+    private function getAllowedServiceCheckCommands(): array
+    {
+        $base = ['check_ping', 'check_http', 'check_tcp', 'check_plugin', 'check_disk', 'check_load', 'check_swap', 'check_users', 'check_cpu', 'check_memory', 'check_inodes', 'check_uptime', 'check_procs', 'check_ntp_time', 'check_ssh', 'check_dns', 'check_smtp', 'check_mysql', 'check_pgsql', 'check_ssl_validity'];
+        if (!Schema::hasTable('observe_service_definitions')) {
+            return $base;
+        }
+        $fromDb = ObserveServiceDefinition::forEngine('nagios')
+            ->get()
+            ->pluck('check_command')
+            ->filter(fn ($c) => is_string($c) && $c !== '')
+            ->map(fn ($c) => strtolower(trim($c)))
+            ->unique()
+            ->values()
+            ->all();
+        return array_values(array_unique(array_merge($base, $fromDb)));
     }
 
     /**

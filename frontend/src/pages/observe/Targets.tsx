@@ -45,7 +45,7 @@ function inferServiceKeyFromServiceName(serviceName: string | undefined): string
   if (!serviceName || typeof serviceName !== 'string') return ''
   const n = serviceName.trim().toLowerCase().replace(/\s+/g, ' ')
   if (n.includes('http') && !n.includes('tcp') && !/port\s*\d+/.test(n)) return 'http'
-  if (n.includes('tcp') || /port\s*\d+/.test(n) || n.includes('port 8080')) return 'tcp_port'
+  if (n.includes('tcp') || /port\s*\d+/.test(n)) return 'tcp_port'
   if (n.includes('ping') || n.includes('live')) return 'ping'
   return ''
 }
@@ -879,7 +879,7 @@ export default function Targets() {
                                           />
                                         </label>
                                       </div>
-                                      <p className="text-[10px] text-white/50">How often Nagios runs this check and retries on failure. Leave empty for defaults (5s / 1s).</p>
+                                      <p className="text-[10px] text-white/50">How often ShieldObserve runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).</p>
                                     </div>
                                     {Object.entries(groups).map(([sectionName, fields]) => (
                                       <div key={sectionName} className="space-y-2">
