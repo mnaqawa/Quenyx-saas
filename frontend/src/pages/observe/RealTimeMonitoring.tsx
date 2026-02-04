@@ -327,6 +327,23 @@ export default function RealTimeMonitoring() {
           <p className="mt-2 max-w-sm text-sm text-white/60">
             Add hosts and services in Monitored Targets to see real-time status, metrics, and alerts here.
           </p>
+          <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 text-left">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/70">Getting started</p>
+            <ol className="space-y-2 text-sm text-white/80">
+              <li className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/30 text-xs font-bold text-sky-200">1</span>
+                Add hosts in Monitored Targets
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">2</span>
+                Add services for each host
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">3</span>
+                View Real-time Monitoring and Dashboard
+              </li>
+            </ol>
+          </div>
           <Link
             to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
@@ -336,6 +353,9 @@ export default function RealTimeMonitoring() {
             </svg>
             Add hosts
           </Link>
+          <p className="mt-4 text-[10px] text-white/40">
+            Later: use <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map` : '#'} className="text-sky-400 hover:underline">Infrastructure Map</Link> for topology and <Link to="/integrations" className="text-sky-400 hover:underline">Integrations</Link> for external data.
+          </p>
         </div>
       </div>
     )
@@ -543,6 +563,16 @@ export default function RealTimeMonitoring() {
           </div>
         </div>
       </div>
+
+      {/* Per-host metrics (future: NRPE/agent) – placeholder when a host is selected */}
+      {selectedHost && (
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-white">
+          <h3 className="text-sm font-semibold text-sky-200">Per-host metrics (coming soon)</h3>
+          <p className="mt-1 text-xs text-white/60">
+            CPU, memory, and disk for <strong>{selectedHost}</strong> will appear here when NRPE or the ShieldObserve agent is configured on the host. For now, use the service status and totals below.
+          </p>
+        </div>
+      )}
 
       {/* Observe status + KPIs (filtered by selected host when set) */}
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">

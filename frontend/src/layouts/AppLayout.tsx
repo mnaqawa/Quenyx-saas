@@ -134,6 +134,17 @@ function AppLayout() {
             {t('nav.integrations')}
           </Link>
           <Link
+            to="/help"
+            className={[
+              'rounded-md px-3 py-2 text-sm font-medium transition',
+              isActive('/help')
+                ? 'bg-white/10 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+            ].join(' ')}
+          >
+            Getting started
+          </Link>
+          <Link
             to="/profile"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
@@ -344,7 +355,7 @@ function AppLayout() {
             </button>
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2 text-xs text-white/70">
-                <span>{t('nav.projects')}</span>
+                <span className="text-white/50">Workspace:</span>
                 <select
                   value={selectedWorkspaceId ?? ''}
                   onChange={(event) => {

@@ -244,6 +244,31 @@ function Dashboard() {
         </button>
       </div>
 
+      {hasObserveAccess && selectedWorkspaceId && (
+        <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-white/60">This workspace:</span>
+          {observeLoading ? (
+            <span className="text-white/50">Loading…</span>
+          ) : observeData ? (
+            <>
+              <span className="font-medium text-emerald-400">{observeData.hostTotals?.up ?? 0} hosts up</span>
+              <span className="text-white/40">·</span>
+              <span className="font-medium text-emerald-400">{observeData.serviceTotals?.ok ?? 0} services OK</span>
+              <span className="text-white/40">·</span>
+              <span className="font-medium text-rose-400">{(observeData.serviceTotals?.warning ?? 0) + (observeData.serviceTotals?.critical ?? 0)} problems</span>
+              <Link
+                to={`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`}
+                className="ml-2 text-sky-300 hover:text-sky-200 text-xs font-medium"
+              >
+                View Observe →
+              </Link>
+            </>
+          ) : (
+            <span className="text-white/50">No data yet</span>
+          )}
+        </div>
+      )}
+
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -537,12 +562,23 @@ function Dashboard() {
               <p className="mt-1 max-w-xs text-xs text-white/60">
                 Add hosts and services in Monitored Targets to see status and alerts here.
               </p>
-              <Link
-                to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
-              >
-                Add hosts
-              </Link>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs">
+                <Link
+                  to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
+                  className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 font-semibold text-white transition hover:bg-sky-400"
+                >
+                  Add hosts
+                </Link>
+                <Link
+                  to="/integrations"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-white/80 transition hover:bg-white/10"
+                >
+                  Configure alert webhooks
+                </Link>
+              </div>
+              <p className="mt-3 text-[10px] text-white/40">
+                Use <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map`} className="text-sky-400 hover:underline">Infrastructure Map</Link> for topology.
+              </p>
             </div>
           ) : (
             <div className="py-8 text-center text-sm text-white/60">No Observe data available</div>

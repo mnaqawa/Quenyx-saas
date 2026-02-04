@@ -35,6 +35,19 @@ portshield-saas/
 - **Internationalization**: Arabic and English language support
 - **Mobile Responsive**: Optimized for all device types
 
+## Getting started (platform users)
+
+After deployment, use the platform as follows:
+
+1. **Log in** with the seeded credentials (or your own after changing them).
+2. **Select a workspace** (e.g. Production Env or Staging Env) from the **Workspace** dropdown in the top bar. All data is scoped to the selected workspace.
+3. **Add hosts** in **Observe → Monitored Targets** (name and address). Without hosts, Real-time Monitoring and Dashboard show an empty state and ask you to add hosts first.
+4. **Add services** for each host (e.g. CPU, disk, HTTP). Status and problems then appear on the Dashboard and in Real-time Monitoring.
+5. **View Dashboard** for a health-at-a-glance line and ShieldObserve summary; **Real-time Monitoring** for server metrics and host/service status.
+6. **Infrastructure Map** for topology, zones (DMZ, WebApp, DB, etc.), and export (PNG, PDF, SVG, JSON). **Integrations** for webhooks (alerts to Slack/Teams/email) and external topology.
+
+In-app **Getting started** (sidebar) links to a short guide. For production deployment and real testing, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Quick Start (Development)
 
 ### Prerequisites
@@ -190,9 +203,17 @@ Gateway will be available at `http://localhost:4000`
 - `/api/projects/:projectId/entitlements`
 - All other `/api/*` routes
 
-## Deployment
+## Deployment and production
 
 Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, and ShieldObserve/Nagios gateway options are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+**Production checklist (see DEPLOYMENT.md):**
+- Use `composer install --no-dev` and `npm ci` / `npm run build` for backend and frontend.
+- Set `APP_ENV=production`, `APP_DEBUG=false`, and strong `APP_KEY`.
+- Configure `.env` for production (DB, `APP_URL`, CORS, etc.).
+- Run migrations and seeders; then restrict or remove seeder default credentials.
+- Use HTTPS (Nginx SSL) and restrict CORS to your frontend origin.
+- Run real tests (login, workspace switch, add host, view Observe) before go-live.
 
 **Summary:**
 - **Single-node**: Backend (Laravel), Gateway (Node), Frontend (static build), Nginx, MySQL. Use `npm ci` and `composer install --no-dev` for reproducible installs.

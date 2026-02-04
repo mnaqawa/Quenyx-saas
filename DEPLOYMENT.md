@@ -248,6 +248,50 @@ php artisan route:cache
 
 ---
 
+## Production readiness
+
+- **Backend:** Use `APP_ENV=production`, `APP_DEBUG=false`, and a strong `APP_KEY`. Run `php artisan config:cache` and `route:cache` after deployment. Ensure `APP_URL` matches the public URL (HTTPS). Do not expose `.env` or storage.
+- **Frontend:** Build with `npm run build`; set `VITE_API_BASE_URL` to your API base (e.g. `https://your-domain.com` so that relative `/api/` requests go to the same origin). Do not ship source maps in production if you want to hide source.
+- **Gateway:** No secrets in logs; use env vars for `BACKEND_BASE_URL`. Restart after any code or config change.
+- **Security:** HTTPS only in production; restrict CORS to your frontend origin; change or remove seeded default credentials before go-live.
+- **Errors:** In production, Laravel should not display stack traces to users (controlled by `APP_DEBUG`). Frontend can show a generic “Something went wrong” and log details client-side or to an error reporting service.
+
+---
+
+## Production environment checklist
+
+Before going live:
+
+| Item | Action |
+|------|--------|
+| **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_*` for production DB |
+| **CORS** | Set `SANCTUM_STATEFUL_DOMAINS` / frontend domain in backend; allow only your frontend origin |
+| **Frontend build** | `VITE_API_BASE_URL` set to your API base (e.g. `https://your-domain/api`) so requests go to gateway |
+| **Seeded credentials** | Change default login (`admin@portshield.test` / `Password123!`) or remove test users after first admin creation |
+| **Workspaces** | Seeder creates only **Production Env** and **Staging Env**; adjust in `ProjectSeeder` if needed |
+| **HTTPS** | Use Nginx (or load balancer) with SSL; redirect HTTP → HTTPS |
+| **Gateway** | `BACKEND_BASE_URL` must point to backend (e.g. `http://127.0.0.1:8000` or internal LB URL) |
+| **No dev deps** | Backend: `composer install --no-dev`. Frontend/gateway: use built assets; no dev servers in production |
+
+---
+
+## Real testing before go-live
+
+Run these flows on a staging or production build:
+
+1. **Login** — Log in with production-ready credentials.
+2. **Workspace** — Switch workspace (Workspace dropdown); confirm Dashboard and Observe data change (or show empty state for the other workspace).
+3. **Empty state** — In a workspace with no hosts, open Real-time Monitoring and Dashboard; confirm “No hosts in this workspace” and “Add hosts” CTA.
+4. **Add host** — In Monitored Targets, add a host (name + address); save.
+5. **Observe data** — Open Real-time Monitoring (and Dashboard); confirm host appears (or service totals update once services are added).
+6. **Infrastructure Map** — Open Map; confirm hosts appear; test export (JSON/PNG).
+7. **Integrations** — Open Integrations; configure webhook (optional); confirm settings save.
+8. **Getting started** — Open **Getting started** from sidebar; confirm steps and links work.
+
+If all pass, the platform is ready for production use.
+
+---
+
 ## Reproducible installs
 
 - **Frontend:** Commit `package-lock.json`; use `npm ci` in CI and deployment.

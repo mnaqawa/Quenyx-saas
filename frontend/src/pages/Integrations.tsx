@@ -319,6 +319,9 @@ function Integrations() {
           <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <h3 className="text-sm font-semibold">{t('integrations.webhooks')}</h3>
             <p className="mt-1 text-xs text-white/60">{t('integrations.webhooksDesc')}</p>
+            <p className="mt-2 text-[10px] text-sky-200/80">
+              Use webhooks to send Observe alerts (e.g. critical service down) to Slack, Teams, or email.
+            </p>
             <div className="mt-4 space-y-3 text-xs text-white/70">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-white/40">Primary Webhook URL</p>
