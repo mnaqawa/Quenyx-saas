@@ -149,6 +149,25 @@ export default function Services() {
     }
   }
 
+  // Group services by host (backend already sorts by host; this adds visual grouping)
+  const groupedByHost = useMemo(() => {
+    if (!data?.items?.length) return []
+    const groups: Array<{ host: string; items: typeof data.items }> = []
+    let currentHost = ''
+    let currentItems: typeof data.items = []
+    for (const item of data.items) {
+      if (item.host !== currentHost) {
+        if (currentItems.length) groups.push({ host: currentHost, items: currentItems })
+        currentHost = item.host
+        currentItems = [item]
+      } else {
+        currentItems.push(item)
+      }
+    }
+    if (currentItems.length) groups.push({ host: currentHost, items: currentItems })
+    return groups
+  }, [data?.items])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -415,109 +434,119 @@ export default function Services() {
                   </td>
                 </tr>
               ) : (
-                data.items.map((item, index) => {
-                  const rowKey = `${item.host}-${item.service}-${index}`
-                  const isExpanded = expandedRowKey === rowKey
-                  const hasDetails = !!(item.info || item.perfData || item.longPluginOutput)
-                  return (
-                    <Fragment key={rowKey}>
-                      <tr
-                        className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
-                      >
-                        <td className="px-3 py-2.5 text-[13px]">
-                          <button
-                            onClick={() => {
-                              if (selectedWorkspaceId) {
-                                navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
-                              }
-                            }}
-                            className="hover:text-sky-200 transition"
+                groupedByHost.map(({ host, items }) => (
+                  <Fragment key={host}>
+                    <tr className="border-b border-white/10 bg-white/5">
+                      <td colSpan={9} className="px-3 py-2 text-xs font-semibold text-white/90">
+                        Host: {host}
+                        <span className="ml-2 font-normal text-white/50">({items.length} service{items.length !== 1 ? 's' : ''})</span>
+                      </td>
+                    </tr>
+                    {items.map((item, index) => {
+                      const rowKey = `${item.host}-${item.service}-${index}`
+                      const isExpanded = expandedRowKey === rowKey
+                      const hasDetails = !!(item.info || item.perfData || item.longPluginOutput)
+                      return (
+                        <Fragment key={rowKey}>
+                          <tr
+                            className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
                           >
-                            {item.host}
-                          </button>
-                        </td>
-                        <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
-                          >
-                            {item.status.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
-                        <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.nextCheckAt)}</td>
-                        <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
-                        <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
-                        <td className="px-3 py-2.5 text-[13px] text-white/70">
-                          <div className="line-clamp-2" title={item.info}>
-                            {item.info || '—'}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center justify-end gap-2">
-                            {hasDetails && (
+                            <td className="px-3 py-2.5 text-[13px]">
                               <button
-                                type="button"
-                                onClick={() => setExpandedRowKey(isExpanded ? null : rowKey)}
-                                title={isExpanded ? 'Hide full status' : 'Show full status information'}
-                                className="rounded border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
+                                onClick={() => {
+                                  if (selectedWorkspaceId) {
+                                    navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
+                                  }
+                                }}
+                                className="hover:text-sky-200 transition"
                               >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotate-180' : ''}>
-                                  <path d="M6 9l6 6 6-6" />
-                                </svg>
+                                {item.host}
                               </button>
-                            )}
-                            <button
-                              disabled
-                              title="Acknowledge (Coming soon)"
-                              className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M20 6L9 17l-5-5" />
-                              </svg>
-                            </button>
-                            <button
-                              disabled
-                              title="Schedule Downtime (Coming soon)"
-                              className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <polyline points="12 6 12 12 16 14" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && hasDetails && (
-                        <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
-                          <td colSpan={9} className="px-3 py-3 text-xs">
-                            <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                              {item.info && (
-                                <div>
-                                  <span className="block font-medium text-white/70 mb-1">Status information</span>
-                                  <div className="whitespace-pre-wrap break-words font-mono text-white/90">{item.info}</div>
+                            </td>
+                            <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
+                            <td className="px-3 py-2.5">
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
+                              >
+                                {item.status.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
+                            <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.nextCheckAt)}</td>
+                            <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
+                            <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
+                            <td className="px-3 py-2.5 text-[13px] text-white/70">
+                              <div className="line-clamp-2" title={item.info}>
+                                {item.info || '—'}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end gap-2">
+                                {hasDetails && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedRowKey(isExpanded ? null : rowKey)}
+                                    title={isExpanded ? 'Hide full status' : 'Show full status information'}
+                                    className="rounded border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotate-180' : ''}>
+                                      <path d="M6 9l6 6 6-6" />
+                                    </svg>
+                                  </button>
+                                )}
+                                <button
+                                  disabled
+                                  title="Acknowledge (Coming soon)"
+                                  className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M20 6L9 17l-5-5" />
+                                  </svg>
+                                </button>
+                                <button
+                                  disabled
+                                  title="Schedule Downtime (Coming soon)"
+                                  className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && hasDetails && (
+                            <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
+                              <td colSpan={9} className="px-3 py-3 text-xs">
+                                <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
+                                  {item.info && (
+                                    <div>
+                                      <span className="block font-medium text-white/70 mb-1">Status information</span>
+                                      <div className="whitespace-pre-wrap break-words font-mono text-white/90">{item.info}</div>
+                                    </div>
+                                  )}
+                                  {item.perfData && (
+                                    <div>
+                                      <span className="block font-medium text-white/70 mb-1">Perf data</span>
+                                      <div className="font-mono text-white/80 break-all">{item.perfData}</div>
+                                    </div>
+                                  )}
+                                  {item.longPluginOutput && (
+                                    <div>
+                                      <span className="block font-medium text-white/70 mb-1">Long output</span>
+                                      <div className="whitespace-pre-wrap break-words text-white/80">{item.longPluginOutput}</div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {item.perfData && (
-                                <div>
-                                  <span className="block font-medium text-white/70 mb-1">Perf data</span>
-                                  <div className="font-mono text-white/80 break-all">{item.perfData}</div>
-                                </div>
-                              )}
-                              {item.longPluginOutput && (
-                                <div>
-                                  <span className="block font-medium text-white/70 mb-1">Long output</span>
-                                  <div className="whitespace-pre-wrap break-words text-white/80">{item.longPluginOutput}</div>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  )
-                })
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </Fragment>
+                ))
               )}
             </tbody>
           </table>

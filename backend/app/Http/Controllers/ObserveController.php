@@ -131,8 +131,8 @@ class ObserveController extends Controller
             return $native ?? $group->first();
         })->values();
 
-        // Apply severity sort and limit
-        $sorted = $deduped->sortBy(fn ($s) => match ($s->state) {
+        // Sort by host name first (group by host), then by severity within each host
+        $severityOrder = fn ($s) => match ($s->state) {
             'critical' => 1,
             'warning' => 2,
             'unknown' => 3,
@@ -140,7 +140,8 @@ class ObserveController extends Controller
             'pending' => 5,
             'ok' => 6,
             default => 7,
-        });
+        };
+        $sorted = $deduped->sortBy(fn ($s) => [$s->host_name, $severityOrder($s)]);
         $services = $sorted->take($limit)->values();
 
         // Totals from deduped set (same scope as list)
