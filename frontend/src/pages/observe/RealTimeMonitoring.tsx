@@ -207,9 +207,6 @@ export default function RealTimeMonitoring() {
     serviceTotals.unknown +
     serviceTotals.pending +
     (serviceTotals.unreachable ?? 0)
-  const hostsUpPct = totalHosts > 0 ? Math.round((hostTotals.up / totalHosts) * 100) : 0
-  const servicesOkPct = totalServices > 0 ? Math.round((serviceTotals.ok / totalServices) * 100) : 0
-  const problemsPct = totalServices > 0 ? Math.min(100, Math.round((problems / totalServices) * 100)) : 0
 
   const m = metrics
   const cpuVal = m?.cpu?.value ?? 0
