@@ -121,7 +121,6 @@ export default function RealTimeMonitoring() {
   const [isLive, setIsLive] = useState(true)
   const [selectedHost, setSelectedHost] = useState<string>('')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [refreshMetricsKey, setRefreshMetricsKey] = useState(0)
   const [metrics, setMetrics] = useState<RealTimeMetrics | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [thresholds, setThresholds] = useState<Array<{ metric: string; warning: string; critical: string }>>([])
@@ -262,12 +261,6 @@ export default function RealTimeMonitoring() {
     const t = setInterval(fetchMetrics, LIVE_POLL_INTERVAL_SEC * 1000)
     return () => clearInterval(t)
   }, [isLive, wsId, fetchMetrics])
-
-  // Refresh button: refetch metrics (and KPIs via refreshKey) on demand
-  useEffect(() => {
-    if (!wsId || refreshMetricsKey === 0) return
-    fetchMetrics()
-  }, [refreshMetricsKey, wsId, fetchMetrics])
 
   const totalServices =
     serviceTotals.ok +
