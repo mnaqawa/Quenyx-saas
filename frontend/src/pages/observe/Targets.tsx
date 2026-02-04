@@ -86,16 +86,23 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
 
 /**
  * Merge PUT response with current state so we never lose service_key or overrides
- * when the API omits them (avoids config "disappearing" after save).
+ * when the API omits them. Match by host name + service name (not index) so order
+ * differences between request and response do not assign wrong type to wrong service.
  */
 function mergeResponseWithCurrent(
   currentHosts: TargetHost[],
   responseHosts: TargetHost[]
 ): TargetHost[] {
-  return responseHosts.map((host, hi) => ({
+  const currentByHostAndService = new Map<string, TargetService>()
+  currentHosts.forEach((h) => {
+    h.services.forEach((s) => {
+      currentByHostAndService.set(`${h.name}::${s.name}`, s)
+    })
+  })
+  return responseHosts.map((host) => ({
     ...host,
-    services: host.services.map((svc, si) => {
-      const currentSvc = currentHosts[hi]?.services[si]
+    services: host.services.map((svc) => {
+      const currentSvc = currentByHostAndService.get(`${host.name}::${svc.name}`)
       const serviceKey =
         svc.service_key ||
         currentSvc?.service_key ||

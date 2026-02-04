@@ -124,7 +124,7 @@ class ObserveTargetsController extends Controller
 
         $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
         $hosts = ObserveTargetHost::where('workspace_id', $project->id)
-            ->with('services')
+            ->with(['services' => fn ($q) => $q->orderBy('name')])
             ->orderBy('name')
             ->get()
             ->map(function ($host) use ($definitionsByCommand, $project) {
@@ -139,13 +139,15 @@ class ObserveTargetsController extends Controller
                         $check_args = $service->check_args ?? [];
                         $responseOverrides = $this->overridesForResponse($check_args);
                         $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
-                        Log::debug('ObserveTargets GET overrides', [
-                            'workspace_id' => $project->id,
-                            'service_id' => $service->id,
-                            'service_name' => $service->name,
-                            'check_args_raw' => $check_args,
-                            'response_overrides' => $responseOverrides,
-                        ]);
+                        if (config('app.debug')) {
+                            Log::debug('ObserveTargets GET overrides', [
+                                'workspace_id' => $project->id,
+                                'service_id' => $service->id,
+                                'service_name' => $service->name,
+                                'service_key' => $service_key,
+                                'check_command' => $service->check_command,
+                            ]);
+                        }
                         $row = [
                             'id' => $service->id,
                             'name' => $service->name,
@@ -267,11 +269,14 @@ class ObserveTargetsController extends Controller
                 $normalizedCheckArgsByIndex[$index][$serviceIndex] = $normalizedCheckArgs;
                 $serviceData['check_args'] = $normalizedCheckArgs;
 
-                Log::debug('ObserveTargets PUT check_args assigned (validation loop)', [
-                    'workspace_id' => $project->id,
-                    'service_name' => $serviceData['name'] ?? null,
-                    'final_check_args_var_export' => var_export($normalizedCheckArgs, true),
-                ]);
+                if (config('app.debug')) {
+                    Log::debug('ObserveTargets PUT check_args assigned (validation loop)', [
+                        'workspace_id' => $project->id,
+                        'service_name' => $serviceData['name'] ?? null,
+                        'service_key' => $serviceKey ?? null,
+                        'check_command' => $serviceData['check_command'] ?? null,
+                    ]);
+                }
 
                 $serviceKey = $serviceData['service_key'] ?? null;
                 $incomingCheckCommand = $serviceData['check_command'] ?? null;
@@ -371,11 +376,14 @@ class ObserveTargetsController extends Controller
                         }
                         $serviceKeyToStore = isset($serviceData['service_key']) && $serviceData['service_key'] !== '' ? $serviceData['service_key'] : null;
 
-                        Log::debug('ObserveTargets PUT overrides (before save)', [
-                            'workspace_id' => $project->id,
-                            'service_name' => $serviceData['name'] ?? null,
-                            'final_check_args_to_store_var_export' => var_export($checkArgsToStore, true),
-                        ]);
+                        if (config('app.debug')) {
+                            Log::debug('ObserveTargets PUT overrides (before save)', [
+                                'workspace_id' => $project->id,
+                                'service_name' => $serviceData['name'] ?? null,
+                                'service_key_to_store' => $serviceKeyToStore,
+                                'check_command' => $serviceData['check_command'] ?? null,
+                            ]);
+                        }
 
                         // Build update data; only include service_key if column exists (remove after migration is run everywhere)
                         $serviceTable = (new ObserveTargetService)->getTable();
@@ -391,17 +399,14 @@ class ObserveTargetsController extends Controller
                         if (Schema::hasColumn($serviceTable, 'retry_interval')) {
                             $updateData['retry_interval'] = isset($serviceData['retry_interval']) ? (int) $serviceData['retry_interval'] : null;
                         }
-                        Log::debug('ObserveTargets PUT check_args assignment (updateData)', [
-                            'workspace_id' => $project->id,
-                            'service_name' => $serviceData['name'] ?? null,
-                            'updateData_check_args_var_export' => var_export($updateData['check_args'], true),
-                        ]);
-                        Log::debug('ObserveTargets PUT (right before save) serviceData.check_args vs updateData.check_args', [
-                            'workspace_id' => $project->id,
-                            'service_name' => $serviceData['name'] ?? null,
-                            'serviceData_check_args' => $serviceData['check_args'] ?? null,
-                            'updateData_check_args' => $updateData['check_args'],
-                        ]);
+                        if (config('app.debug')) {
+                            Log::debug('ObserveTargets PUT (before save)', [
+                                'workspace_id' => $project->id,
+                                'service_name' => $serviceData['name'] ?? null,
+                                'service_key' => $serviceKeyToStore,
+                                'check_command' => $serviceData['check_command'] ?? null,
+                            ]);
+                        }
                         if (Schema::hasColumn($serviceTable, 'service_key')) {
                             $updateData['service_key'] = $serviceKeyToStore;
                         }
@@ -418,13 +423,15 @@ class ObserveTargetsController extends Controller
                         $storedRaw = $afterSave ? $afterSave->getRawOriginal('check_args') : null;
                         $storedDecoded = $afterSave ? ($afterSave->check_args ?? []) : [];
 
-                        Log::debug('ObserveTargets PUT overrides (after save)', [
-                            'workspace_id' => $project->id,
-                            'service_id' => $service->id,
-                            'service_name' => $service->name,
-                            'db_check_args_raw' => $storedRaw,
-                            'db_check_args_decoded' => $storedDecoded,
-                        ]);
+                        if (config('app.debug')) {
+                            Log::debug('ObserveTargets PUT overrides (after save)', [
+                                'workspace_id' => $project->id,
+                                'service_id' => $service->id,
+                                'service_name' => $service->name,
+                                'service_key' => $service->service_key ?? null,
+                                'check_command' => $service->check_command ?? null,
+                            ]);
+                        }
 
                         $newServiceIds[] = $service->id;
                     }
@@ -469,7 +476,7 @@ class ObserveTargetsController extends Controller
             // Return updated targets (no Nagios publish; we use ShieldObserve native engine only)
             $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
             $hosts = ObserveTargetHost::where('workspace_id', $project->id)
-                ->with('services')
+                ->with(['services' => fn ($q) => $q->orderBy('name')])
                 ->orderBy('name')
                 ->get()
                 ->map(function ($host) use ($definitionsByCommand) {
@@ -483,7 +490,7 @@ class ObserveTargetsController extends Controller
                         'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
                             $check_args = $service->check_args ?? [];
                             $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
-                            return [
+                            $row = [
                                 'id' => $service->id,
                                 'name' => $service->name,
                                 'service_key' => $service_key,
@@ -492,6 +499,13 @@ class ObserveTargetsController extends Controller
                                 'overrides' => $this->overridesForResponse($check_args),
                                 'enabled' => $service->enabled,
                             ];
+                            if (Schema::hasColumn($service->getTable(), 'check_interval')) {
+                                $row['check_interval'] = $service->check_interval;
+                            }
+                            if (Schema::hasColumn($service->getTable(), 'retry_interval')) {
+                                $row['retry_interval'] = $service->retry_interval;
+                            }
+                            return $row;
                         }),
                         'created_at' => $host->created_at->toIso8601String(),
                         'updated_at' => $host->updated_at->toIso8601String(),
