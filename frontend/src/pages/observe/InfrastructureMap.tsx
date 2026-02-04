@@ -1,9 +1,13 @@
 import { useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveMapHosts } from '../../hooks/useObserveData'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+
+type HostRow = { name: string; address: string; status: string }
 
 const VIEW_OPTIONS = ['Logical View', 'Physical View', 'Geographic View', 'Security Zones'] as const
 const LAYER_OPTIONS = ['All Layers', 'Network Layer', 'Compute Layer', 'Storage Layer', 'Security Layer'] as const
@@ -38,6 +42,63 @@ export default function InfrastructureMap() {
 
   const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId)
   const { data: servicesData } = useObserveServices({ workspaceId: selectedWorkspaceId ?? null, limit: 500 })
+  const exportAreaRef = useRef<HTMLDivElement>(null)
+
+  const networks = useMemo(() => {
+    const byKey = new Map<string, HostRow[]>()
+    hosts.forEach((h) => {
+      const addr = (h.address || '').trim()
+      const parts = addr.split(/\./)
+      const isIPv4 = parts.length === 4 && parts.every((p) => /^\d+$/.test(p))
+      const key = isIPv4 ? `${parts[0]}.${parts[1]}.${parts[2]}.0/24` : (addr || 'default')
+      if (!byKey.has(key)) byKey.set(key, [])
+      byKey.get(key)!.push(h)
+    })
+    return Array.from(byKey.entries()).map(([key, hostList]) => ({
+      id: key,
+      name: key,
+      hosts: hostList,
+      status: hostList.every((h) => h.status === 'ok') ? 'ok' : hostList.some((h) => h.status === 'critical' || h.status === 'unreachable') ? 'critical' : 'warning',
+    }))
+  }, [hosts])
+
+  const layerFiltered = useMemo(() => {
+    const showCompute = layerFilter === 'All Layers' || layerFilter === 'Compute Layer'
+    const showNetwork = layerFilter === 'All Layers' || layerFilter === 'Network Layer'
+    const showStorage = layerFilter === 'Storage Layer'
+    const showSecurity = layerFilter === 'Security Layer'
+    return {
+      showCompute,
+      showNetwork,
+      showStorage,
+      showSecurity,
+      hasData: (showCompute && hosts.length > 0) || (showNetwork && networks.length > 0),
+      hostsFiltered: showCompute ? hosts : [] as HostRow[],
+      networksFiltered: showNetwork ? networks : [],
+    }
+  }, [layerFilter, hosts, networks])
+
+  const connectionsFiltered = useMemo(() => {
+    if (layerFilter === 'Network Layer') {
+      return networks.map((n) => ({
+        id: `net-${n.id}`,
+        source: n.name,
+        type: 'segment',
+        destination: 'Monitoring',
+        status: n.status === 'ok' ? 'Online' : n.status === 'warning' ? 'Warning' : 'Critical',
+        speed: '—',
+      }))
+    }
+    if (layerFilter === 'Storage Layer' || layerFilter === 'Security Layer') return []
+    return hosts.map((h) => ({
+      id: `mon-${h.name}`,
+      source: h.name,
+      type: 'monitored',
+      destination: 'Monitoring',
+      status: h.status === 'ok' ? 'Online' : h.status === 'warning' ? 'Warning' : 'Critical',
+      speed: '—',
+    }))
+  }, [layerFilter, hosts, networks])
 
   const hostStatusCounts = useMemo(() => {
     const ok = hosts.filter((h) => h.status === 'ok').length
@@ -59,7 +120,8 @@ export default function InfrastructureMap() {
     if (servicesData?.items) {
       const criticalSvcs = servicesData.items.filter((s: { status: string }) => s.status === 'critical')
       criticalSvcs.slice(0, 5).forEach((s: { host: string; service: string }) => {
-        if (!issues.some((i) => i.label.includes(s.service)))) {
+        const alreadyListed = issues.some((i) => i.label.includes(s.service))
+        if (!alreadyListed) {
           issues.push({
             id: `${s.host}-${s.service}`,
             label: `${s.service} on ${s.host.replace(/^ws\d+-/, '')} critical`,
@@ -71,16 +133,6 @@ export default function InfrastructureMap() {
     return issues.slice(0, 10)
   }, [hosts, servicesData?.items])
 
-  const connections = useMemo(() => {
-    return hosts.map((h) => ({
-      id: `mon-${h.name}`,
-      source: h.name,
-      type: 'monitored',
-      destination: 'Monitoring',
-      status: h.status === 'ok' ? 'Online' : h.status === 'warning' ? 'Warning' : 'Critical',
-      speed: '—',
-    }))
-  }, [hosts])
 
   const zoomScale = useMemo(() => {
     const v = zoomLevel.replace('%', '')
@@ -103,15 +155,25 @@ export default function InfrastructureMap() {
         'Security Layer': 'Security zones and policies (define in Monitored Targets)',
       },
       zone: selectedWorkspaceId ? { id: selectedWorkspaceId, name: 'Workspace' } : null,
-      nodes: hosts.map((h) => ({
-        id: h.name,
-        name: h.name,
-        type: 'host',
-        address: h.address,
-        status: h.status,
-        layer: 'Compute',
-      })),
-      connections: connections.map((c) => ({
+      nodes: [
+        ...layerFiltered.hostsFiltered.map((h) => ({
+          id: h.name,
+          name: h.name,
+          type: 'host' as const,
+          address: h.address,
+          status: h.status,
+          layer: 'Compute' as const,
+        })),
+        ...layerFiltered.networksFiltered.map((n) => ({
+          id: n.id,
+          name: n.name,
+          type: 'network' as const,
+          hostCount: n.hosts.length,
+          status: n.status,
+          layer: 'Network' as const,
+        })),
+      ],
+      connections: connectionsFiltered.map((c) => ({
         source: c.source,
         destination: c.destination,
         type: c.type,
@@ -133,6 +195,50 @@ export default function InfrastructureMap() {
       mapContainerRef.current.requestFullscreen?.().then(() => setIsFullScreen(true)).catch(() => {})
     } else {
       document.exitFullscreen?.().then(() => setIsFullScreen(false)).catch(() => {})
+    }
+  }
+
+  const handleExportPng = async () => {
+    const el = exportAreaRef.current
+    if (!el) return
+    try {
+      const canvas = await html2canvas(el, {
+        backgroundColor: '#0f151d',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      })
+      const dataUrl = canvas.toDataURL('image/png')
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = `infrastructure-map-${new Date().toISOString().slice(0, 10)}.png`
+      a.click()
+    } catch (e) {
+      console.error('Export PNG failed', e)
+    }
+  }
+
+  const handleExportPdf = async () => {
+    const el = exportAreaRef.current
+    if (!el) return
+    try {
+      const canvas = await html2canvas(el, {
+        backgroundColor: '#0f151d',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const ratio = Math.min(pageW / canvas.width, pageH / canvas.height) * 0.95
+      const w = canvas.width * ratio
+      const h = canvas.height * ratio
+      pdf.addImage(imgData, 'PNG', (pageW - w) / 2, (pageH - h) / 2, w, h)
+      pdf.save(`infrastructure-map-${new Date().toISOString().slice(0, 10)}.pdf`)
+    } catch (e) {
+      console.error('Export PDF failed', e)
     }
   }
 
@@ -168,7 +274,21 @@ export default function InfrastructureMap() {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export Map
+              Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPng}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
+            >
+              Export PNG
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
+            >
+              Export PDF
             </button>
             <button
               type="button"
@@ -252,14 +372,14 @@ export default function InfrastructureMap() {
         </nav>
       </div>
 
-      {/* Tab content */}
-      <div className="min-h-[400px] rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+      {/* Tab content (ref for PNG/PDF export) */}
+      <div ref={exportAreaRef} className="min-h-[400px] rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         {activeTab === 'topology' && (
           <>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold">Network Topology Map</h3>
-                <p className="text-xs text-white/50">Interactive infrastructure visualization (real data from Monitored Targets)</p>
+                <p className="text-xs text-white/50">Layer: {layerFilter} — real data from Monitored Targets</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-white/50">Design:</span>
@@ -283,7 +403,11 @@ export default function InfrastructureMap() {
               className="relative rounded-lg border border-white/10 bg-white/5 p-6"
               style={{ transform: zoomLevel !== 'Fit to Screen' ? `scale(${zoomScale})` : undefined, transformOrigin: 'top left' }}
             >
-              {hosts.length === 0 ? (
+              {layerFiltered.showStorage || layerFiltered.showSecurity ? (
+                <div className="py-12 text-center text-sm text-white/50">
+                  No {layerFilter === 'Storage Layer' ? 'storage' : 'security'} data. Define in Monitored Targets or integrate with external tools.
+                </div>
+              ) : !layerFiltered.hasData ? (
                 <div className="py-12 text-center text-sm text-white/50">
                   No hosts. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link>.
                 </div>
@@ -291,10 +415,14 @@ export default function InfrastructureMap() {
                 <div className="flex flex-col items-center gap-4">
                   <div className="rounded-xl border-2 border-sky-500/30 bg-sky-500/10 px-8 py-6 text-center">
                     <p className="text-xs font-medium text-sky-200/80 uppercase tracking-wider">Workspace Zone</p>
-                    <p className="mt-1 text-2xl font-bold">{hostStatusCounts.total} hosts</p>
+                    <p className="mt-1 text-2xl font-bold">
+                      {layerFiltered.showCompute && layerFiltered.hostsFiltered.length > 0 && `${layerFiltered.hostsFiltered.length} hosts`}
+                      {layerFiltered.showCompute && layerFiltered.showNetwork && layerFiltered.networksFiltered.length > 0 && ' · '}
+                      {layerFiltered.showNetwork && layerFiltered.networksFiltered.length > 0 && `${layerFiltered.networksFiltered.length} networks`}
+                    </p>
                     <p className="mt-1 text-xs text-white/60">{hostStatusCounts.ok} healthy, {hostStatusCounts.warning} warning, {hostStatusCounts.critical} critical</p>
                   </div>
-                  <p className="text-xs text-white/40">HLD: High-level view. Export Map for full HLD/LLD JSON with layer definitions.</p>
+                  <p className="text-xs text-white/40">HLD: High-level view. Export JSON for full HLD/LLD with layer definitions.</p>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-center gap-6">
@@ -302,7 +430,7 @@ export default function InfrastructureMap() {
                     <p className="text-[10px] font-medium text-white/50 uppercase">Monitoring</p>
                     <p className="text-xs font-semibold text-sky-200">ShieldObserve</p>
                   </div>
-                  {hosts.map((h) => (
+                  {layerFiltered.hostsFiltered.map((h) => (
                     <div
                       key={h.name}
                       className={`rounded-xl border-2 px-4 py-3 text-center min-w-[120px] ${
@@ -322,6 +450,27 @@ export default function InfrastructureMap() {
                       </p>
                     </div>
                   ))}
+                  {layerFiltered.networksFiltered.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`rounded-xl border-2 px-4 py-3 text-center min-w-[120px] ${
+                        n.status === 'ok'
+                          ? 'border-sky-500/40 bg-sky-500/10'
+                          : n.status === 'warning'
+                            ? 'border-amber-500/40 bg-amber-500/10'
+                            : 'border-rose-500/40 bg-rose-500/10'
+                      }`}
+                    >
+                      <p className="text-[10px] font-medium text-white/50 uppercase">Network</p>
+                      <p className="mt-0.5 text-xs font-semibold truncate max-w-[140px]" title={n.name}>{n.name}</p>
+                      <p className="mt-1 text-[10px] text-white/60">{n.hosts.length} hosts</p>
+                      <p className={`mt-1 text-[10px] font-medium ${
+                        n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'
+                      }`}>
+                        {statusLabel(n.status)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -336,18 +485,20 @@ export default function InfrastructureMap() {
         {activeTab === 'devices' && (
           <>
             <h3 className="mb-1 text-sm font-semibold">Device Inventory</h3>
-            <p className="mb-4 text-xs text-white/50">All devices (hosts) in the infrastructure — real data from Monitored Targets.</p>
-            {hosts.length === 0 ? (
+            <p className="mb-4 text-xs text-white/50">Layer: {layerFilter} — real data from Monitored Targets.</p>
+            {(layerFiltered.showStorage || layerFiltered.showSecurity) ? (
+              <div className="py-12 text-center text-sm text-white/50">No {layerFilter === 'Storage Layer' ? 'storage' : 'security'} devices. Define in Monitored Targets.</div>
+            ) : !layerFiltered.hasData ? (
               <div className="py-12 text-center text-sm text-white/50">No devices. Add hosts in Monitored Targets.</div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {hosts.map((h) => (
+                {layerFiltered.hostsFiltered.map((h) => (
                   <div key={h.name} className="rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm truncate" title={h.name}>{h.name}</p>
                         <p className="mt-1 text-xs text-white/60">server · {h.address}</p>
-                        <p className="mt-1 text-xs text-white/50">Network: default</p>
+                        <p className="mt-1 text-xs text-white/50">Layer: Compute</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
                         h.status === 'ok' ? 'bg-emerald-500/20 text-emerald-200' :
@@ -355,6 +506,24 @@ export default function InfrastructureMap() {
                         'bg-rose-500/20 text-rose-200'
                       }`}>
                         {statusLabel(h.status)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {layerFiltered.networksFiltered.map((n) => (
+                  <div key={n.id} className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm truncate" title={n.name}>{n.name}</p>
+                        <p className="mt-1 text-xs text-white/60">network · {n.hosts.length} hosts</p>
+                        <p className="mt-1 text-xs text-white/50">Layer: Network</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
+                        n.status === 'ok' ? 'bg-sky-500/20 text-sky-200' :
+                        n.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
+                        'bg-rose-500/20 text-rose-200'
+                      }`}>
+                        {statusLabel(n.status)}
                       </span>
                     </div>
                   </div>
@@ -367,12 +536,14 @@ export default function InfrastructureMap() {
         {activeTab === 'connections' && (
           <>
             <h3 className="mb-1 text-sm font-semibold">Network Connections</h3>
-            <p className="mb-4 text-xs text-white/50">Logical links from hosts to monitoring — real data.</p>
-            {connections.length === 0 ? (
-              <div className="py-12 text-center text-sm text-white/50">No connections. Add hosts in Monitored Targets.</div>
+            <p className="mb-4 text-xs text-white/50">Layer: {layerFilter} — logical links to monitoring.</p>
+            {connectionsFiltered.length === 0 ? (
+              <div className="py-12 text-center text-sm text-white/50">
+                {layerFilter === 'Storage Layer' || layerFilter === 'Security Layer' ? `No ${layerFilter === 'Storage Layer' ? 'storage' : 'security'} connections.` : 'No connections. Add hosts in Monitored Targets.'}
+              </div>
             ) : (
               <div className="space-y-3">
-                {connections.map((c) => (
+                {connectionsFiltered.map((c) => (
                   <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
                     <span className="font-mono text-xs">{c.source}</span>
                     <span className="text-white/40">— {c.type} —</span>
@@ -401,8 +572,8 @@ export default function InfrastructureMap() {
                 </div>
                 <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/70">Connections</span>
-                  <span className={`text-xs font-medium ${connections.filter((c) => c.status === 'Online').length === connections.length ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {connections.filter((c) => c.status === 'Online').length}/{connections.length} Active
+                  <span className={`text-xs font-medium ${connectionsFiltered.filter((c) => c.status === 'Online').length === connectionsFiltered.length ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {connectionsFiltered.filter((c) => c.status === 'Online').length}/{connectionsFiltered.length} Active
                   </span>
                 </div>
               </div>
