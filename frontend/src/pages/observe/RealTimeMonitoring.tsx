@@ -199,7 +199,6 @@ export default function RealTimeMonitoring() {
     return () => clearInterval(t)
   }, [isLive, wsId, refreshInterval, fetchMetrics])
 
-  const totalHosts = hostTotals.up + hostTotals.down + hostTotals.unreachable + hostTotals.pending
   const totalServices =
     serviceTotals.ok +
     serviceTotals.warning +
