@@ -418,7 +418,7 @@ export default function Services() {
                 data.items.map((item, index) => {
                   const rowKey = `${item.host}-${item.service}-${index}`
                   const isExpanded = expandedRowKey === rowKey
-                  const hasPerf = !!(item.perfData || item.longPluginOutput)
+                  const hasDetails = !!(item.info || item.perfData || item.longPluginOutput)
                   return (
                     <Fragment key={rowKey}>
                       <tr
@@ -455,11 +455,11 @@ export default function Services() {
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center justify-end gap-2">
-                            {hasPerf && (
+                            {hasDetails && (
                               <button
                                 type="button"
                                 onClick={() => setExpandedRowKey(isExpanded ? null : rowKey)}
-                                title={isExpanded ? 'Hide perf data' : 'Show perf data'}
+                                title={isExpanded ? 'Hide full status' : 'Show full status information'}
                                 className="rounded border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotate-180' : ''}>
@@ -489,20 +489,26 @@ export default function Services() {
                           </div>
                         </td>
                       </tr>
-                      {isExpanded && hasPerf && (
+                      {isExpanded && hasDetails && (
                         <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
-                          <td colSpan={9} className="px-3 py-2 text-xs text-white/60">
-                            <div className="space-y-1">
+                          <td colSpan={9} className="px-3 py-3 text-xs">
+                            <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
+                              {item.info && (
+                                <div>
+                                  <span className="block font-medium text-white/70 mb-1">Status information</span>
+                                  <div className="whitespace-pre-wrap break-words font-mono text-white/90">{item.info}</div>
+                                </div>
+                              )}
                               {item.perfData && (
                                 <div>
-                                  <span className="font-medium text-white/70">Perf data:</span>{' '}
-                                  <span className="font-mono">{item.perfData}</span>
+                                  <span className="block font-medium text-white/70 mb-1">Perf data</span>
+                                  <div className="font-mono text-white/80 break-all">{item.perfData}</div>
                                 </div>
                               )}
                               {item.longPluginOutput && (
                                 <div>
-                                  <span className="font-medium text-white/70">Long output:</span>{' '}
-                                  <span className="whitespace-pre-wrap">{item.longPluginOutput}</span>
+                                  <span className="block font-medium text-white/70 mb-1">Long output</span>
+                                  <div className="whitespace-pre-wrap break-words text-white/80">{item.longPluginOutput}</div>
                                 </div>
                               )}
                             </div>
