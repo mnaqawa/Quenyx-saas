@@ -1,8 +1,8 @@
 #!/usr/bin/env php
 <?php
 /**
- * Observe plugin: Disk space. Copy to storage/app/observe_plugins/check_disk.php.
- * Host and all args come from the engine (UI: host under target; mount/warn_pct/crit_pct from service config).
+ * Observe plugin: Disk space. Install with: php artisan observe:install-plugins
+ * All values from UI: host (Monitored Targets), mount/warn_pct/crit_pct (service config). No hardcoded IP or thresholds.
  * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
@@ -16,8 +16,20 @@ if ($host === '') {
     exit(3);
 }
 
-$isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true)
-    || (function_exists('gethostname') && strtolower(trim($host)) === strtolower(trim((string) gethostname())));
+// Local = same machine (derived at runtime; no hardcoded IPs)
+$localIdentifiers = [];
+if (function_exists('gethostname')) {
+    $localIdentifiers[] = strtolower(trim((string) gethostname()));
+}
+$localIdentifiers[] = 'localhost';
+if (function_exists('gethostbyname')) {
+    $lb = gethostbyname('localhost');
+    if ($lb !== '' && $lb !== 'localhost') {
+        $localIdentifiers[] = $lb;
+    }
+}
+$localIdentifiers[] = '::1';
+$isLocal = in_array(strtolower($host), $localIdentifiers, true);
 
 if ($isLocal) {
     $cmd = "df -P " . escapeshellarg($mount) . " 2>/dev/null | tail -1";

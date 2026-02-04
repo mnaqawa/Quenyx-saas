@@ -15,8 +15,20 @@ if ($host === '') {
     exit(3);
 }
 
-$isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true)
-    || (function_exists('gethostname') && strtolower(trim($host)) === strtolower(trim((string) gethostname())));
+// Local = same machine (derived at runtime; no hardcoded IPs)
+$localIdentifiers = [];
+if (function_exists('gethostname')) {
+    $localIdentifiers[] = strtolower(trim((string) gethostname()));
+}
+$localIdentifiers[] = 'localhost';
+if (function_exists('gethostbyname')) {
+    $lb = gethostbyname('localhost');
+    if ($lb !== '' && $lb !== 'localhost') {
+        $localIdentifiers[] = $lb;
+    }
+}
+$localIdentifiers[] = '::1';
+$isLocal = in_array(strtolower($host), $localIdentifiers, true);
 
 if ($isLocal) {
     $load = is_readable('/proc/loadavg') ? file_get_contents('/proc/loadavg') : '';

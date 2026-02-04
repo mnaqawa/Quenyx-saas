@@ -246,41 +246,59 @@ class NativeObserveCheckRunner
             return ['state' => 'unknown', 'output' => 'Invalid plugin name (no path traversal)', 'perfdata' => null];
         }
 
+        $exampleDir = is_dir(base_path('docs/observe_plugins_example'))
+            ? base_path('docs/observe_plugins_example')
+            : (is_dir(__DIR__ . '/../../docs/observe_plugins_example') ? realpath(__DIR__ . '/../../docs/observe_plugins_example') : null);
+
         $path = null;
         $runner = null;
         $ext = strtolower(pathinfo($base, PATHINFO_EXTENSION));
-        if (in_array($ext, ['php'], true)) {
-            $path = $pluginsDir . DIRECTORY_SEPARATOR . $base;
-            $runner = ['php', $path];
-        } elseif (in_array($ext, ['pl'], true)) {
-            $path = $pluginsDir . DIRECTORY_SEPARATOR . $base;
-            $runner = ['perl', $path];
-        } elseif (in_array($ext, ['sh'], true) || $ext === '') {
-            $candidate = $pluginsDir . DIRECTORY_SEPARATOR . $base;
-            if ($ext === '') {
+        $searchDirs = array_filter([$pluginsDir, $exampleDir]);
+
+        foreach ($searchDirs as $dir) {
+            if (in_array($ext, ['php'], true)) {
+                $candidate = $dir . DIRECTORY_SEPARATOR . $base;
+                if (is_file($candidate)) {
+                    $path = $candidate;
+                    $runner = ['php', $path];
+                    break;
+                }
+            } elseif (in_array($ext, ['pl'], true)) {
+                $candidate = $dir . DIRECTORY_SEPARATOR . $base;
+                if (is_file($candidate)) {
+                    $path = $candidate;
+                    $runner = ['perl', $path];
+                    break;
+                }
+            } elseif (in_array($ext, ['sh'], true)) {
+                $candidate = $dir . DIRECTORY_SEPARATOR . $base;
+                if (is_file($candidate)) {
+                    $path = $candidate;
+                    $runner = ['bash', $path];
+                    break;
+                }
+            } else {
                 foreach (['.sh', '.php', '.pl'] as $e) {
-                    if (is_file($candidate . $e)) {
-                        $candidate .= $e;
-                        $base .= $e;
-                        $ext = ltrim($e, '.');
-                        break;
+                    $candidate = $dir . DIRECTORY_SEPARATOR . $base . $e;
+                    if (is_file($candidate)) {
+                        $path = $candidate;
+                        $runner = $e === '.php' ? ['php', $path] : ($e === '.pl' ? ['perl', $path] : ['bash', $path]);
+                        break 2;
                     }
                 }
             }
-            $path = $candidate;
-            if (!is_file($path)) {
-                return ['state' => 'unknown', 'output' => 'Plugin not found: ' . $base, 'perfdata' => null];
-            }
-            $runner = ['bash', $path];
         }
 
         if ($path === null || $runner === null || !is_file($path)) {
-            return ['state' => 'unknown', 'output' => 'Plugin not found or unsupported type: ' . $base, 'perfdata' => null];
+            return ['state' => 'unknown', 'output' => 'Plugin not found: ' . $base . '. Run: php artisan observe:install-plugins', 'perfdata' => null];
         }
 
         $realPath = realpath($path);
         $pluginsReal = realpath($pluginsDir);
-        if ($realPath === false || $pluginsReal === false || !str_starts_with(str_replace('\\', '/', $realPath), str_replace('\\', '/', $pluginsReal))) {
+        $exampleReal = $exampleDir ? realpath($exampleDir) : false;
+        $allowed = array_filter([$pluginsReal, $exampleReal]);
+        $allowedPrefix = $realPath && $allowed ? array_filter($allowed, fn ($prefix) => $prefix && str_starts_with(str_replace('\\', '/', $realPath), str_replace('\\', '/', $prefix))) : [];
+        if ($realPath === false || empty($allowedPrefix)) {
             return ['state' => 'unknown', 'output' => 'Plugin path not allowed', 'perfdata' => null];
         }
 
