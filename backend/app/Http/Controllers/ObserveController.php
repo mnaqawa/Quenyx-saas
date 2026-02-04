@@ -6,6 +6,7 @@ use App\Models\ObserveService;
 use App\Models\ObserveMeta;
 use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
+use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -359,30 +360,61 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: real-time metrics (no backend implementation yet). Returns empty object.
+     * Real-time system metrics (CPU, memory, disk, network, temperature) from the server.
      */
     public function realTimeMetrics(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => (object) []]);
+        try {
+            $data = app(SystemMetricsService::class)->getRealTimeMetrics();
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            Log::warning('ObserveController::realTimeMetrics failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => true, 'data' => [
+                'cpu' => ['value' => 0, 'cores' => '—', 'frequency' => '—'],
+                'memory' => ['value' => 0, 'used' => '—', 'total' => '—'],
+                'diskIO' => ['value' => 0, 'type' => '—', 'throughput' => '—'],
+                'network' => ['value' => 0, 'speed' => '—', 'type' => '—'],
+                'temperature' => ['value' => 0, 'source' => '—'],
+            ]]);
+        }
     }
 
     /**
-     * Stub: system info (no backend implementation yet). Returns empty object.
+     * System info (hostname, OS, kernel, uptime, load average) from the server.
      */
     public function systemInfo(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => (object) []]);
+        try {
+            $data = app(SystemMetricsService::class)->getSystemInfo();
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            Log::warning('ObserveController::systemInfo failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => true, 'data' => [
+                'hostname' => gethostname() ?: '—',
+                'os' => PHP_OS,
+                'kernel' => php_uname('r') ?: '—',
+                'uptime' => '—',
+                'loadAverage' => '—',
+            ]]);
+        }
     }
 
     /**
-     * Stub: performance thresholds (no backend implementation yet). Returns empty array.
+     * Performance thresholds for dashboard display (defaults; per-service thresholds are in Monitored Targets).
      */
     public function performanceThresholds(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                ['metric' => 'CPU', 'warning' => '70%', 'critical' => '90%'],
+                ['metric' => 'Memory', 'warning' => '80%', 'critical' => '95%'],
+                ['metric' => 'Temp', 'warning' => '65°C', 'critical' => '80°C'],
+            ],
+        ]);
     }
 
     /**
