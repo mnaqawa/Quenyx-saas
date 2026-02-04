@@ -195,7 +195,10 @@ export default function RealTimeMonitoring() {
       .then((list) => {
         const arr = Array.isArray(list) ? list : (list as { targets?: Array<{ name: string; address: string }> })?.targets ?? []
         setHostList(arr)
-        setSelectedHost((prev) => (arr.some((h) => h.name === prev) ? prev : ''))
+        setSelectedHost((prev) => {
+          if (arr.length === 0) return ''
+          return arr.some((h) => h.name === prev) ? prev : arr[0].name
+        })
       })
       .catch(() => setHostList([]))
   }, [wsId])
@@ -298,12 +301,12 @@ export default function RealTimeMonitoring() {
         actions={
           <div className="flex items-center gap-2">
             <select
-              value={selectedHost}
+              value={hostList.length === 0 ? '' : selectedHost}
               onChange={(e) => setSelectedHost(e.target.value)}
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 min-w-[140px]"
-              title="Filter data by host"
+              title="Select host"
+              disabled={hostList.length === 0}
             >
-              <option value="" className="bg-slate-900 text-white">All hosts</option>
               {hostList.map((h) => (
                 <option key={h.name} value={h.name} className="bg-slate-900 text-white">
                   {h.name}
@@ -329,6 +332,7 @@ export default function RealTimeMonitoring() {
               onClick={() => {
                 setRefreshKey((k) => k + 1)
                 setRefreshMetricsKey((k) => k + 1)
+                if (wsId) void fetchMetrics()
               }}
               className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
             >
