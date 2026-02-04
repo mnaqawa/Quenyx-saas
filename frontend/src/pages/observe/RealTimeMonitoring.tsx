@@ -329,12 +329,9 @@ export default function RealTimeMonitoring() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setRefreshKey((k) => k + 1)
-                setRefreshMetricsKey((k) => k + 1)
-                if (wsId) void fetchMetrics()
-              }}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
+              onClick={() => window.location.reload()}
+              className="cursor-pointer rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+              title="Reload page to refresh all data"
             >
               Refresh
             </button>
