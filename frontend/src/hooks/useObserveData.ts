@@ -473,8 +473,9 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
       setTargetsLoading(false)
       return
     }
-    let cancelled = false
+    setTargets([])
     setTargetsLoading(true)
+    let cancelled = false
     observeService
       .getTargets(Number(workspaceId))
       .then((list) => {
@@ -546,6 +547,9 @@ export function useObserveConnections(
       setError(null)
       return
     }
+    setData(null)
+    setLoading(true)
+    setError(null)
     let cancelled = false
     const fetchConnections = () => {
       observeService
@@ -626,6 +630,10 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
       setError(null)
       return
     }
+    // Clear previous workspace data immediately when switching so UI never shows wrong workspace
+    setData(null)
+    setLoading(true)
+    setError(null)
 
     const fetchData = async () => {
       setLoading(true)

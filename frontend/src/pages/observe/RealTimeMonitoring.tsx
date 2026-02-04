@@ -128,6 +128,16 @@ export default function RealTimeMonitoring() {
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
 
+  // Reset workspace-scoped state when workspace changes so we never show another workspace's data
+  useEffect(() => {
+    setMetrics(null)
+    setSystemInfo(null)
+    setTimeSeries([])
+    setHostList([])
+    setSelectedHost('')
+    setMetricsError(null)
+  }, [selectedWorkspaceId])
+
   const { data: servicesData, loading: kpisLoading, error: kpisError } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,

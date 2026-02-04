@@ -8,32 +8,29 @@ use Illuminate\Database\Seeder;
 
 class ProjectSeeder extends Seeder
 {
+    /**
+     * Create only Production Env and Staging Env workspaces.
+     * All existing projects are removed so that only these two remain.
+     */
     public function run(): void
     {
-        $statuses = ['active', 'paused', 'archived'];
+        Project::query()->delete();
 
-        $namePool = [
-            'Core Monitoring',
-            'Security Upgrade',
-            'Automation Rollout',
-            'Incident Readiness',
-            'Ops Visibility',
-            'Service Optimization',
-            'Alert Modernization',
-            'Compliance Review',
-            'Infrastructure Audit',
-            'Workflow Revamp',
-        ];
+        $owner = User::query()->first();
+        if (! $owner) {
+            return;
+        }
 
-        User::query()->each(function (User $user) use ($statuses, $namePool) {
-            $count = rand(2, 5);
-            for ($i = 0; $i < $count; $i++) {
-                Project::create([
-                    'owner_id' => $user->id,
-                    'name' => $namePool[array_rand($namePool)] . ' #' . rand(1, 99),
-                    'status' => $statuses[array_rand($statuses)],
-                ]);
-            }
-        });
+        Project::create([
+            'owner_id' => $owner->id,
+            'name' => 'Production Env',
+            'status' => 'active',
+        ]);
+
+        Project::create([
+            'owner_id' => $owner->id,
+            'name' => 'Staging Env',
+            'status' => 'active',
+        ]);
     }
 }
