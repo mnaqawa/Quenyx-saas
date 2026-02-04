@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
 use App\Models\ObserveServiceDefinition;
+use App\Models\ObserveTargetHost;
+use App\Models\IntegrationConfiguration;
 use App\Models\Project;
 use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
@@ -419,11 +421,174 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: network topology (no backend implementation yet). Returns empty array.
+     * Network topology from Observe data: targets + service status. Real data only.
+     * Returns nodes array for backward compatibility (e.g. frontend NetworkNode[]).
      */
     public function networkTopology(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+        $data = $this->buildTopologyFromObserve($project);
+        return response()->json(['success' => true, 'data' => $data['nodes']]);
+    }
+
+    /**
+     * Infrastructure connections: topology from Observe + optional merge from Integrations (external topology).
+     * GET ?include_integrations=1 to merge integration-provided nodes/connections.
+     */
+    public function infrastructureConnections(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $includeIntegrations = $request->query('include_integrations', '1') === '1' || $request->query('include_integrations') === 'true';
+        $data = $this->buildTopologyFromObserve($project);
+        $integrationSources = [];
+        if ($includeIntegrations) {
+            $merged = $this->mergeIntegrationTopology($project, $data, $integrationSources);
+            $data = $merged;
+        }
+        $response = [
+            'nodes' => $data['nodes'],
+            'connections' => $data['connections'],
+            'service_stats' => $data['service_stats'] ?? [],
+        ];
+        if ($includeIntegrations && count($integrationSources) > 0) {
+            $response['from_integrations'] = $integrationSources;
+        }
+        return response()->json(['success' => true, 'data' => $response]);
+    }
+
+    /**
+     * Build topology (nodes + connections) from Observe targets and services only.
+     *
+     * @return array{nodes: array, connections: array, service_stats: array}
+     */
+    private function buildTopologyFromObserve(Project $project): array
+    {
+        $prefix = 'ws' . $project->id . '-';
+        $hosts = ObserveTargetHost::where('workspace_id', $project->id)->where('enabled', true)->get();
+        $serviceRows = ObserveService::where('workspace_id', $project->id)
+            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('host_name', 'like', $prefix . '%')
+            ->get();
+        $hostToState = [];
+        $hostToServiceCount = ['total' => [], 'critical' => [], 'warning' => []];
+        foreach ($serviceRows as $s) {
+            $hostName = str_starts_with($s->host_name, $prefix) ? substr($s->host_name, strlen($prefix)) : $s->host_name;
+            $hostToState[$hostName] = $this->worstState($hostToState[$hostName] ?? 'pending', $s->state);
+            $hostToServiceCount['total'][$hostName] = ($hostToServiceCount['total'][$hostName] ?? 0) + 1;
+            if (in_array($s->state, ['critical', 'unreachable'], true)) {
+                $hostToServiceCount['critical'][$hostName] = ($hostToServiceCount['critical'][$hostName] ?? 0) + 1;
+            } elseif (in_array($s->state, ['warning', 'unknown'], true)) {
+                $hostToServiceCount['warning'][$hostName] = ($hostToServiceCount['warning'][$hostName] ?? 0) + 1;
+            }
+        }
+        $nodes = [];
+        $seenNet = [];
+        foreach ($hosts as $h) {
+            $name = $h->name;
+            $address = $h->address ?? '';
+            $status = $hostToState[$name] ?? 'pending';
+            $nodes[] = [
+                'id' => 'host-' . $name,
+                'name' => $name,
+                'type' => 'host',
+                'address' => $address,
+                'status' => $status,
+                'layer' => 'Compute',
+                'source' => 'observe',
+            ];
+            $parts = array_map('trim', explode('.', $address));
+            $isIPv4 = count($parts) === 4 && array_reduce($parts, fn ($ok, $p) => $ok && ctype_digit($p), true);
+            $netKey = $isIPv4 ? ($parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.0/24') : ($address ?: 'default');
+            if (!isset($seenNet[$netKey])) {
+                $seenNet[$netKey] = true;
+                $nodes[] = [
+                    'id' => 'net-' . $netKey,
+                    'name' => $netKey,
+                    'type' => 'network',
+                    'layer' => 'Network',
+                    'source' => 'observe',
+                ];
+            }
+        }
+        $connections = [];
+        foreach ($hosts as $h) {
+            $connections[] = [
+                'id' => 'mon-' . $h->name,
+                'source' => $h->name,
+                'destination' => 'Monitoring',
+                'type' => 'monitored',
+                'status' => $this->stateToLabel($hostToState[$h->name] ?? 'pending'),
+            ];
+        }
+        $serviceStats = [];
+        foreach (array_keys($hostToServiceCount['total']) as $hostName) {
+            $serviceStats[$hostName] = [
+                'total' => $hostToServiceCount['total'][$hostName] ?? 0,
+                'critical' => $hostToServiceCount['critical'][$hostName] ?? 0,
+                'warning' => $hostToServiceCount['warning'][$hostName] ?? 0,
+            ];
+        }
+        return ['nodes' => $nodes, 'connections' => $connections, 'service_stats' => $serviceStats];
+    }
+
+    private function worstState(string $a, string $b): string
+    {
+        $order = ['critical' => 1, 'unreachable' => 2, 'warning' => 3, 'unknown' => 4, 'pending' => 5, 'ok' => 6];
+        return ($order[$a] ?? 99) <= ($order[$b] ?? 99) ? $a : $b;
+    }
+
+    private function stateToLabel(string $state): string
+    {
+        return match ($state) {
+            'ok' => 'Online',
+            'warning' => 'Warning',
+            'critical', 'unreachable' => 'Critical',
+            default => 'Pending',
+        };
+    }
+
+    /**
+     * Merge topology from project integrations (settings.topology_enabled + topology_data).
+     *
+     * @param array{nodes: array, connections: array} $observeData
+     * @param array $integrationSources filled with integration names that contributed
+     * @return array{nodes: array, connections: array}
+     */
+    private function mergeIntegrationTopology(Project $project, array $observeData, array &$integrationSources): array
+    {
+        $configs = IntegrationConfiguration::where('project_id', $project->id)->with('integration')->get();
+        $nodes = $observeData['nodes'];
+        $connections = $observeData['connections'];
+        foreach ($configs as $config) {
+            $settings = $config->settings ?? [];
+            if (empty($settings['topology_enabled'])) {
+                continue;
+            }
+            $topology = $settings['topology_data'] ?? null;
+            if (is_string($topology)) {
+                $decoded = json_decode($topology, true);
+                $topology = is_array($decoded) ? $decoded : null;
+            }
+            if (!is_array($topology)) {
+                continue;
+            }
+            $integrationName = $config->integration?->name ?? 'External';
+            $integrationSources[] = $integrationName;
+            $extraNodes = $topology['nodes'] ?? [];
+            $extraConnections = $topology['connections'] ?? [];
+            foreach ($extraNodes as $n) {
+                if (!is_array($n)) {
+                    continue;
+                }
+                $nodes[] = array_merge($n, ['source' => 'integration', 'integration' => $integrationName]);
+            }
+            foreach ($extraConnections as $c) {
+                if (!is_array($c)) {
+                    continue;
+                }
+                $connections[] = array_merge($c, ['source_origin' => 'integration', 'integration' => $integrationName]);
+            }
+        }
+        return ['nodes' => $nodes, 'connections' => $connections];
     }
 }

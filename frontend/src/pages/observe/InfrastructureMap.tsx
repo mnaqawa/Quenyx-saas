@@ -1,17 +1,61 @@
-import { useState, useMemo, useRef } from 'react'
+/**
+ * Infrastructure Map — Observe module (ShieldObserve microservice).
+ * All dynamic data (hosts, services, connections, status) comes from Observe APIs only; no fixtures or hardcoded variables.
+ */
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
-import { useObserveMapHosts } from '../../hooks/useObserveData'
-import { useObserveServices } from '../../hooks/useObserveData'
+import { useObserveMapHosts, useObserveServices, useObserveConnections } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
 
 type HostRow = { name: string; address: string; status: string }
 
-const VIEW_OPTIONS = ['Logical View', 'Physical View', 'Geographic View', 'Security Zones'] as const
+const VIEW_OPTIONS = ['Logical View', 'Physical View', 'By Zone', 'Security Zones'] as const
 const LAYER_OPTIONS = ['All Layers', 'Network Layer', 'Compute Layer', 'Storage Layer', 'Security Layer'] as const
 const ZOOM_OPTIONS = ['Fit to Screen', '50%', '100%', '150%', '200%'] as const
+
+// Zone presets (UI labels only; dynamic data comes from Observe microservice)
+export const ZONE_OPTIONS = ['Unassigned', 'DMZ', 'WebApp', 'DB', 'Internal', 'Edge', 'API', 'Cache'] as const
+export type ZoneId = (typeof ZONE_OPTIONS)[number] | string
+
+const DIAGRAM_STORAGE_KEY = 'portshield-infra-diagram'
+
+export interface DiagramState {
+  hostZones: Record<string, ZoneId>
+  nodePositions: Record<string, { x: number; y: number }>
+  customZones: string[]
+}
+
+function loadDiagram(workspaceId: string | null): DiagramState {
+  if (!workspaceId) return { hostZones: {}, nodePositions: {}, customZones: [] }
+  try {
+    const raw = localStorage.getItem(`${DIAGRAM_STORAGE_KEY}-${workspaceId}`)
+    if (!raw) return { hostZones: {}, nodePositions: {}, customZones: [] }
+    const parsed = JSON.parse(raw) as DiagramState
+    return {
+      hostZones: parsed.hostZones ?? {},
+      nodePositions: parsed.nodePositions ?? {},
+      customZones: Array.isArray(parsed.customZones) ? parsed.customZones : [],
+    }
+  } catch {
+    return { hostZones: {}, nodePositions: {}, customZones: [] }
+  }
+}
+
+function saveDiagram(workspaceId: string | null, state: DiagramState) {
+  if (!workspaceId) return
+  try {
+    localStorage.setItem(`${DIAGRAM_STORAGE_KEY}-${workspaceId}`, JSON.stringify(state))
+  } catch {
+    // ignore
+  }
+}
+
+function getAllZones(customZones: string[]): string[] {
+  return [...ZONE_OPTIONS.filter((z) => z !== 'Unassigned'), ...customZones]
+}
 
 function statusLabel(s: string): string {
   switch (s) {
@@ -37,11 +81,105 @@ export default function InfrastructureMap() {
   const [layerFilter, setLayerFilter] = useState<string>(LAYER_OPTIONS[0])
   const [zoomLevel, setZoomLevel] = useState<string>(ZOOM_OPTIONS[0])
   const [designLevel, setDesignLevel] = useState<'hld' | 'lld'>('lld')
+  const [zoneFilter, setZoneFilter] = useState<string>('All Zones')
+  const [diagram, setDiagram] = useState<DiagramState>(() => loadDiagram(selectedWorkspaceId))
+  const [customZoneInput, setCustomZoneInput] = useState('')
+  const [draggingNode, setDraggingNode] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(30)
   const mapContainerRef = useRef<HTMLDivElement>(null)
+  const topologyRef = useRef<HTMLDivElement>(null)
 
-  const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId)
-  const { data: servicesData } = useObserveServices({ workspaceId: selectedWorkspaceId ?? null, limit: 500 })
+  const refetchIntervalMs = autoRefresh ? autoRefreshSeconds * 1000 : 0
+  // Observe module: real data only from ShieldObserve microservice APIs (no fixtures / no hardcoded dynamic data)
+  const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId, refetchIntervalMs, true)
+  const { data: servicesData } = useObserveServices({
+    workspaceId: selectedWorkspaceId ?? null,
+    limit: 500,
+    refetchIntervalMs,
+    realDataOnly: true,
+  })
+  const { data: apiConnectionsData } = useObserveConnections(selectedWorkspaceId, {
+    refetchIntervalMs,
+    includeIntegrations: true,
+  })
   const exportAreaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setDiagram(loadDiagram(selectedWorkspaceId))
+  }, [selectedWorkspaceId])
+
+  useEffect(() => {
+    saveDiagram(selectedWorkspaceId, diagram)
+  }, [selectedWorkspaceId, diagram])
+
+  const allZonesList = useMemo(() => getAllZones(diagram.customZones), [diagram.customZones])
+
+  const hostsByZone = useMemo(() => {
+    const map = new Map<string, HostRow[]>()
+    map.set('Unassigned', [])
+    allZonesList.forEach((z) => map.set(z, []))
+    hosts.forEach((h) => {
+      const zone = diagram.hostZones[h.name] ?? 'Unassigned'
+      if (!map.has(zone)) map.set(zone, [])
+      map.get(zone)!.push(h)
+    })
+    if (zoneFilter !== 'All Zones') {
+      const filtered = new Map<string, HostRow[]>()
+      const list = map.get(zoneFilter) ?? []
+      if (zoneFilter !== 'Unassigned') filtered.set(zoneFilter, list)
+      else filtered.set('Unassigned', list)
+      return filtered
+    }
+    return map
+  }, [hosts, diagram.hostZones, allZonesList, zoneFilter])
+
+  const hostsFilteredByZone = useMemo(() => {
+    if (zoneFilter === 'All Zones') return hosts
+    return hostsByZone.get(zoneFilter) ?? []
+  }, [hosts, zoneFilter, hostsByZone])
+
+  const setHostZone = useCallback((hostName: string, zone: ZoneId) => {
+    setDiagram((prev) => ({ ...prev, hostZones: { ...prev.hostZones, [hostName]: zone } }))
+  }, [])
+
+  const addCustomZone = useCallback(() => {
+    const name = customZoneInput.trim()
+    if (!name || diagram.customZones.includes(name)) return
+    setDiagram((prev) => ({ ...prev, customZones: [...prev.customZones, name] }))
+    setCustomZoneInput('')
+  }, [customZoneInput, diagram.customZones])
+
+  const getNodePosition = useCallback((hostName: string, index: number, total: number) => {
+    const saved = diagram.nodePositions[hostName]
+    if (saved) return saved
+    const row = Math.floor(index / 4)
+    const col = index % 4
+    return { x: 80 + col * 160, y: 60 + row * 100 }
+  }, [diagram.nodePositions])
+
+  const handleNodeMouseDown = useCallback((e: React.MouseEvent, hostName: string) => {
+    e.preventDefault()
+    const pos = diagram.nodePositions[hostName] ?? getNodePosition(hostName, 0, 1)
+    setDraggingNode(hostName)
+    setDragOffset({ x: e.clientX - pos.x, y: e.clientY - pos.y })
+  }, [diagram.nodePositions, getNodePosition])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!draggingNode) return
+    setDiagram((prev) => ({
+      ...prev,
+      nodePositions: {
+        ...prev.nodePositions,
+        [draggingNode]: { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y },
+      },
+    }))
+  }, [draggingNode, dragOffset])
+
+  const handleMouseUp = useCallback(() => {
+    if (draggingNode) setDraggingNode(null)
+  }, [draggingNode])
 
   const networks = useMemo(() => {
     const byKey = new Map<string, HostRow[]>()
@@ -99,6 +237,54 @@ export default function InfrastructureMap() {
     }))
   }, [layerFilter, hosts, networks])
 
+  // Richer connection data from Observe microservice (servicesData): service counts per host
+  const hostServiceStats = useMemo(() => {
+    const stats = new Map<string, { total: number; critical: number; warning: number }>()
+    if (!servicesData?.items) return stats
+    const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
+    for (const item of servicesData.items as Array<{ host: string; status: string }>) {
+      const hostName = item.host?.startsWith(prefix) ? item.host.slice(prefix.length) : item.host
+      const cur = stats.get(hostName) ?? { total: 0, critical: 0, warning: 0 }
+      cur.total += 1
+      if (item.status === 'critical' || item.status === 'unreachable') cur.critical += 1
+      else if (item.status === 'warning' || item.status === 'unknown') cur.warning += 1
+      stats.set(hostName, cur)
+    }
+    return stats
+  }, [servicesData?.items, selectedWorkspaceId])
+
+  const connectionsWithServices = useMemo(() => {
+    return connectionsFiltered.map((c) => {
+      const st = hostServiceStats.get(c.source)
+      return {
+        ...c,
+        serviceCount: st?.total ?? 0,
+        criticalCount: st?.critical ?? 0,
+        warningCount: st?.warning ?? 0,
+      }
+    })
+  }, [connectionsFiltered, hostServiceStats])
+
+  // Prefer API connections (Observe + Integrations) when available; enrich with service stats
+  const connectionsForTab = useMemo(() => {
+    if (apiConnectionsData != null) {
+      const stats = apiConnectionsData.service_stats ?? {}
+      return apiConnectionsData.connections.map((c) => ({
+        id: (c as { id?: string }).id ?? `conn-${c.source}-${c.destination}`,
+        source: c.source,
+        type: c.type,
+        destination: c.destination,
+        status: c.status,
+        serviceCount: stats[c.source]?.total ?? 0,
+        criticalCount: stats[c.source]?.critical ?? 0,
+        warningCount: stats[c.source]?.warning ?? 0,
+        fromIntegration: (c as { source_origin?: string; integration?: string }).source_origin === 'integration',
+        integrationName: (c as { integration?: string }).integration,
+      }))
+    }
+    return connectionsWithServices.map((c) => ({ ...c, fromIntegration: false, integrationName: undefined }))
+  }, [apiConnectionsData, connectionsWithServices])
+
   const hostStatusCounts = useMemo(() => {
     const ok = hosts.filter((h) => h.status === 'ok').length
     const warning = hosts.filter((h) => h.status === 'warning').length
@@ -154,6 +340,7 @@ export default function InfrastructureMap() {
         'Security Layer': 'Security zones and policies (define in Monitored Targets)',
       },
       zone: selectedWorkspaceId ? { id: selectedWorkspaceId, name: 'Workspace' } : null,
+      zones: [...ZONE_OPTIONS, ...diagram.customZones],
       nodes: [
         ...layerFiltered.hostsFiltered.map((h) => ({
           id: h.name,
@@ -162,6 +349,8 @@ export default function InfrastructureMap() {
           address: h.address,
           status: h.status,
           layer: 'Compute' as const,
+          zone: diagram.hostZones[h.name] ?? 'Unassigned',
+          position: diagram.nodePositions[h.name] ?? null,
         })),
         ...layerFiltered.networksFiltered.map((n) => ({
           id: n.id,
@@ -172,11 +361,12 @@ export default function InfrastructureMap() {
           layer: 'Network' as const,
         })),
       ],
-      connections: connectionsFiltered.map((c) => ({
+      connections: connectionsWithServices.map((c) => ({
         source: c.source,
         destination: c.destination,
         type: c.type,
         status: c.status,
+        ...(c.serviceCount !== undefined && c.type === 'monitored' ? { serviceCount: c.serviceCount, criticalCount: c.criticalCount ?? 0, warningCount: c.warningCount ?? 0 } : {}),
       })),
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
@@ -241,6 +431,96 @@ export default function InfrastructureMap() {
     }
   }
 
+  // SVG export from real diagram state (no rasterization) — vector HLD/LLD
+  const handleExportSvg = useCallback(() => {
+    const MONITORING = { x: 20, y: 20, w: 100, h: 48 }
+    const nodeW = 120
+    const nodeH = 56
+    const padding = 40
+    const strokeOk = '#10b981'
+    const strokeWarn = '#f59e0b'
+    const strokeCrit = '#f43f5e'
+    const strokeNet = '#0ea5e9'
+    const bg = '#0f151d'
+    const textColor = '#e2e8f0'
+
+    const displayHosts = zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone
+    const hostPositions = displayHosts.map((h, idx) => {
+      const pos = diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, displayHosts.length)
+      return { ...h, x: pos.x, y: pos.y }
+    })
+    const networkPositions = layerFiltered.networksFiltered.map((n, idx) => ({
+      ...n,
+      x: 80 + (idx % 4) * 160,
+      y: 60 + Math.floor(idx / 4) * 100,
+    }))
+
+    const allX = [MONITORING.x, MONITORING.x + MONITORING.w, ...hostPositions.map((p) => p.x), ...hostPositions.map((p) => p.x + nodeW), ...networkPositions.map((p) => p.x), ...networkPositions.map((p) => p.x + nodeW)]
+    const allY = [MONITORING.y, MONITORING.y + MONITORING.h, ...hostPositions.map((p) => p.y), ...hostPositions.map((p) => p.y + nodeH), ...networkPositions.map((p) => p.y), ...networkPositions.map((p) => p.y + nodeH)]
+    const minX = Math.min(...allX) - padding
+    const minY = Math.min(...allY) - padding
+    const maxX = Math.max(...allX) + padding
+    const maxY = Math.max(...allY) + padding
+    const width = maxX - minX
+    const height = maxY - minY
+
+    const line = (x1: number, y1: number, x2: number, y2: number, stroke: string) =>
+      `<line x1="${x1 - minX}" y1="${y1 - minY}" x2="${x2 - minX}" y2="${y2 - minY}" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="4,2"/>`
+    const rect = (x: number, y: number, w: number, h: number, stroke: string, fill = 'rgba(15,23,29,0.95)') =>
+      `<rect x="${x - minX}" y="${y - minY}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
+    const label = (x: number, y: number, w: number, h: number, lines: string[]) => {
+      const cx = x - minX + w / 2
+      const ty = y - minY + 14
+      return lines.map((t, i) => `<text x="${cx}" y="${ty + i * 12}" text-anchor="middle" font-size="10" fill="${textColor}" font-family="system-ui,sans-serif">${escapeXml(t)}</text>`).join('')
+    }
+    function escapeXml(s: string): string {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    const lines: string[] = []
+    hostPositions.forEach((h) => {
+      const cx = h.x + nodeW / 2
+      const cy = h.y + nodeH / 2
+      const mx = MONITORING.x + MONITORING.w / 2
+      const my = MONITORING.y + MONITORING.h / 2
+      const stroke = h.status === 'ok' ? strokeOk : h.status === 'warning' ? strokeWarn : strokeCrit
+      lines.push(line(cx, cy, mx, my, stroke))
+    })
+    networkPositions.forEach((n) => {
+      const cx = n.x + nodeW / 2
+      const cy = n.y + nodeH / 2
+      const mx = MONITORING.x + MONITORING.w / 2
+      const my = MONITORING.y + MONITORING.h / 2
+      lines.push(line(cx, cy, mx, my, strokeNet))
+    })
+
+    const rectsAndLabels: string[] = []
+    rectsAndLabels.push(rect(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, strokeNet))
+    rectsAndLabels.push(label(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, ['Monitoring', 'ShieldObserve']))
+    hostPositions.forEach((h) => {
+      const stroke = h.status === 'ok' ? strokeOk : h.status === 'warning' ? strokeWarn : strokeCrit
+      rectsAndLabels.push(rect(h.x, h.y, nodeW, nodeH, stroke))
+      rectsAndLabels.push(label(h.x, h.y, nodeW, nodeH, [h.name, statusLabel(h.status)]))
+    })
+    networkPositions.forEach((n) => {
+      rectsAndLabels.push(rect(n.x, n.y, nodeW, nodeH, strokeNet))
+      rectsAndLabels.push(label(n.x, n.y, nodeW, nodeH, [n.name, `${n.hosts.length} hosts`]))
+    })
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:${bg}">
+  ${lines.join('\n  ')}
+  ${rectsAndLabels.join('\n  ')}
+</svg>`
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `infrastructure-map-${designLevel}-${new Date().toISOString().slice(0, 10)}.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [diagram.nodePositions, layerFiltered.hostsFiltered, layerFiltered.networksFiltered, hostsFilteredByZone, zoneFilter, designLevel, getNodePosition])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -284,6 +564,14 @@ export default function InfrastructureMap() {
             </button>
             <button
               type="button"
+              onClick={handleExportSvg}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
+              title="Vector diagram (HLD/LLD) from current topology"
+            >
+              Export SVG
+            </button>
+            <button
+              type="button"
               onClick={handleExportPdf}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
             >
@@ -299,6 +587,27 @@ export default function InfrastructureMap() {
               </svg>
               Full Screen
             </button>
+            <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-white/30 bg-white/10 text-sky-500 focus:ring-sky-500/50"
+              />
+              Auto-refresh
+            </label>
+            {autoRefresh && (
+              <select
+                value={autoRefreshSeconds}
+                onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none"
+                title="Refresh interval"
+              >
+                <option value={15} className="bg-slate-900">15s</option>
+                <option value={30} className="bg-slate-900">30s</option>
+                <option value={60} className="bg-slate-900">60s</option>
+              </select>
+            )}
             <Link
               to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
@@ -348,6 +657,21 @@ export default function InfrastructureMap() {
               {o}
             </option>
           ))}
+        </select>
+        <select
+          value={zoneFilter}
+          onChange={(e) => setZoneFilter(e.target.value)}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
+          title="Filter by zone"
+        >
+          <option value="All Zones" className="bg-slate-900 text-white">All Zones</option>
+          {ZONE_OPTIONS.filter((z) => z !== 'Unassigned').map((z) => (
+            <option key={z} value={z} className="bg-slate-900 text-white">{z}</option>
+          ))}
+          {diagram.customZones.map((z) => (
+            <option key={z} value={z} className="bg-slate-900 text-white">{z}</option>
+          ))}
+          <option value="Unassigned" className="bg-slate-900 text-white">Unassigned</option>
         </select>
       </div>
 
@@ -399,8 +723,15 @@ export default function InfrastructureMap() {
               </div>
             </div>
             <div
-              className="relative rounded-lg border border-white/10 bg-white/5 p-6"
-              style={{ transform: zoomLevel !== 'Fit to Screen' ? `scale(${zoomScale})` : undefined, transformOrigin: 'top left' }}
+              ref={topologyRef}
+              className="relative rounded-lg border border-white/10 bg-white/5 p-6 min-h-[420px] select-none"
+              style={{
+                transform: zoomLevel !== 'Fit to Screen' ? `scale(${zoomScale})` : undefined,
+                transformOrigin: 'top left',
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               {layerFiltered.showStorage || layerFiltered.showSecurity ? (
                 <div className="py-12 text-center text-sm text-white/50">
@@ -409,6 +740,28 @@ export default function InfrastructureMap() {
               ) : !layerFiltered.hasData ? (
                 <div className="py-12 text-center text-sm text-white/50">
                   No hosts. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link>.
+                </div>
+              ) : viewType === 'By Zone' ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-white/50 mb-3">Zones and hosts — assign zones in Device List. Drag nodes in Logical View to arrange.</p>
+                  {Array.from(hostsByZone.entries()).filter(([, list]) => list.length > 0).map(([zoneName]) => (
+                    <div key={zoneName} className="rounded-xl border-2 border-white/20 bg-white/5 p-4">
+                      <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">{zoneName}</p>
+                      <div className="flex flex-wrap gap-3">
+                        {(hostsByZone.get(zoneName) ?? []).map((h) => (
+                          <div
+                            key={h.name}
+                            className={`rounded-lg border-2 px-3 py-2 text-center min-w-[100px] ${
+                              h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'
+                            }`}
+                          >
+                            <p className="text-xs font-semibold truncate max-w-[120px]" title={h.name}>{h.name}</p>
+                            <p className="text-[10px] text-white/60">{statusLabel(h.status)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : designLevel === 'hld' ? (
                 <div className="flex flex-col items-center gap-4">
@@ -421,51 +774,51 @@ export default function InfrastructureMap() {
                     </p>
                     <p className="mt-1 text-xs text-white/60">{hostStatusCounts.ok} healthy, {hostStatusCounts.warning} warning, {hostStatusCounts.critical} critical</p>
                   </div>
-                  <p className="text-xs text-white/40">HLD: High-level view. Export JSON for full HLD/LLD with layer definitions.</p>
+                  <p className="text-xs text-white/40">HLD: High-level view. Export JSON/PNG/PDF for full HLD/LLD with zones.</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap items-center justify-center gap-6">
-                  <div className="rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-center">
+                <div className="relative min-h-[360px]" style={{ width: '100%' }}>
+                  <div
+                    className="absolute rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-center cursor-default"
+                    style={{ left: 20, top: 20 }}
+                  >
                     <p className="text-[10px] font-medium text-white/50 uppercase">Monitoring</p>
                     <p className="text-xs font-semibold text-sky-200">ShieldObserve</p>
                   </div>
-                  {layerFiltered.hostsFiltered.map((h) => (
-                    <div
-                      key={h.name}
-                      className={`rounded-xl border-2 px-4 py-3 text-center min-w-[120px] ${
-                        h.status === 'ok'
-                          ? 'border-emerald-500/40 bg-emerald-500/10'
-                          : h.status === 'warning'
-                            ? 'border-amber-500/40 bg-amber-500/10'
-                            : 'border-rose-500/40 bg-rose-500/10'
-                      }`}
-                    >
-                      <p className="text-xs font-semibold truncate max-w-[140px]" title={h.name}>{h.name}</p>
-                      <p className="mt-0.5 text-[10px] text-white/60 truncate max-w-[140px]" title={h.address}>{h.address}</p>
-                      <p className={`mt-1 text-[10px] font-medium ${
-                        h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'
-                      }`}>
-                        {statusLabel(h.status)}
-                      </p>
-                    </div>
-                  ))}
-                  {layerFiltered.networksFiltered.map((n) => (
+                  {(zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone).map((h, idx) => {
+                    const pos = getNodePosition(h.name, idx, (zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone).length)
+                    return (
+                      <div
+                        key={h.name}
+                        className={`absolute rounded-xl border-2 px-4 py-3 text-center min-w-[120px] cursor-move ${
+                          draggingNode === h.name ? 'ring-2 ring-sky-400 z-10' : ''
+                        } ${
+                          h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'
+                        }`}
+                        style={{ left: pos.x, top: pos.y }}
+                        onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
+                      >
+                        <p className="text-xs font-semibold truncate max-w-[140px]" title={h.name}>{h.name}</p>
+                        <p className="mt-0.5 text-[10px] text-white/60 truncate max-w-[140px]" title={h.address}>{h.address}</p>
+                        <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+                          {statusLabel(h.status)}
+                        </p>
+                        {(diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned') && (
+                          <p className="mt-1 text-[9px] text-white/50">Zone: {String(diagram.hostZones[h.name])}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {layerFiltered.networksFiltered.map((n, idx) => (
                     <div
                       key={n.id}
-                      className={`rounded-xl border-2 px-4 py-3 text-center min-w-[120px] ${
-                        n.status === 'ok'
-                          ? 'border-sky-500/40 bg-sky-500/10'
-                          : n.status === 'warning'
-                            ? 'border-amber-500/40 bg-amber-500/10'
-                            : 'border-rose-500/40 bg-rose-500/10'
-                      }`}
+                      className="absolute rounded-xl border-2 border-sky-500/40 bg-sky-500/10 px-4 py-3 text-center min-w-[120px] cursor-default"
+                      style={{ left: 80 + (idx % 4) * 160, top: 60 + Math.floor(idx / 4) * 100 }}
                     >
                       <p className="text-[10px] font-medium text-white/50 uppercase">Network</p>
                       <p className="mt-0.5 text-xs font-semibold truncate max-w-[140px]" title={n.name}>{n.name}</p>
                       <p className="mt-1 text-[10px] text-white/60">{n.hosts.length} hosts</p>
-                      <p className={`mt-1 text-[10px] font-medium ${
-                        n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'
-                      }`}>
+                      <p className={`mt-1 text-[10px] font-medium ${n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
                         {statusLabel(n.status)}
                       </p>
                     </div>
@@ -484,7 +837,19 @@ export default function InfrastructureMap() {
         {activeTab === 'devices' && (
           <>
             <h3 className="mb-1 text-sm font-semibold">Device Inventory</h3>
-            <p className="mb-4 text-xs text-white/50">Layer: {layerFilter} — real data from Monitored Targets.</p>
+            <p className="mb-2 text-xs text-white/50">Layer: {layerFilter}. Assign zones for HLD/LLD and use &quot;By Zone&quot; view.</p>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={customZoneInput}
+                onChange={(e) => setCustomZoneInput(e.target.value)}
+                placeholder="Custom zone name"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder-white/40 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 w-40"
+              />
+              <button type="button" onClick={addCustomZone} className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-3 py-1.5 text-xs text-sky-200 hover:bg-sky-500/30">
+                Add zone
+              </button>
+            </div>
             {(layerFiltered.showStorage || layerFiltered.showSecurity) ? (
               <div className="py-12 text-center text-sm text-white/50">No {layerFilter === 'Storage Layer' ? 'storage' : 'security'} devices. Define in Monitored Targets.</div>
             ) : !layerFiltered.hasData ? (
@@ -493,11 +858,27 @@ export default function InfrastructureMap() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {layerFiltered.hostsFiltered.map((h) => (
                   <div key={h.name} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm truncate" title={h.name}>{h.name}</p>
                         <p className="mt-1 text-xs text-white/60">server · {h.address}</p>
                         <p className="mt-1 text-xs text-white/50">Layer: Compute</p>
+                        <div className="mt-2">
+                          <label className="text-[10px] text-white/50 block mb-1">Zone</label>
+                          <select
+                            value={diagram.hostZones[h.name] ?? 'Unassigned'}
+                            onChange={(e) => setHostZone(h.name, e.target.value as ZoneId)}
+                            className="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white focus:border-sky-500/50 focus:outline-none w-full max-w-[140px]"
+                          >
+                            <option value="Unassigned" className="bg-slate-900">Unassigned</option>
+                            {ZONE_OPTIONS.filter((z) => z !== 'Unassigned').map((z) => (
+                              <option key={z} value={z} className="bg-slate-900">{z}</option>
+                            ))}
+                            {diagram.customZones.map((z) => (
+                              <option key={z} value={z} className="bg-slate-900">{z}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
                         h.status === 'ok' ? 'bg-emerald-500/20 text-emerald-200' :
@@ -535,14 +916,19 @@ export default function InfrastructureMap() {
         {activeTab === 'connections' && (
           <>
             <h3 className="mb-1 text-sm font-semibold">Network Connections</h3>
-            <p className="mb-4 text-xs text-white/50">Layer: {layerFilter} — logical links to monitoring.</p>
-            {connectionsFiltered.length === 0 ? (
+            <p className="mb-2 text-xs text-white/50">
+              Layer: {layerFilter} — real data from ShieldObserve microservice
+              {apiConnectionsData?.from_integrations?.length ? (
+                <span className="ml-2 rounded bg-sky-500/20 px-2 py-0.5 text-sky-200">+ {apiConnectionsData.from_integrations.join(', ')}</span>
+              ) : null}
+            </p>
+            {connectionsForTab.length === 0 ? (
               <div className="py-12 text-center text-sm text-white/50">
-                {layerFilter === 'Storage Layer' || layerFilter === 'Security Layer' ? `No ${layerFilter === 'Storage Layer' ? 'storage' : 'security'} connections.` : 'No connections. Add hosts in Monitored Targets.'}
+                {layerFilter === 'Storage Layer' || layerFilter === 'Security Layer' ? `No ${layerFilter === 'Storage Layer' ? 'storage' : 'security'} connections.` : 'No connections. Add hosts in Monitored Targets or add external topology in Integrations.'}
               </div>
             ) : (
               <div className="space-y-3">
-                {connectionsFiltered.map((c) => (
+                {connectionsForTab.map((c) => (
                   <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
                     <span className="font-mono text-xs">{c.source}</span>
                     <span className="text-white/40">— {c.type} —</span>
@@ -552,7 +938,18 @@ export default function InfrastructureMap() {
                     }`}>
                       {c.status}
                     </span>
-                    <span className="text-xs text-white/50">{c.speed}</span>
+                    {c.serviceCount !== undefined && c.type === 'monitored' ? (
+                      <span className="text-xs text-white/50">
+                        {c.serviceCount} service{c.serviceCount !== 1 ? 's' : ''}
+                        {(c.criticalCount ?? 0) > 0 && <span className="text-rose-400"> · {c.criticalCount} critical</span>}
+                        {(c.warningCount ?? 0) > 0 && (c.criticalCount ?? 0) === 0 && <span className="text-amber-400"> · {c.warningCount} warning</span>}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-white/50">—</span>
+                    )}
+                    {c.fromIntegration && c.integrationName ? (
+                      <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] text-sky-200" title="From external integration">Integration: {c.integrationName}</span>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -571,8 +968,8 @@ export default function InfrastructureMap() {
                 </div>
                 <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/70">Connections</span>
-                  <span className={`text-xs font-medium ${connectionsFiltered.filter((c) => c.status === 'Online').length === connectionsFiltered.length ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {connectionsFiltered.filter((c) => c.status === 'Online').length}/{connectionsFiltered.length} Active
+                  <span className={`text-xs font-medium ${connectionsForTab.filter((c) => c.status === 'Online').length === connectionsForTab.length && connectionsForTab.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {connectionsForTab.filter((c) => c.status === 'Online').length}/{connectionsForTab.length} Active
                   </span>
                 </div>
               </div>

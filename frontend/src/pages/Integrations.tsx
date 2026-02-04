@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   integrationService,
   Integration,
@@ -23,8 +24,17 @@ function Integrations() {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<number | null>(null)
-  const [configSettings, setConfigSettings] = useState<Record<string, string>>({})
+  const [configSettings, setConfigSettings] = useState<Record<string, string | boolean>>({
+    endpoint: '',
+    api_key: '',
+    webhook_url: '',
+    primary_webhook: '',
+    backup_webhook: '',
+    topology_enabled: false,
+    topology_data: '',
+  })
   const [savingConfig, setSavingConfig] = useState(false)
+  const [savingTopology, setSavingTopology] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,13 +73,22 @@ function Integrations() {
         Number(selectedWorkspaceId),
         selectedIntegrationId
       )
-      const settings = (data.settings ?? {}) as Record<string, string>
+      const settings = (data.settings ?? {}) as Record<string, unknown>
+      const topo = settings.topology_data
+      const topologyDataStr =
+        typeof topo === 'object' && topo !== null
+          ? JSON.stringify(topo as object, null, 2)
+          : typeof topo === 'string'
+            ? topo
+            : ''
       setConfigSettings({
-        endpoint: settings.endpoint ?? '',
-        api_key: settings.api_key ?? '',
-        webhook_url: settings.webhook_url ?? '',
-        primary_webhook: settings.primary_webhook ?? '',
-        backup_webhook: settings.backup_webhook ?? '',
+        endpoint: (settings.endpoint as string) ?? '',
+        api_key: (settings.api_key as string) ?? '',
+        webhook_url: (settings.webhook_url as string) ?? '',
+        primary_webhook: (settings.primary_webhook as string) ?? '',
+        backup_webhook: (settings.backup_webhook as string) ?? '',
+        topology_enabled: settings.topology_enabled === true || settings.topology_enabled === 'true',
+        topology_data: topologyDataStr,
       })
     }
     fetchConfiguration()
@@ -169,6 +188,75 @@ function Integrations() {
           {t('integrations.browse')}
         </button>
       </div>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-white">Infrastructure Map (Observe)</h2>
+        <p className="text-xs text-white/60">
+          Use an external integration to feed nodes and connections into the{' '}
+          <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map` : '#'} className="text-sky-300 hover:underline">
+            Infrastructure Map
+          </Link>
+          . Enable below and paste topology JSON to merge with Observe data.
+        </p>
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="topology_enabled"
+              checked={configSettings.topology_enabled === true}
+              onChange={(e) =>
+                setConfigSettings((prev) => ({ ...prev, topology_enabled: e.target.checked }))
+              }
+              className="rounded border-white/30 bg-white/10 text-sky-500 focus:ring-sky-500/50"
+            />
+            <label htmlFor="topology_enabled" className="text-sm font-medium">
+              Feed Infrastructure Map with topology from this integration
+            </label>
+          </div>
+          <div className="mt-4">
+            <label className="text-[10px] uppercase tracking-wide text-white/40">Topology JSON (nodes &amp; connections)</label>
+            <textarea
+              value={typeof configSettings.topology_data === 'string' ? configSettings.topology_data : ''}
+              onChange={(e) =>
+                setConfigSettings((prev) => ({ ...prev, topology_data: e.target.value }))
+              }
+              placeholder='{"nodes":[{"id":"ext-1","name":"External","type":"host","address":"10.0.0.1"}],"connections":[{"source":"External","destination":"Monitoring","type":"external","status":"Online"}]}'
+              rows={6}
+              className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-[11px] text-white placeholder-white/40 focus:border-sky-500/50 focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!selectedWorkspaceId || !selectedIntegrationId) return
+              setSavingTopology(true)
+              try {
+                const raw = typeof configSettings.topology_data === 'string' ? configSettings.topology_data : '{}'
+                let topologyData: { nodes?: unknown[]; connections?: unknown[] } = {}
+                try {
+                  if (raw.trim()) topologyData = JSON.parse(raw) as { nodes?: unknown[]; connections?: unknown[] }
+                } catch {
+                  // leave empty
+                }
+                await integrationService.updateProjectIntegrationConfiguration(
+                  Number(selectedWorkspaceId),
+                  selectedIntegrationId,
+                  {
+                    ...configSettings,
+                    topology_enabled: configSettings.topology_enabled === true,
+                    topology_data: topologyData,
+                  } as Record<string, unknown>
+                )
+              } finally {
+                setSavingTopology(false)
+              }
+            }}
+            className="mt-4 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+          >
+            {savingTopology ? 'Saving…' : 'Save topology'}
+          </button>
+        </div>
+      </section>
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-white">{t('integrations.apiConfig')}</h2>

@@ -106,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/real-time/system-info', [\App\Http\Controllers\ObserveController::class, 'systemInfo']);
     Route::get('/workspaces/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
     Route::get('/workspaces/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
+    Route::get('/workspaces/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
 
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
@@ -125,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/real-time/system-info', [\App\Http\Controllers\ObserveController::class, 'systemInfo']);
     Route::get('/projects/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
     Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
+    Route::get('/projects/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     
     // Observe targets endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);

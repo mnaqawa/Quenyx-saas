@@ -456,9 +456,14 @@ export function useDataSourceSummary() {
 }
 
 // Observe KPIs for Real-time Monitoring (host/service totals, problems, unreachable, stale, last poll)
-// Map: real target hosts with status from services (for Infrastructure Map)
-export function useObserveMapHosts(workspaceId: string | null) {
-  const { data: servicesData, loading: servicesLoading } = useObserveServices({ workspaceId, limit: 500 })
+// Map: real target hosts with status from services (for Infrastructure Map). Use realDataOnly in Observe module.
+export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs = 0, realDataOnly = false) {
+  const { data: servicesData, loading: servicesLoading } = useObserveServices({
+    workspaceId,
+    limit: 500,
+    refetchIntervalMs,
+    realDataOnly,
+  })
   const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoading, setTargetsLoading] = useState(true)
 
@@ -469,6 +474,7 @@ export function useObserveMapHosts(workspaceId: string | null) {
       return
     }
     let cancelled = false
+    setTargetsLoading(true)
     observeService
       .getTargets(Number(workspaceId))
       .then((list) => {
@@ -480,8 +486,18 @@ export function useObserveMapHosts(workspaceId: string | null) {
       .finally(() => {
         if (!cancelled) setTargetsLoading(false)
       })
-    return () => { cancelled = true }
-  }, [workspaceId])
+    const intervalMs = refetchIntervalMs > 0 ? refetchIntervalMs : 0
+    const id = intervalMs ? window.setInterval(() => {
+      if (cancelled) return
+      observeService.getTargets(Number(workspaceId)).then((list) => {
+        if (!cancelled) setTargets(Array.isArray(list) ? list : (list as any)?.targets ?? [])
+      }).catch(() => { if (!cancelled) setTargets([]) })
+    }, intervalMs) : 0
+    return () => {
+      cancelled = true
+      if (id) window.clearInterval(id)
+    }
+  }, [workspaceId, refetchIntervalMs])
 
   const statusOrder = (s: string) =>
     ['critical', 'warning', 'unknown', 'unreachable', 'pending', 'ok'].indexOf(s.toLowerCase())
@@ -510,6 +526,54 @@ export function useObserveMapHosts(workspaceId: string | null) {
   }, [targets, hostToStatus])
 
   return { hosts, loading: targetsLoading || servicesLoading }
+}
+
+/** Infrastructure Map: connections + optional integration-sourced topology from Observe API */
+export function useObserveConnections(
+  workspaceId: string | null,
+  options?: { refetchIntervalMs?: number; includeIntegrations?: boolean }
+) {
+  const refetchIntervalMs = options?.refetchIntervalMs ?? 0
+  const includeIntegrations = options?.includeIntegrations ?? true
+  const [data, setData] = useState<import('../types/observe').InfrastructureConnectionsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setData(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
+    let cancelled = false
+    const fetchConnections = () => {
+      observeService
+        .getInfrastructureConnections(Number(workspaceId), includeIntegrations)
+        .then((res) => {
+          if (!cancelled) setData(res)
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : 'Failed to load connections')
+            setData(null)
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+    }
+    setLoading(true)
+    setError(null)
+    fetchConnections()
+    const id = refetchIntervalMs > 0 ? window.setInterval(fetchConnections, refetchIntervalMs) : 0
+    return () => {
+      cancelled = true
+      if (id) window.clearInterval(id)
+    }
+  }, [workspaceId, includeIntegrations, refetchIntervalMs])
+
+  return { data, loading, error }
 }
 
 export function useObserveKpis(workspaceId: string | null, refreshKey = 0) {
@@ -545,9 +609,12 @@ interface UseObserveServicesParams {
   limit?: number
   problemsOnly?: boolean
   refreshKey?: number // Optional refresh trigger
+  refetchIntervalMs?: number // Optional auto-refresh interval (0 = off)
+  /** When true, always use Observe microservice API (no fixtures). Use in Observe module for real data only. */
+  realDataOnly?: boolean
 }
 
-export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly, refreshKey = 0 }: UseObserveServicesParams) {
+export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly, refreshKey = 0, refetchIntervalMs = 0, realDataOnly = false }: UseObserveServicesParams) {
   const [data, setData] = useState<ObserveServicesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -565,7 +632,8 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
       setError(null)
       
       try {
-        if (USE_FIXTURES) {
+        const useFixtures = USE_FIXTURES && !realDataOnly
+        if (useFixtures) {
           // Use fixtures with filtering
           await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate delay
           let filtered = { ...servicesFixture }
@@ -644,8 +712,13 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
     }
 
     fetchData()
+    const intervalMs = refetchIntervalMs > 0 ? refetchIntervalMs : 0
+    const id = intervalMs ? window.setInterval(fetchData, intervalMs) : 0
+    return () => {
+      if (id) window.clearInterval(id)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, q, statuses?.join(','), limit, problemsOnly, refreshKey])
+  }, [workspaceId, q, statuses?.join(','), limit, problemsOnly, refreshKey, refetchIntervalMs, realDataOnly])
 
   return { data, loading, error }
 }

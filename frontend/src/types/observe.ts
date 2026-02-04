@@ -70,6 +70,36 @@ export interface NetworkNode {
   }>
 }
 
+/** Infrastructure Map: node from Observe or Integration */
+export interface InfrastructureNode {
+  id: string
+  name: string
+  type: 'host' | 'network'
+  address?: string
+  status?: string
+  layer?: string
+  source: 'observe' | 'integration'
+  integration?: string
+}
+
+/** Infrastructure Map: connection from Observe or Integration */
+export interface InfrastructureConnection {
+  id?: string
+  source: string
+  destination: string
+  type: string
+  status: string
+  source_origin?: 'observe' | 'integration'
+  integration?: string
+}
+
+export interface InfrastructureConnectionsResponse {
+  nodes: InfrastructureNode[]
+  connections: InfrastructureConnection[]
+  service_stats?: Record<string, { total: number; critical: number; warning: number }>
+  from_integrations?: string[]
+}
+
 export interface CapacityMetric {
   title: string
   value: string

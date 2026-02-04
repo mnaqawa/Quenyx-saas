@@ -15,6 +15,7 @@ import type {
   DataSourceSummary,
   ObserveServicesResponse,
   ServiceDefinition,
+  InfrastructureConnectionsResponse,
 } from '../types/observe'
 
 export const observeService = {
@@ -42,10 +43,21 @@ export const observeService = {
     )
   },
 
-  // Infrastructure Map
+  // Infrastructure Map — real data from Observe microservice; optional merge from Integrations
   async getNetworkTopology(workspaceId: number): Promise<NetworkNode[]> {
     return gatewayClient.get<NetworkNode[]>(
       `workspaces/${workspaceId}/observe/infrastructure/topology`,
+      { workspaceId, moduleKey: 'shieldobserve' }
+    )
+  },
+
+  async getInfrastructureConnections(
+    workspaceId: number,
+    includeIntegrations = true
+  ): Promise<InfrastructureConnectionsResponse> {
+    const q = includeIntegrations ? '?include_integrations=1' : ''
+    return gatewayClient.get<InfrastructureConnectionsResponse>(
+      `workspaces/${workspaceId}/observe/infrastructure/connections${q}`,
       { workspaceId, moduleKey: 'shieldobserve' }
     )
   },
