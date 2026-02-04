@@ -127,6 +127,7 @@ export default function RealTimeMonitoring() {
   const [timeSeries, setTimeSeries] = useState<Array<{ time: string; cpu: number; memory: number; disk: number; network: number }>>([])
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
+  const [targetsLoaded, setTargetsLoaded] = useState(false)
 
   // Reset workspace-scoped state when workspace changes so we never show another workspace's data
   useEffect(() => {
@@ -136,6 +137,7 @@ export default function RealTimeMonitoring() {
     setHostList([])
     setSelectedHost('')
     setMetricsError(null)
+    setTargetsLoaded(false)
   }, [selectedWorkspaceId])
 
   const { data: servicesData, loading: kpisLoading, error: kpisError } = useObserveServices({
@@ -192,13 +194,15 @@ export default function RealTimeMonitoring() {
     }
   }, [servicesData, selectedHost, prefix])
 
-  // Fetch host list for dropdown
+  // Fetch host list for dropdown (real data: only targets added in this workspace)
   useEffect(() => {
     if (!wsId) {
       setHostList([])
       setSelectedHost('')
+      setTargetsLoaded(true)
       return
     }
+    setTargetsLoaded(false)
     observeService
       .getTargets(wsId)
       .then((list) => {
@@ -208,8 +212,12 @@ export default function RealTimeMonitoring() {
           if (arr.length === 0) return ''
           return arr.some((h) => h.name === prev) ? prev : arr[0].name
         })
+        setTargetsLoaded(true)
       })
-      .catch(() => setHostList([]))
+      .catch(() => {
+        setHostList([])
+        setTargetsLoaded(true)
+      })
   }, [wsId])
 
   // Poll Observe data when Live is on (fixed interval)
@@ -288,10 +296,47 @@ export default function RealTimeMonitoring() {
   const loadStr = systemInfo?.loadAverage ?? ''
   const load1m = loadStr ? parseFloat(loadStr.split(',')[0]?.trim() || '0') : null
 
-  if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0) {
+  if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0 && !targetsLoaded) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-sm text-white/60">Loading real-time data...</div>
+      </div>
+    )
+  }
+
+  // No targets in this workspace: show empty state and ask user to add hosts first (real data only)
+  if (selectedWorkspaceId && targetsLoaded && hostList.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Real-time Monitoring"
+          subtitle="Live system metrics and performance for this workspace."
+        />
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0f151d] py-20 px-6 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/50">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+              <line x1="6" y1="6" x2="6.01" y2="6" />
+              <line x1="6" y1="18" x2="6.01" y2="18" />
+              <line x1="18" y1="6" x2="18.01" y2="6" />
+              <line x1="18" y1="18" x2="18.01" y2="18" />
+            </svg>
+          </div>
+          <h2 className="mt-6 text-lg font-semibold text-white">No hosts in this workspace</h2>
+          <p className="mt-2 max-w-sm text-sm text-white/60">
+            Add hosts and services in Monitored Targets to see real-time status, metrics, and alerts here.
+          </p>
+          <Link
+            to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add hosts
+          </Link>
+        </div>
       </div>
     )
   }
@@ -300,7 +345,7 @@ export default function RealTimeMonitoring() {
     <div className="space-y-6">
       <PageHeader
         title="Real-time Monitoring"
-        subtitle="Live system metrics and performance indicators."
+        subtitle="Monitoring server metrics and workspace hosts &amp; services (real data)."
         actions={
           <div className="flex items-center gap-2">
             <select
@@ -379,7 +424,13 @@ export default function RealTimeMonitoring() {
         </div>
       )}
 
-      {/* Top row: System metrics – live when Live is on */}
+      {/* System metrics: monitoring server (same machine for all workspaces; workspace hosts are in Observe status below) */}
+      <div className="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+        <span className="text-xs font-medium text-sky-200">Monitoring server</span>
+        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running ShieldObserve (not your monitored hosts)">
+          Server metrics · workspace hosts in Observe status below
+        </span>
+      </div>
       <div className="grid gap-4 md:grid-cols-5">
         <MetricCard
           title="CPU Usage"
@@ -428,7 +479,7 @@ export default function RealTimeMonitoring() {
               </span>
             )}
           </div>
-          <p className="mb-3 text-xs text-white/50">Real-time CPU, Memory, and Disk usage.</p>
+          <p className="mb-3 text-xs text-white/50">Monitoring server: CPU, Memory, Disk (real-time).</p>
           <div className="h-[220px] w-full">
             {timeSeries.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -463,7 +514,7 @@ export default function RealTimeMonitoring() {
               </span>
             )}
           </div>
-          <p className="mb-3 text-xs text-white/50">Real-time network utilization.</p>
+          <p className="mb-3 text-xs text-white/50">Monitoring server: network utilization (real-time).</p>
           <div className="h-[220px] w-full">
             {timeSeries.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -521,10 +572,11 @@ export default function RealTimeMonitoring() {
         </p>
       </div>
 
-      {/* Bottom row: System Information, Performance Thresholds, Quick Actions */}
+      {/* Bottom row: System Information (monitoring server), Performance Thresholds, Quick Actions */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">System Information</h3>
+          <h3 className="mb-1 text-xs font-semibold text-white/70 uppercase tracking-wider">System Information</h3>
+          <p className="mb-3 text-[10px] text-white/50">Monitoring server (hostname, OS, kernel, uptime)</p>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-2">
               <dt className="text-white/60 shrink-0">Hostname</dt>

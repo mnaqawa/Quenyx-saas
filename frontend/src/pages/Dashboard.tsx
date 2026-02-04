@@ -407,7 +407,7 @@ function Dashboard() {
           
           {observeLoading ? (
             <div className="py-8 text-center text-sm text-white/60">Loading Observe data...</div>
-          ) : observeData ? (
+          ) : observeData && (observeData.hostTotals?.up > 0 || (observeData.items?.length ?? 0) > 0) ? (
             <div className="space-y-4">
               {/* Summary Cards */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -524,6 +524,25 @@ function Dashboard() {
                   Configure Data Source
                 </Link>
               </div>
+            </div>
+          ) : observeData ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/50">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-sm font-semibold text-white">No hosts in this workspace</h3>
+              <p className="mt-1 max-w-xs text-xs text-white/60">
+                Add hosts and services in Monitored Targets to see status and alerts here.
+              </p>
+              <Link
+                to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-400"
+              >
+                Add hosts
+              </Link>
             </div>
           ) : (
             <div className="py-8 text-center text-sm text-white/60">No Observe data available</div>
