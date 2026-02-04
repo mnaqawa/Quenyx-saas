@@ -37,7 +37,6 @@ export default function InfrastructureMap() {
   const [layerFilter, setLayerFilter] = useState<string>(LAYER_OPTIONS[0])
   const [zoomLevel, setZoomLevel] = useState<string>(ZOOM_OPTIONS[0])
   const [designLevel, setDesignLevel] = useState<'hld' | 'lld'>('lld')
-  const [isFullScreen, setIsFullScreen] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
 
   const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId)
@@ -192,9 +191,9 @@ export default function InfrastructureMap() {
   const handleFullScreen = () => {
     if (!mapContainerRef.current) return
     if (!document.fullscreenElement) {
-      mapContainerRef.current.requestFullscreen?.().then(() => setIsFullScreen(true)).catch(() => {})
+      mapContainerRef.current.requestFullscreen?.().catch(() => {})
     } else {
-      document.exitFullscreen?.().then(() => setIsFullScreen(false)).catch(() => {})
+      document.exitFullscreen?.().catch(() => {})
     }
   }
 
