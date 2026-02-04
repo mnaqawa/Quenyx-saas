@@ -1,12 +1,13 @@
 #!/bin/bash
 # Example observe plugin (shell). Copy to storage/app/observe_plugins/ (or OBSERVE_PLUGINS_DIR).
-# Env: OBSERVE_HOST_ADDRESS, OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
+# Host and port come from UI: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON for port etc).
+# Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
 set -e
-HOST="${OBSERVE_HOST_ADDRESS:-127.0.0.1}"
-# Parse port from JSON (requires php or jq); fallback 8080
+HOST="${OBSERVE_HOST_ADDRESS:?No host address (set host in Monitored Targets)}"
+# Parse port from JSON (requires php or jq); fallback 8080 only when not in args
 PORT=8080
 if command -v php >/dev/null 2>&1; then
-  PORT=$(echo "$OBSERVE_CHECK_ARGS" | php -r 'echo json_decode(file_get_contents("php://stdin"))->port ?? 8080;' 2>/dev/null || echo 8080)
+  PORT=$(echo "${OBSERVE_CHECK_ARGS:-{}}" | php -r 'echo json_decode(file_get_contents("php://stdin"))->port ?? 8080;' 2>/dev/null || echo 8080)
 fi
 URL="http://${HOST}:${PORT}/health"
 if curl -sf --connect-timeout 5 "$URL" >/dev/null; then

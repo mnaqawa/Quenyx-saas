@@ -12,8 +12,6 @@ use Symfony\Component\Process\Process;
  */
 class NativeObserveCheckRunner
 {
-    private const CONNECT_TIMEOUT = 5;
-    private const HTTP_TIMEOUT = 10;
 
     /**
      * Run one check. Returns ['state' => 'ok'|'warning'|'critical'|'unknown', 'output' => string, 'perfdata' => string|null].
@@ -64,10 +62,12 @@ class NativeObserveCheckRunner
         $scheme = ($port === 443 || ($args['use_ssl'] ?? false)) ? 'https' : 'http';
         $url = "{$scheme}://{$host}:{$port}{$path}";
 
+        $httpTimeout = (float) config('observe.http_timeout_seconds', 10);
+        $connectTimeout = (float) config('observe.connect_timeout_seconds', 5);
         $start = microtime(true);
         try {
-            $response = Http::timeout(self::HTTP_TIMEOUT)
-                ->connectTimeout(self::CONNECT_TIMEOUT)
+            $response = Http::timeout($httpTimeout)
+                ->connectTimeout($connectTimeout)
                 ->get($url);
             $elapsed = round((microtime(true) - $start) * 1000);
             $status = $response->status();
@@ -115,10 +115,12 @@ class NativeObserveCheckRunner
             return ['state' => 'unknown', 'output' => 'Invalid port', 'perfdata' => null];
         }
 
+        $connectTimeout = (int) round((float) config('observe.connect_timeout_seconds', 5));
+        $connectTimeout = $connectTimeout >= 1 ? $connectTimeout : 5;
         $start = microtime(true);
         $errno = 0;
         $errstr = '';
-        $fp = @fsockopen($host, $port, $errno, $errstr, self::CONNECT_TIMEOUT);
+        $fp = @fsockopen($host, $port, $errno, $errstr, $connectTimeout);
         $elapsed = round((microtime(true) - $start) * 1000);
 
         if ($fp !== false) {

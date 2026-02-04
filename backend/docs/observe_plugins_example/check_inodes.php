@@ -1,24 +1,34 @@
 #!/usr/bin/env php
 <?php
 /**
- * Example observe plugin: Disk inodes. Copy to storage/app/observe_plugins/check_inodes.php.
- * Env: OBSERVE_HOST_ADDRESS, OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
- * Args: mount (default /), warn_pct, crit_pct = free inode percentage thresholds.
+ * Observe plugin: Disk inodes. Copy to storage/app/observe_plugins/check_inodes.php.
+ * Host and args from engine (UI: host under target; mount/warn_pct/crit_pct from service config).
+ * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
-$mount = $args['mount'] ?? '/';
-$warnFreePct = (float) ($args['warn_pct'] ?? 15);
-$critFreePct = (float) ($args['crit_pct'] ?? 5);
-$host = getenv('OBSERVE_HOST_ADDRESS') ?: '127.0.0.1';
+$mount = isset($args['mount']) && $args['mount'] !== '' ? (string) $args['mount'] : '/';
+$warnFreePct = isset($args['warn_pct']) ? (float) $args['warn_pct'] : 15;
+$critFreePct = isset($args['crit_pct']) ? (float) $args['crit_pct'] : 5;
 
-if ($host !== '127.0.0.1' && $host !== 'localhost') {
-    echo "UNKNOWN - Remote inodes check not implemented (host={$host})\n";
+$host = trim((string) getenv('OBSERVE_HOST_ADDRESS'));
+if ($host === '') {
+    echo "UNKNOWN - No host address (set host in Monitored Targets)\n";
     exit(3);
 }
 
+$isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true)
+    || (function_exists('gethostname') && strtolower(trim($host)) === strtolower(trim((string) gethostname())));
+
+if ($isLocal) {
+    $cmd = "df -iP " . escapeshellarg($mount) . " 2>/dev/null | tail -1";
+    $lineI = @shell_exec($cmd);
+} else {
+    $mountEsc = str_replace("'", "'\\''", $mount);
+    $cmd = "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no " . escapeshellarg($host) . " \"df -iP '{$mountEsc}' 2>/dev/null | tail -1\"";
+    $lineI = @shell_exec($cmd);
+}
+
 $freePct = null;
-$cmdI = "df -iP " . escapeshellarg($mount) . " 2>/dev/null | tail -1";
-$lineI = @shell_exec($cmdI);
 if ($lineI && preg_match('/\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%/', trim($lineI), $m)) {
     $itotal = (int) $m[1];
     $iused = (int) $m[2];
@@ -26,19 +36,18 @@ if ($lineI && preg_match('/\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%/', trim($lineI), $m
 }
 
 if ($freePct === null) {
-    echo "UNKNOWN - Could not get inode usage for {$mount}\n";
+    echo "UNKNOWN - Could not get inode usage for {$mount} on {$host}\n";
     exit(3);
 }
 
-$usedPct = round(100 - $freePct, 1);
 $perf = sprintf("inode_free_pct=%.1f%%;%.0f;%.0f;0;100", $freePct, $warnFreePct, $critFreePct);
 if ($freePct <= $critFreePct) {
-    echo "INODES CRITICAL - {$freePct}% free on {$mount} | {$perf}\n";
+    echo "INODES CRITICAL - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
     exit(2);
 }
 if ($freePct <= $warnFreePct) {
-    echo "INODES WARNING - {$freePct}% free on {$mount} | {$perf}\n";
+    echo "INODES WARNING - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
     exit(1);
 }
-echo "INODES OK - {$freePct}% free on {$mount} | {$perf}\n";
+echo "INODES OK - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
 exit(0);

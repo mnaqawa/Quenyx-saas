@@ -1,27 +1,51 @@
 #!/usr/bin/env php
 <?php
 /**
- * Example observe plugin (PHP). Copy to storage/app/observe_plugins/ (or OBSERVE_PLUGINS_DIR).
- * Receives env: OBSERVE_HOST_ADDRESS, OBSERVE_CHECK_ARGS (JSON), OBSERVE_SERVICE_NAME, OBSERVE_WORKSPACE_ID, OBSERVE_HOST_NAME.
- * Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown. Output: one line; optional " | perfdata".
+ * Observe plugin: Disk space. Copy to storage/app/observe_plugins/check_disk.php.
+ * Host and all args come from the engine (UI: host under target; mount/warn_pct/crit_pct from service config).
+ * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
-$mount = $args['mount'] ?? '/';
-$host = getenv('OBSERVE_HOST_ADDRESS') ?: '127.0.0.1';
+$mount = isset($args['mount']) && $args['mount'] !== '' ? (string) $args['mount'] : '/';
+$warnPct = isset($args['warn_pct']) ? (float) $args['warn_pct'] : 20;
+$critPct = isset($args['crit_pct']) ? (float) $args['crit_pct'] : 10;
 
-// Example: local disk check (simplified; real plugin would run df or SSH to $host)
-if ($host !== '127.0.0.1' && $host !== 'localhost') {
-    echo "UNKNOWN - Remote disk check not implemented (host={$host})\n";
+$host = trim((string) getenv('OBSERVE_HOST_ADDRESS'));
+if ($host === '') {
+    echo "UNKNOWN - No host address (set host in Monitored Targets)\n";
     exit(3);
 }
-$freePct = 25; // Replace with: shell_exec("df -P " . escapeshellarg($mount) . " | tail -1 | awk '{print \$5}'"); then 100 - used
-if ($freePct >= 20) {
-    echo "DISK OK - {$freePct}% free on {$mount}\n";
-    exit(0);
+
+$isLocal = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true)
+    || (function_exists('gethostname') && strtolower(trim($host)) === strtolower(trim((string) gethostname())));
+
+if ($isLocal) {
+    $cmd = "df -P " . escapeshellarg($mount) . " 2>/dev/null | tail -1";
+    $line = @shell_exec($cmd);
+} else {
+    $mountEsc = str_replace("'", "'\\''", $mount);
+    $cmd = "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no " . escapeshellarg($host) . " \"df -P '{$mountEsc}' 2>/dev/null | tail -1\"";
+    $line = @shell_exec($cmd);
 }
-if ($freePct >= 10) {
-    echo "DISK WARNING - {$freePct}% free on {$mount}\n";
+
+$usedPct = null;
+if ($line && preg_match('/\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%/', trim($line), $m)) {
+    $usedPct = (int) $m[4];
+}
+if ($usedPct === null) {
+    echo "UNKNOWN - Could not get disk usage for {$mount} on {$host}\n";
+    exit(3);
+}
+
+$freePct = 100 - $usedPct;
+$perf = sprintf('free_pct=%.1f%%;%.0f;%.0f;0;100', $freePct, $warnPct, $critPct);
+if ($freePct <= $critPct) {
+    echo "DISK CRITICAL - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
+    exit(2);
+}
+if ($freePct <= $warnPct) {
+    echo "DISK WARNING - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
     exit(1);
 }
-echo "DISK CRITICAL - {$freePct}% free on {$mount}\n";
-exit(2);
+echo "DISK OK - {$freePct}% free on {$mount} ({$host}) | {$perf}\n";
+exit(0);

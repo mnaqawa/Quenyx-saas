@@ -29,4 +29,12 @@ return [
     */
     'plugins_dir' => env('OBSERVE_PLUGINS_DIR', 'app/observe_plugins'),
     'plugin_timeout_seconds' => (int) env('OBSERVE_PLUGIN_TIMEOUT_SECONDS', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Built-in check timeouts (HTTP, TCP, Ping)
+    |--------------------------------------------------------------------------
+    */
+    'http_timeout_seconds' => (float) env('OBSERVE_HTTP_TIMEOUT_SECONDS', 10),
+    'connect_timeout_seconds' => (float) env('OBSERVE_CONNECT_TIMEOUT_SECONDS', 5),
 ];

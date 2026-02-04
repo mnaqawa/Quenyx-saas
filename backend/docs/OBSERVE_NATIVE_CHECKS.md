@@ -117,12 +117,14 @@ echo "DISK CRITICAL - {$free}% free\n"; exit(2);
 
 ### Example plugin (shell)
 
+Host must come from the UI (Monitored Targets). Do not hardcode an IP.
+
 ```bash
 #!/bin/bash
 # storage/app/observe_plugins/check_myapp.sh
-HOST="${OBSERVE_HOST_ADDRESS:-127.0.0.1}"
-ARGS=$(echo "$OBSERVE_CHECK_ARGS" | php -r 'echo json_decode(file_get_contents("php://stdin"))->port ?? 8080;')
-if curl -sf "http://$HOST:$ARGS/health" > /dev/null; then
+HOST="${OBSERVE_HOST_ADDRESS:?No host address (set host in Monitored Targets)}"
+PORT=$(echo "${OBSERVE_CHECK_ARGS:-{}}" | php -r 'echo json_decode(file_get_contents("php://stdin"))->port ?? 8080;')
+if curl -sf "http://$HOST:$PORT/health" > /dev/null; then
   echo "OK - health endpoint responded"
   exit 0
 else

@@ -86,6 +86,7 @@ For each type (e.g. cpu, memory, disk), the engine runs a script whose **name** 
 - **Infrastructure:** Provide `check_cpu`, `check_memory`, `check_disk`, `check_inodes`, `check_load`, `check_swap` (PHP, Perl, or shell) that read `OBSERVE_HOST_ADDRESS` and `OBSERVE_CHECK_ARGS` and exit 0/1/2/3. CPU/Memory are often run via NRPE on the target host; you can use wrapper scripts that call NRPE or implement checks locally.
 - **Nagios binaries:** Install **nagios-plugins** and symlink/copy binaries (e.g. `check_disk`, `check_load`) into the plugins dir. For binaries, use a small shell wrapper that passes args from env to the binary.
 - **Examples:** See `backend/docs/observe_plugins_example/` (e.g. `check_disk.php`, `check_health.sh`) and copy/adapt into `storage/app/observe_plugins/`.
+- **Important:** All plugin scripts must use the **host from the UI** via the `OBSERVE_HOST_ADDRESS` environment variable. Do not hardcode IPs (e.g. 127.0.0.1) in plugins; the engine passes the host entered under Monitored Targets. Configurable values (mount, warn_pct, crit_pct, port, etc.) must come from `OBSERVE_CHECK_ARGS` (from the service configuration in the UI).
 
 ## Full Nagios Plugins reference
 
