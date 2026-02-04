@@ -24,7 +24,16 @@ function Integrations() {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<number | null>(null)
-  const [configSettings, setConfigSettings] = useState<Record<string, string | boolean>>({
+  type ConfigSettings = {
+    endpoint: string
+    api_key: string
+    webhook_url: string
+    primary_webhook: string
+    backup_webhook: string
+    topology_enabled: boolean
+    topology_data: string
+  }
+  const [configSettings, setConfigSettings] = useState<ConfigSettings>({
     endpoint: '',
     api_key: '',
     webhook_url: '',
@@ -89,7 +98,7 @@ function Integrations() {
         backup_webhook: (settings.backup_webhook as string) ?? '',
         topology_enabled: settings.topology_enabled === true || settings.topology_enabled === 'true',
         topology_data: topologyDataStr,
-      })
+      } as ConfigSettings)
     }
     fetchConfiguration()
   }, [selectedWorkspaceId, selectedIntegrationId])
@@ -243,7 +252,7 @@ function Integrations() {
                   selectedIntegrationId,
                   {
                     ...configSettings,
-                    topology_enabled: configSettings.topology_enabled === true,
+                    topology_enabled: configSettings.topology_enabled,
                     topology_data: topologyData,
                   } as Record<string, unknown>
                 )

@@ -151,7 +151,7 @@ export default function InfrastructureMap() {
     setCustomZoneInput('')
   }, [customZoneInput, diagram.customZones])
 
-  const getNodePosition = useCallback((hostName: string, index: number, total: number) => {
+  const getNodePosition = useCallback((hostName: string, index: number, _total: number) => {
     const saved = diagram.nodePositions[hostName]
     if (saved) return saved
     const row = Math.floor(index / 4)
@@ -468,7 +468,7 @@ export default function InfrastructureMap() {
       `<line x1="${x1 - minX}" y1="${y1 - minY}" x2="${x2 - minX}" y2="${y2 - minY}" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="4,2"/>`
     const rect = (x: number, y: number, w: number, h: number, stroke: string, fill = 'rgba(15,23,29,0.95)') =>
       `<rect x="${x - minX}" y="${y - minY}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
-    const label = (x: number, y: number, w: number, h: number, lines: string[]) => {
+    const label = (x: number, y: number, w: number, _h: number, lines: string[]) => {
       const cx = x - minX + w / 2
       const ty = y - minY + 14
       return lines.map((t, i) => `<text x="${cx}" y="${ty + i * 12}" text-anchor="middle" font-size="10" fill="${textColor}" font-family="system-ui,sans-serif">${escapeXml(t)}</text>`).join('')
