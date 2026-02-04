@@ -168,6 +168,13 @@ export default function Services() {
     return groups
   }, [data?.items])
 
+  // Display host name without workspace prefix for section headers (e.g. ws84-PortShield-DEV-Platform → PortShield-DEV-Platform)
+  const hostDisplayName = (host: string) => {
+    if (!selectedWorkspaceId) return host
+    const prefix = `ws${selectedWorkspaceId}-`
+    return host.startsWith(prefix) ? host.slice(prefix.length) : host
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -438,7 +445,7 @@ export default function Services() {
                   <Fragment key={host}>
                     <tr className="border-b border-white/10 bg-white/5">
                       <td colSpan={9} className="px-3 py-2 text-xs font-semibold text-white/90">
-                        Host: {host}
+                        Host: {hostDisplayName(host)}
                         <span className="ml-2 font-normal text-white/50">({items.length} service{items.length !== 1 ? 's' : ''})</span>
                       </td>
                     </tr>
@@ -446,24 +453,31 @@ export default function Services() {
                       const rowKey = `${item.host}-${item.service}-${index}`
                       const isExpanded = expandedRowKey === rowKey
                       const hasDetails = !!(item.info || item.perfData || item.longPluginOutput)
+                      const isFirstInGroup = index === 0
                       return (
                         <Fragment key={rowKey}>
                           <tr
-                            className={`border-b border-white/5 ${getRowBgColor(item.status)}`}
+                            className={`border-b border-white/5 ${getRowBgColor(item.status)} ${!isFirstInGroup ? 'bg-white/[0.02]' : ''}`}
                           >
-                            <td className="px-3 py-2.5 text-[13px]">
-                              <button
-                                onClick={() => {
-                                  if (selectedWorkspaceId) {
-                                    navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
-                                  }
-                                }}
-                                className="hover:text-sky-200 transition"
-                              >
-                                {item.host}
-                              </button>
+                            <td className="px-3 py-2.5 text-[13px] align-top">
+                              {isFirstInGroup ? (
+                                <button
+                                  onClick={() => {
+                                    if (selectedWorkspaceId) {
+                                      navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
+                                    }
+                                  }}
+                                  className="hover:text-sky-200 transition font-medium"
+                                >
+                                  {hostDisplayName(item.host)}
+                                </button>
+                              ) : (
+                                <span className="text-white/30" aria-hidden>—</span>
+                              )}
                             </td>
-                            <td className="px-3 py-2.5 text-[13px]">{item.service}</td>
+                            <td className={`px-3 py-2.5 text-[13px] ${!isFirstInGroup ? 'pl-6' : ''}`}>
+                              {item.service}
+                            </td>
                             <td className="px-3 py-2.5">
                               <span
                                 className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
