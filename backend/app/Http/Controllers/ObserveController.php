@@ -412,7 +412,8 @@ class ObserveController extends Controller
             'data' => [
                 ['metric' => 'CPU', 'warning' => '70%', 'critical' => '90%'],
                 ['metric' => 'Memory', 'warning' => '80%', 'critical' => '95%'],
-                ['metric' => 'Temp', 'warning' => '65°C', 'critical' => '80°C'],
+                ['metric' => 'Disk', 'warning' => '85%', 'critical' => '95%'],
+                ['metric' => 'Network', 'warning' => '70%', 'critical' => '90%'],
             ],
         ]);
     }

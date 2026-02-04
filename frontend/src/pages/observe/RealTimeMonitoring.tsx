@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Area,
@@ -13,12 +13,13 @@ import {
   Legend,
 } from 'recharts'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
-import { useObserveKpis } from '../../hooks/useObserveData'
+import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { observeService } from '../../services/observeService'
 import type { RealTimeMetrics, SystemInfo } from '../../types/observe'
 
 const MAX_POINTS = 120
+const LIVE_POLL_INTERVAL_SEC = 5
 
 function MetricCard({
   title,
@@ -106,9 +107,9 @@ const Icons = {
       <line x1="17" y1="21" x2="17" y2="12" />
     </svg>
   ),
-  temp: (
+  load: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+      <path d="M3 12h2v6H3v-6zM9 8h2v10H9V8zM15 14h2v4h-2v-4zM21 10h2v8h-2v-8z" />
     </svg>
   ),
 }
@@ -118,33 +119,93 @@ export default function RealTimeMonitoring() {
   const { selectedWorkspaceId } = useWorkspaceContext()
 
   const [isLive, setIsLive] = useState(true)
-  const [refreshInterval, setRefreshInterval] = useState(5)
+  const [selectedHost, setSelectedHost] = useState<string>('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshMetricsKey, setRefreshMetricsKey] = useState(0)
   const [metrics, setMetrics] = useState<RealTimeMetrics | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [thresholds, setThresholds] = useState<Array<{ metric: string; warning: string; critical: string }>>([])
   const [timeSeries, setTimeSeries] = useState<Array<{ time: string; cpu: number; memory: number; disk: number; network: number }>>([])
   const [metricsError, setMetricsError] = useState<string | null>(null)
+  const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
 
-  const {
-    hostTotals,
-    serviceTotals,
-    problems,
-    engineUnreachable,
-    stale,
-    lastPollAt,
-    loading: kpisLoading,
-    error: kpisError,
-  } = useObserveKpis(selectedWorkspaceId ?? null, refreshKey)
+  const { data: servicesData, loading: kpisLoading, error: kpisError } = useObserveServices({
+    workspaceId: selectedWorkspaceId ?? null,
+    limit: 500,
+    refreshKey,
+  })
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
+  const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
 
-  // Poll Observe KPIs only when Live is on
+  const { hostTotals, serviceTotals, problems, lastPollAt, engineUnreachable, stale } = useMemo(() => {
+    if (!servicesData) {
+      return {
+        hostTotals: { up: 0, down: 0, unreachable: 0, pending: 0 },
+        serviceTotals: { ok: 0, warning: 0, critical: 0, unknown: 0, pending: 0, unreachable: 0 },
+        problems: 0,
+        lastPollAt: null as string | null,
+        engineUnreachable: false,
+        stale: true,
+      }
+    }
+    const items = servicesData.items ?? []
+    if (!selectedHost) {
+      return {
+        hostTotals: servicesData.hostTotals ?? { up: 0, down: 0, unreachable: 0, pending: 0 },
+        serviceTotals: servicesData.serviceTotals ?? { ok: 0, warning: 0, critical: 0, unknown: 0, pending: 0, unreachable: 0 },
+        problems:
+          (servicesData.serviceTotals?.warning ?? 0) +
+          (servicesData.serviceTotals?.critical ?? 0) +
+          (servicesData.serviceTotals?.unknown ?? 0) +
+          (servicesData.serviceTotals?.unreachable ?? 0),
+        lastPollAt: servicesData.last_poll_at ?? null,
+        engineUnreachable: servicesData.engine_unreachable ?? false,
+        stale: servicesData.stale ?? true,
+      }
+    }
+    const hostKey = prefix ? `${prefix}${selectedHost}` : selectedHost
+    const filtered = items.filter((item: { host: string }) => item.host === hostKey || item.host === selectedHost || item.host.endsWith(selectedHost))
+    const ok = filtered.filter((i: { status: string }) => i.status === 'ok').length
+    const warning = filtered.filter((i: { status: string }) => i.status === 'warning').length
+    const critical = filtered.filter((i: { status: string }) => i.status === 'critical').length
+    const unknown = filtered.filter((i: { status: string }) => i.status === 'unknown').length
+    const pending = filtered.filter((i: { status: string }) => i.status === 'pending').length
+    const unreachable = filtered.filter((i: { status: string }) => i.status === 'unreachable').length
+    const serviceTotalsFiltered = { ok, warning, critical, unknown, pending, unreachable: unreachable ?? 0 }
+    return {
+      hostTotals: { up: filtered.length ? 1 : 0, down: 0, unreachable: 0, pending: 0 },
+      serviceTotals: serviceTotalsFiltered,
+      problems: warning + critical + unknown + unreachable,
+      lastPollAt: servicesData.last_poll_at ?? null,
+      engineUnreachable: servicesData.engine_unreachable ?? false,
+      stale: servicesData.stale ?? true,
+    }
+  }, [servicesData, selectedHost, prefix])
+
+  // Fetch host list for dropdown
+  useEffect(() => {
+    if (!wsId) {
+      setHostList([])
+      setSelectedHost('')
+      return
+    }
+    observeService
+      .getTargets(wsId)
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : (list as { targets?: Array<{ name: string; address: string }> })?.targets ?? []
+        setHostList(arr)
+        setSelectedHost((prev) => (arr.some((h) => h.name === prev) ? prev : ''))
+      })
+      .catch(() => setHostList([]))
+  }, [wsId])
+
+  // Poll Observe data when Live is on (fixed interval)
   useEffect(() => {
     if (!isLive || !selectedWorkspaceId) return
-    const t = setInterval(() => setRefreshKey((k) => k + 1), refreshInterval * 1000)
+    const t = setInterval(() => setRefreshKey((k) => k + 1), LIVE_POLL_INTERVAL_SEC * 1000)
     return () => clearInterval(t)
-  }, [isLive, selectedWorkspaceId, refreshInterval])
+  }, [isLive, selectedWorkspaceId])
 
   // Fetch thresholds once when workspace is set
   useEffect(() => {
@@ -191,13 +252,19 @@ export default function RealTimeMonitoring() {
     }
   }, [wsId])
 
-  // Poll system metrics only when Live is on
+  // Poll system metrics when Live is on (fixed interval)
   useEffect(() => {
     if (!isLive || !wsId) return
     fetchMetrics()
-    const t = setInterval(fetchMetrics, refreshInterval * 1000)
+    const t = setInterval(fetchMetrics, LIVE_POLL_INTERVAL_SEC * 1000)
     return () => clearInterval(t)
-  }, [isLive, wsId, refreshInterval, fetchMetrics])
+  }, [isLive, wsId, fetchMetrics])
+
+  // Refresh button: refetch metrics (and KPIs via refreshKey) on demand
+  useEffect(() => {
+    if (!wsId || refreshMetricsKey === 0) return
+    fetchMetrics()
+  }, [refreshMetricsKey, wsId, fetchMetrics])
 
   const totalServices =
     serviceTotals.ok +
@@ -212,7 +279,8 @@ export default function RealTimeMonitoring() {
   const memVal = m?.memory?.value ?? 0
   const diskVal = m?.diskIO?.value ?? 0
   const netVal = m?.network?.value ?? 0
-  const tempVal = m?.temperature?.value ?? 0
+  const loadStr = systemInfo?.loadAverage ?? ''
+  const load1m = loadStr ? parseFloat(loadStr.split(',')[0]?.trim() || '0') : null
 
   if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0) {
     return (
@@ -230,15 +298,17 @@ export default function RealTimeMonitoring() {
         actions={
           <div className="flex items-center gap-2">
             <select
-              value={refreshInterval}
-              onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
+              value={selectedHost}
+              onChange={(e) => setSelectedHost(e.target.value)}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 min-w-[140px]"
+              title="Filter data by host"
             >
-              <option value={5} className="bg-slate-900 text-white">5 seconds</option>
-              <option value={10} className="bg-slate-900 text-white">10 seconds</option>
-              <option value={30} className="bg-slate-900 text-white">30 seconds</option>
-              <option value={60} className="bg-slate-900 text-white">60 seconds</option>
-              <option value={90} className="bg-slate-900 text-white">90 seconds</option>
+              <option value="" className="bg-slate-900 text-white">All hosts</option>
+              {hostList.map((h) => (
+                <option key={h.name} value={h.name} className="bg-slate-900 text-white">
+                  {h.name}
+                </option>
+              ))}
             </select>
             <button
               type="button"
@@ -258,7 +328,7 @@ export default function RealTimeMonitoring() {
               type="button"
               onClick={() => {
                 setRefreshKey((k) => k + 1)
-                if (wsId) fetchMetrics()
+                setRefreshMetricsKey((k) => k + 1)
               }}
               className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
             >
@@ -305,7 +375,7 @@ export default function RealTimeMonitoring() {
         </div>
       )}
 
-      {/* Top row: System metrics (reference-style) – live when Live is on */}
+      {/* Top row: System metrics – live when Live is on */}
       <div className="grid gap-4 md:grid-cols-5">
         <MetricCard
           title="CPU Usage"
@@ -322,9 +392,9 @@ export default function RealTimeMonitoring() {
           icon={Icons.memory}
         />
         <MetricCard
-          title="Disk I/O"
+          title="Disk"
           value={m ? `${diskVal}%` : '—'}
-          detail={m?.diskIO ? `${m.diskIO.type} • ${m.diskIO.throughput}` : '—'}
+          detail={m?.diskIO ? `${m.diskIO.type} • used` : '—'}
           percentage={diskVal}
           icon={Icons.disk}
         />
@@ -336,11 +406,10 @@ export default function RealTimeMonitoring() {
           icon={Icons.network}
         />
         <MetricCard
-          title="Temperature"
-          value={m && tempVal > 0 ? `${tempVal}°C` : '—'}
-          detail={m?.temperature?.source ?? '—'}
-          percentage={tempVal > 0 ? Math.min(100, Math.round((tempVal / 80) * 100)) : 0}
-          icon={Icons.temp}
+          title="Load (1m)"
+          value={load1m != null && !Number.isNaN(load1m) ? load1m.toFixed(2) : '—'}
+          detail={loadStr ? `1m, 5m, 15m: ${loadStr}` : 'Enable Live for server metrics'}
+          icon={Icons.load}
         />
       </div>
 
@@ -420,12 +489,19 @@ export default function RealTimeMonitoring() {
         </div>
       </div>
 
-      {/* Observe status + KPIs */}
+      {/* Observe status + KPIs (filtered by selected host when set) */}
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         <h3 className="mb-2 text-sm font-semibold">Observe status</h3>
+        {selectedHost && (
+          <p className="mb-2 text-xs text-sky-300">
+            Showing data for host: <strong>{selectedHost}</strong>
+          </p>
+        )}
         <p className="text-xs text-white/60">
-          Host and service totals: <strong>{hostTotals.up} up</strong>, <strong>{serviceTotals.ok} OK</strong>,{' '}
-          <strong>{problems} problems</strong>, {serviceTotals.pending} pending. Last poll:{' '}
+          Host and service totals: <span className="font-semibold text-emerald-400">{hostTotals.up} up</span>,{' '}
+          <span className="font-semibold text-emerald-400">{serviceTotals.ok} OK</span>,{' '}
+          <span className="font-semibold text-rose-400">{problems} problems</span>,{' '}
+          <span className="font-semibold text-amber-400">{serviceTotals.pending} pending</span>. Last poll:{' '}
           {lastPollAt ? new Date(lastPollAt).toLocaleString() : '—'}.{' '}
           {selectedWorkspaceId && (
             <>
@@ -509,12 +585,20 @@ export default function RealTimeMonitoring() {
                     <dd className="text-rose-400">95%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Temp Warning</dt>
-                    <dd className="text-amber-400">65°C</dd>
+                    <dt className="text-white/60">Disk Warning</dt>
+                    <dd className="text-amber-400">85%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Temp Critical</dt>
-                    <dd className="text-rose-400">80°C</dd>
+                    <dt className="text-white/60">Disk Critical</dt>
+                    <dd className="text-rose-400">95%</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-white/60">Network Warning</dt>
+                    <dd className="text-amber-400">70%</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-white/60">Network Critical</dt>
+                    <dd className="text-rose-400">90%</dd>
                   </div>
                 </>
               )}

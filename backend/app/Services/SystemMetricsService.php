@@ -196,13 +196,13 @@ class SystemMetricsService
     private function getNetworkMetrics(): array
     {
         if (! is_readable('/proc/net/dev')) {
-            return ['value' => 0, 'speed' => '—', 'type' => '—'];
+            return ['value' => 0, 'speed' => '1 Gbps', 'type' => 'Ethernet'];
         }
         $dev1 = @file_get_contents('/proc/net/dev');
         if ($dev1 === false) {
             return ['value' => 0, 'speed' => '1 Gbps', 'type' => 'Ethernet'];
         }
-        usleep(200000); // 0.2s
+        usleep(500000); // 0.5s for more measurable delta
         $dev2 = @file_get_contents('/proc/net/dev');
         if ($dev2 === false) {
             return ['value' => 0, 'speed' => '1 Gbps', 'type' => 'Ethernet'];
@@ -210,9 +210,9 @@ class SystemMetricsService
         $bytes1 = $this->sumNetDevBytes($dev1);
         $bytes2 = $this->sumNetDevBytes($dev2);
         $delta = $bytes2 - $bytes1;
-        $bps = $delta * 4; // ~0.2s -> *4 for per-second rate (approx)
-        $gbps = $bps / 1e9;
-        $value = (int) round(min(100, $gbps * 100)); // assume 1 Gbps max for %
+        $bps = $delta * 2; // 0.5s -> *2 for bytes per second
+        $oneGbpsBytes = 125_000_000; // 1 Gbps = 125 MB/s
+        $value = (int) round(min(100, 100 * $bps / $oneGbpsBytes));
         return [
             'value' => max(0, $value),
             'speed' => '1 Gbps',
