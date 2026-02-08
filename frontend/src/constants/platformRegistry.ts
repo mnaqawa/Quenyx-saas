@@ -294,7 +294,7 @@ export function getPageTitleFromPath(pathname: string): string {
       .join(' ')
   }
 
-  return 'PortShield'
+  return 'PortShield vOPS HUB'
 }
 
 // Helper: Check if module is ready

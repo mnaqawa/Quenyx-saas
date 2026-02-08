@@ -1,10 +1,10 @@
-# PortShield SaaS
+# PortShield vOPS HUB
 
 **PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
 
 This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited. Use of this software is permitted only with explicit written authorization from PortShield CO.
 
-Monorepo for PortShield SaaS platform with API gateway, entitlement enforcement, and multi-tenant project management.
+Monorepo for PortShield vOPS HUB (Virtual IT Operations Platform) with API gateway, entitlement enforcement, and multi-tenant project management.
 
 ## Stack
 

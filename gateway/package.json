@@ -1,7 +1,7 @@
 {
   "name": "portshield-gateway",
   "version": "1.0.0",
-  "description": "API Gateway for PortShield SaaS with entitlement enforcement",
+  "description": "API Gateway for PortShield vOPS HUB with entitlement enforcement",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

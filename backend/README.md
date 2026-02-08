@@ -4,7 +4,7 @@
 
 This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
 
-Laravel API-only backend for PortShield SaaS.
+Laravel API-only backend for PortShield vOPS HUB.
 
 ## Requirements
 

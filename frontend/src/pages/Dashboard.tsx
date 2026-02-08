@@ -219,7 +219,7 @@ function Dashboard() {
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
             <p className="font-semibold">Get Started</p>
             <p className="mt-1 text-xs text-sky-200/80">
-              Create your first workspace to start using PortShield SaaS.
+              Create your first workspace to start using PortShield vOPS HUB.
             </p>
           </div>
         )}
@@ -601,10 +601,10 @@ function Dashboard() {
 
       <section className="px-6 py-6 text-center text-white/70">
         <p className="text-sm font-semibold text-white/80">
-          ShieldCore Control Center • Virtual IT Operations Platform • v2.1.0
+          PortShield vOPS HUB • Virtual IT Operations Platform • v2.1.0
         </p>
         <p className="mt-2 text-xs text-white/50">
-          Unified monitoring and control for all your integrated PortShield SaaS modules
+          Unified monitoring and control for all your integrated PortShield vOPS HUB modules
         </p>
       </section>
     </div>

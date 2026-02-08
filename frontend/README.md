@@ -1,6 +1,6 @@
 # PortShield Frontend
 
-React + TypeScript + Vite frontend for PortShield SaaS.
+React + TypeScript + Vite frontend for PortShield vOPS HUB.
 
 ## Requirements
 

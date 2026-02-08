@@ -1,8 +1,8 @@
-# PortShield SaaS – Deployment
+# PortShield vOPS HUB – Deployment
 
 **PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
 
-This document describes how to deploy the PortShield SaaS monorepo (backend, frontend, gateway) for development and production.
+This document describes how to deploy the PortShield vOPS HUB monorepo (backend, frontend, gateway) for development and production.
 
 ## Prerequisites
 
