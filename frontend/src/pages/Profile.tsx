@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { profileService, UserProfile, UserProfilePreferences } from '../services/profileService'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { Language } from '../i18n/translations'
@@ -24,6 +24,7 @@ function formatNumber(n: number): string {
 }
 
 export default function Profile() {
+  const navigate = useNavigate()
   const { t, language, setLanguage } = useLanguage()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -116,18 +117,20 @@ export default function Profile() {
   }
 
   const handleThemeChange = async (theme: 'light' | 'dark' | 'system') => {
+    // Apply theme to DOM and localStorage immediately so the UI updates even if API fails
+    if (theme === 'system') {
+      document.documentElement.classList.remove('light', 'dark')
+    } else {
+      document.documentElement.classList.remove('light', 'dark')
+      document.documentElement.classList.add(theme)
+    }
+    if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', theme)
     const prefs: UserProfilePreferences = { ...profile?.preferences, theme }
     try {
       const updated = await profileService.updateProfile({ preferences: prefs })
       setProfile(updated)
-      if (theme === 'system') {
-        document.documentElement.classList.remove('light', 'dark')
-      } else {
-        document.documentElement.classList.remove('light', 'dark')
-        document.documentElement.classList.add(theme)
-      }
     } catch {
-      // ignore
+      // ignore; theme already applied above
     }
   }
 
@@ -343,8 +346,9 @@ export default function Profile() {
                 </div>
                 <button
                   type="button"
+                  onClick={() => navigate('/integrations')}
                   className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-white/10"
-                  title="Coming soon"
+                  title={t('profile.notificationsDesc')}
                 >
                   <span aria-hidden>🔔</span>
                   {t('profile.configure')}

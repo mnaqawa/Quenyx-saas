@@ -9,6 +9,71 @@ body,
   height: 100%;
 }
 
+/* Light theme: when html has class "light", override main layout and content colors */
+html.light body,
+html.light #root {
+  background: #f1f5f9 !important;
+  color: #0f172a;
+}
+html.light #app-layout {
+  background: #f1f5f9 !important;
+  color: #0f172a;
+}
+html.light #app-layout aside {
+  background: #e2e8f0 !important;
+  border-right-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a;
+}
+html.light #app-layout aside p,
+html.light #app-layout aside span {
+  color: inherit;
+}
+html.light #app-layout aside a {
+  color: #334155;
+}
+html.light #app-layout aside a:hover,
+html.light #app-layout aside button:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+html.light #app-layout main {
+  background: #f8fafc !important;
+  color: #0f172a;
+}
+/* Light theme: profile and other content cards */
+html.light [class*="bg-\[#0f151d\]"],
+html.light [class*="bg-\[#0b0f14\]"],
+html.light [class*="bg-\[#0f141b\]"] {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a;
+}
+html.light .text-white {
+  color: #0f172a !important;
+}
+html.light .text-white\/60,
+html.light .text-white\/50,
+html.light .text-white\/40 {
+  color: #475569 !important;
+}
+html.light .text-white\/80 {
+  color: #334155 !important;
+}
+html.light .text-slate-100 {
+  color: #0f172a !important;
+}
+/* Light theme: inputs and buttons in content */
+html.light input[type="text"],
+html.light input[type="password"],
+html.light input[type="email"] {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html.light select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
 /* Style select dropdown options for dark theme */
 select option {
   background-color: #0f172a; /* slate-900 */

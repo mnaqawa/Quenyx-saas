@@ -55,7 +55,7 @@ function AppLayout() {
   }
 
   return (
-    <div className="relative flex min-h-screen bg-[#0b0f14] text-slate-100">
+    <div id="app-layout" className="relative flex min-h-screen bg-[#0b0f14] text-slate-100">
       {isSidebarOpen ? (
         <button
           type="button"
