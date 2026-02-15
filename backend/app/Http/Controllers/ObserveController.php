@@ -511,9 +511,10 @@ class ObserveController extends Controller
             ], 400);
         }
 
-        // Dispatch jobs to run after response is sent (avoids timeout; user gets immediate feedback)
+        // Dispatch jobs to queue (database/redis). Worker must be running: php artisan queue:work
+        // With sync driver, jobs run in-process; with database driver, jobs run in worker (recommended for long scans)
         foreach ($hosts as $host) {
-            NmapPortScanJob::dispatch($host->id, $options)->afterResponse();
+            NmapPortScanJob::dispatch($host->id, $options);
         }
 
         return response()->json([

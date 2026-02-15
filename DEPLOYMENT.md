@@ -185,16 +185,56 @@ Add this line (adjust the path if your backend lives elsewhere):
 cd backend && php artisan config:clear && php artisan config:cache
 ```
 
-### 8. Enable and start
+### 8. Queue worker (for port scans and other background jobs)
+
+Port scans (especially full 1–65535) run as background jobs. **Without a queue worker, scans will not complete.**
+
+1. **Create jobs table** (if not exists):
+   ```bash
+   cd backend && php artisan migrate --force
+   ```
+
+2. **Set queue driver** in `.env`:
+   ```
+   QUEUE_CONNECTION=database
+   ```
+
+3. **Add queue worker systemd service** `/etc/systemd/system/portshield-queue.service`:
+   ```ini
+   [Unit]
+   Description=PortShield Queue Worker
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=www-data
+   WorkingDirectory=/var/www/portshield/portshield-saas/backend
+   ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+4. **Enable and start**:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable portshield-queue
+   sudo systemctl start portshield-queue
+   ```
+
+**Verify:** Trigger a port scan from the UI; check `storage/logs/laravel.log` or the Port Scan tab for results.
+
+### 9. Enable and start
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable portshield-backend portshield-gateway
-sudo systemctl start portshield-backend portshield-gateway
+sudo systemctl enable portshield-backend portshield-gateway portshield-queue
+sudo systemctl start portshield-backend portshield-gateway portshield-queue
 sudo systemctl reload nginx
 ```
 
-### 9. Health checks
+### 10. Health checks
 
 - Gateway: `curl http://127.0.0.1:4000/health` → `{"status":"ok","service":"gateway"}`
 - Backend: `curl http://127.0.0.1:8000/api/health` → Laravel health response
