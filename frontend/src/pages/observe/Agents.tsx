@@ -279,16 +279,9 @@ function InstallAgentModal({
   onGenerateToken,
   onClose,
 }: InstallAgentModalProps) {
-  const [primaryProtocol, setPrimaryProtocol] = useState('http_api')
-  const [enabledProtocols, setEnabledProtocols] = useState<string[]>(['http_api'])
+  const [primaryProtocol, setPrimaryProtocol] = useState('psap')
   const [permissions, setPermissions] = useState<string[]>(['system_metrics', 'inventory', 'filesystem'])
   const [expiresHours, setExpiresHours] = useState<number | 'never'>(24)
-
-  const toggleProtocol = (key: string) => {
-    setEnabledProtocols((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    )
-  }
 
   const togglePermission = (key: string) => {
     setPermissions((prev) =>
@@ -299,7 +292,7 @@ function InstallAgentModal({
   const handleGenerate = () => {
     onGenerateToken({
       primary_protocol: primaryProtocol,
-      enabled_protocols: enabledProtocols.length ? enabledProtocols : [primaryProtocol],
+      enabled_protocols: [primaryProtocol],
       permissions: permissions.length ? permissions : ['system_metrics', 'inventory', 'filesystem'],
       expires_hours: expiresHours === 'never' ? 0 : expiresHours,
     })
@@ -341,12 +334,6 @@ function InstallAgentModal({
                         name="primary_protocol"
                         checked={primaryProtocol === key}
                         onChange={() => setPrimaryProtocol(key)}
-                        className="mt-1"
-                      />
-                      <input
-                        type="checkbox"
-                        checked={enabledProtocols.includes(key)}
-                        onChange={() => toggleProtocol(key)}
                         className="mt-1"
                       />
                       <div>

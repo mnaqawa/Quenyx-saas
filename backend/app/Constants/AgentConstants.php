@@ -11,17 +11,17 @@ class AgentConstants
     public const PROTOCOL_SNMP = 'snmp';
 
     public const PROTOCOLS = [
-        self::PROTOCOL_HTTP_API => [
-            'label' => 'HTTP API (Push)',
-            'description' => 'Agent pushes metrics and inventory to the platform. Works across firewalls; only outbound HTTPS required.',
-            'port' => null,
-            'direction' => 'push',
-        ],
         self::PROTOCOL_PSAP => [
             'label' => 'PortShield Agent Protocol (PSAP)',
             'description' => 'Custom TCP protocol for PortShield. Platform connects to agent on port 9444. Requires inbound access from platform to agent.',
             'port' => 9444,
             'direction' => 'pull',
+        ],
+        self::PROTOCOL_HTTP_API => [
+            'label' => 'HTTP API (Push)',
+            'description' => 'Agent pushes metrics and inventory to the platform. Works across firewalls; only outbound HTTPS required.',
+            'port' => null,
+            'direction' => 'push',
         ],
         self::PROTOCOL_SNMP => [
             'label' => 'SNMP',
