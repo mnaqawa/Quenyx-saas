@@ -681,7 +681,9 @@ class ObserveTargetsController extends Controller
 
         foreach ($hosts as $host) {
             $scopedHostName = $prefix . $host->name;
+            $hasServices = false;
             foreach ($host->services as $service) {
+                $hasServices = true;
                 $engineServiceKey = $scopedHostName . '::' . $service->name;
                 $receivedKeys[] = $engineServiceKey;
 
@@ -694,6 +696,29 @@ class ObserveTargetsController extends Controller
                     [
                         'host_name' => $scopedHostName,
                         'service_name' => $service->name,
+                        'state' => 'pending',
+                        'last_check_at' => null,
+                        'duration_sec' => null,
+                        'attempt' => null,
+                        'output' => 'Pending first check (ShieldObserve)',
+                        'perfdata' => null,
+                    ]
+                );
+            }
+            // Hosts with no services get a synthetic Host-Alive (ping) so they show real status instead of "Pending"
+            if (! $hasServices) {
+                $engineServiceKey = $scopedHostName . '::Host-Alive';
+                $receivedKeys[] = $engineServiceKey;
+
+                ObserveService::updateOrCreate(
+                    [
+                        'workspace_id' => $workspaceId,
+                        'engine_key' => $engineKey,
+                        'engine_service_key' => $engineServiceKey,
+                    ],
+                    [
+                        'host_name' => $scopedHostName,
+                        'service_name' => 'Host-Alive',
                         'state' => 'pending',
                         'last_check_at' => null,
                         'duration_sec' => null,

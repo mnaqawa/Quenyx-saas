@@ -75,6 +75,14 @@ function statusLabel(s: string): string {
   }
 }
 
+/** Tooltip explaining Pending: first check not run yet */
+function statusTooltip(s: string): string | undefined {
+  if (s?.toLowerCase() === 'pending') {
+    return 'Pending = first check not run yet. ShieldObserve runs checks every minute. Add services in Monitored Targets for more checks.'
+  }
+  return undefined
+}
+
 // Zone colors for enterprise-style topology (similar to Thara network diagram)
 const ZONE_STYLES: Record<string, { border: string; bg: string; header: string }> = {
   DMZ: { border: 'border-amber-500/50', bg: 'bg-amber-500/5', header: 'bg-amber-500/20 text-amber-200' },
@@ -192,8 +200,8 @@ function ZoneBasedTopology({
   )
 }
 
-// ShieldObserve cloud: centered at top, above networks (like PDF)
-const CLOUD_NODE = { cx: 320, cy: 36, r: 48 }
+// ShieldObserve cloud: centered at top, above networks (like PDF) — larger and clearer
+const CLOUD_NODE = { cx: 320, cy: 48, r: 72 }
 
 function LLDTopology({
   networks,
@@ -262,16 +270,21 @@ function LLDTopology({
         })}
       </svg>
 
-      {/* ShieldObserve as cloud (top center) */}
+      {/* ShieldObserve as cloud (top center) — larger, clearer diagram */}
       <div
-        className="absolute z-20 flex flex-col items-center justify-center"
-        style={{ left: cloudCx - CLOUD_NODE.r - 20, top: cloudCy - CLOUD_NODE.r / 2, width: (CLOUD_NODE.r + 20) * 2, height: CLOUD_NODE.r * 2 }}
+        className="absolute z-20 flex flex-col items-center justify-center rounded-2xl border-2 border-sky-500/40 bg-sky-500/15 px-6 py-4 shadow-xl backdrop-blur-sm"
+        style={{ left: cloudCx - CLOUD_NODE.r - 24, top: 4, width: (CLOUD_NODE.r + 24) * 2, minHeight: CLOUD_NODE.r * 1.4 }}
       >
-        <svg viewBox="0 0 64 32" className="w-20 h-10 text-sky-400/90" fill="currentColor">
-          <path d="M8 20c-4 0-8-3-8-7s3-7 8-7c1 0 2 0 3 1-1-4 2-7 6-7 2 0 4 1 5 3 2-1 4-2 7-2 6 0 10 4 10 10 0 1 0 2 0 2h-36c-4 0-8-3-8-7s4-6 8-6z" />
-        </svg>
-        <p className="text-[10px] font-medium text-sky-300/90 uppercase tracking-wider -mt-1">Monitoring</p>
-        <p className="text-xs font-semibold text-sky-200">ShieldObserve</p>
+        <div className="flex items-center gap-3">
+          <svg viewBox="0 0 80 48" className="w-14 h-9 text-sky-400 shrink-0" fill="currentColor" aria-hidden>
+            <path d="M12 32c-6 0-12-5-12-11s5-11 12-11c2 0 4 0 5 1-2-6 3-11 8-11 3 0 5 1 7 4 3-2 6-3 10-3 8 0 14 6 14 14 0 2 0 3 0 3H12z" />
+            <path d="M48 32c-6 0-12-5-12-11s5-11 12-11c2 0 4 0 5 1-2-6 3-11 8-11 3 0 5 1 7 4 3-2 6-3 10-3 8 0 14 6 14 14 0 2 0 3 0 3H48z" opacity="0.85" />
+          </svg>
+          <div className="text-left">
+            <p className="text-[11px] font-semibold text-sky-300/95 uppercase tracking-widest">Monitoring</p>
+            <p className="text-lg font-bold text-sky-100 tracking-tight">ShieldObserve</p>
+          </div>
+        </div>
       </div>
 
       {/* Network containers with servers inside (like PDF) */}
@@ -305,7 +318,10 @@ function LLDTopology({
                   <p className="text-xs font-semibold truncate max-w-[90px]" title={h.name}>{h.name}</p>
                 </div>
                 <p className="text-[10px] text-white/60 truncate max-w-[110px]" title={h.address}>{h.address || '—'}</p>
-                <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+                <p
+                  className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}
+                  title={statusTooltip(h.status)}
+                >
                   {statusLabel(h.status)}
                 </p>
                 {diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned' && (
@@ -1086,11 +1102,14 @@ export default function InfrastructureMap() {
                           </select>
                         </div>
                       </div>
-                      <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
-                        h.status === 'ok' ? 'bg-emerald-500/20 text-emerald-200' :
-                        h.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
-                        'bg-rose-500/20 text-rose-200'
-                      }`}>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
+                          h.status === 'ok' ? 'bg-emerald-500/20 text-emerald-200' :
+                          h.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
+                          'bg-rose-500/20 text-rose-200'
+                        }`}
+                        title={statusTooltip(h.status)}
+                      >
                         {statusLabel(h.status)}
                       </span>
                     </div>
@@ -1139,9 +1158,14 @@ export default function InfrastructureMap() {
                     <span className="font-mono text-xs">{c.source}</span>
                     <span className="text-white/40">— {c.type} —</span>
                     <span className="font-mono text-xs">{c.destination}</span>
-                    <span className={`text-xs font-medium ${
-                      c.status === 'Online' ? 'text-emerald-400' : c.status === 'Warning' ? 'text-amber-400' : 'text-rose-400'
-                    }`}>
+                    <span
+                      className={`text-xs font-medium ${
+                        c.status === 'Online' ? 'text-emerald-400' :
+                        c.status === 'Warning' ? 'text-amber-400' :
+                        c.status === 'Pending' ? 'text-white/70' : 'text-rose-400'
+                      }`}
+                      title={statusTooltip(c.status)}
+                    >
                       {c.status}
                     </span>
                     {c.serviceCount !== undefined && c.type === 'monitored' ? (
@@ -1189,13 +1213,16 @@ export default function InfrastructureMap() {
                           </span>
                         )}
                         {ps.scan?.status === 'running' && (
-                          <span className="rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-200">Scanning…</span>
+                          <span className="rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-200 animate-pulse">Scanning…</span>
                         )}
                         {ps.scan?.status === 'failed' && (
                           <span className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-medium text-rose-200" title={ps.scan.error_message ?? ''}>Failed</span>
                         )}
                         {ps.scan?.status === 'pending' && (
                           <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">Pending</span>
+                        )}
+                        {!ps.scan && (
+                          <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title="Scan will run when host is saved in Monitored Targets">Queued</span>
                         )}
                         {ps.scan?.scanned_at && (
                           <span className="text-[10px] text-white/50">
@@ -1217,9 +1244,13 @@ export default function InfrastructureMap() {
                           </span>
                         ))}
                       </div>
-                    ) : ps.scan?.status === 'completed' && (
+                    ) : ps.scan?.status === 'completed' ? (
                       <p className="text-xs text-white/50">No open ports found in scan range.</p>
-                    )}
+                    ) : ps.scan?.status === 'running' || !ps.scan ? (
+                      <p className="text-xs text-white/50 italic">
+                        {ps.scan?.status === 'running' ? 'Scanning…' : 'Scan queued. Results will appear when the scan completes.'}
+                      </p>
+                    ) : null}
                   </div>
                 ))}
               </div>

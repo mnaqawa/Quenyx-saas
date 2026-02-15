@@ -39,6 +39,77 @@ class RunObserveChecks extends Command
                 continue;
             }
 
+            // Hosts with no services: run Host-Alive (ping) check so they show real status instead of "Pending"
+            if ($host->services->isEmpty()) {
+                $engineKey = 'native';
+                $engineServiceKey = "{$hostName}::Host-Alive";
+                $existing = ObserveService::where('workspace_id', $workspaceId)
+                    ->where('engine_key', $engineKey)
+                    ->where('engine_service_key', $engineServiceKey)
+                    ->first();
+
+                $intervalSec = 5;
+                $now = now();
+                $due = $existing === null
+                    || $existing->next_check_at === null
+                    || $existing->next_check_at->getTimestamp() <= $now->getTimestamp();
+
+                if ($due) {
+                    try {
+                        $result = $runner->run('ping', $address, [], [
+                            'workspace_id' => $workspaceId,
+                            'host_name' => $hostName,
+                            'service_name' => 'Host-Alive',
+                        ]);
+                    } catch (\Throwable $e) {
+                        $result = [
+                            'state' => 'unknown',
+                            'output' => 'Check failed: ' . $e->getMessage(),
+                            'perfdata' => null,
+                        ];
+                        $errors++;
+                    }
+
+                    $nextCheck = $now->copy()->addSeconds($intervalSec);
+                    $payload = [
+                        'workspace_id' => $workspaceId,
+                        'engine_key' => $engineKey,
+                        'engine_service_key' => $engineServiceKey,
+                        'host_name' => $hostName,
+                        'service_name' => 'Host-Alive',
+                        'state' => $result['state'],
+                        'last_check_at' => $now,
+                        'next_check_at' => $nextCheck,
+                        'output' => $result['output'],
+                        'plugin_output' => $result['output'],
+                        'perfdata' => $result['perfdata'] ?? null,
+                        'attempt' => '1/3',
+                        'current_attempt' => 1,
+                        'max_attempts' => 3,
+                    ];
+
+                    if ($existing !== null && $existing->state !== $result['state']) {
+                        $payload['last_state_change_at'] = $now;
+                        $payload['duration_sec'] = 0;
+                    } elseif ($existing !== null && $existing->last_state_change_at) {
+                        $payload['last_state_change_at'] = $existing->last_state_change_at;
+                        $payload['duration_sec'] = (int) $existing->last_state_change_at->diffInSeconds($now);
+                    } else {
+                        $payload['duration_sec'] = 0;
+                    }
+
+                    ObserveService::updateOrCreate(
+                        [
+                            'workspace_id' => $workspaceId,
+                            'engine_key' => $engineKey,
+                            'engine_service_key' => $engineServiceKey,
+                        ],
+                        $payload
+                    );
+                    $run++;
+                }
+            }
+
             foreach ($host->services as $service) {
                 $serviceName = $service->name;
                 $engineKey = 'native';
