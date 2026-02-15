@@ -172,7 +172,7 @@ Today, `observe_targets_hosts` assumes hosts are **reachable from the backend**.
 
 Users can install the agent directly from the PortShield portal:
 
-1. **Agents** page (ShieldObserve → Agents)
+1. **Integrations** page → **Agents** section (platform-wide; used by ShieldObserve, ShieldInventory, VA scan, etc.)
 2. **Install Agent** → Opens modal with:
    - **Protocol selection**: HTTP API (push), NRPE, SNMP – with descriptions and port info
    - **Permissions checklist**: System metrics, inventory, network, processes, filesystem

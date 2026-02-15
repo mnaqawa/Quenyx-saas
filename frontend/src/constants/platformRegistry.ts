@@ -104,12 +104,6 @@ const shieldObserveRoutes: RouteConfig[] = [
     path: '/app/workspaces/:id/observe/targets',
     title: 'Monitored Targets',
   },
-  {
-    key: 'agents',
-    label: 'Agents',
-    path: '/app/workspaces/:id/observe/agents',
-    title: 'Agents',
-  },
 ]
 
 // Module registry - all modules in the platform

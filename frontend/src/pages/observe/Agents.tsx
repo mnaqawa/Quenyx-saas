@@ -49,7 +49,12 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
   )
 }
 
-export default function Agents() {
+interface AgentsProps {
+  /** When true, hide PageHeader (e.g. when embedded in Integrations page) */
+  embedded?: boolean
+}
+
+export default function Agents({ embedded = false }: AgentsProps) {
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, allowedByKey } = useWorkspaceContext()
   const workspaceId = id || selectedWorkspaceId
@@ -65,8 +70,10 @@ export default function Agents() {
     permissions: Record<string, PermissionInfo>
   }>({ protocols: {}, permissions: {} })
 
-  const isLocked = !(allowedByKey['shieldobserve'] ?? false)
-  const canEdit = !isLocked
+  // When embedded in Integrations, agents are platform-wide (ShieldObserve, ShieldInventory, VA, etc.)
+  const canEdit = embedded
+    ? !!selectedWorkspaceId
+    : !!(allowedByKey['shieldobserve'] ?? false)
 
   const fetchAgents = useCallback(async () => {
     if (!workspaceId) return
@@ -145,10 +152,12 @@ export default function Agents() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Agents"
-        subtitle="Install agents on servers and workstations for cross-network monitoring and asset inventory."
-      />
+      {!embedded && (
+        <PageHeader
+          title="Agents"
+          subtitle="Install agents on servers and workstations for cross-network monitoring and asset inventory."
+        />
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-200">

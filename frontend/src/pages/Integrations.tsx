@@ -6,6 +6,7 @@ import {
 } from '../services/integrationService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import Agents from './observe/Agents'
 
 const statusStyles: Record<string, string> = {
   connected: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30',
@@ -125,6 +126,15 @@ function Integrations() {
         <h1 className="text-2xl font-semibold text-white">{t('integrations.title')}</h1>
         <p className="text-sm text-white/60">{t('integrations.subtitle')}</p>
       </div>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-white">Agents</h2>
+        <p className="text-xs text-white/60">
+          Install agents on servers and workstations for cross-network monitoring, asset discovery (ShieldInventory),
+          vulnerability assessment, and ShieldObserve. Works across firewalls—only outbound HTTPS required.
+        </p>
+        <Agents embedded />
+      </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {integrations.map((integration) => (
