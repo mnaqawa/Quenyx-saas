@@ -192,22 +192,19 @@ function ZoneBasedTopology({
   )
 }
 
-const MONITORING_NODE = { x: 20, y: 20, w: 110, h: 52 }
+// ShieldObserve cloud: centered at top, above networks (like PDF)
+const CLOUD_NODE = { cx: 320, cy: 36, r: 48 }
 
 function LLDTopology({
-  hosts,
   networks,
   diagram,
-  getNodePosition,
   draggingNode,
   handleNodeMouseDown,
   statusLabel,
   portScansByHost,
 }: {
-  hosts: HostRow[]
   networks: Array<{ id: string; name: string; hosts: HostRow[]; status: string }>
   diagram: DiagramState
-  getNodePosition: (name: string, idx: number, total: number) => { x: number; y: number }
   draggingNode: string | null
   handleNodeMouseDown: (e: React.MouseEvent, name: string) => void
   statusLabel: (s: string) => string
@@ -215,39 +212,46 @@ function LLDTopology({
 }) {
   const nodeW = 130
   const nodeH = 58
-  const hostPositions = hosts.map((h, idx) => ({
-    ...h,
-    x: (diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, hosts.length)).x,
-    y: (diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, hosts.length)).y,
-  }))
-  const networkPositions = networks.map((n, idx) => ({
-    ...n,
-    x: 100 + (idx % 4) * 170,
-    y: 80 + Math.floor(idx / 4) * 110,
-  }))
-  const mx = MONITORING_NODE.x + MONITORING_NODE.w / 2
-  const my = MONITORING_NODE.y + MONITORING_NODE.h / 2
+  const containerPad = 24
+  const networkGap = 20
+  const hostGap = 12
+
+  // Layout: networks as containers with hosts inside. Cloud at top.
+  const normalizedLayouts = networks.map((n, netIdx) => {
+    const hostsInNet = n.hosts
+    const rows = Math.ceil(hostsInNet.length / 3) || 1
+    const innerW = Math.max(200, Math.min(3, hostsInNet.length) * (nodeW + hostGap) - hostGap)
+    const innerH = rows * nodeH + (rows - 1) * hostGap
+    const w = innerW + containerPad * 2
+    const h = 52 + innerH + containerPad * 2
+    const x = 40 + netIdx * (w + networkGap)
+    const y = 100
+    return { network: n, x, y, w, h, hostPositions: hostsInNet }
+  })
+
+  const cloudCx = CLOUD_NODE.cx
+  const cloudCy = CLOUD_NODE.cy
 
   return (
-    <div className="relative min-h-[400px] w-full" style={{ minWidth: 600 }}>
-      {/* Connection lines (SVG overlay) */}
+    <div className="relative min-h-[500px] w-full" style={{ minWidth: 680 }}>
+      {/* Connection lines: Cloud -> each network container */}
       <svg className="absolute inset-0 pointer-events-none z-0" width="100%" height="100%">
         <defs>
           <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
             <polygon points="0 0, 6 2, 0 4" fill="rgba(14,165,233,0.5)" />
           </marker>
         </defs>
-        {hostPositions.map((h) => {
-          const hx = h.x + nodeW / 2
-          const hy = h.y + nodeH / 2
-          const stroke = h.status === 'ok' ? '#10b981' : h.status === 'warning' ? '#f59e0b' : '#f43f5e'
+        {normalizedLayouts.map((layout) => {
+          const netCenterX = layout.x + layout.w / 2
+          const netTopY = layout.y
+          const stroke = layout.network.status === 'ok' ? '#10b981' : layout.network.status === 'warning' ? '#f59e0b' : '#f43f5e'
           return (
             <line
-              key={`line-${h.name}`}
-              x1={mx}
-              y1={my}
-              x2={hx}
-              y2={hy}
+              key={`line-${layout.network.id}`}
+              x1={cloudCx}
+              y1={cloudCy + CLOUD_NODE.r}
+              x2={netCenterX}
+              y2={netTopY}
               stroke={stroke}
               strokeWidth="1.5"
               strokeDasharray="4 3"
@@ -256,74 +260,65 @@ function LLDTopology({
             />
           )
         })}
-        {networkPositions.map((n) => {
-          const nx = n.x + nodeW / 2
-          const ny = n.y + nodeH / 2
-          return (
-            <line
-              key={`line-${n.id}`}
-              x1={mx}
-              y1={my}
-              x2={nx}
-              y2={ny}
-              stroke="#0ea5e9"
-              strokeWidth="1.5"
-              strokeDasharray="4 3"
-              opacity={0.6}
-              markerEnd="url(#arrowhead)"
-            />
-          )
-        })}
       </svg>
-      {/* Monitoring node */}
+
+      {/* ShieldObserve as cloud (top center) */}
       <div
-        className="absolute z-10 rounded-xl border-2 border-sky-500/50 bg-sky-500/10 px-4 py-3 shadow-lg"
-        style={{ left: MONITORING_NODE.x, top: MONITORING_NODE.y, width: MONITORING_NODE.w, minHeight: MONITORING_NODE.h }}
+        className="absolute z-20 flex flex-col items-center justify-center"
+        style={{ left: cloudCx - CLOUD_NODE.r - 20, top: cloudCy - CLOUD_NODE.r / 2, width: (CLOUD_NODE.r + 20) * 2, height: CLOUD_NODE.r * 2 }}
       >
-        <p className="text-[10px] font-medium text-sky-300/80 uppercase tracking-wider">Monitoring</p>
-        <p className="text-sm font-semibold text-sky-200">ShieldObserve</p>
+        <svg viewBox="0 0 64 32" className="w-20 h-10 text-sky-400/90" fill="currentColor">
+          <path d="M8 20c-4 0-8-3-8-7s3-7 8-7c1 0 2 0 3 1-1-4 2-7 6-7 2 0 4 1 5 3 2-1 4-2 7-2 6 0 10 4 10 10 0 1 0 2 0 2h-36c-4 0-8-3-8-7s4-6 8-6z" />
+        </svg>
+        <p className="text-[10px] font-medium text-sky-300/90 uppercase tracking-wider -mt-1">Monitoring</p>
+        <p className="text-xs font-semibold text-sky-200">ShieldObserve</p>
       </div>
-      {/* Host nodes */}
-      {hostPositions.map((h) => (
+
+      {/* Network containers with servers inside (like PDF) */}
+      {normalizedLayouts.map((layout) => (
         <div
-          key={h.name}
-          className={`absolute rounded-xl border-2 px-4 py-3 text-center cursor-move z-10 transition-shadow hover:shadow-lg ${
-            draggingNode === h.name ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-[#0f151d]' : ''
-          } ${h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'}`}
-          style={{ left: h.x, top: h.y, width: nodeW, minHeight: nodeH }}
-          onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
+          key={layout.network.id}
+          className={`absolute z-10 rounded-xl border-2 overflow-visible ${
+            layout.network.status === 'ok' ? 'border-sky-500/50 bg-sky-500/5' : layout.network.status === 'warning' ? 'border-amber-500/50 bg-amber-500/5' : 'border-rose-500/50 bg-rose-500/5'
+          }`}
+          style={{ left: layout.x, top: layout.y, width: layout.w, minHeight: layout.h }}
         >
-          <div className="flex items-center gap-1.5 justify-center mb-0.5">
-            <span className={`h-2 w-2 rounded-full shrink-0 ${h.status === 'ok' ? 'bg-emerald-400' : h.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`} />
-            <p className="text-xs font-semibold truncate max-w-[100px]" title={h.name}>{h.name}</p>
+          <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+            <p className="text-[10px] font-medium text-sky-300/80 uppercase tracking-wider">Network</p>
+            <p className="text-xs font-semibold truncate max-w-[180px]" title={layout.network.name}>{layout.network.name}</p>
+            <span className={`text-[10px] font-medium ${layout.network.status === 'ok' ? 'text-sky-400' : layout.network.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+              {statusLabel(layout.network.status)} · {layout.network.hosts.length} host{layout.network.hosts.length !== 1 ? 's' : ''}
+            </span>
           </div>
-          <p className="text-[10px] text-white/60 truncate max-w-[120px]" title={h.address}>{h.address || '—'}</p>
-          <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
-            {statusLabel(h.status)}
-          </p>
-          {diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned' && (
-            <p className="mt-1 text-[9px] text-white/50">Zone: {String(diagram.hostZones[h.name])}</p>
-          )}
-          {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
-            <p className="mt-1 text-[9px] text-sky-400">
-              {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
-            </p>
-          )}
-        </div>
-      ))}
-      {/* Network nodes */}
-      {networkPositions.map((n) => (
-        <div
-          key={n.id}
-          className="absolute rounded-xl border-2 border-sky-500/40 bg-sky-500/10 px-4 py-3 text-center z-10"
-          style={{ left: n.x, top: n.y, width: nodeW, minHeight: nodeH }}
-        >
-          <p className="text-[10px] font-medium text-sky-300/80 uppercase">Network</p>
-          <p className="mt-0.5 text-xs font-semibold truncate max-w-[110px]" title={n.name}>{n.name}</p>
-          <p className="mt-1 text-[10px] text-white/60">{n.hosts.length} host{n.hosts.length !== 1 ? 's' : ''}</p>
-          <p className={`mt-1 text-[10px] font-medium ${n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
-            {statusLabel(n.status)}
-          </p>
+          <div className="p-3 flex flex-wrap gap-3">
+            {layout.network.hosts.map((h) => (
+              <div
+                key={h.name}
+                className={`rounded-lg border-2 px-3 py-2.5 text-center cursor-move shrink-0 transition-shadow hover:shadow-lg ${
+                  draggingNode === h.name ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-[#0f151d] z-20' : ''
+                } ${h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'}`}
+                style={{ width: nodeW, minHeight: nodeH }}
+                onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
+              >
+                <div className="flex items-center gap-1.5 justify-center mb-0.5">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${h.status === 'ok' ? 'bg-emerald-400' : h.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`} />
+                  <p className="text-xs font-semibold truncate max-w-[90px]" title={h.name}>{h.name}</p>
+                </div>
+                <p className="text-[10px] text-white/60 truncate max-w-[110px]" title={h.address}>{h.address || '—'}</p>
+                <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {statusLabel(h.status)}
+                </p>
+                {diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned' && (
+                  <p className="mt-0.5 text-[9px] text-white/50">Zone: {String(diagram.hostZones[h.name])}</p>
+                )}
+                {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
+                  <p className="mt-0.5 text-[9px] text-sky-400">
+                    {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -1028,10 +1023,8 @@ export default function InfrastructureMap() {
                 </div>
               ) : (
                 <LLDTopology
-                  hosts={zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone}
-                  networks={layerFiltered.networksFiltered}
+                  networks={networks}
                   diagram={diagram}
-                  getNodePosition={getNodePosition}
                   draggingNode={draggingNode}
                   handleNodeMouseDown={handleNodeMouseDown}
                   statusLabel={statusLabel}

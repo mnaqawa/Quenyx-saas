@@ -236,19 +236,21 @@ class ObserveController extends Controller
             ? (now()->parse($lastPollAt)->diffInSeconds(now(), false) > $staleThresholdSeconds)
             : true;
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'hostTotals' => $hostTotals,
-                'serviceTotals' => $serviceTotals,
-                'items' => $items,
-                'last_poll_at' => $lastPollAt,
-                'source_timestamp' => $sourceTimestamp,
-                'engine_unreachable' => $engineUnreachable,
-                'engine_unreachable_reason' => $engineUnreachableReason,
-                'stale' => $stale,
-            ],
-        ]);
+        return response()
+            ->json([
+                'success' => true,
+                'data' => [
+                    'hostTotals' => $hostTotals,
+                    'serviceTotals' => $serviceTotals,
+                    'items' => $items,
+                    'last_poll_at' => $lastPollAt,
+                    'source_timestamp' => $sourceTimestamp,
+                    'engine_unreachable' => $engineUnreachable,
+                    'engine_unreachable_reason' => $engineUnreachableReason,
+                    'stale' => $stale,
+                ],
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     /**
