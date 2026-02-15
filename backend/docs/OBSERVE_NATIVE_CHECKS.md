@@ -46,8 +46,9 @@ You do **not** need Nagios when using the native engine. To test without Nagios:
    - Leave it; it will set `engine_unreachable` for nagios but native data will still show (deduped, native preferred).
 3. Ensure the Laravel scheduler is running so `observe:run-checks` runs every minute:
    ```bash
-   * * * * * cd /path/to/backend && php artisan schedule:run >> /dev/null 2>&1
+   * * * * * cd /path/to/backend && php artisan schedule:run >> /path/to/backend/storage/logs/scheduler.log 2>&1
    ```
+   (Use `>> /dev/null 2>&1` only if you do not need scheduler output. Prefer logging for debugging.)
 4. Run checks once manually if needed:
    ```bash
    cd backend && php artisan observe:run-checks --workspace_id=84

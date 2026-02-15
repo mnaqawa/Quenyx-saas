@@ -26,14 +26,26 @@ class Handler extends ExceptionHandler
     ];
 
     /**
-     * Register the exception handling callbacks for the application.
+     * Exceptions that should not be reported (expected 404s, etc.).
+     *
+     * @var array<int, class-string<\Throwable>>
      */
+    protected $dontReport = [
+        ModelNotFoundException::class,
+    ];
+
     /**
      * Report or log an exception.
      */
     public function report(Throwable $e): void
     {
-        // Explicitly log all exceptions before parent handles it
+        // Skip explicit logging for exceptions we handle gracefully (e.g. ModelNotFoundException → 404)
+        if ($e instanceof ModelNotFoundException) {
+            parent::report($e);
+            return;
+        }
+
+        // Explicitly log all other exceptions before parent handles it
         try {
             Log::error('Exception reported', [
                 'message' => $e->getMessage(),
@@ -43,7 +55,6 @@ class Handler extends ExceptionHandler
                 'class' => get_class($e),
             ]);
         } catch (\Exception $logException) {
-            // If logging fails, at least try to write to error_log
             error_log('Failed to log exception: ' . $logException->getMessage());
             error_log('Original exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         }
@@ -57,7 +68,9 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            // Additional logging in reportable callback
+            if ($e instanceof ModelNotFoundException) {
+                return;
+            }
             try {
                 Log::error('Exception in reportable callback', [
                     'message' => $e->getMessage(),

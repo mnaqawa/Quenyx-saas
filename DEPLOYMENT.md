@@ -160,7 +160,27 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-### 7. Enable and start
+### 7. Laravel scheduler (cron) – required for ShieldObserve
+
+The scheduler runs `observe:run-checks` every minute for host/service monitoring. **Without this, Real-time Monitoring and Infrastructure Map will show stale or "never" data.**
+
+Add to the **www-data** user crontab (or the user that runs the backend):
+
+```bash
+sudo crontab -u www-data -e
+```
+
+Add this line (adjust the path if your backend lives elsewhere):
+
+```
+* * * * * cd /var/www/portshield/portshield-saas/backend && php artisan schedule:run >> /var/www/portshield/portshield-saas/backend/storage/logs/scheduler.log 2>&1
+```
+
+**Verify:**
+- Wait 1–2 minutes, then check `backend/storage/logs/scheduler.log` – it should contain output from `observe:run-checks` (e.g. "Ran X native check(s).").
+- If the file stays empty, confirm: (1) crontab is installed for the correct user, (2) PHP path is correct (`which php`), (3) `storage/logs/` is writable by the cron user.
+
+### 8. Enable and start
 
 ```bash
 sudo systemctl daemon-reload
@@ -169,7 +189,7 @@ sudo systemctl start portshield-backend portshield-gateway
 sudo systemctl reload nginx
 ```
 
-### 8. Health checks
+### 9. Health checks
 
 - Gateway: `curl http://127.0.0.1:4000/health` → `{"status":"ok","service":"gateway"}`
 - Backend: `curl http://127.0.0.1:8000/api/health` → Laravel health response
@@ -272,6 +292,7 @@ Before going live:
 | **HTTPS** | Use Nginx (or load balancer) with SSL; redirect HTTP → HTTPS |
 | **Gateway** | `BACKEND_BASE_URL` must point to backend (e.g. `http://127.0.0.1:8000` or internal LB URL) |
 | **No dev deps** | Backend: `composer install --no-dev`. Frontend/gateway: use built assets; no dev servers in production |
+| **Laravel scheduler** | Add crontab for `php artisan schedule:run` (see §7). Without it, ShieldObserve checks never run and "Last poll: never" appears |
 
 ---
 

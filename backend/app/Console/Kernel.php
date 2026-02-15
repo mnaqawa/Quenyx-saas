@@ -18,7 +18,8 @@ class Kernel extends ConsoleKernel
         // ShieldObserve engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
         $schedule->command('observe:run-checks')
             ->everyMinute()
-            ->withoutOverlapping(90);
+            ->withoutOverlapping(90)
+            ->appendOutputTo(storage_path('logs/scheduler.log'));
     }
 
     /**
