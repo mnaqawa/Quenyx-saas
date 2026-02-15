@@ -18,6 +18,12 @@ use App\Http\Controllers\InviteController;
 
 Route::get('/health', [HealthController::class, 'index']);
 
+// Agent API (no user auth; uses enrollment token or agent secret)
+Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
+Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
+Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
+Route::post('/agents/{agent}/inventory', [\App\Http\Controllers\AgentApiController::class, 'inventory']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -143,4 +149,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
     Route::post('/projects/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
     Route::get('/projects/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
+
+    // Agents (workspace-scoped)
+    Route::get('/workspaces/{project}/agents', [\App\Http\Controllers\AgentController::class, 'index']);
+    Route::post('/workspaces/{project}/agents/enrollment-token', [\App\Http\Controllers\AgentController::class, 'createEnrollmentToken']);
+    Route::get('/workspaces/{project}/agents/metadata', [\App\Http\Controllers\AgentController::class, 'metadata']);
+    Route::delete('/workspaces/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
+    Route::get('/projects/{project}/agents', [\App\Http\Controllers\AgentController::class, 'index']);
+    Route::post('/projects/{project}/agents/enrollment-token', [\App\Http\Controllers\AgentController::class, 'createEnrollmentToken']);
+    Route::get('/projects/{project}/agents/metadata', [\App\Http\Controllers\AgentController::class, 'metadata']);
+    Route::delete('/projects/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
 });

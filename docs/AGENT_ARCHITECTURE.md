@@ -168,34 +168,55 @@ Today, `observe_targets_hosts` assumes hosts are **reachable from the backend**.
 
 ---
 
-## Implementation Phases
+## Portal: Install from UI
 
-### Phase 1: Platform API + Schema
+Users can install the agent directly from the PortShield portal:
 
-1. Migration: `agents`, `agent_metrics`, `agent_inventories`.
-2. API: `POST /api/agents/register`, `POST /api/agents/{id}/heartbeat`, `POST /api/agents/{id}/metrics`, `POST /api/agents/{id}/inventory`.
-3. Auth: Validate `agent_id` + `agent_secret` (or signed token) on each request.
-4. Jobs: Ingest metrics and inventory asynchronously (queue) to avoid blocking agent.
+1. **Agents** page (ShieldObserve → Agents)
+2. **Install Agent** → Opens modal with:
+   - **Protocol selection**: HTTP API (push), NRPE, SNMP – with descriptions and port info
+   - **Permissions checklist**: System metrics, inventory, network, processes, filesystem
+   - **Token expiry**: 1h, 24h, 72h, 7d, 30d
+3. **Generate token** → Returns enrollment token + install instructions for Linux, Windows, macOS
+4. Copy commands and run on the target host
 
-### Phase 2: Minimal Agent (Go)
+## Permissions Checklist
 
-1. Config: `platform_url`, `workspace_id`, `enrollment_token`.
-2. Registration flow.
-3. Heartbeat loop.
-4. Metrics collection (CPU, memory, disk) for Linux first.
-5. Basic inventory (hostname, OS, CPU, RAM, interfaces).
+| Permission | Description | Required |
+|------------|-------------|----------|
+| `system_metrics` | CPU, memory, disk, load | Yes |
+| `inventory` | Hardware and software inventory | Yes |
+| `filesystem` | Disk usage and stats | Yes |
+| `network` | Network interfaces and connections | No |
+| `processes` | Process list for service monitoring | No |
 
-### Phase 3: Windows + macOS Agent
+## Implementation Status
 
-1. Port metrics collection to Windows (WMI/Performance Counters) and macOS (sysctl, etc.).
-2. Packaging: `.msi`, `.pkg`.
-3. Install as service/daemon.
+### Phase 1: Platform API + Schema ✅
 
-### Phase 4: Observe Integration
+- Migration: `agents`, `agent_metrics`, `agent_inventories`, `agent_enrollment_tokens`
+- API: `POST /api/agents/register`, `POST /api/agents/{id}/heartbeat`, `POST /api/agents/{id}/metrics`, `POST /api/agents/{id}/inventory`
+- Auth: Enrollment token for register; `agent_id` + `agent_secret` for other endpoints
+- Jobs: `AgentIngestMetricsJob`, `AgentIngestInventoryJob` for async ingest
 
-1. Add `agent_id` to `observe_targets_hosts`.
-2. When agent sends metrics, update linked host's check results.
-3. UI: "Add host from agent" – select enrolled agent to create observe target.
+### Phase 2: Minimal Agent (Go) ✅
+
+- Config: `~/.config/portshield/agent.json` (Linux/macOS) or `%APPDATA%\portshield\agent.json` (Windows)
+- `enroll`, `run`, `install` commands
+- Metrics: Linux (`/proc`), macOS (`sysctl`, `vm_stat`), Windows (placeholder)
+- Inventory: Hostname, OS, arch, CPU cores
+
+### Phase 3: Portal UI ✅
+
+- Agents page with list, Install Agent modal
+- Protocol selection and permissions checklist
+- Install instructions with copy buttons
+
+### Phase 4: Observe Integration (planned)
+
+- Add `agent_id` to `observe_targets_hosts` (schema ready)
+- When agent sends metrics, update linked host's check results
+- UI: "Add host from agent" – select enrolled agent to create observe target
 
 ---
 

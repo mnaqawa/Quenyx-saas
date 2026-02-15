@@ -26,6 +26,7 @@ import Services from './pages/observe/Services'
 import Reports from './pages/observe/Reports'
 import DataSources from './pages/observe/DataSources'
 import Targets from './pages/observe/Targets'
+import Agents from './pages/observe/Agents'
 import ComingSoon from './pages/ComingSoon'
 import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
@@ -92,6 +93,9 @@ function App() {
               )}
               {observeRoutes.find((r) => r.key === 'targets') && (
                 <Route path="targets" element={<Targets />} />
+              )}
+              {observeRoutes.find((r) => r.key === 'agents') && (
+                <Route path="agents" element={<Agents />} />
               )}
               <Route index element={<RealTimeMonitoring />} />
             </Route>

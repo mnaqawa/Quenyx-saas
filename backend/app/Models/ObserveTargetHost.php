@@ -22,6 +22,8 @@ class ObserveTargetHost extends Model
         'workspace_id',
         'name',
         'address',
+        'agent_id',
+        'source',
         'check_command',
         'tags',
         'enabled',
@@ -35,6 +37,11 @@ class ObserveTargetHost extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'workspace_id');
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class);
     }
 
     public function services(): HasMany
