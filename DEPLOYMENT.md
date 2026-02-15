@@ -180,6 +180,11 @@ Add this line (adjust the path if your backend lives elsewhere):
 - Wait 1–2 minutes, then check `backend/storage/logs/scheduler.log` – it should contain output from `observe:run-checks` (e.g. "Ran X native check(s).").
 - If the file stays empty, confirm: (1) crontab is installed for the correct user, (2) PHP path is correct (`which php`), (3) `storage/logs/` is writable by the cron user.
 
+**After adding or changing `config/queue.php`**, run:
+```bash
+cd backend && php artisan config:clear && php artisan config:cache
+```
+
 ### 8. Enable and start
 
 ```bash

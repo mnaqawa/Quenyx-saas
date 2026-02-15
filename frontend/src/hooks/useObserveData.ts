@@ -511,6 +511,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     const prefix = workspaceId ? `ws${workspaceId}-` : ''
     for (const item of servicesData.items) {
       const hostName = item.host?.startsWith(prefix) ? item.host.slice(prefix.length) : item.host
+      if (!hostName) continue
       const current = map.get(hostName)
       const s = (item as any).status ?? 'pending'
       map.set(hostName, current ? worstStatus([current, s]) : s)
@@ -519,11 +520,18 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
   }, [servicesData?.items, workspaceId])
 
   const hosts = useMemo(() => {
-    return targets.map((t) => ({
-      name: t.name,
-      address: t.address,
-      status: hostToStatus.get(t.name) || 'pending',
-    }))
+    return targets.map((t) => {
+      // Exact match first, then case-insensitive (backend/target name may differ in casing)
+      const status =
+        hostToStatus.get(t.name) ??
+        [...hostToStatus.entries()].find(([k]) => k.toLowerCase() === t.name.toLowerCase())?.[1] ??
+        'pending'
+      return {
+        name: t.name,
+        address: t.address,
+        status,
+      }
+    })
   }, [targets, hostToStatus])
 
   return { hosts, loading: targetsLoading || servicesLoading }

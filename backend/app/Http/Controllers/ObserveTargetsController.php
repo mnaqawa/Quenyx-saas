@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\NmapPortScanJob;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\ObserveService;
@@ -466,9 +465,17 @@ class ObserveTargetsController extends Controller
             // Sync targets → observe_services (native engine) so Services page shows targets; run-checks will update state
             $this->syncTargetsToObserveServices($project);
 
-            // Dispatch nmap port scans for each host saved in this request (runs after response; requires nmap installed)
+            // Run nmap port scans for each host saved (direct call avoids queue config issues; runs in request)
+            $nmapService = app(\App\Services\NmapPortScanService::class);
             foreach ($savedHostIds as $hostId) {
-                NmapPortScanJob::dispatch($hostId)->afterResponse();
+                try {
+                    $host = ObserveTargetHost::find($hostId);
+                    if ($host) {
+                        $nmapService->runScan($host);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Nmap port scan failed', ['host_id' => $hostId, 'error' => $e->getMessage()]);
+                }
             }
 
             // Run native checks once for this workspace so Services page updates immediately
