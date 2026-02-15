@@ -6,7 +6,7 @@ class AgentConstants
 {
     public const PROTOCOL_HTTP_API = 'http_api';
 
-    public const PROTOCOL_NRPE = 'nrpe';
+    public const PROTOCOL_PSAP = 'psap';
 
     public const PROTOCOL_SNMP = 'snmp';
 
@@ -17,10 +17,10 @@ class AgentConstants
             'port' => null,
             'direction' => 'push',
         ],
-        self::PROTOCOL_NRPE => [
-            'label' => 'NRPE (Nagios Remote Plugin Executor)',
-            'description' => 'Platform connects to agent on port 5666. Requires inbound access from platform to agent.',
-            'port' => 5666,
+        self::PROTOCOL_PSAP => [
+            'label' => 'PortShield Agent Protocol (PSAP)',
+            'description' => 'Custom TCP protocol for PortShield. Platform connects to agent on port 9444. Requires inbound access from platform to agent.',
+            'port' => 9444,
             'direction' => 'pull',
         ],
         self::PROTOCOL_SNMP => [

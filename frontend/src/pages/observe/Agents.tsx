@@ -282,7 +282,7 @@ function InstallAgentModal({
   const [primaryProtocol, setPrimaryProtocol] = useState('http_api')
   const [enabledProtocols, setEnabledProtocols] = useState<string[]>(['http_api'])
   const [permissions, setPermissions] = useState<string[]>(['system_metrics', 'inventory', 'filesystem'])
-  const [expiresHours, setExpiresHours] = useState(24)
+  const [expiresHours, setExpiresHours] = useState<number | 'never'>(24)
 
   const toggleProtocol = (key: string) => {
     setEnabledProtocols((prev) =>
@@ -301,7 +301,7 @@ function InstallAgentModal({
       primary_protocol: primaryProtocol,
       enabled_protocols: enabledProtocols.length ? enabledProtocols : [primaryProtocol],
       permissions: permissions.length ? permissions : ['system_metrics', 'inventory', 'filesystem'],
-      expires_hours: expiresHours,
+      expires_hours: expiresHours === 'never' ? 0 : expiresHours,
     })
   }
 
@@ -390,7 +390,10 @@ function InstallAgentModal({
                 <h3 className="mb-2 text-sm font-medium text-white/80">Token expiry</h3>
                 <select
                   value={expiresHours}
-                  onChange={(e) => setExpiresHours(Number(e.target.value))}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setExpiresHours(v === 'never' ? 'never' : Number(v))
+                  }}
                   className="rounded border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
                 >
                   <option value={1}>1 hour</option>
@@ -398,6 +401,7 @@ function InstallAgentModal({
                   <option value={72}>72 hours</option>
                   <option value={168}>7 days</option>
                   <option value={720}>30 days</option>
+                  <option value="never">Never expires</option>
                 </select>
               </section>
 
@@ -440,7 +444,12 @@ function EnrollmentResultView({
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
-        <strong>Save this token.</strong> It will not be shown again. Expires: {new Date(result.expires_at).toLocaleString()}
+        <strong>Save this token.</strong> It will not be shown again.{' '}
+        {result.expires_at ? (
+          <>Expires: {new Date(result.expires_at).toLocaleString()}</>
+        ) : (
+          <>Never expires</>
+        )}
       </div>
 
       <div>

@@ -174,7 +174,7 @@ Users can install the agent directly from the PortShield portal:
 
 1. **Integrations** page → **Agents** section (platform-wide; used by ShieldObserve, ShieldInventory, VA scan, etc.)
 2. **Install Agent** → Opens modal with:
-   - **Protocol selection**: HTTP API (push), NRPE, SNMP – with descriptions and port info
+   - **Protocol selection**: HTTP API (push), PortShield Agent Protocol (PSAP, port 9444), SNMP – with descriptions and port info
    - **Permissions checklist**: System metrics, inventory, network, processes, filesystem
    - **Token expiry**: 1h, 24h, 72h, 7d, 30d
 3. **Generate token** → Returns enrollment token + install instructions for Linux, Windows, macOS

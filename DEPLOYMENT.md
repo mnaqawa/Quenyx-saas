@@ -71,6 +71,16 @@ BACKEND_BASE_URL=http://127.0.0.1:8000
 ENTITLEMENTS_CACHE_TTL_MS=30000
 ```
 
+**Backend `.env` – Agent install instructions:**
+
+Set `GATEWAY_BASE_URL` in `backend/.env` to your **public** gateway URL (e.g. `https://portshield.example.com`). This is used for agent download and enrollment commands. If unset, it falls back to `APP_URL` or `http://127.0.0.1:4000`.
+
+```bash
+GATEWAY_BASE_URL=https://your-public-domain.com
+```
+
+After changing `.env`, run `php artisan config:clear` (or `php artisan config:cache` in production).
+
 **Optional – ShieldObserve / Nagios:**
 
 ```bash

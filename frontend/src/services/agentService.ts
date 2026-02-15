@@ -35,7 +35,7 @@ export interface InstallInstructions {
 export interface EnrollmentTokenResponse {
   enrollment_token_id: number
   token: string
-  expires_at: string
+  expires_at: string | null
   primary_protocol: string
   enabled_protocols: string[]
   permissions: string[]

@@ -52,7 +52,7 @@ class AgentController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
-            'expires_hours' => ['nullable', 'integer', 'min:1', 'max:720'],
+            'expires_hours' => ['nullable', 'integer', 'min:0', 'max:720'],
             'primary_protocol' => ['nullable', 'string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
             'enabled_protocols' => ['nullable', 'array'],
             'enabled_protocols.*' => ['string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
@@ -62,9 +62,10 @@ class AgentController extends Controller
 
         $token = AgentEnrollmentToken::generateToken();
         $tokenHash = hash('sha256', $token);
-        $expiresAt = isset($validated['expires_hours'])
-            ? now()->addHours($validated['expires_hours'])
-            : now()->addHours(24);
+        $expiresHours = $validated['expires_hours'] ?? 24;
+        $expiresAt = ($expiresHours === 0 || $expiresHours === null)
+            ? null
+            : now()->addHours($expiresHours);
 
         $enrollmentToken = AgentEnrollmentToken::create([
             'workspace_id' => $project->id,
@@ -83,15 +84,14 @@ class AgentController extends Controller
         }
         $permissions = $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
 
-        $platformUrl = config('app.url', 'https://your-portshield-instance.com');
-        $gatewayUrl = rtrim(config('app.gateway_url', $platformUrl), '/');
+        $gatewayUrl = rtrim(config('app.gateway_url', config('app.url', 'http://127.0.0.1:4000')), '/');
 
         return response()->json([
             'success' => true,
             'data' => [
                 'enrollment_token_id' => $enrollmentToken->id,
                 'token' => $token,
-                'expires_at' => $enrollmentToken->expires_at->toIso8601String(),
+                'expires_at' => $enrollmentToken->expires_at?->toIso8601String(),
                 'primary_protocol' => $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
                 'permissions' => $permissions,

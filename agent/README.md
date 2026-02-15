@@ -53,7 +53,7 @@ The agent collects:
 ## Protocols
 
 - **HTTP API (default)**: Agent pushes data to the platform. Works across firewalls; only outbound HTTPS required.
-- **NRPE**: Platform connects to agent on port 5666 (requires inbound access).
+- **PSAP (PortShield Agent Protocol)**: Platform connects to agent on port 9444 (requires inbound access).
 - **SNMP**: Platform polls agent via SNMP (requires SNMP agent on host).
 
 ## Config location
