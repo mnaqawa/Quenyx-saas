@@ -108,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/workspaces/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     Route::get('/workspaces/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
+    Route::post('/workspaces/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
 
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
@@ -129,6 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/projects/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     Route::get('/projects/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
+    Route::post('/projects/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
     
     // Observe targets endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);

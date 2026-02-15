@@ -70,6 +70,38 @@ export const observeService = {
     )
   },
 
+  async runPortScans(
+    workspaceId: number,
+    options: {
+      hostIds?: number[]
+      ports?: 'top100' | 'all' | 'range'
+      portsRange?: string
+      protocol?: 'tcp' | 'udp'
+    }
+  ): Promise<{ scanned: number; total: number; errors: string[] }> {
+    const body: Record<string, unknown> = {
+      ports: options.ports ?? 'top100',
+      protocol: options.protocol ?? 'tcp',
+    }
+    if (options.hostIds && options.hostIds.length > 0) {
+      body.host_ids = options.hostIds
+    }
+    if (options.ports === 'range' && options.portsRange) {
+      body.ports_range = options.portsRange
+    }
+    const res = await gatewayClient.post<{ scanned: number; total: number; errors: string[] }>(
+      `workspaces/${workspaceId}/observe/infrastructure/port-scans/run`,
+      body,
+      { workspaceId, moduleKey: 'shieldobserve' }
+    )
+    const data = res as { scanned?: number; total?: number; errors?: string[] }
+    return {
+      scanned: data?.scanned ?? 0,
+      total: data?.total ?? 0,
+      errors: Array.isArray(data?.errors) ? data.errors : [],
+    }
+  },
+
   // Performance Analytics
   async getPerformanceMetrics(workspaceId: number, timeRange?: string): Promise<PerformanceMetric[]> {
     const endpoint = timeRange

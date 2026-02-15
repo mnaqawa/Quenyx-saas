@@ -474,6 +474,68 @@ class ObserveController extends Controller
     }
 
     /**
+     * Trigger nmap port scan(s) with custom options.
+     * POST /workspaces/{project}/observe/infrastructure/port-scans/run
+     * Body: { host_ids?: number[], ports?: 'top100'|'all'|'range', ports_range?: string, protocol?: 'tcp'|'udp' }
+     */
+    public function runPortScans(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $validated = $request->validate([
+            'host_ids' => 'nullable|array',
+            'host_ids.*' => 'integer',
+            'ports' => 'nullable|string|in:top100,all,range',
+            'ports_range' => 'nullable|string|max:500',
+            'protocol' => 'nullable|string|in:tcp,udp',
+        ]);
+
+        $hostIds = $validated['host_ids'] ?? null;
+        $options = [
+            'ports' => $validated['ports'] ?? 'top100',
+            'ports_range' => $validated['ports_range'] ?? '',
+            'protocol' => $validated['protocol'] ?? 'tcp',
+        ];
+
+        $query = ObserveTargetHost::where('workspace_id', $project->id)->where('enabled', true);
+        if ($hostIds !== null && count($hostIds) > 0) {
+            $query->whereIn('id', $hostIds);
+        }
+        $hosts = $query->get();
+
+        if ($hosts->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hosts to scan. Add hosts in Monitored Targets first.',
+            ], 400);
+        }
+
+        $nmapService = app(\App\Services\NmapPortScanService::class);
+        $scanned = 0;
+        $errors = [];
+
+        foreach ($hosts as $host) {
+            try {
+                $nmapService->runScan($host, $options);
+                $scanned++;
+            } catch (\Throwable $e) {
+                $errors[] = "{$host->name}: " . $e->getMessage();
+                Log::warning('Port scan failed', ['host_id' => $host->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Started {$scanned} scan(s)." . (count($errors) > 0 ? ' ' . count($errors) . ' failed.' : ''),
+            'data' => [
+                'scanned' => $scanned,
+                'total' => $hosts->count(),
+                'errors' => $errors,
+            ],
+        ]);
+    }
+
+    /**
      * Network topology from Observe data: targets + service status. Real data only.
      * Returns nodes array for backward compatibility (e.g. frontend NetworkNode[]).
      */

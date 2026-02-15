@@ -8,6 +8,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
+import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import type { PortScanResult } from '../../types/observe'
 
@@ -355,6 +356,15 @@ export default function InfrastructureMap() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(30)
+  const [scanModalOpen, setScanModalOpen] = useState(false)
+  const [scanOptions, setScanOptions] = useState<{ ports: 'top100' | 'all' | 'range'; portsRange: string; protocol: 'tcp' | 'udp'; hostIds: number[] }>({
+    ports: 'top100',
+    portsRange: '1-1024',
+    protocol: 'tcp',
+    hostIds: [],
+  })
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const topologyRef = useRef<HTMLDivElement>(null)
 
@@ -371,7 +381,7 @@ export default function InfrastructureMap() {
     refetchIntervalMs,
     includeIntegrations: true,
   })
-  const { data: portScansData } = useObservePortScans(selectedWorkspaceId, { refetchIntervalMs })
+  const { data: portScansData, refresh: refreshPortScans } = useObservePortScans(selectedWorkspaceId, { refetchIntervalMs })
   const portScansByHost = useMemo(() => {
     const map = new Map<string, NonNullable<typeof portScansData>[number]>()
     ;(portScansData ?? []).forEach((ps) => map.set(ps.host_name, ps))
@@ -1189,10 +1199,152 @@ export default function InfrastructureMap() {
 
         {activeTab === 'ports' && (
           <>
-            <h3 className="mb-1 text-sm font-semibold">Nmap Port Scan</h3>
-            <p className="mb-4 text-xs text-white/50">
-              Port scan results from nmap (top 100 ports). Scans run automatically when hosts are added or saved in Monitored Targets. Requires nmap installed on the server.
-            </p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="mb-1 text-sm font-semibold">Nmap Port Scan</h3>
+                <p className="text-xs text-white/50">
+                  Port scan results from nmap. Scans run when hosts are saved in Monitored Targets, or use Perform Scan for custom options. Requires nmap on the server.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setScanOptions((prev) => ({
+                    ...prev,
+                    hostIds: (portScansData ?? []).map((ps) => ps.host_id),
+                  }))
+                  setScanModalOpen(true)
+                  setScanError(null)
+                }}
+                disabled={(portScansData ?? []).length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+                Perform Scan
+              </button>
+            </div>
+
+            {scanModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !scanning && setScanModalOpen(false)}>
+                <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <h4 className="mb-4 text-base font-semibold">Port Scan Options</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-white/80">Port range</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['top100', 'all', 'range'] as const).map((p) => (
+                          <label key={p} className="flex cursor-pointer items-center gap-2">
+                            <input
+                              type="radio"
+                              name="ports"
+                              checked={scanOptions.ports === p}
+                              onChange={() => setScanOptions((prev) => ({ ...prev, ports: p }))}
+                              className="rounded border-white/20"
+                            />
+                            <span className="text-sm">
+                              {p === 'top100' ? 'Top 100' : p === 'all' ? 'All ports (1-65535)' : 'Custom range'}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {scanOptions.ports === 'range' && (
+                        <input
+                          type="text"
+                          value={scanOptions.portsRange}
+                          onChange={(e) => setScanOptions((prev) => ({ ...prev, portsRange: e.target.value }))}
+                          placeholder="e.g. 1-1024 or 80,443,8080"
+                          className="mt-2 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-sky-500/50 focus:outline-none"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-white/80">Protocol</label>
+                      <div className="flex gap-4">
+                        {(['tcp', 'udp'] as const).map((prot) => (
+                          <label key={prot} className="flex cursor-pointer items-center gap-2">
+                            <input
+                              type="radio"
+                              name="protocol"
+                              checked={scanOptions.protocol === prot}
+                              onChange={() => setScanOptions((prev) => ({ ...prev, protocol: prot }))}
+                              className="rounded border-white/20"
+                            />
+                            <span className="text-sm uppercase">{prot}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[10px] text-white/50">UDP scan may require root on Linux.</p>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-white/80">Hosts to scan</label>
+                      <p className="text-xs text-white/60">
+                        {scanOptions.hostIds.length === 0
+                          ? 'All hosts in workspace'
+                          : `${scanOptions.hostIds.length} host(s) selected`}
+                      </p>
+                      {scanOptions.hostIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setScanOptions((prev) => ({ ...prev, hostIds: [] }))}
+                          className="mt-1 text-[10px] text-sky-400 hover:underline"
+                        >
+                          Switch to all hosts
+                        </button>
+                      )}
+                    </div>
+                    {scanOptions.ports === 'all' && (
+                      <p className="rounded bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-200">
+                        All ports (1–65535) can take several minutes per host.
+                      </p>
+                    )}
+                  </div>
+                  {scanError && (
+                    <p className="mt-3 text-sm text-rose-400">{scanError}</p>
+                  )}
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => !scanning && setScanModalOpen(false)}
+                      className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!selectedWorkspaceId || scanning) return
+                        setScanning(true)
+                        setScanError(null)
+                        try {
+                          const res = await observeService.runPortScans(Number(selectedWorkspaceId), {
+                            hostIds: scanOptions.hostIds.length > 0 ? scanOptions.hostIds : undefined,
+                            ports: scanOptions.ports,
+                            portsRange: scanOptions.ports === 'range' ? scanOptions.portsRange : undefined,
+                            protocol: scanOptions.protocol,
+                          })
+                          if (res.errors.length > 0) {
+                            setScanError(res.errors.join('; '))
+                          }
+                          setScanModalOpen(false)
+                          refreshPortScans()
+                        } catch (e) {
+                          setScanError(e instanceof Error ? e.message : 'Scan failed')
+                        } finally {
+                          setScanning(false)
+                        }
+                      }}
+                      disabled={scanning}
+                      className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                    >
+                      {scanning ? 'Scanning…' : 'Start Scan'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {(portScansData ?? []).length === 0 ? (
               <div className="py-12 text-center text-sm text-white/50">
                 No port scan data. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link> and save to trigger nmap scans.
@@ -1207,6 +1359,17 @@ export default function InfrastructureMap() {
                         <p className="text-xs text-white/60">{ps.address}</p>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScanOptions((prev) => ({ ...prev, hostIds: [ps.host_id] }))
+                            setScanModalOpen(true)
+                            setScanError(null)
+                          }}
+                          className="rounded border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-medium text-sky-200 hover:bg-sky-500/20"
+                        >
+                          Scan
+                        </button>
                         {ps.scan?.status === 'completed' && (
                           <span className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-medium text-emerald-200">
                             {ps.scan.open_ports_count ?? 0} open

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import {
   realTimeMetricsFixture,
@@ -597,6 +597,19 @@ export function useObservePortScans(
   const [data, setData] = useState<import('../types/observe').PortScanResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const fetchScans = useCallback(() => {
+    if (!workspaceId) return
+    observeService
+      .getPortScans(Number(workspaceId))
+      .then((res) => setData(Array.isArray(res) ? res : []))
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to load port scans')
+        setData([])
+      })
+      .finally(() => setLoading(false))
+  }, [workspaceId])
 
   useEffect(() => {
     if (!workspaceId) {
@@ -605,35 +618,35 @@ export function useObservePortScans(
       setError(null)
       return
     }
-    setData([])
     setLoading(true)
     setError(null)
     let cancelled = false
-    const fetchScans = () => {
-      observeService
-        .getPortScans(Number(workspaceId))
-        .then((res) => {
-          if (!cancelled) setData(Array.isArray(res) ? res : [])
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            setError(err instanceof Error ? err.message : 'Failed to load port scans')
-            setData([])
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
-    }
-    fetchScans()
+    observeService
+      .getPortScans(Number(workspaceId))
+      .then((res) => {
+        if (!cancelled) setData(Array.isArray(res) ? res : [])
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load port scans')
+          setData([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     const id = refetchIntervalMs > 0 ? window.setInterval(fetchScans, refetchIntervalMs) : 0
     return () => {
       cancelled = true
       if (id) window.clearInterval(id)
     }
-  }, [workspaceId, refetchIntervalMs])
+  }, [workspaceId, refetchIntervalMs, refreshKey, fetchScans])
 
-  return { data, loading, error }
+  const refresh = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  return { data, loading, error, refresh }
 }
 
 export function useObserveKpis(workspaceId: string | null, refreshKey = 0) {
