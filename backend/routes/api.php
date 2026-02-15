@@ -19,6 +19,7 @@ use App\Http\Controllers\InviteController;
 Route::get('/health', [HealthController::class, 'index']);
 
 // Agent API (no user auth; uses enrollment token or agent secret)
+Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
 Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
 Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
 Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);

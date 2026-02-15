@@ -31,6 +31,9 @@ Lightweight agent for cross-network monitoring and asset inventory. Runs on Linu
 # Linux amd64
 GOOS=linux GOARCH=amd64 go build -o portshield-agent .
 
+# Linux arm64
+GOOS=linux GOARCH=arm64 go build -o portshield-agent .
+
 # Windows amd64
 GOOS=windows GOARCH=amd64 go build -o portshield-agent.exe .
 
@@ -40,6 +43,21 @@ GOOS=darwin GOARCH=amd64 go build -o portshield-agent .
 # macOS arm64 (Apple Silicon)
 GOOS=darwin GOARCH=arm64 go build -o portshield-agent .
 ```
+
+### Deploy binaries for portal download
+
+The Install Agent instructions use `/api/agents/download/{platform}`. To serve the agent from the portal:
+
+1. Build the agent for each platform (see above).
+2. Copy binaries into the backend storage:
+   - `backend/storage/app/agents/linux-amd64` (no extension)
+   - `backend/storage/app/agents/linux-arm64`
+   - `backend/storage/app/agents/windows-amd64` (binary; served as `portshield-agent.exe`)
+   - `backend/storage/app/agents/darwin-amd64`
+   - `backend/storage/app/agents/darwin-arm64`
+3. Ensure the `storage/app/agents` directory is writable by the web server.
+
+If a binary is missing, the download endpoint returns a JSON error (so users know to build from source or ask the admin).
 
 ## Permissions
 

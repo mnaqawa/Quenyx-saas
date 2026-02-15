@@ -81,6 +81,16 @@ GATEWAY_BASE_URL=https://your-public-domain.com
 
 After changing `.env`, run `php artisan config:clear` (or `php artisan config:cache` in production).
 
+**Agent binaries (for Install Agent download):**
+
+The route `GET /api/agents/download/{platform}` serves the agent binary. Build from `agent/` (Go) and place files in `backend/storage/app/agents/`:
+
+- `linux-amd64`, `linux-arm64` (no extension)
+- `windows-amd64`, `windows-arm64` (served as `portshield-agent.exe`)
+- `darwin-amd64`, `darwin-arm64`
+
+See `agent/README.md` for build commands. If a binary is missing, the endpoint returns JSON (so curl would save a JSON error instead of the binary).
+
 **Optional – ShieldObserve / Nagios:**
 
 ```bash
