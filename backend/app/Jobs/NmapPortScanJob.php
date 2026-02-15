@@ -17,10 +17,14 @@ class NmapPortScanJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 150;
+    public int $timeout = 600;
 
+    /**
+     * @param  array{ports?: string, ports_range?: string, protocol?: string}  $options
+     */
     public function __construct(
-        public int $hostId
+        public int $hostId,
+        public array $options = []
     ) {}
 
     public function handle(NmapPortScanService $service): void
@@ -31,6 +35,6 @@ class NmapPortScanJob implements ShouldQueue
             return;
         }
 
-        $service->runScan($host);
+        $service->runScan($host, $this->options);
     }
 }

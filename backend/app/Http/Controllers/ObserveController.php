@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\NmapPortScanJob;
 use App\Models\HostPortScan;
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
@@ -510,27 +511,18 @@ class ObserveController extends Controller
             ], 400);
         }
 
-        $nmapService = app(\App\Services\NmapPortScanService::class);
-        $scanned = 0;
-        $errors = [];
-
+        // Dispatch jobs to run after response is sent (avoids timeout; user gets immediate feedback)
         foreach ($hosts as $host) {
-            try {
-                $nmapService->runScan($host, $options);
-                $scanned++;
-            } catch (\Throwable $e) {
-                $errors[] = "{$host->name}: " . $e->getMessage();
-                Log::warning('Port scan failed', ['host_id' => $host->id, 'error' => $e->getMessage()]);
-            }
+            NmapPortScanJob::dispatch($host->id, $options)->afterResponse();
         }
 
         return response()->json([
             'success' => true,
-            'message' => "Started {$scanned} scan(s)." . (count($errors) > 0 ? ' ' . count($errors) . ' failed.' : ''),
+            'message' => 'Scan started. Results will appear when complete—refresh the page or wait for auto-refresh.',
             'data' => [
-                'scanned' => $scanned,
+                'scanned' => $hosts->count(),
                 'total' => $hosts->count(),
-                'errors' => $errors,
+                'errors' => [],
             ],
         ]);
     }

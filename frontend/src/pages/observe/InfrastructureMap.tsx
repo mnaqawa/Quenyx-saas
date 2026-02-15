@@ -365,6 +365,7 @@ export default function InfrastructureMap() {
   })
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [scanStartedMessage, setScanStartedMessage] = useState<string | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const topologyRef = useRef<HTMLDivElement>(null)
 
@@ -1296,7 +1297,7 @@ export default function InfrastructureMap() {
                     </div>
                     {scanOptions.ports === 'all' && (
                       <p className="rounded bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-200">
-                        All ports (1–65535) can take several minutes per host.
+                        All ports (1–65535) can take several minutes per host. Scan runs in background—you can close this and continue working; results will appear when ready.
                       </p>
                     )}
                   </div>
@@ -1326,9 +1327,12 @@ export default function InfrastructureMap() {
                           })
                           if (res.errors.length > 0) {
                             setScanError(res.errors.join('; '))
+                          } else {
+                            setScanModalOpen(false)
+                            setScanStartedMessage(`Scan started for ${res.scanned} host(s). Results will appear when ready—refresh or wait for auto-refresh.`)
+                            setTimeout(() => setScanStartedMessage(null), 8000)
+                            refreshPortScans()
                           }
-                          setScanModalOpen(false)
-                          refreshPortScans()
                         } catch (e) {
                           setScanError(e instanceof Error ? e.message : 'Scan failed')
                         } finally {
@@ -1338,13 +1342,18 @@ export default function InfrastructureMap() {
                       disabled={scanning}
                       className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
                     >
-                      {scanning ? 'Scanning…' : 'Start Scan'}
+                      {scanning ? 'Starting…' : 'Start Scan'}
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
+            {scanStartedMessage && (
+              <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                {scanStartedMessage}
+              </div>
+            )}
             {(portScansData ?? []).length === 0 ? (
               <div className="py-12 text-center text-sm text-white/50">
                 No port scan data. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link> and save to trigger nmap scans.
