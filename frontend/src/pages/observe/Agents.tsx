@@ -11,7 +11,6 @@ import type {
   ProtocolInfo,
   PermissionInfo,
   EnrollmentTokenResponse,
-  InstallInstructions,
 } from '../../services/agentService'
 
 function statusBadge(status: string) {
@@ -148,7 +147,7 @@ export default function Agents() {
     <div className="space-y-6">
       <PageHeader
         title="Agents"
-        description="Install agents on servers and workstations for cross-network monitoring and asset inventory."
+        subtitle="Install agents on servers and workstations for cross-network monitoring and asset inventory."
       />
 
       {error && (
@@ -236,7 +235,6 @@ export default function Agents() {
 
       {installModalOpen && (
         <InstallAgentModal
-          workspaceId={String(workspaceId)}
           metadata={metadata}
           enrollmentResult={enrollmentResult}
           creating={creating}
@@ -253,7 +251,6 @@ export default function Agents() {
 }
 
 interface InstallAgentModalProps {
-  workspaceId: string
   metadata: { protocols: Record<string, ProtocolInfo>; permissions: Record<string, PermissionInfo> }
   enrollmentResult: EnrollmentTokenResponse | null
   creating: boolean
@@ -267,7 +264,6 @@ interface InstallAgentModalProps {
 }
 
 function InstallAgentModal({
-  workspaceId,
   metadata,
   enrollmentResult,
   creating,
@@ -415,7 +411,7 @@ function InstallAgentModal({
               </div>
             </>
           ) : (
-            <EnrollmentResultView result={enrollmentResult} workspaceId={workspaceId} onClose={onClose} />
+            <EnrollmentResultView result={enrollmentResult} onClose={onClose} />
           )}
         </div>
       </div>
@@ -425,11 +421,9 @@ function InstallAgentModal({
 
 function EnrollmentResultView({
   result,
-  workspaceId,
   onClose,
 }: {
   result: EnrollmentTokenResponse
-  workspaceId: string
   onClose: () => void
 }) {
   const instructions = result.install_instructions
