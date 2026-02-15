@@ -7,8 +7,9 @@ import { Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
-import { useObserveMapHosts, useObserveServices, useObserveConnections } from '../../hooks/useObserveData'
+import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+import type { PortScanResult } from '../../types/observe'
 
 type HostRow = { name: string; address: string; status: string }
 
@@ -74,9 +75,264 @@ function statusLabel(s: string): string {
   }
 }
 
+// Zone colors for enterprise-style topology (similar to Thara network diagram)
+const ZONE_STYLES: Record<string, { border: string; bg: string; header: string }> = {
+  DMZ: { border: 'border-amber-500/50', bg: 'bg-amber-500/5', header: 'bg-amber-500/20 text-amber-200' },
+  WebApp: { border: 'border-sky-500/50', bg: 'bg-sky-500/5', header: 'bg-sky-500/20 text-sky-200' },
+  DB: { border: 'border-violet-500/50', bg: 'bg-violet-500/5', header: 'bg-violet-500/20 text-violet-200' },
+  Internal: { border: 'border-emerald-500/50', bg: 'bg-emerald-500/5', header: 'bg-emerald-500/20 text-emerald-200' },
+  Edge: { border: 'border-cyan-500/50', bg: 'bg-cyan-500/5', header: 'bg-cyan-500/20 text-cyan-200' },
+  API: { border: 'border-indigo-500/50', bg: 'bg-indigo-500/5', header: 'bg-indigo-500/20 text-indigo-200' },
+  Cache: { border: 'border-orange-500/50', bg: 'bg-orange-500/5', header: 'bg-orange-500/20 text-orange-200' },
+  Unassigned: { border: 'border-white/20', bg: 'bg-white/5', header: 'bg-white/10 text-white/70' },
+}
+
+function getZoneStyle(zone: string) {
+  return ZONE_STYLES[zone] ?? ZONE_STYLES.Unassigned
+}
+
+function ZoneBasedTopology({
+  hostsByZone,
+  zoneFilter,
+  statusLabel,
+  allZonesList,
+  layerFiltered,
+  portScansByHost,
+}: {
+  hostsByZone: Map<string, HostRow[]>
+  zoneFilter: string
+  statusLabel: (s: string) => string
+  allZonesList: string[]
+  layerFiltered: { hostsFiltered: HostRow[]; networksFiltered: Array<{ id: string; name: string; hosts: HostRow[]; status: string }> }
+  portScansByHost: Map<string, PortScanResult>
+}) {
+  const zonesToShow = zoneFilter === 'All Zones'
+    ? allZonesList.filter((z) => (hostsByZone.get(z) ?? []).length > 0)
+    : [zoneFilter]
+  const hasNetworks = layerFiltered.networksFiltered.length > 0
+
+  return (
+    <div className="relative space-y-6">
+      <p className="text-xs text-white/50 mb-3">
+        Zone-based topology — assign zones in Device List. Layout inspired by enterprise network diagrams (DMZ → Web/App → DB).
+      </p>
+      {/* Monitoring node (top-left, like ShieldObserve in PDF) */}
+      <div className="absolute right-4 top-4 z-10 rounded-xl border-2 border-sky-500/50 bg-sky-500/10 px-4 py-2 shadow-lg">
+        <p className="text-[10px] font-medium text-sky-300/80 uppercase tracking-wider">Monitoring</p>
+        <p className="text-sm font-semibold text-sky-200">ShieldObserve</p>
+      </div>
+      {/* Zone containers in a flow layout */}
+      <div className="grid grid-cols-1 gap-6 pt-14 md:grid-cols-2 lg:grid-cols-3">
+        {zonesToShow.map((zoneName) => {
+          const hosts = hostsByZone.get(zoneName) ?? []
+          const style = getZoneStyle(zoneName)
+          return (
+            <div
+              key={zoneName}
+              className={`rounded-xl border-2 ${style.border} ${style.bg} p-0 overflow-hidden min-h-[140px]`}
+            >
+              <div className={`px-4 py-2 ${style.header} border-b border-white/10`}>
+                <p className="text-xs font-semibold uppercase tracking-wider">{zoneName} Zone</p>
+                <p className="text-[10px] opacity-80">{hosts.length} host{hosts.length !== 1 ? 's' : ''}</p>
+              </div>
+              <div className="flex flex-wrap gap-3 p-4">
+                {hosts.map((h) => (
+                  <div
+                    key={h.name}
+                    className={`rounded-lg border-2 px-3 py-2.5 text-center min-w-[110px] transition-shadow hover:shadow-md ${
+                      h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <span className={`h-2 w-2 rounded-full ${h.status === 'ok' ? 'bg-emerald-400' : h.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`} />
+                      <p className="text-xs font-semibold truncate max-w-[100px]" title={h.name}>{h.name}</p>
+                    </div>
+                    <p className="text-[10px] text-white/60 truncate max-w-[100px]" title={h.address}>{h.address || '—'}</p>
+                    <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+                      {statusLabel(h.status)}
+                    </p>
+                    {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
+                      <p className="mt-1 text-[9px] text-sky-400">
+                        {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {/* Network segments (when Network Layer is shown) */}
+      {hasNetworks && (
+        <div className="rounded-xl border-2 border-sky-500/30 bg-sky-500/5 p-4">
+          <p className="text-xs font-semibold text-sky-200 uppercase tracking-wider mb-3">Network Segments</p>
+          <div className="flex flex-wrap gap-3">
+            {layerFiltered.networksFiltered.map((n) => (
+              <div
+                key={n.id}
+                className="rounded-lg border-2 border-sky-500/40 bg-sky-500/10 px-4 py-2.5 min-w-[120px]"
+              >
+                <p className="text-xs font-semibold truncate max-w-[140px]" title={n.name}>{n.name}</p>
+                <p className="text-[10px] text-white/60">{n.hosts.length} host{n.hosts.length !== 1 ? 's' : ''}</p>
+                <p className={`mt-1 text-[10px] font-medium ${n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {statusLabel(n.status)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {zonesToShow.length === 0 && !hasNetworks && (
+        <div className="py-12 text-center text-sm text-white/50">
+          No zones with hosts. Assign zones in Device List or add hosts in Monitored Targets.
+        </div>
+      )}
+    </div>
+  )
+}
+
+const MONITORING_NODE = { x: 20, y: 20, w: 110, h: 52 }
+
+function LLDTopology({
+  hosts,
+  networks,
+  diagram,
+  getNodePosition,
+  draggingNode,
+  handleNodeMouseDown,
+  statusLabel,
+  portScansByHost,
+}: {
+  hosts: HostRow[]
+  networks: Array<{ id: string; name: string; hosts: HostRow[]; status: string }>
+  diagram: DiagramState
+  getNodePosition: (name: string, idx: number, total: number) => { x: number; y: number }
+  draggingNode: string | null
+  handleNodeMouseDown: (e: React.MouseEvent, name: string) => void
+  statusLabel: (s: string) => string
+  portScansByHost: Map<string, PortScanResult>
+}) {
+  const nodeW = 130
+  const nodeH = 58
+  const hostPositions = hosts.map((h, idx) => ({
+    ...h,
+    x: (diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, hosts.length)).x,
+    y: (diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, hosts.length)).y,
+  }))
+  const networkPositions = networks.map((n, idx) => ({
+    ...n,
+    x: 100 + (idx % 4) * 170,
+    y: 80 + Math.floor(idx / 4) * 110,
+  }))
+  const mx = MONITORING_NODE.x + MONITORING_NODE.w / 2
+  const my = MONITORING_NODE.y + MONITORING_NODE.h / 2
+
+  return (
+    <div className="relative min-h-[400px] w-full" style={{ minWidth: 600 }}>
+      {/* Connection lines (SVG overlay) */}
+      <svg className="absolute inset-0 pointer-events-none z-0" width="100%" height="100%">
+        <defs>
+          <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+            <polygon points="0 0, 6 2, 0 4" fill="rgba(14,165,233,0.5)" />
+          </marker>
+        </defs>
+        {hostPositions.map((h) => {
+          const hx = h.x + nodeW / 2
+          const hy = h.y + nodeH / 2
+          const stroke = h.status === 'ok' ? '#10b981' : h.status === 'warning' ? '#f59e0b' : '#f43f5e'
+          return (
+            <line
+              key={`line-${h.name}`}
+              x1={mx}
+              y1={my}
+              x2={hx}
+              y2={hy}
+              stroke={stroke}
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              opacity={0.6}
+              markerEnd="url(#arrowhead)"
+            />
+          )
+        })}
+        {networkPositions.map((n) => {
+          const nx = n.x + nodeW / 2
+          const ny = n.y + nodeH / 2
+          return (
+            <line
+              key={`line-${n.id}`}
+              x1={mx}
+              y1={my}
+              x2={nx}
+              y2={ny}
+              stroke="#0ea5e9"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              opacity={0.6}
+              markerEnd="url(#arrowhead)"
+            />
+          )
+        })}
+      </svg>
+      {/* Monitoring node */}
+      <div
+        className="absolute z-10 rounded-xl border-2 border-sky-500/50 bg-sky-500/10 px-4 py-3 shadow-lg"
+        style={{ left: MONITORING_NODE.x, top: MONITORING_NODE.y, width: MONITORING_NODE.w, minHeight: MONITORING_NODE.h }}
+      >
+        <p className="text-[10px] font-medium text-sky-300/80 uppercase tracking-wider">Monitoring</p>
+        <p className="text-sm font-semibold text-sky-200">ShieldObserve</p>
+      </div>
+      {/* Host nodes */}
+      {hostPositions.map((h) => (
+        <div
+          key={h.name}
+          className={`absolute rounded-xl border-2 px-4 py-3 text-center cursor-move z-10 transition-shadow hover:shadow-lg ${
+            draggingNode === h.name ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-[#0f151d]' : ''
+          } ${h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'}`}
+          style={{ left: h.x, top: h.y, width: nodeW, minHeight: nodeH }}
+          onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
+        >
+          <div className="flex items-center gap-1.5 justify-center mb-0.5">
+            <span className={`h-2 w-2 rounded-full shrink-0 ${h.status === 'ok' ? 'bg-emerald-400' : h.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`} />
+            <p className="text-xs font-semibold truncate max-w-[100px]" title={h.name}>{h.name}</p>
+          </div>
+          <p className="text-[10px] text-white/60 truncate max-w-[120px]" title={h.address}>{h.address || '—'}</p>
+          <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+            {statusLabel(h.status)}
+          </p>
+          {diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned' && (
+            <p className="mt-1 text-[9px] text-white/50">Zone: {String(diagram.hostZones[h.name])}</p>
+          )}
+          {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
+            <p className="mt-1 text-[9px] text-sky-400">
+              {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
+            </p>
+          )}
+        </div>
+      ))}
+      {/* Network nodes */}
+      {networkPositions.map((n) => (
+        <div
+          key={n.id}
+          className="absolute rounded-xl border-2 border-sky-500/40 bg-sky-500/10 px-4 py-3 text-center z-10"
+          style={{ left: n.x, top: n.y, width: nodeW, minHeight: nodeH }}
+        >
+          <p className="text-[10px] font-medium text-sky-300/80 uppercase">Network</p>
+          <p className="mt-0.5 text-xs font-semibold truncate max-w-[110px]" title={n.name}>{n.name}</p>
+          <p className="mt-1 text-[10px] text-white/60">{n.hosts.length} host{n.hosts.length !== 1 ? 's' : ''}</p>
+          <p className={`mt-1 text-[10px] font-medium ${n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
+            {statusLabel(n.status)}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function InfrastructureMap() {
   const { selectedWorkspaceId } = useWorkspaceContext()
-  const [activeTab, setActiveTab] = useState<'topology' | 'devices' | 'connections' | 'health'>('topology')
+  const [activeTab, setActiveTab] = useState<'topology' | 'devices' | 'connections' | 'ports' | 'health'>('topology')
   const [viewType, setViewType] = useState<string>(VIEW_OPTIONS[0])
   const [layerFilter, setLayerFilter] = useState<string>(LAYER_OPTIONS[0])
   const [zoomLevel, setZoomLevel] = useState<string>(ZOOM_OPTIONS[0])
@@ -104,6 +360,12 @@ export default function InfrastructureMap() {
     refetchIntervalMs,
     includeIntegrations: true,
   })
+  const { data: portScansData } = useObservePortScans(selectedWorkspaceId, { refetchIntervalMs })
+  const portScansByHost = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof portScansData>[number]>()
+    ;(portScansData ?? []).forEach((ps) => map.set(ps.host_name, ps))
+    return map
+  }, [portScansData])
   const exportAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -533,6 +795,7 @@ export default function InfrastructureMap() {
     { id: 'topology' as const, label: 'Network Topology' },
     { id: 'devices' as const, label: 'Device List' },
     { id: 'connections' as const, label: 'Connections' },
+    { id: 'ports' as const, label: 'Port Scan' },
     { id: 'health' as const, label: 'Health Overview' },
   ]
 
@@ -741,28 +1004,15 @@ export default function InfrastructureMap() {
                 <div className="py-12 text-center text-sm text-white/50">
                   No hosts. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link>.
                 </div>
-              ) : viewType === 'By Zone' ? (
-                <div className="space-y-4">
-                  <p className="text-xs text-white/50 mb-3">Zones and hosts — assign zones in Device List. Drag nodes in Logical View to arrange.</p>
-                  {Array.from(hostsByZone.entries()).filter(([, list]) => list.length > 0).map(([zoneName]) => (
-                    <div key={zoneName} className="rounded-xl border-2 border-white/20 bg-white/5 p-4">
-                      <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">{zoneName}</p>
-                      <div className="flex flex-wrap gap-3">
-                        {(hostsByZone.get(zoneName) ?? []).map((h) => (
-                          <div
-                            key={h.name}
-                            className={`rounded-lg border-2 px-3 py-2 text-center min-w-[100px] ${
-                              h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'
-                            }`}
-                          >
-                            <p className="text-xs font-semibold truncate max-w-[120px]" title={h.name}>{h.name}</p>
-                            <p className="text-[10px] text-white/60">{statusLabel(h.status)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              ) : viewType === 'By Zone' || viewType === 'Security Zones' ? (
+                <ZoneBasedTopology
+                  hostsByZone={hostsByZone}
+                  zoneFilter={zoneFilter}
+                  statusLabel={statusLabel}
+                  allZonesList={allZonesList}
+                  layerFiltered={layerFiltered}
+                  portScansByHost={portScansByHost}
+                />
               ) : designLevel === 'hld' ? (
                 <div className="flex flex-col items-center gap-4">
                   <div className="rounded-xl border-2 border-sky-500/30 bg-sky-500/10 px-8 py-6 text-center">
@@ -777,53 +1027,16 @@ export default function InfrastructureMap() {
                   <p className="text-xs text-white/40">HLD: High-level view. Export JSON/PNG/PDF for full HLD/LLD with zones.</p>
                 </div>
               ) : (
-                <div className="relative min-h-[360px]" style={{ width: '100%' }}>
-                  <div
-                    className="absolute rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-center cursor-default"
-                    style={{ left: 20, top: 20 }}
-                  >
-                    <p className="text-[10px] font-medium text-white/50 uppercase">Monitoring</p>
-                    <p className="text-xs font-semibold text-sky-200">ShieldObserve</p>
-                  </div>
-                  {(zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone).map((h, idx) => {
-                    const pos = getNodePosition(h.name, idx, (zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone).length)
-                    return (
-                      <div
-                        key={h.name}
-                        className={`absolute rounded-xl border-2 px-4 py-3 text-center min-w-[120px] cursor-move ${
-                          draggingNode === h.name ? 'ring-2 ring-sky-400 z-10' : ''
-                        } ${
-                          h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'
-                        }`}
-                        style={{ left: pos.x, top: pos.y }}
-                        onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
-                      >
-                        <p className="text-xs font-semibold truncate max-w-[140px]" title={h.name}>{h.name}</p>
-                        <p className="mt-0.5 text-[10px] text-white/60 truncate max-w-[140px]" title={h.address}>{h.address}</p>
-                        <p className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
-                          {statusLabel(h.status)}
-                        </p>
-                        {(diagram.hostZones[h.name] && diagram.hostZones[h.name] !== 'Unassigned') && (
-                          <p className="mt-1 text-[9px] text-white/50">Zone: {String(diagram.hostZones[h.name])}</p>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {layerFiltered.networksFiltered.map((n, idx) => (
-                    <div
-                      key={n.id}
-                      className="absolute rounded-xl border-2 border-sky-500/40 bg-sky-500/10 px-4 py-3 text-center min-w-[120px] cursor-default"
-                      style={{ left: 80 + (idx % 4) * 160, top: 60 + Math.floor(idx / 4) * 100 }}
-                    >
-                      <p className="text-[10px] font-medium text-white/50 uppercase">Network</p>
-                      <p className="mt-0.5 text-xs font-semibold truncate max-w-[140px]" title={n.name}>{n.name}</p>
-                      <p className="mt-1 text-[10px] text-white/60">{n.hosts.length} hosts</p>
-                      <p className={`mt-1 text-[10px] font-medium ${n.status === 'ok' ? 'text-sky-400' : n.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}>
-                        {statusLabel(n.status)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <LLDTopology
+                  hosts={zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone}
+                  networks={layerFiltered.networksFiltered}
+                  diagram={diagram}
+                  getNodePosition={getNodePosition}
+                  draggingNode={draggingNode}
+                  handleNodeMouseDown={handleNodeMouseDown}
+                  statusLabel={statusLabel}
+                  portScansByHost={portScansByHost}
+                />
               )}
             </div>
             <div className="mt-4 flex gap-6 text-[10px] text-white/50">
@@ -950,6 +1163,70 @@ export default function InfrastructureMap() {
                     {c.fromIntegration && c.integrationName ? (
                       <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] text-sky-200" title="From external integration">Integration: {c.integrationName}</span>
                     ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'ports' && (
+          <>
+            <h3 className="mb-1 text-sm font-semibold">Nmap Port Scan</h3>
+            <p className="mb-4 text-xs text-white/50">
+              Port scan results from nmap (top 100 ports). Scans run automatically when hosts are added or saved in Monitored Targets. Requires nmap installed on the server.
+            </p>
+            {(portScansData ?? []).length === 0 ? (
+              <div className="py-12 text-center text-sm text-white/50">
+                No port scan data. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link> and save to trigger nmap scans.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(portScansData ?? []).map((ps) => (
+                  <div key={ps.host_id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div>
+                        <p className="font-semibold text-sm">{ps.host_name}</p>
+                        <p className="text-xs text-white/60">{ps.address}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {ps.scan?.status === 'completed' && (
+                          <span className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-medium text-emerald-200">
+                            {ps.scan.open_ports_count ?? 0} open
+                          </span>
+                        )}
+                        {ps.scan?.status === 'running' && (
+                          <span className="rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-200">Scanning…</span>
+                        )}
+                        {ps.scan?.status === 'failed' && (
+                          <span className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-medium text-rose-200" title={ps.scan.error_message ?? ''}>Failed</span>
+                        )}
+                        {ps.scan?.status === 'pending' && (
+                          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">Pending</span>
+                        )}
+                        {ps.scan?.scanned_at && (
+                          <span className="text-[10px] text-white/50">
+                            {new Date(ps.scan.scanned_at).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {ps.ports.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {ps.ports.filter((p) => p.state === 'open').map((p) => (
+                          <span
+                            key={`${p.port}-${p.protocol}`}
+                            className="inline-flex items-center gap-1 rounded bg-sky-500/20 px-2 py-1 text-xs font-mono text-sky-200"
+                            title={p.service ? `${p.service}${p.version ? ' ' + p.version : ''}` : undefined}
+                          >
+                            {p.port}/{p.protocol}
+                            {p.service && <span className="text-white/70">({p.service})</span>}
+                          </span>
+                        ))}
+                      </div>
+                    ) : ps.scan?.status === 'completed' && (
+                      <p className="text-xs text-white/50">No open ports found in scan range.</p>
+                    )}
                   </div>
                 ))}
               </div>

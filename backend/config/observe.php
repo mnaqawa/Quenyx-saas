@@ -37,4 +37,14 @@ return [
     */
     'http_timeout_seconds' => (float) env('OBSERVE_HTTP_TIMEOUT_SECONDS', 10),
     'connect_timeout_seconds' => (float) env('OBSERVE_CONNECT_TIMEOUT_SECONDS', 5),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Nmap port scan (Infrastructure Map)
+    |--------------------------------------------------------------------------
+    | Ports: --top-ports 100 (fast) or -p 1-1024 (common) or -p- (all 65535, slow).
+    | Timeout: max seconds for nmap process.
+    */
+    'nmap_ports' => env('OBSERVE_NMAP_PORTS', '--top-ports 100'),
+    'nmap_timeout_seconds' => (int) env('OBSERVE_NMAP_TIMEOUT_SECONDS', 120),
 ];

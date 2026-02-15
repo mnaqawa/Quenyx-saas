@@ -437,10 +437,11 @@ export default function RealTimeMonitoring() {
               ? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
               : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-100'
           }`}
+          role="alert"
         >
           {engineUnreachable
             ? 'Monitoring engine is unreachable. Status may be outdated.'
-            : `Data may be stale. Last poll: ${lastPollAt ? new Date(lastPollAt).toLocaleString() : 'never'}.`}
+            : `Data may be stale. Last poll: ${lastPollAt ? new Date(lastPollAt).toLocaleString() : 'never'}. Ensure the Laravel scheduler runs \`observe:run-checks\` every minute.`}
         </div>
       )}
 

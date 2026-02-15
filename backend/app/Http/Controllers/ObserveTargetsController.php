@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\NmapPortScanJob;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\ObserveService;
@@ -332,8 +333,9 @@ class ObserveTargetsController extends Controller
         }
         unset($hostData, $serviceData);
 
+        $savedHostIds = [];
         try {
-            DB::transaction(function () use ($project, $hostsData, $normalizedCheckArgsByIndex) {
+            DB::transaction(function () use ($project, $hostsData, $normalizedCheckArgsByIndex, &$savedHostIds) {
                 // Get existing host IDs to track what to delete
                 $existingHostIds = ObserveTargetHost::where('workspace_id', $project->id)
                     ->pluck('id')
@@ -449,6 +451,7 @@ class ObserveTargetsController extends Controller
                     ObserveTargetService::whereIn('host_id', $hostsToDelete)->delete();
                     ObserveTargetHost::whereIn('id', $hostsToDelete)->delete();
                 }
+                $savedHostIds = $newHostIds;
             });
 
             // Verify persistence when we had hosts to write (fail fast if DB didn't persist)
@@ -462,6 +465,11 @@ class ObserveTargetsController extends Controller
 
             // Sync targets → observe_services (native engine) so Services page shows targets; run-checks will update state
             $this->syncTargetsToObserveServices($project);
+
+            // Dispatch nmap port scans for each host saved in this request (runs after response; requires nmap installed)
+            foreach ($savedHostIds as $hostId) {
+                NmapPortScanJob::dispatch($hostId)->afterResponse();
+            }
 
             // Run native checks once for this workspace so Services page updates immediately
             try {
@@ -534,6 +542,58 @@ class ObserveTargetsController extends Controller
                 'errors' => config('app.debug') ? ['detail' => $e->getTraceAsString()] : null,
             ], 500);
         }
+    }
+
+    /**
+     * Get nmap port scan results for a host.
+     */
+    public function portScan(Request $request, Project $project, int $hostId): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $host = ObserveTargetHost::where('workspace_id', $project->id)->where('id', $hostId)->first();
+        if (!$host) {
+            return response()->json(['success' => false, 'message' => 'Host not found'], 404);
+        }
+
+        $latestScan = $host->portScans()->with('results')->orderByDesc('id')->first();
+        if (!$latestScan) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'host_id' => $host->id,
+                    'host_name' => $host->name,
+                    'address' => $host->address,
+                    'scan' => null,
+                    'ports' => [],
+                ],
+            ]);
+        }
+
+        $ports = $latestScan->results->map(fn ($r) => [
+            'port' => $r->port,
+            'protocol' => $r->protocol,
+            'state' => $r->state,
+            'service' => $r->service,
+            'version' => $r->version,
+        ])->values()->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'host_id' => $host->id,
+                'host_name' => $host->name,
+                'address' => $host->address,
+                'scan' => [
+                    'id' => $latestScan->id,
+                    'status' => $latestScan->status,
+                    'scanned_at' => $latestScan->scanned_at?->toIso8601String(),
+                    'open_ports_count' => $latestScan->open_ports_count,
+                    'error_message' => $latestScan->error_message,
+                ],
+                'ports' => $ports,
+            ],
+        ]);
     }
 
     /**

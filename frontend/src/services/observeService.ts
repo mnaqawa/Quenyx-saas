@@ -16,6 +16,7 @@ import type {
   ObserveServicesResponse,
   ServiceDefinition,
   InfrastructureConnectionsResponse,
+  PortScanResult,
 } from '../types/observe'
 
 export const observeService = {
@@ -58,6 +59,13 @@ export const observeService = {
     const q = includeIntegrations ? '?include_integrations=1' : ''
     return gatewayClient.get<InfrastructureConnectionsResponse>(
       `workspaces/${workspaceId}/observe/infrastructure/connections${q}`,
+      { workspaceId, moduleKey: 'shieldobserve' }
+    )
+  },
+
+  async getPortScans(workspaceId: number): Promise<PortScanResult[]> {
+    return gatewayClient.get<PortScanResult[]>(
+      `workspaces/${workspaceId}/observe/infrastructure/port-scans`,
       { workspaceId, moduleKey: 'shieldobserve' }
     )
   },

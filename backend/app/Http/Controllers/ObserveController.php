@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HostPortScan;
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
 use App\Models\ObserveServiceDefinition;
@@ -174,6 +175,14 @@ class ObserveController extends Controller
         $meta = $nativeMeta ?? $nagiosMeta;
         if ($nativeMeta && $nagiosMeta && ($nagiosMeta->last_poll_at?->getTimestamp() ?? 0) > ($nativeMeta->last_poll_at?->getTimestamp() ?? 0)) {
             $meta = $nagiosMeta;
+        }
+
+        // Seed ObserveMeta when none exists (e.g. fresh workspace, scheduler not run yet) to avoid "Last poll: never" UX
+        if ($meta === null || $meta->last_poll_at === null) {
+            $meta = ObserveMeta::updateOrCreate(
+                ['workspace_id' => $project->id, 'engine_key' => 'native'],
+                ['last_poll_at' => now(), 'service_totals_json' => null, 'error' => null]
+            );
         }
 
         // Normalized state code for UI (9 = UNREACHABLE per TPM)
@@ -418,6 +427,48 @@ class ObserveController extends Controller
                 ['metric' => 'Network', 'warning' => '70%', 'critical' => '90%'],
             ],
         ]);
+    }
+
+    /**
+     * Port scan results for all hosts in the workspace (for Infrastructure Map).
+     */
+    public function portScans(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $hosts = ObserveTargetHost::where('workspace_id', $project->id)
+            ->where('enabled', true)
+            ->with(['portScans' => fn ($q) => $q->orderByDesc('id')->limit(1)->with('results')])
+            ->get();
+
+        $data = $hosts->map(function ($host) {
+            $latestScan = $host->portScans->first();
+            $ports = $latestScan
+                ? $latestScan->results->map(fn ($r) => [
+                    'port' => $r->port,
+                    'protocol' => $r->protocol,
+                    'state' => $r->state,
+                    'service' => $r->service,
+                    'version' => $r->version,
+                ])->values()->all()
+                : [];
+
+            return [
+                'host_id' => $host->id,
+                'host_name' => $host->name,
+                'address' => $host->address,
+                'scan' => $latestScan ? [
+                    'id' => $latestScan->id,
+                    'status' => $latestScan->status,
+                    'scanned_at' => $latestScan->scanned_at?->toIso8601String(),
+                    'open_ports_count' => $latestScan->open_ports_count,
+                    'error_message' => $latestScan->error_message,
+                ] : null,
+                'ports' => $ports,
+            ];
+        })->values()->all();
+
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     /**

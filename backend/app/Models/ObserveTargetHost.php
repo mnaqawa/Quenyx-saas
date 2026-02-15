@@ -41,4 +41,9 @@ class ObserveTargetHost extends Model
     {
         return $this->hasMany(ObserveTargetService::class, 'host_id');
     }
+
+    public function portScans(): HasMany
+    {
+        return $this->hasMany(HostPortScan::class, 'host_id');
+    }
 }

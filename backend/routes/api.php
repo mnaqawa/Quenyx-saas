@@ -107,6 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
     Route::get('/workspaces/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/workspaces/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
+    Route::get('/workspaces/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
 
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
@@ -127,14 +128,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/real-time/thresholds', [\App\Http\Controllers\ObserveController::class, 'performanceThresholds']);
     Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/projects/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
+    Route::get('/projects/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
     
     // Observe targets endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
     Route::put('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
     Route::post('/workspaces/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
+    Route::get('/workspaces/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
     
     // Observe targets endpoints (project aliases)
     Route::get('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
     Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
     Route::post('/projects/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
+    Route::get('/projects/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
 });

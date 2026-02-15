@@ -100,6 +100,27 @@ export interface InfrastructureConnectionsResponse {
   from_integrations?: string[]
 }
 
+/** Nmap port scan result for Infrastructure Map */
+export interface PortScanResult {
+  host_id: number
+  host_name: string
+  address: string
+  scan: {
+    id: number
+    status: 'pending' | 'running' | 'completed' | 'failed'
+    scanned_at: string | null
+    open_ports_count: number | null
+    error_message: string | null
+  } | null
+  ports: Array<{
+    port: number
+    protocol: string
+    state: string
+    service: string | null
+    version: string | null
+  }>
+}
+
 export interface CapacityMetric {
   title: string
   value: string
