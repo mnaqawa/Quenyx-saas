@@ -5,7 +5,7 @@ import { ModuleWithAccess } from '../types/module'
 import { workspaceService } from '../services/workspaceService'
 import { subscriptionService } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
-import { getAuthToken } from '../services/apiClient'
+import { getAuthToken, WORKSPACE_404_EVENT } from '../services/apiClient'
 
 interface WorkspaceContextValue {
   workspaces: Project[] // Keep Project type since backend returns Project
@@ -182,6 +182,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshWorkspaces()
+  }, [refreshWorkspaces])
+
+  // When a workspace-scoped API returns 404 (workspace deleted), refresh and pick a valid one
+  useEffect(() => {
+    const handler = () => {
+      setSelectedWorkspaceIdState(null)
+      refreshWorkspaces()
+    }
+    window.addEventListener(WORKSPACE_404_EVENT, handler)
+    return () => window.removeEventListener(WORKSPACE_404_EVENT, handler)
   }, [refreshWorkspaces])
 
   const refreshModules = useCallback(async () => {

@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -97,6 +98,18 @@ class Handler extends ExceptionHandler
                 'message' => 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
+        }
+
+        // Handle model not found (e.g. workspace/project deleted or invalid ID)
+        if ($e instanceof ModelNotFoundException) {
+            $model = class_basename($e->getModel());
+            $message = $model === 'Project'
+                ? 'Workspace not found. It may have been deleted or you no longer have access.'
+                : 'Resource not found.';
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 404);
         }
 
         // Handle HTTP exceptions

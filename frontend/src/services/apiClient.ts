@@ -1,5 +1,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN_STORAGE_KEY = 'portshield.auth.token'
+const WORKSPACE_STORAGE_KEY = 'portshield.selected_workspace_id'
+const OLD_WORKSPACE_STORAGE_KEY = 'portshield.selected_project_id'
+
+/** Emitted when a workspace-scoped API returns 404 (workspace deleted or invalid) */
+export const WORKSPACE_404_EVENT = 'portshield:workspace-404'
 
 export const getAuthToken = (): string | null => {
   return localStorage.getItem(TOKEN_STORAGE_KEY)
@@ -128,6 +133,20 @@ class ApiClient {
             console.error('API Error (403):', { url, status: response.status, message: errorMessage })
           }
           throw forbiddenError
+        }
+
+        // 404 on workspace-scoped endpoints: workspace may have been deleted
+        if (response.status === 404) {
+          const workspaceMatch = url.match(/\/workspaces\/(\d+)\//) || url.match(/\/projects\/(\d+)\//)
+          if (workspaceMatch) {
+            const workspaceId = workspaceMatch[1]
+            const stored = localStorage.getItem(WORKSPACE_STORAGE_KEY) || localStorage.getItem(OLD_WORKSPACE_STORAGE_KEY)
+            if (stored === workspaceId) {
+              localStorage.removeItem(WORKSPACE_STORAGE_KEY)
+              localStorage.removeItem(OLD_WORKSPACE_STORAGE_KEY)
+              window.dispatchEvent(new CustomEvent(WORKSPACE_404_EVENT, { detail: { workspaceId } }))
+            }
+          }
         }
         
         if (response.status >= 500) {
