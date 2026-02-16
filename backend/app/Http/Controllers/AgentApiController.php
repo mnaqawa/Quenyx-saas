@@ -21,25 +21,29 @@ use Illuminate\Validation\Rule;
 class AgentApiController extends Controller
 {
     /**
-     * Register a new agent with an enrollment token.
+     * Register a new agent with an enrollment token (multi-tenant: agent is tied to workspace_id from token).
      * POST /api/agents/register
      * Body: { workspace_id, token, hostname, os?, arch?, agent_version?, primary_protocol?, enabled_protocols?, permissions? }
      */
     public function register(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'workspace_id' => ['required', 'integer', 'exists:projects,id'],
-            'token' => ['required', 'string', 'min:10'],
-            'hostname' => ['required', 'string', 'max:255'],
-            'os' => ['nullable', 'string', 'max:100'],
-            'arch' => ['nullable', 'string', 'max:50'],
-            'agent_version' => ['nullable', 'string', 'max:50'],
-            'primary_protocol' => ['nullable', 'string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
-            'enabled_protocols' => ['nullable', 'array'],
-            'enabled_protocols.*' => ['string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
-            'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', Rule::in(array_keys(AgentConstants::PERMISSIONS))],
-        ]);
+        try {
+            $validated = $request->validate([
+                'workspace_id' => ['required', 'integer', 'exists:projects,id'],
+                'token' => ['required', 'string', 'min:10'],
+                'hostname' => ['required', 'string', 'max:255'],
+                'os' => ['nullable', 'string', 'max:100'],
+                'arch' => ['nullable', 'string', 'max:50'],
+                'agent_version' => ['nullable', 'string', 'max:50'],
+                'primary_protocol' => ['nullable', 'string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
+                'enabled_protocols' => ['nullable', 'array'],
+                'enabled_protocols.*' => ['string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
+                'permissions' => ['nullable', 'array'],
+                'permissions.*' => ['string', Rule::in(array_keys(AgentConstants::PERMISSIONS))],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        }
 
         $tokenHash = hash('sha256', $validated['token']);
         $enrollmentToken = AgentEnrollmentToken::where('workspace_id', $validated['workspace_id'])
@@ -62,49 +66,62 @@ class AgentApiController extends Controller
             ], 401);
         }
 
-        $agentSecret = Agent::generateId();
-        $agentId = Agent::generateId();
-        $primaryProtocol = $validated['primary_protocol'] ?? AgentConstants::PROTOCOL_HTTP_API;
-        $enabledProtocols = $validated['enabled_protocols'] ?? [$primaryProtocol];
-        if (! in_array($primaryProtocol, $enabledProtocols, true)) {
-            $enabledProtocols[] = $primaryProtocol;
-        }
-        $permissions = $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
+        try {
+            $agentSecret = Agent::generateId();
+            $agentId = Agent::generateId();
+            $primaryProtocol = $validated['primary_protocol'] ?? AgentConstants::PROTOCOL_HTTP_API;
+            $enabledProtocols = $validated['enabled_protocols'] ?? [$primaryProtocol];
+            if (! in_array($primaryProtocol, $enabledProtocols, true)) {
+                $enabledProtocols[] = $primaryProtocol;
+            }
+            $permissions = $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
 
-        $agent = Agent::create([
-            'id' => $agentId,
-            'workspace_id' => $validated['workspace_id'],
-            'enrollment_token_id' => $enrollmentToken->id,
-            'hostname' => $validated['hostname'],
-            'os' => $validated['os'] ?? null,
-            'arch' => $validated['arch'] ?? null,
-            'agent_version' => $validated['agent_version'] ?? null,
-            'primary_protocol' => $primaryProtocol,
-            'enabled_protocols' => $enabledProtocols,
-            'permissions' => $permissions,
-            'agent_secret_hash' => Hash::make($agentSecret),
-            'last_seen_at' => now(),
-            'status' => AgentConstants::STATUS_ONLINE,
-            'enrolled_at' => now(),
-        ]);
-
-        $enrollmentToken->update(['used_at' => now()]);
-
-        Log::info('Agent registered', [
-            'agent_id' => $agentId,
-            'workspace_id' => $agent->workspace_id,
-            'hostname' => $agent->hostname,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'agent_id' => $agentId,
-                'agent_secret' => $agentSecret,
+            $agent = Agent::create([
+                'id' => $agentId,
+                'workspace_id' => $validated['workspace_id'],
+                'enrollment_token_id' => $enrollmentToken->id,
+                'hostname' => $validated['hostname'],
+                'os' => $validated['os'] ?? null,
+                'arch' => $validated['arch'] ?? null,
+                'agent_version' => $validated['agent_version'] ?? null,
                 'primary_protocol' => $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
-            ],
-        ]);
+                'permissions' => $permissions,
+                'agent_secret_hash' => Hash::make($agentSecret),
+                'last_seen_at' => now(),
+                'status' => AgentConstants::STATUS_ONLINE,
+                'enrolled_at' => now(),
+            ]);
+
+            $enrollmentToken->update(['used_at' => now()]);
+
+            Log::info('Agent registered', [
+                'agent_id' => $agentId,
+                'workspace_id' => $agent->workspace_id,
+                'hostname' => $agent->hostname,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'agent_id' => $agentId,
+                    'agent_secret' => $agentSecret,
+                    'primary_protocol' => $primaryProtocol,
+                    'enabled_protocols' => $enabledProtocols,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Agent registration failed', [
+                'workspace_id' => $validated['workspace_id'] ?? null,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed. Check server logs.',
+            ], 500);
+        }
     }
 
     /**

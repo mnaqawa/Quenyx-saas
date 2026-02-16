@@ -10,7 +10,7 @@ class AgentEnrollmentToken extends Model
 {
     protected $table = 'agent_enrollment_tokens';
 
-    protected $fillable = ['workspace_id', 'name', 'token_hash', 'expires_at'];
+    protected $fillable = ['workspace_id', 'name', 'token_hash', 'expires_at', 'used_at'];
 
     protected $casts = [
         'expires_at' => 'datetime',
