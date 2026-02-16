@@ -65,7 +65,7 @@ WantedBy=multi-user.target
 
 func installWindowsService(exe string) error {
 	// TODO: Use golang.org/x/sys/windows/svc or similar
-	return fmt.Errorf("Windows service install not yet implemented. Run manually: %s run", exe)
+	return fmt.Errorf("Windows service install not yet implemented. Run manually from this directory: .\\portshield-agent.exe run  or use the full path: %s run", exe)
 }
 
 func installLaunchd(exe string) error {

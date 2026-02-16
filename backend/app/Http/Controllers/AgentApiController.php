@@ -70,12 +70,13 @@ class AgentApiController extends Controller
         try {
             $agentSecret = Agent::generateId();
             $agentId = Agent::generateId();
-            $primaryProtocol = $validated['primary_protocol'] ?? AgentConstants::PROTOCOL_HTTP_API;
-            $enabledProtocols = $validated['enabled_protocols'] ?? [$primaryProtocol];
+            // Use protocol and permissions from the enrollment token (chosen in UI), not from the agent request
+            $primaryProtocol = $enrollmentToken->primary_protocol ?? $validated['primary_protocol'] ?? AgentConstants::PROTOCOL_HTTP_API;
+            $enabledProtocols = $enrollmentToken->enabled_protocols ?? $validated['enabled_protocols'] ?? [$primaryProtocol];
             if (! in_array($primaryProtocol, $enabledProtocols, true)) {
                 $enabledProtocols[] = $primaryProtocol;
             }
-            $permissions = $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
+            $permissions = $enrollmentToken->permissions ?? $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
 
             $agent = Agent::create([
                 'id' => $agentId,

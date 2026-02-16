@@ -10,11 +10,22 @@ class AgentEnrollmentToken extends Model
 {
     protected $table = 'agent_enrollment_tokens';
 
-    protected $fillable = ['workspace_id', 'name', 'token_hash', 'expires_at', 'used_at'];
+    protected $fillable = [
+        'workspace_id',
+        'name',
+        'token_hash',
+        'expires_at',
+        'primary_protocol',
+        'enabled_protocols',
+        'permissions',
+        'used_at',
+    ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'used_at' => 'datetime',
+        'enabled_protocols' => 'array',
+        'permissions' => 'array',
     ];
 
     public function workspace(): BelongsTo

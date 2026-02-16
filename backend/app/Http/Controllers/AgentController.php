@@ -67,22 +67,25 @@ class AgentController extends Controller
             ? null
             : now()->addHours($expiresHours);
 
-        $enrollmentToken = AgentEnrollmentToken::create([
-            'workspace_id' => $project->id,
-            'name' => $validated['name'] ?? null,
-            'token_hash' => $tokenHash,
-            'expires_at' => $expiresAt,
-        ]);
-
-        // Store plain token for response (we hashed for DB)
-        $enrollmentToken->plain_token = $token;
-
         $primaryProtocol = $validated['primary_protocol'] ?? AgentConstants::PROTOCOL_HTTP_API;
         $enabledProtocols = $validated['enabled_protocols'] ?? [$primaryProtocol];
         if (! in_array($primaryProtocol, $enabledProtocols, true)) {
             $enabledProtocols[] = $primaryProtocol;
         }
         $permissions = $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
+
+        $enrollmentToken = AgentEnrollmentToken::create([
+            'workspace_id' => $project->id,
+            'name' => $validated['name'] ?? null,
+            'token_hash' => $tokenHash,
+            'expires_at' => $expiresAt,
+            'primary_protocol' => $primaryProtocol,
+            'enabled_protocols' => $enabledProtocols,
+            'permissions' => $permissions,
+        ]);
+
+        // Store plain token for response (we hashed for DB)
+        $enrollmentToken->plain_token = $token;
 
         $gatewayUrl = rtrim(config('app.gateway_url', config('app.url', 'http://127.0.0.1:4000')), '/');
 

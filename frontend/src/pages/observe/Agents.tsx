@@ -221,7 +221,15 @@ export default function Agents({ embedded = false }: AgentsProps) {
                   <td className="px-4 py-3 text-sm text-white/70">
                     {[a.os, a.arch].filter(Boolean).join(' / ') || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white/70">{a.primary_protocol}</td>
+                  <td className="px-4 py-3 text-sm text-white/70">
+                    {a.primary_protocol === 'psap'
+                      ? 'PortShield Agent Protocol (PSAP)'
+                      : a.primary_protocol === 'http_api'
+                        ? 'HTTP API (Push)'
+                        : a.primary_protocol === 'snmp'
+                          ? 'SNMP'
+                          : a.primary_protocol ?? '—'}
+                  </td>
                   <td className="px-4 py-3">{statusBadge(a.status)}</td>
                   <td className="px-4 py-3 text-sm text-white/60">{formatDate(a.last_seen_at)}</td>
                   <td className="px-4 py-3 text-right">
@@ -424,78 +432,6 @@ function InstallAgentModal({
   )
 }
 
-const DOWNLOAD_PLATFORMS: { id: string; label: string }[] = [
-  { id: 'linux-amd64', label: 'Linux (amd64)' },
-  { id: 'linux-arm64', label: 'Linux (arm64)' },
-  { id: 'windows-amd64', label: 'Windows (amd64)' },
-  { id: 'darwin-amd64', label: 'macOS (Intel)' },
-  { id: 'darwin-arm64', label: 'macOS (Apple Silicon)' },
-]
-
-function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
-  const [downloading, setDownloading] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleDownload = async (id: string) => {
-    setError(null)
-    setDownloading(id)
-    const url = `${baseUrl}/api/agents/download/${id}`
-    const filename = id.startsWith('windows') ? 'portshield-agent.exe' : 'portshield-agent'
-    try {
-      const res = await fetch(url)
-      if (!res.ok) {
-        const text = await res.text()
-        let msg = 'This build is not available on the server yet. Use the command-line instructions below to download and enroll.'
-        try {
-          const data = JSON.parse(text) as { message?: string }
-          if (data.message) msg = data.message
-        } catch {
-          /* use default msg */
-        }
-        setError(msg)
-        return
-      }
-      const blob = await res.blob()
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(a.href)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Download failed. Try again or use the install commands below.')
-    } finally {
-      setDownloading(null)
-    }
-  }
-
-  return (
-    <div>
-      <h3 className="mb-2 text-sm font-medium text-white/80">Download agent</h3>
-      <p className="mb-3 text-xs text-white/50">
-        Download the agent for your OS directly, or use the command-line instructions below.
-      </p>
-      {error && (
-        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-          {error}
-        </div>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {DOWNLOAD_PLATFORMS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            disabled={downloading !== null}
-            onClick={() => handleDownload(id)}
-            className="inline-flex rounded-lg border border-sky-500/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
-          >
-            {downloading === id ? 'Downloading…' : label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function EnrollmentResultView({
   result,
   onClose,
@@ -527,12 +463,8 @@ function EnrollmentResultView({
         </div>
       </div>
 
-      {baseUrl && (
-        <DownloadAgentButtons key={result.enrollment_token_id} baseUrl={baseUrl} />
-      )}
-
       <div>
-        <h3 className="mb-2 text-sm font-medium text-white/80">Or use command-line</h3>
+        <h3 className="mb-2 text-sm font-medium text-white/80">Command-line instructions</h3>
         <p className="mb-3 text-xs text-white/50">
           Copy the commands for your OS to download the agent and enroll.
         </p>

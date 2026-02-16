@@ -102,6 +102,11 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	}
 
 	fmt.Printf("Enrolled successfully. Config saved to %s\n", cfgPath)
-	fmt.Println("Run 'portshield-agent run' to start the agent.")
+	switch runtime.GOOS {
+	case "windows":
+		fmt.Println("To start the agent, run: .\\portshield-agent.exe run")
+	default:
+		fmt.Println("To start the agent, run: ./portshield-agent run  (or add it to PATH and run: portshield-agent run)")
+	}
 	return nil
 }
