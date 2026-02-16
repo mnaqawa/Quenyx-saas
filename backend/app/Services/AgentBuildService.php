@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
@@ -48,17 +49,21 @@ class AgentBuildService
         $goBinary = config('agent.go_binary', 'go');
 
         $outDir = storage_path('app/agents');
-        if (! File::isDirectory($outDir)) {
-            File::makeDirectory($outDir, 0755, true);
-        }
         $outPath = $outDir . '/' . $platform;
 
-        $lockPath = $outDir . '/.build-' . $platform . '.lock';
-        $lock = fopen($lockPath, 'c');
-        if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
-            if ($lock) {
-                fclose($lock);
+        try {
+            if (! File::isDirectory($outDir)) {
+                File::makeDirectory($outDir, 0755, true);
             }
+        } catch (\Throwable $e) {
+            $this->lastError = 'Cannot create storage/app/agents: ' . $e->getMessage() . '. Ensure the directory exists and is writable by the web server user.';
+            Log::warning('Agent build: storage directory not writable', ['path' => $outDir, 'error' => $e->getMessage()]);
+            return null;
+        }
+
+        $lockKey = 'agent-build-' . $platform;
+        $lock = Cache::lock($lockKey, 120);
+        if (! $lock->get()) {
             for ($i = 0; $i < 60; $i++) {
                 usleep(500000);
                 if (File::isFile($outPath)) {
@@ -93,6 +98,8 @@ class AgentBuildService
                 $this->lastError = 'Build failed: ' . trim($out ?: $process->getErrorOutput() . $process->getOutput());
                 if (str_contains($this->lastError, 'command not found') || str_contains($this->lastError, 'executable file not found')) {
                     $this->lastError = 'Go binary not found. Set AGENT_GO_BINARY in .env to the full path (e.g. /usr/bin/go).';
+                } elseif (str_contains($this->lastError, 'Permission denied') || str_contains($this->lastError, 'permission denied')) {
+                    $this->lastError = 'Permission denied writing to storage/app/agents. Ensure backend/storage/app/agents exists and is writable by the web server user (e.g. chown www-data:www-data and chmod 775).';
                 }
                 Log::error('Agent build failed', ['platform' => $platform, 'output' => $out]);
                 return null;
@@ -107,9 +114,7 @@ class AgentBuildService
             Log::info('Agent built successfully', ['platform' => $platform, 'path' => $outPath]);
             return $outPath;
         } finally {
-            @flock($lock, LOCK_UN);
-            @fclose($lock);
-            @unlink($lockPath);
+            $lock->release();
         }
     }
 
