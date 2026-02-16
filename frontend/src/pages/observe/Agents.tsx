@@ -440,7 +440,6 @@ function EnrollmentResultView({
   onClose: () => void
 }) {
   const instructions = result.install_instructions
-  const baseUrl = result.gateway_url ?? ''
 
   return (
     <div className="space-y-6">
