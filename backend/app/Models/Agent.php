@@ -14,6 +14,7 @@ class Agent extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'id',
         'workspace_id',
         'enrollment_token_id',
         'hostname',
