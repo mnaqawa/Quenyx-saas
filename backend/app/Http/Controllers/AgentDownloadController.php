@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -24,14 +25,14 @@ class AgentDownloadController extends Controller
      *
      * Binaries must be placed in storage/app/agents/{platform} (e.g. build from agent/ and copy).
      */
-    public function download(string $platform): StreamedResponse|Response
+    public function download(string $platform): StreamedResponse|Response|JsonResponse
     {
         $platform = strtolower($platform);
         if (! in_array($platform, self::ALLOWED_PLATFORMS, true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unsupported platform. Use one of: ' . implode(', ', self::ALLOWED_PLATFORMS),
-            ], 404);
+            ], 404)->header('Content-Type', 'application/json');
         }
 
         $path = storage_path('app/agents/' . $platform);
@@ -41,24 +42,40 @@ class AgentDownloadController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Agent binary not available for this platform. Build from source (agent/) and place at storage/app/agents/' . $platform,
-            ], 404);
+            ], 404)->header('Content-Type', 'application/json');
         }
 
         $filename = $platform === 'windows-amd64' || $platform === 'windows-arm64'
             ? 'portshield-agent.exe'
             : 'portshield-agent';
 
-        return response()->streamDownload(function () use ($path) {
-            $stream = fopen($path, 'rb');
-            if ($stream) {
-                while (! feof($stream)) {
-                    echo fread($stream, 8192);
-                    flush();
+        try {
+            return response()->streamDownload(function () use ($path) {
+                $stream = fopen($path, 'rb');
+                if (! $stream) {
+                    throw new \RuntimeException('Could not open file');
                 }
-                fclose($stream);
-            }
-        }, $filename, [
-            'Content-Type' => 'application/octet-stream',
-        ]);
+                try {
+                    while (! feof($stream)) {
+                        echo fread($stream, 8192);
+                        if (ob_get_level()) {
+                            ob_flush();
+                        }
+                        flush();
+                    }
+                } finally {
+                    fclose($stream);
+                }
+            }, $filename, [
+                'Content-Type' => 'application/octet-stream',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Agent download failed', ['platform' => $platform, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Download failed. The agent binary may not be available for this platform.',
+            ], 500)->header('Content-Type', 'application/json');
+        }
     }
 }

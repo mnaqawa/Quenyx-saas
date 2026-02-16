@@ -432,6 +432,70 @@ const DOWNLOAD_PLATFORMS: { id: string; label: string }[] = [
   { id: 'darwin-arm64', label: 'macOS (Apple Silicon)' },
 ]
 
+function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleDownload = async (id: string, label: string) => {
+    setError(null)
+    setDownloading(id)
+    const url = `${baseUrl}/api/agents/download/${id}`
+    const filename = id.startsWith('windows') ? 'portshield-agent.exe' : 'portshield-agent'
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      if (!res.ok) {
+        const text = await blob.text()
+        let msg = 'Agent binary not available for this platform.'
+        try {
+          const data = JSON.parse(text)
+          if (data?.message) msg = data.message
+        } catch {
+          // use default
+        }
+        setError(msg)
+        return
+      }
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download failed. Try again or use the install commands below.')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium text-white/80">Download agent</h3>
+      <p className="mb-3 text-xs text-white/50">
+        Choose your OS and download the agent. Then run the enroll command below.
+      </p>
+      {error && (
+        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          {error}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {DOWNLOAD_PLATFORMS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            disabled={downloading !== null}
+            onClick={() => handleDownload(id, label)}
+            className="inline-flex rounded-lg border border-sky-500/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
+          >
+            {downloading === id ? 'Downloading…' : label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function EnrollmentResultView({
   result,
   onClose,
@@ -464,29 +528,7 @@ function EnrollmentResultView({
       </div>
 
       {baseUrl && (
-        <div>
-          <h3 className="mb-2 text-sm font-medium text-white/80">Download agent</h3>
-          <p className="mb-3 text-xs text-white/50">
-            Choose your OS and download the agent. Then run the enroll command below.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {DOWNLOAD_PLATFORMS.map(({ id, label }) => {
-              const url = `${baseUrl}/api/agents/download/${id}`
-              return (
-                <a
-                  key={id}
-                  href={url}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex rounded-lg border border-sky-500/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30"
-                >
-                  {label}
-                </a>
-              )
-            })}
-          </div>
-        </div>
+        <DownloadAgentButtons baseUrl={baseUrl} />
       )}
 
       <div>
