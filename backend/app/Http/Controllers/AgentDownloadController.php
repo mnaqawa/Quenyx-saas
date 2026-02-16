@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AgentBuildService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
@@ -23,9 +24,9 @@ class AgentDownloadController extends Controller
      * Serve the agent binary for the given platform.
      * GET /api/agents/download/{platform}
      *
-     * Binaries must be placed in storage/app/agents/{platform} (e.g. build from agent/ and copy).
+     * If the binary is missing and build_on_demand is enabled, builds it from agent/ (requires Go).
      */
-    public function download(string $platform): StreamedResponse|Response|JsonResponse
+    public function download(string $platform, AgentBuildService $buildService): StreamedResponse|Response|JsonResponse
     {
         $platform = strtolower($platform);
         if (! in_array($platform, self::ALLOWED_PLATFORMS, true)) {
@@ -37,12 +38,20 @@ class AgentDownloadController extends Controller
 
         $path = storage_path('app/agents/' . $platform);
         if (! File::isFile($path)) {
-            Log::warning('Agent binary not found', ['platform' => $platform, 'path' => $path]);
+            if (config('agent.build_on_demand', true)) {
+                $built = $buildService->build($platform);
+                if ($built !== null) {
+                    $path = $built;
+                }
+            }
+            if (! File::isFile($path)) {
+                Log::warning('Agent binary not found', ['platform' => $platform, 'path' => $path]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Agent binary not available for this platform. Build from source (agent/) and place at storage/app/agents/' . $platform,
-            ], 404)->header('Content-Type', 'application/json');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Agent binary not available for this platform. Build from source (agent/) and place at storage/app/agents/' . $platform,
+                ], 404)->header('Content-Type', 'application/json');
+            }
         }
 
         $filename = $platform === 'windows-amd64' || $platform === 'windows-arm64'
