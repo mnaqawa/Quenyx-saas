@@ -55,6 +55,14 @@ class AgentBuildService
             if (! File::isDirectory($outDir)) {
                 File::makeDirectory($outDir, 0755, true);
             }
+            $goCacheDir = $outDir . '/.gocache';
+            $goModCacheDir = $outDir . '/.gomodcache';
+            if (! File::isDirectory($goCacheDir)) {
+                File::makeDirectory($goCacheDir, 0755, true);
+            }
+            if (! File::isDirectory($goModCacheDir)) {
+                File::makeDirectory($goModCacheDir, 0755, true);
+            }
         } catch (\Throwable $e) {
             $this->lastError = 'Cannot create storage/app/agents: ' . $e->getMessage() . '. Ensure the directory exists and is writable by the web server user.';
             Log::warning('Agent build: storage directory not writable', ['path' => $outDir, 'error' => $e->getMessage()]);
@@ -75,11 +83,15 @@ class AgentBuildService
         }
 
         try {
+            $goCacheDir = $outDir . '/.gocache';
+            $goModCacheDir = $outDir . '/.gomodcache';
             $env = array_merge(
                 array_filter(getenv()),
                 [
                     'GOOS' => $map['GOOS'],
                     'GOARCH' => $map['GOARCH'],
+                    'GOCACHE' => $goCacheDir,
+                    'GOMODCACHE' => $goModCacheDir,
                 ]
             );
 
@@ -98,6 +110,8 @@ class AgentBuildService
                 $this->lastError = 'Build failed: ' . trim($out ?: $process->getErrorOutput() . $process->getOutput());
                 if (str_contains($this->lastError, 'command not found') || str_contains($this->lastError, 'executable file not found')) {
                     $this->lastError = 'Go binary not found. Set AGENT_GO_BINARY in .env to the full path (e.g. /usr/bin/go).';
+                } elseif (str_contains($this->lastError, 'build cache') && (str_contains($this->lastError, 'permission denied') || str_contains($this->lastError, 'Permission denied'))) {
+                    $this->lastError = 'Go build cache permission denied. The app now uses storage/app/agents/.gocache; ensure storage/app/agents is writable by the web server user.';
                 } elseif (str_contains($this->lastError, 'Permission denied') || str_contains($this->lastError, 'permission denied')) {
                     $this->lastError = 'Permission denied writing to storage/app/agents. Ensure backend/storage/app/agents exists and is writable by the web server user (e.g. chown www-data:www-data and chmod 775).';
                 }

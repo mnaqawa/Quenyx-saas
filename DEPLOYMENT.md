@@ -89,7 +89,7 @@ The route `GET /api/agents/download/{platform}` serves the agent binary. When a 
 - **AGENT_SOURCE_PATH** – Directory containing the agent Go module (`go.mod`). Default is the `agent/` directory next to the backend (e.g. repo root `agent/`). Set if your deploy layout differs.
 - **AGENT_BUILD_ON_DEMAND** – Set to `false` to disable on-demand build and only serve pre-built binaries from `storage/app/agents/`.
 
-Ensure **backend/storage/app/agents** exists and is writable by the web server user (e.g. `www-data`), so on-demand build can write binaries and the download endpoint can serve them. Example: `sudo mkdir -p backend/storage/app/agents && sudo chown www-data:www-data backend/storage/app/agents && sudo chmod 775 backend/storage/app/agents`.
+Ensure **backend/storage/app/agents** exists and is writable by the web server user (e.g. `www-data`), so on-demand build can write binaries, Go cache dirs (`.gocache`, `.gomodcache`), and the download endpoint can serve them. Example: `sudo mkdir -p backend/storage/app/agents && sudo chown www-data:www-data backend/storage/app/agents && sudo chmod 775 backend/storage/app/agents`.
 
 Built or pre-placed files in `backend/storage/app/agents/`: `linux-amd64`, `linux-arm64`, `windows-amd64`, `windows-arm64`, `darwin-amd64`, `darwin-arm64`. See `agent/README.md` for manual build commands. If the server cannot build or find a binary, the endpoint returns JSON with a `message` explaining the reason (e.g. "Go binary not found").
 
