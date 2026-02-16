@@ -9,6 +9,7 @@ use App\Models\Agent;
 use App\Models\AgentEnrollmentToken;
 use App\Models\AgentInventory;
 use App\Models\AgentMetric;
+use App\Models\ObserveTargetHost;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -95,10 +96,36 @@ class AgentApiController extends Controller
 
             $enrollmentToken->update(['used_at' => now()]);
 
+            $hostName = $validated['hostname'];
+            $hostAddress = $validated['hostname'];
+            for ($i = 0; $i < 3; $i++) {
+                $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
+                try {
+                    ObserveTargetHost::create([
+                        'workspace_id' => $agent->workspace_id,
+                        'name' => $name,
+                        'address' => $hostAddress,
+                        'agent_id' => $agent->id,
+                        'source' => 'agent',
+                        'enabled' => true,
+                    ]);
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    $msg = $e->getMessage();
+                    if (strpos($msg, 'Duplicate') === false && strpos($msg, '23000') === false && strpos($msg, 'unique') === false) {
+                        throw $e;
+                    }
+                }
+            }
+
             Log::info('Agent registered', [
                 'agent_id' => $agentId,
                 'workspace_id' => $agent->workspace_id,
                 'hostname' => $agent->hostname,
+                'permissions' => $permissions,
+                'primary_protocol' => $primaryProtocol,
+                'enabled_protocols' => $enabledProtocols,
+                'monitored_target_created' => true,
             ]);
 
             return response()->json([
@@ -108,6 +135,7 @@ class AgentApiController extends Controller
                     'agent_secret' => $agentSecret,
                     'primary_protocol' => $primaryProtocol,
                     'enabled_protocols' => $enabledProtocols,
+                    'permissions' => $permissions,
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -137,6 +165,13 @@ class AgentApiController extends Controller
 
         $agent->markSeen();
 
+        Log::info('Agent heartbeat', [
+            'agent_id' => $agent->id,
+            'workspace_id' => $agent->workspace_id,
+            'hostname' => $agent->hostname,
+            'status' => $agent->status,
+        ]);
+
         return response()->json(['success' => true, 'data' => ['status' => 'ok']]);
     }
 
@@ -153,6 +188,15 @@ class AgentApiController extends Controller
         $validated = $request->validate([
             'collected_at' => ['required', 'date'],
             'payload' => ['required', 'array'],
+        ]);
+
+        $payloadKeys = array_keys($validated['payload']);
+        Log::info('Agent metrics received', [
+            'agent_id' => $agent->id,
+            'workspace_id' => $agent->workspace_id,
+            'hostname' => $agent->hostname,
+            'collected_at' => $validated['collected_at'],
+            'payload_keys' => $payloadKeys,
         ]);
 
         AgentIngestMetricsJob::dispatch($agent->id, $validated['collected_at'], $validated['payload']);
@@ -173,6 +217,15 @@ class AgentApiController extends Controller
         $validated = $request->validate([
             'collected_at' => ['required', 'date'],
             'payload' => ['required', 'array'],
+        ]);
+
+        $payloadKeys = array_keys($validated['payload']);
+        Log::info('Agent inventory received', [
+            'agent_id' => $agent->id,
+            'workspace_id' => $agent->workspace_id,
+            'hostname' => $agent->hostname,
+            'collected_at' => $validated['collected_at'],
+            'payload_keys' => $payloadKeys,
         ]);
 
         AgentIngestInventoryJob::dispatch($agent->id, $validated['collected_at'], $validated['payload']);

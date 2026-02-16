@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +25,9 @@ func runAgent(cfgPath string) error {
 	baseURL := cfg.PlatformURL
 	agentID := cfg.AgentID
 	secret := cfg.AgentSecret
+
+	log.Printf("[agent] status=started workspace_id=%d agent_id=%s primary_protocol=%s permissions=%v",
+		cfg.WorkspaceID, agentID, cfg.PrimaryProtocol, cfg.Permissions)
 
 	// Heartbeat every 5 minutes
 	heartbeatInterval := 5 * time.Minute
@@ -69,13 +73,23 @@ func sendHeartbeat(baseURL, agentID, secret string) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[agent] heartbeat failed: %v", err)
 		return
 	}
 	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("[agent] heartbeat status=ok")
+	} else {
+		log.Printf("[agent] heartbeat status=error http=%d", resp.StatusCode)
+	}
 }
 
 func sendMetrics(baseURL, agentID, secret string) {
 	payload := collector.CollectMetrics()
+	keys := make([]string, 0, len(payload))
+	for k := range payload {
+		keys = append(keys, k)
+	}
 	body := map[string]interface{}{
 		"collected_at": time.Now().UTC().Format(time.RFC3339),
 		"payload":      payload,
@@ -88,13 +102,23 @@ func sendMetrics(baseURL, agentID, secret string) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[agent] metrics send failed: %v (shared: %v)", err, keys)
 		return
 	}
 	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("[agent] metrics shared=%v status=accepted", keys)
+	} else {
+		log.Printf("[agent] metrics shared=%v status=error http=%d", keys, resp.StatusCode)
+	}
 }
 
 func sendInventory(baseURL, agentID, secret string) {
 	payload := collector.CollectInventory()
+	keys := make([]string, 0, len(payload))
+	for k := range payload {
+		keys = append(keys, k)
+	}
 	body := map[string]interface{}{
 		"collected_at": time.Now().UTC().Format(time.RFC3339),
 		"payload":      payload,
@@ -107,7 +131,13 @@ func sendInventory(baseURL, agentID, secret string) {
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[agent] inventory send failed: %v (shared: %v)", err, keys)
 		return
 	}
 	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("[agent] inventory shared=%v status=accepted", keys)
+	} else {
+		log.Printf("[agent] inventory shared=%v status=error http=%d", keys, resp.StatusCode)
+	}
 }

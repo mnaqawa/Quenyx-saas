@@ -57,8 +57,11 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	var result struct {
 		Success bool `json:"success"`
 		Data    struct {
-			AgentID    string   `json:"agent_id"`
-			AgentSecret string   `json:"agent_secret"`
+			AgentID          string   `json:"agent_id"`
+			AgentSecret      string   `json:"agent_secret"`
+			PrimaryProtocol  string   `json:"primary_protocol"`
+			EnabledProtocols []string `json:"enabled_protocols"`
+			Permissions      []string `json:"permissions"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -69,10 +72,16 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	}
 
 	cfg := config.Config{
-		PlatformURL: platformURL,
-		WorkspaceID:  workspaceID,
-		AgentID:     result.Data.AgentID,
-		AgentSecret: result.Data.AgentSecret,
+		PlatformURL:      platformURL,
+		WorkspaceID:       workspaceID,
+		AgentID:           result.Data.AgentID,
+		AgentSecret:       result.Data.AgentSecret,
+		PrimaryProtocol:  result.Data.PrimaryProtocol,
+		EnabledProtocols: result.Data.EnabledProtocols,
+		Permissions:      result.Data.Permissions,
+	}
+	if cfg.PrimaryProtocol == "" {
+		cfg.PrimaryProtocol = "http_api"
 	}
 
 	cfgPath, err := config.DefaultPath()

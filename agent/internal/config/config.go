@@ -8,11 +8,17 @@ import (
 	"runtime"
 )
 
+// PSAPPort is the default TCP port for PortShield Agent Protocol (when primary_protocol is psap).
+const PSAPPort = 9444
+
 type Config struct {
-	PlatformURL string `json:"platform_url"`
-	WorkspaceID int    `json:"workspace_id"`
-	AgentID     string `json:"agent_id"`
-	AgentSecret string `json:"agent_secret"`
+	PlatformURL      string   `json:"platform_url"`
+	WorkspaceID      int      `json:"workspace_id"`
+	AgentID          string   `json:"agent_id"`
+	AgentSecret      string   `json:"agent_secret"`
+	PrimaryProtocol  string   `json:"primary_protocol,omitempty"`
+	EnabledProtocols []string `json:"enabled_protocols,omitempty"`
+	Permissions      []string `json:"permissions,omitempty"`
 }
 
 func DefaultPath() (string, error) {
@@ -51,6 +57,9 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.PlatformURL == "" || cfg.AgentID == "" || cfg.AgentSecret == "" {
 		return nil, fmt.Errorf("invalid config: missing platform_url, agent_id, or agent_secret")
+	}
+	if cfg.PrimaryProtocol == "" {
+		cfg.PrimaryProtocol = "http_api"
 	}
 	return &cfg, nil
 }

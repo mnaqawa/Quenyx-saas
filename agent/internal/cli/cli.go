@@ -13,7 +13,10 @@ func Run() error {
 	enrollToken := enroll.String("token", "", "Enrollment token from the portal")
 
 	run := flag.NewFlagSet("run", flag.ExitOnError)
-	runConfig := run.String("config", "", "Config file path (default: ~/.portshield-agent.json)")
+	runConfig := run.String("config", "", "Config file path (default: ~/.config/portshield/agent.json)")
+
+	configCmd := flag.NewFlagSet("config", flag.ExitOnError)
+	configPath := configCmd.String("config", "", "Config file path to show")
 
 	install := flag.NewFlagSet("install", flag.ExitOnError)
 	installUser := install.String("user", "portshield", "User to run the agent (Linux systemd)")
@@ -24,6 +27,9 @@ func Run() error {
 	}
 
 	switch os.Args[1] {
+	case "config":
+		configCmd.Parse(os.Args[2:])
+		return runConfigShow(*configPath)
 	case "enroll":
 		enroll.Parse(os.Args[2:])
 		if *enrollURL == "" || *enrollWorkspace == 0 || *enrollToken == "" {
@@ -50,11 +56,13 @@ func printUsage() {
 Usage:
   portshield-agent enroll --url=URL --workspace=ID --token=TOKEN
   portshield-agent run [--config=PATH]
+  portshield-agent config [--config=PATH]
   portshield-agent install [--user=USER]
 
 Commands:
   enroll   Register with the platform using an enrollment token from the portal
   run      Run the agent (heartbeat, metrics, inventory)
+  config   Show config file path and contents (permissions, protocol, port)
   install  Install as a system service (Linux systemd, Windows service, macOS launchd)
 `)
 }
