@@ -445,14 +445,6 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
       const res = await fetch(url)
       const blob = await res.blob()
       if (!res.ok) {
-        const text = await blob.text()
-        let msg = 'Agent binary not available for this platform.'
-        try {
-          const data = JSON.parse(text)
-          if (data?.message) msg = data.message
-        } catch {
-          // use default
-        }
         setError('This build is not available on the server yet. Use the command-line instructions below to download and enroll.')
         return
       }
