@@ -436,7 +436,7 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
   const [downloading, setDownloading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const handleDownload = async (id: string, label: string) => {
+  const handleDownload = async (id: string) => {
     setError(null)
     setDownloading(id)
     const url = `${baseUrl}/api/agents/download/${id}`
@@ -485,7 +485,7 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
             key={id}
             type="button"
             disabled={downloading !== null}
-            onClick={() => handleDownload(id, label)}
+            onClick={() => handleDownload(id)}
             className="inline-flex rounded-lg border border-sky-500/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
           >
             {downloading === id ? 'Downloading…' : label}
