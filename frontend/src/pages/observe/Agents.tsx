@@ -443,11 +443,19 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
     const filename = id.startsWith('windows') ? 'portshield-agent.exe' : 'portshield-agent'
     try {
       const res = await fetch(url)
-      const blob = await res.blob()
       if (!res.ok) {
-        setError('This build is not available on the server yet. Use the command-line instructions below to download and enroll.')
+        const text = await res.text()
+        let msg = 'This build is not available on the server yet. Use the command-line instructions below to download and enroll.'
+        try {
+          const data = JSON.parse(text) as { message?: string }
+          if (data.message) msg = data.message
+        } catch {
+          /* use default msg */
+        }
+        setError(msg)
         return
       }
+      const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = filename

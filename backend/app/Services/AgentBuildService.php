@@ -8,6 +8,9 @@ use Symfony\Component\Process\Process;
 
 class AgentBuildService
 {
+    /** Last failure reason, for API to return to the client. */
+    private ?string $lastError = null;
+
     private const PLATFORM_MAP = [
         'linux-amd64' => ['GOOS' => 'linux', 'GOARCH' => 'amd64', 'ext' => ''],
         'linux-arm64' => ['GOOS' => 'linux', 'GOARCH' => 'arm64', 'ext' => ''],
@@ -17,23 +20,32 @@ class AgentBuildService
         'darwin-arm64' => ['GOOS' => 'darwin', 'GOARCH' => 'arm64', 'ext' => ''],
     ];
 
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     /**
      * Build the agent for the given platform and save to storage. Returns path to the built file or null on failure.
      */
     public function build(string $platform): ?string
     {
+        $this->lastError = null;
         $platform = strtolower($platform);
         $map = self::PLATFORM_MAP[$platform] ?? null;
         if (! $map) {
+            $this->lastError = 'Unsupported platform.';
             return null;
         }
 
         $sourcePath = rtrim(config('agent.source_path', base_path('../agent')), '/');
         if (! is_dir($sourcePath) || ! File::isFile($sourcePath . '/go.mod')) {
+            $this->lastError = 'Agent source not found at ' . $sourcePath . '. Set AGENT_SOURCE_PATH in .env to the directory containing go.mod.';
             Log::warning('Agent source not found', ['path' => $sourcePath]);
-
             return null;
         }
+
+        $goBinary = config('agent.go_binary', 'go');
 
         $outDir = storage_path('app/agents');
         if (! File::isDirectory($outDir)) {
@@ -53,6 +65,7 @@ class AgentBuildService
                     return $outPath;
                 }
             }
+            $this->lastError = 'Build in progress or timed out. Try again in a minute.';
             return null;
         }
 
@@ -66,7 +79,7 @@ class AgentBuildService
             );
 
             $process = new Process(
-                ['go', 'build', '-o', $outPath, '.'],
+                [$goBinary, 'build', '-o', $outPath, '.'],
                 $sourcePath,
                 $env,
                 null,
@@ -76,14 +89,17 @@ class AgentBuildService
             $process->run();
 
             if (! $process->isSuccessful()) {
-                Log::error('Agent build failed', [
-                    'platform' => $platform,
-                    'output' => $process->getErrorOutput() ?: $process->getOutput(),
-                ]);
+                $out = $process->getErrorOutput() ?: $process->getOutput();
+                $this->lastError = 'Build failed: ' . trim($out ?: $process->getErrorOutput() . $process->getOutput());
+                if (str_contains($this->lastError, 'command not found') || str_contains($this->lastError, 'executable file not found')) {
+                    $this->lastError = 'Go binary not found. Set AGENT_GO_BINARY in .env to the full path (e.g. /usr/bin/go).';
+                }
+                Log::error('Agent build failed', ['platform' => $platform, 'output' => $out]);
                 return null;
             }
 
             if (! File::isFile($outPath)) {
+                $this->lastError = 'Build produced no binary. Check server logs.';
                 Log::error('Agent build produced no file', ['platform' => $platform]);
                 return null;
             }

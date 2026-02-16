@@ -45,11 +45,13 @@ class AgentDownloadController extends Controller
                 }
             }
             if (! File::isFile($path)) {
-                Log::warning('Agent binary not found', ['platform' => $platform, 'path' => $path]);
+                $reason = $buildService->getLastError();
+                $message = $reason ?: 'Agent binary not available for this platform. Build from source (agent/) and place at storage/app/agents/' . $platform;
+                Log::warning('Agent binary not found', ['platform' => $platform, 'path' => $path, 'reason' => $reason]);
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Agent binary not available for this platform. Build from source (agent/) and place at storage/app/agents/' . $platform,
+                    'message' => $message,
                 ], 404)->header('Content-Type', 'application/json');
             }
         }

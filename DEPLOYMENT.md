@@ -83,13 +83,13 @@ After changing `.env`, run `php artisan config:clear` (or `php artisan config:ca
 
 **Agent binaries (for Install Agent download):**
 
-The route `GET /api/agents/download/{platform}` serves the agent binary. Build from `agent/` (Go) and place files in `backend/storage/app/agents/`:
+The route `GET /api/agents/download/{platform}` serves the agent binary. When a binary is missing, the server can build it on demand (requires Go). Configure in `backend/.env`:
 
-- `linux-amd64`, `linux-arm64` (no extension)
-- `windows-amd64`, `windows-arm64` (served as `portshield-agent.exe`)
-- `darwin-amd64`, `darwin-arm64`
+- **AGENT_GO_BINARY** – Path to the Go binary. PHP-FPM often has a minimal PATH, so set this to the full path (e.g. `AGENT_GO_BINARY=/usr/bin/go`). If unset, `go` is used and may not be found when the web server runs.
+- **AGENT_SOURCE_PATH** – Directory containing the agent Go module (`go.mod`). Default is the `agent/` directory next to the backend (e.g. repo root `agent/`). Set if your deploy layout differs.
+- **AGENT_BUILD_ON_DEMAND** – Set to `false` to disable on-demand build and only serve pre-built binaries from `storage/app/agents/`.
 
-See `agent/README.md` for build commands. If a binary is missing, the endpoint returns JSON (so curl would save a JSON error instead of the binary).
+Built or pre-placed files in `backend/storage/app/agents/`: `linux-amd64`, `linux-arm64`, `windows-amd64`, `windows-arm64`, `darwin-amd64`, `darwin-arm64`. See `agent/README.md` for manual build commands. If the server cannot build or find a binary, the endpoint returns JSON with a `message` explaining the reason (e.g. "Go binary not found").
 
 **Optional – ShieldObserve / Nagios:**
 
