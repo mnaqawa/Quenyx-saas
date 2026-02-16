@@ -48,16 +48,35 @@ GOOS=darwin GOARCH=arm64 go build -o portshield-agent .
 
 The Install Agent instructions use `/api/agents/download/{platform}`. To serve the agent from the portal:
 
-1. Build the agent for each platform (see above).
-2. Copy binaries into the backend storage:
-   - `backend/storage/app/agents/linux-amd64` (no extension)
-   - `backend/storage/app/agents/linux-arm64`
-   - `backend/storage/app/agents/windows-amd64` (binary; served as `portshield-agent.exe`)
-   - `backend/storage/app/agents/darwin-amd64`
-   - `backend/storage/app/agents/darwin-arm64`
-3. Ensure the `storage/app/agents` directory is writable by the web server.
+**Option A – Build on the same server (install Go first):**
 
-If a binary is missing, the download endpoint returns a JSON error (so users know to build from source or ask the admin).
+```bash
+cd /var/www/portshield/portshield-saas   # or your repo root
+apt install -y golang-go
+cd agent
+chmod +x build-linux-amd64.sh
+./build-linux-amd64.sh ../backend        # builds and copies to backend/storage/app/agents/linux-amd64
+```
+
+**Option B – Build on your laptop/CI (Go installed), then copy to server:**
+
+```bash
+# On your machine (from repo root):
+cd agent
+./build-linux-amd64.sh ../backend        # if backend is next to agent
+# Or just build and copy manually:
+GOOS=linux GOARCH=amd64 go build -o portshield-agent .
+scp portshield-agent root@your-server:/var/www/portshield/portshield-saas/backend/storage/app/agents/linux-amd64
+```
+
+**Storage paths (inside backend):**
+
+- `storage/app/agents/linux-amd64` (no extension)
+- `storage/app/agents/linux-arm64`
+- `storage/app/agents/windows-amd64` (served as `portshield-agent.exe`)
+- `storage/app/agents/darwin-amd64`, `darwin-arm64`
+
+Ensure `storage/app/agents` exists and is writable by the web server. If a binary is missing, the download endpoint returns JSON (so users see an error instead of a script).
 
 ## Permissions
 
