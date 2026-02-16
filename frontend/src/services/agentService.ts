@@ -39,6 +39,7 @@ export interface EnrollmentTokenResponse {
   primary_protocol: string
   enabled_protocols: string[]
   permissions: string[]
+  gateway_url?: string
   install_instructions: InstallInstructions
   protocols: Record<string, ProtocolInfo>
   permissions_checklist: Record<string, PermissionInfo>

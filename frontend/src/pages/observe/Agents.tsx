@@ -300,6 +300,11 @@ function InstallAgentModal({
 
   const protocols = metadata.protocols ?? {}
   const perms = metadata.permissions ?? {}
+  // Display order: PSAP first, then HTTP API, then SNMP
+  const protocolOrder: Record<string, number> = { psap: 0, http_api: 1, snmp: 2 }
+  const protocolEntriesSorted = Object.entries(protocols).sort(
+    ([a], [b]) => (protocolOrder[a] ?? 99) - (protocolOrder[b] ?? 99)
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -321,10 +326,10 @@ function InstallAgentModal({
               <section>
                 <h3 className="mb-2 text-sm font-medium text-white/80">Protocol</h3>
                 <p className="mb-3 text-xs text-white/50">
-                  Choose how the agent communicates. HTTP API (push) works across firewalls.
+                  Choose how the agent communicates. PortShield Agent Protocol (PSAP) or HTTP API (push).
                 </p>
                 <div className="space-y-2">
-                  {Object.entries(protocols).map(([key, info]) => (
+                  {protocolEntriesSorted.map(([key, info]) => (
                     <label
                       key={key}
                       className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3 hover:bg-white/10"
@@ -419,6 +424,14 @@ function InstallAgentModal({
   )
 }
 
+const DOWNLOAD_PLATFORMS: { id: string; label: string }[] = [
+  { id: 'linux-amd64', label: 'Linux (amd64)' },
+  { id: 'linux-arm64', label: 'Linux (arm64)' },
+  { id: 'windows-amd64', label: 'Windows (amd64)' },
+  { id: 'darwin-amd64', label: 'macOS (Intel)' },
+  { id: 'darwin-arm64', label: 'macOS (Apple Silicon)' },
+]
+
 function EnrollmentResultView({
   result,
   onClose,
@@ -427,6 +440,7 @@ function EnrollmentResultView({
   onClose: () => void
 }) {
   const instructions = result.install_instructions
+  const baseUrl = result.gateway_url ?? ''
 
   return (
     <div className="space-y-6">
@@ -448,6 +462,32 @@ function EnrollmentResultView({
           <CopyButton text={result.token} label="Copy" />
         </div>
       </div>
+
+      {baseUrl && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-white/80">Download agent</h3>
+          <p className="mb-3 text-xs text-white/50">
+            Choose your OS and download the agent. Then run the enroll command below.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {DOWNLOAD_PLATFORMS.map(({ id, label }) => {
+              const url = `${baseUrl}/api/agents/download/${id}`
+              return (
+                <a
+                  key={id}
+                  href={url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex rounded-lg border border-sky-500/50 bg-sky-500/20 px-3 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30"
+                >
+                  {label}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="mb-2 text-sm font-medium text-white/80">Install instructions</h3>

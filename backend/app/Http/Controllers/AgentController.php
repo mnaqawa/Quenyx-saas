@@ -95,6 +95,7 @@ class AgentController extends Controller
                 'primary_protocol' => $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
                 'permissions' => $permissions,
+                'gateway_url' => $gatewayUrl,
                 'install_instructions' => $this->buildInstallInstructions($token, $gatewayUrl, $project->id, $primaryProtocol, $enabledProtocols),
                 'protocols' => AgentConstants::PROTOCOLS,
                 'permissions_checklist' => AgentConstants::PERMISSIONS,
