@@ -453,7 +453,7 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
         } catch {
           // use default
         }
-        setError(msg)
+        setError('This build is not available on the server yet. Use the command-line instructions below to download and enroll.')
         return
       }
       const a = document.createElement('a')
@@ -472,7 +472,7 @@ function DownloadAgentButtons({ baseUrl }: { baseUrl: string }) {
     <div>
       <h3 className="mb-2 text-sm font-medium text-white/80">Download agent</h3>
       <p className="mb-3 text-xs text-white/50">
-        Choose your OS and download the agent. Then run the enroll command below.
+        Download the agent for your OS directly, or use the command-line instructions below.
       </p>
       {error && (
         <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
@@ -508,8 +508,8 @@ function EnrollmentResultView({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
-        <strong>Save this token.</strong> It will not be shown again.{' '}
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+        <strong>Token generated.</strong> Save it—it will not be shown again.{' '}
         {result.expires_at ? (
           <>Expires: {new Date(result.expires_at).toLocaleString()}</>
         ) : (
@@ -528,11 +528,14 @@ function EnrollmentResultView({
       </div>
 
       {baseUrl && (
-        <DownloadAgentButtons baseUrl={baseUrl} />
+        <DownloadAgentButtons key={result.enrollment_token_id} baseUrl={baseUrl} />
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-medium text-white/80">Install instructions</h3>
+        <h3 className="mb-2 text-sm font-medium text-white/80">Or use command-line</h3>
+        <p className="mb-3 text-xs text-white/50">
+          Copy the commands for your OS to download the agent and enroll.
+        </p>
         {(['linux', 'windows', 'macos'] as const).map((platform) => {
           const inst = instructions[platform]
           if (!inst) return null
