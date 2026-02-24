@@ -68,8 +68,13 @@ function AppLayout() {
         ].join(' ')}
       >
         <div className="border-b border-white/10 px-6 py-6">
-          <h1 className="text-lg font-semibold leading-6">{t('app.name')}</h1>
-          <p className="mt-1 text-xs text-white/50">{t('app.controlCenter')}</p>
+          <div className="flex items-center gap-3">
+            <img src="/quenyx-logo.png" alt="Quenyx" className="h-9 w-9 shrink-0 object-contain" />
+            <div>
+              <h1 className="text-lg font-semibold leading-6">{t('app.name')}</h1>
+              <p className="mt-0.5 text-xs text-white/50">{t('app.controlCenter')}</p>
+            </div>
+          </div>
         </div>
         <nav className="flex flex-col gap-1 px-4 py-4">
           <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
