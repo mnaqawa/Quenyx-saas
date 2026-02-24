@@ -166,7 +166,7 @@ class NagiosConfigPublisher
             if (!$cfgIncludesOk) {
                 $publishError = $verifyIncludesData['message'] ?? 'Published config directory is not included in nagios.cfg (missing cfg_dir/cfg_file).';
                 if (str_contains($publishError, 'cfg_dir') && !str_contains($publishError, 'Add cfg_dir')) {
-                    $publishError .= ' Add cfg_dir=/opt/nagios/etc/objects/portshield/workspaces to the main nagios.cfg, or ensure the gateway has Docker access to auto-add it.';
+                    $publishError .= ' Add cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces to the main nagios.cfg, or ensure the gateway has Docker access to auto-add it.';
                 }
                 $result = 'failure';
             }
@@ -317,7 +317,7 @@ class NagiosConfigPublisher
     private function buildConfig($hosts, int $workspaceId): string
     {
         $lines = [
-            '# PortShield Workspace ' . $workspaceId,
+            '# Quenyx Workspace ' . $workspaceId,
             '# DO NOT EDIT MANUALLY - This file is auto-generated',
             '',
         ];

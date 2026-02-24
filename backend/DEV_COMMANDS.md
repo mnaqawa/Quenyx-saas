@@ -4,17 +4,17 @@ This document lists development-only artisan commands for testing and setup.
 
 ## Reset User Workspaces
 
-**Command:** `php artisan portshield:reset-workspaces {email} {--count=4}`
+**Command:** `php artisan quenyx:reset-workspaces {email} {--count=4}`
 
 **Description:** DEV-ONLY command to reset a user's workspaces by deleting all existing projects and creating sample ones.
 
 **Usage:**
 ```bash
 # Reset workspaces for a user (creates 4 default workspaces)
-php artisan portshield:reset-workspaces user@example.com
+php artisan quenyx:reset-workspaces user@example.com
 
 # Create only 2 sample workspaces
-php artisan portshield:reset-workspaces user@example.com --count=2
+php artisan quenyx:reset-workspaces user@example.com --count=2
 ```
 
 **What it does:**

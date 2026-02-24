@@ -64,7 +64,7 @@ export default function ComingSoon() {
             }`}
             title={!canNavigateToObserve ? 'Select a workspace first' : undefined}
           >
-            View ShieldObserve
+            View QynSight
           </Link>
         </div>
       </div>

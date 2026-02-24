@@ -1,8 +1,8 @@
-# PortShield Gateway
+# Quenyx Gateway
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
+This software is the proprietary property of Quenyx CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
 
 Lightweight API gateway service that enforces project entitlements before forwarding requests to the Laravel backend.
 
@@ -21,7 +21,7 @@ BACKEND_BASE_URL=http://127.0.0.1:8000  # Laravel backend URL
 ENTITLEMENTS_CACHE_TTL_MS=30000      # Cache TTL in milliseconds (default: 30s)
 ```
 
-### Observe / Nagios (ShieldObserve)
+### Observe / Nagios (QynSight)
 
 The gateway resolves the Nagios binary **inside the Nagios container** automatically:
 

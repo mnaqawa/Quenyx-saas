@@ -56,7 +56,7 @@ export default function Help() {
             <div>
               <p className="font-medium text-white">View Real-time Monitoring &amp; Dashboard</p>
               <p className="mt-1 text-xs text-white/60">
-                Dashboard shows a health-at-a-glance line and ShieldObserve summary. Real-time Monitoring shows monitoring server metrics and workspace host/service status.
+                Dashboard shows a health-at-a-glance line and QynSight summary. Real-time Monitoring shows monitoring server metrics and workspace host/service status.
               </p>
               {selectedWorkspaceId && (
                 <div className="mt-2 flex gap-3">

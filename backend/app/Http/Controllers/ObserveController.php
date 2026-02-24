@@ -226,7 +226,7 @@ class ObserveController extends Controller
         })->toArray();
 
         $lastPollAt = $meta?->last_poll_at?->toIso8601String();
-        // Only report unreachable from native engine (ShieldObserve). Nagios poll failures are ignored.
+        // Only report unreachable from native engine (QynSight). Nagios poll failures are ignored.
         $engineUnreachable = $nativeMeta && trim((string) ($nativeMeta->error ?? '')) !== '';
         $engineUnreachableReason = $engineUnreachable
             ? (trim((string) ($nativeMeta->error ?? '')) ?: 'Monitoring engine could not be reached.')

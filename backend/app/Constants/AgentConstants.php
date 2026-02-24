@@ -12,8 +12,8 @@ class AgentConstants
 
     public const PROTOCOLS = [
         self::PROTOCOL_PSAP => [
-            'label' => 'PortShield Agent Protocol (PSAP)',
-            'description' => 'Custom TCP protocol for PortShield. Platform connects to agent on port 9444. Requires inbound access from platform to agent.',
+            'label' => 'Quenyx Agent Protocol (PSAP)',
+            'description' => 'Custom TCP protocol for Quenyx. Platform connects to agent on port 9444. Requires inbound access from platform to agent.',
             'port' => 9444,
             'direction' => 'pull',
         ],

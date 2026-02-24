@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
         // Optional: poll Nagios via gateway when Nagios daemon is running (data merged with native; native preferred)
         // $schedule->command('observe:poll')->everyMinute()->withoutOverlapping(90);
 
-        // ShieldObserve engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
+        // QynSight engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
         $schedule->command('observe:run-checks')
             ->everyMinute()
             ->withoutOverlapping(90)

@@ -21,8 +21,8 @@ class ObserveTargetHost extends Model
     protected $fillable = [
         'workspace_id',
         'name',
-        'address',      // Private IP or hostname (used for monitoring)
-        'public_ip',    // Optional public IP (e.g. for agent behind NAT)
+        'address',      // Private IP (or hostname). For agent-enrolled hosts, updated from heartbeat when DHCP changes.
+        'public_ip',    // Public IP (optional). For agent-enrolled hosts, updated from heartbeat.
         'agent_id',
         'source',
         'check_command',

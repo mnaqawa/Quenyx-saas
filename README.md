@@ -1,10 +1,10 @@
-# PortShield vOPS HUB
+# Quenyx vOPS HUB
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited. Use of this software is permitted only with explicit written authorization from PortShield CO.
+This software is the proprietary property of Quenyx CO. Unauthorized use, copying, modification, or distribution is strictly prohibited. Use of this software is permitted only with explicit written authorization from Quenyx CO.
 
-Monorepo for PortShield vOPS HUB (Virtual IT Operations Platform) with API gateway, entitlement enforcement, and multi-tenant project management.
+Monorepo for Quenyx vOPS HUB (Virtual IT Operations Platform) with API gateway, entitlement enforcement, and multi-tenant project management.
 
 ## Stack
 
@@ -43,7 +43,7 @@ After deployment, use the platform as follows:
 2. **Select a workspace** (e.g. Production Env or Staging Env) from the **Workspace** dropdown in the top bar. All data is scoped to the selected workspace.
 3. **Add hosts** in **Observe → Monitored Targets** (name and address). Without hosts, Real-time Monitoring and Dashboard show an empty state and ask you to add hosts first.
 4. **Add services** for each host (e.g. CPU, disk, HTTP). Status and problems then appear on the Dashboard and in Real-time Monitoring.
-5. **View Dashboard** for a health-at-a-glance line and ShieldObserve summary; **Real-time Monitoring** for server metrics and host/service status.
+5. **View Dashboard** for a health-at-a-glance line and QynSight summary; **Real-time Monitoring** for server metrics and host/service status.
 6. **Infrastructure Map** for topology, zones (DMZ, WebApp, DB, etc.), and export (PNG, PDF, SVG, JSON). **Integrations** for webhooks (alerts to Slack/Teams/email) and external topology.
 
 In-app **Getting started** (sidebar) links to a short guide. For production deployment and real testing, see [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -205,7 +205,7 @@ Gateway will be available at `http://localhost:4000`
 
 ## Deployment and production
 
-Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, and ShieldObserve/Nagios gateway options are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, and QynSight/Nagios gateway options are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 **Production checklist (see DEPLOYMENT.md):**
 - Use `composer install --no-dev` and `npm ci` / `npm run build` for backend and frontend.
@@ -279,8 +279,8 @@ All endpoints return consistent JSON:
 ### Module Catalog
 
 The system maintains a catalog of Shield modules:
-- ShieldCore (core module, always included)
-- ShieldObserve
+- QynCore (core module, always included)
+- QynSight
 - ShieldInventory
 - ShieldRespond
 - ShieldSecure
@@ -339,8 +339,8 @@ All other routes pass through without enforcement.
 
 ## License
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited. Use of this software is permitted only with explicit written authorization from PortShield CO.
+This software is the proprietary property of Quenyx CO. Unauthorized use, copying, modification, or distribution is strictly prohibited. Use of this software is permitted only with explicit written authorization from Quenyx CO.
 
 See [LICENSE](LICENSE) for full terms and conditions.

@@ -154,7 +154,7 @@ function runNagiosValidateInContainer(
 // Resolve config dir: use absolute path, or resolve relative to process.cwd()
 const rawConfigDir = process.env.NAGIOS_CONFIG_DIR || './nagios/config'
 const NAGIOS_CONFIG_DIR = path.isAbsolute(rawConfigDir) ? rawConfigDir : path.resolve(process.cwd(), rawConfigDir)
-const NAGIOS_CONTAINER_WORKSPACES_DIR = process.env.NAGIOS_CONTAINER_WORKSPACES_DIR || '/opt/nagios/etc/objects/portshield/workspaces'
+const NAGIOS_CONTAINER_WORKSPACES_DIR = process.env.NAGIOS_CONTAINER_WORKSPACES_DIR || '/opt/nagios/etc/objects/quenyx/workspaces'
 
 // Reload verification: timeout and retry (TPM hardening gate C)
 const RELOAD_TIMEOUT_MS = parseInt(process.env.NAGIOS_RELOAD_TIMEOUT_MS || '15000', 10)
@@ -184,14 +184,14 @@ export async function checkDockerAccess(): Promise<{ accessible: boolean; error?
   }
 }
 
-const WORKSPACES_CFG_DIR_LINE = 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces'
+const WORKSPACES_CFG_DIR_LINE = 'cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces'
 
 function lineMatchesCfgFile(s: string): boolean {
-  return /^\s*cfg_file\s*=\s*\/opt\/nagios\/etc\/objects\/portshield\/portshield\.cfg\s*$/.test(s.trim())
+  return /^\s*cfg_file\s*=\s*\/opt\/nagios\/etc\/objects\/quenyx\/quenyx\.cfg\s*$/.test(s.trim())
 }
 
 function lineMatchesCfgDir(s: string): boolean {
-  return /^\s*cfg_dir\s*=\s*\/opt\/nagios\/etc\/objects\/portshield\/workspaces\s*$/.test(s.trim())
+  return /^\s*cfg_dir\s*=\s*\/opt\/nagios\/etc\/objects\/quenyx\/workspaces\s*$/.test(s.trim())
 }
 
 /**
@@ -203,7 +203,7 @@ export async function verifyNagiosCfgIncludesWorkspaces(): Promise<{ ok: boolean
   if (!dockerCheck.accessible) {
     return {
       ok: false,
-      message: (dockerCheck.error ?? 'Docker access denied') + ' Add cfg_dir=/opt/nagios/etc/objects/portshield/workspaces to nagios.cfg manually.',
+      message: (dockerCheck.error ?? 'Docker access denied') + ' Add cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces to nagios.cfg manually.',
     }
   }
   const checkOnce = async (): Promise<{ ok: boolean; message?: string }> => {
@@ -214,7 +214,7 @@ export async function verifyNagiosCfgIncludesWorkspaces(): Promise<{ ok: boolean
       const hasCfgDir = lines.some(lineMatchesCfgDir)
       const hasCfgFileWorkspaces = lines.some((l) => {
         const m = l.match(/^\s*cfg_file\s*=\s*(.+)\s*$/)
-        return m ? (m[1] ?? '').trim().includes('portshield/workspaces') : false
+        return m ? (m[1] ?? '').trim().includes('quenyx/workspaces') : false
       })
       if (hasCfgDir || hasCfgFileWorkspaces) {
         return { ok: true }
@@ -303,7 +303,7 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
     const hadCfgDir = lines.some(lineMatchesCfgDir)
     const block = [
       '',
-      '# PortShield workspace configs (auto-added)',
+      '# Quenyx workspace configs (auto-added)',
       WORKSPACES_CFG_DIR_LINE,
     ]
     const outLines = hadCfgDir ? withoutOldOrCfgDir : [...withoutOldOrCfgDir, ...block]
@@ -311,7 +311,7 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
     if (out === originalContent) {
       return
     }
-    const tmpPath = path.join(os.tmpdir(), `portshield-nagios-${Date.now()}.cfg`)
+    const tmpPath = path.join(os.tmpdir(), `quenyx-nagios-${Date.now()}.cfg`)
     await fs.writeFile(tmpPath, out, 'utf-8')
     try {
       await execAsync(`docker cp "${tmpPath.replace(/"/g, '\\"')}" ${NAGIOS_CONTAINER_NAME}:/tmp/nagios_ps.cfg`, { timeout: 5000 })

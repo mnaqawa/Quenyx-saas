@@ -12,7 +12,7 @@ export interface ObserveRouteConfig {
 }
 
 // Convert RouteConfig[] to ObserveRouteConfig[] format
-function convertToObserveRoutes(routes: typeof routesByModule.shieldobserve): ObserveRouteConfig[] {
+function convertToObserveRoutes(routes: typeof routesByModule.qynsight): ObserveRouteConfig[] {
   return routes.map((route) => ({
     route: route.key,
     title: route.title,
@@ -20,7 +20,7 @@ function convertToObserveRoutes(routes: typeof routesByModule.shieldobserve): Ob
   }))
 }
 
-export const observeRoutes: ObserveRouteConfig[] = convertToObserveRoutes(routesByModule.shieldobserve || [])
+export const observeRoutes: ObserveRouteConfig[] = convertToObserveRoutes(routesByModule.qynsight || [])
 
 // Map for quick lookup by route
 export const observeRoutesMap: Record<string, string> = Object.fromEntries(
@@ -30,6 +30,6 @@ export const observeRoutesMap: Record<string, string> = Object.fromEntries(
 // Get title by route (now uses platformRegistry)
 export function getObservePageTitle(route: string): string {
   // Extract route key from full path or use route directly
-  const routeConfig = routesByModule.shieldobserve?.find((r) => r.key === route)
-  return routeConfig?.title || 'ShieldObserve'
+  const routeConfig = routesByModule.qynsight?.find((r) => r.key === route)
+  return routeConfig?.title || 'QynSight'
 }

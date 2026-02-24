@@ -10,14 +10,14 @@ export default function ObserveLayout() {
   if (!selectedWorkspaceId) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
-        <p className="text-sm text-white/60">Please select a workspace to view ShieldObserve</p>
+        <p className="text-sm text-white/60">Please select a workspace to view QynSight</p>
       </div>
     )
   }
 
-  // Check if ShieldObserve is locked
-  const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
-  const isLocked = observeModule ? !allowedByKey['shieldobserve'] : false
+  // Check if QynSight is locked
+  const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
+  const isLocked = observeModule ? !allowedByKey['qynsight'] : false
 
   // Get page title from platformRegistry
   const currentPageTitle = getPageTitleFromPath(location.pathname)
@@ -32,7 +32,7 @@ export default function ObserveLayout() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>ShieldObserve is locked. Some features are disabled.</span>
+            <span>QynSight is locked. Some features are disabled.</span>
           </div>
         </div>
       )}
@@ -50,9 +50,9 @@ export default function ObserveLayout() {
           onClick={() => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`)}
           className="hover:text-white/60 transition"
         >
-          ShieldObserve
+          QynSight
         </button>
-        {currentPageTitle && currentPageTitle !== 'ShieldObserve' && (
+        {currentPageTitle && currentPageTitle !== 'QynSight' && (
           <>
             <span>/</span>
             <span className="text-white/50">{currentPageTitle}</span>

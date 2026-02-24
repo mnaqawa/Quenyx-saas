@@ -22,7 +22,7 @@ function getClientVersion(): string {
 // Get current workspace ID from context (will be injected by services)
 export interface GatewayRequestOptions {
   workspaceId?: string | number
-  moduleKey?: string // Module scope for gateway routing (e.g., 'shieldobserve', 'shieldrun')
+  moduleKey?: string // Module scope for gateway routing (e.g., 'qynsight', 'qynrun')
   headers?: Record<string, string>
 }
 
@@ -57,7 +57,7 @@ function buildGatewayHeaders(options?: GatewayRequestOptions): Record<string, st
     headers['x-workspace-id'] = String(options.workspaceId)
   }
 
-  // Add module key header for gateway scoping (defaults to 'shieldobserve' for observeService)
+  // Add module key header for gateway scoping (defaults to 'qynsight' for observeService)
   if (options?.moduleKey) {
     headers['x-module-key'] = options.moduleKey
   }

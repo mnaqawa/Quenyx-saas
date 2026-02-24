@@ -1,10 +1,10 @@
-# PortShield Backend API
+# Quenyx Backend API
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This software is the proprietary property of PortShield CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
+This software is the proprietary property of Quenyx CO. Unauthorized use, copying, modification, or distribution is strictly prohibited.
 
-Laravel API-only backend for PortShield vOPS HUB.
+Laravel API-only backend for Quenyx vOPS HUB.
 
 ## Requirements
 

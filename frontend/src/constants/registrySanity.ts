@@ -44,14 +44,14 @@ export function validatePlatformRegistry(): ValidationError[] {
     }
   }
 
-  // Check that all ShieldObserve routes start with /app/workspaces/:id/observe
-  const observeModule = modules.find((m) => m.key === 'shieldobserve')
+  // Check that all QynSight routes start with /app/workspaces/:id/observe
+  const observeModule = modules.find((m) => m.key === 'qynsight')
   if (observeModule?.sidebar.children) {
     for (const route of observeModule.sidebar.children) {
       if (!route.path.startsWith('/app/workspaces/:id/observe')) {
         errors.push({
           type: 'invalid_observe_route',
-          message: `ShieldObserve route must start with /app/workspaces/:id/observe: ${route.path}`,
+          message: `QynSight route must start with /app/workspaces/:id/observe: ${route.path}`,
           details: { route: route.path },
         })
       }

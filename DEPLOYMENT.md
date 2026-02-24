@@ -1,8 +1,8 @@
-# PortShield vOPS HUB – Deployment
+# Quenyx vOPS HUB – Deployment
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This document describes how to deploy the PortShield vOPS HUB monorepo (backend, frontend, gateway) for development and production.
+This document describes how to deploy the Quenyx vOPS HUB monorepo (backend, frontend, gateway) for development and production.
 
 ## Prerequisites
 
@@ -93,7 +93,7 @@ Ensure **backend/storage/app/agents** exists and is writable by the web server u
 
 Built or pre-placed files in `backend/storage/app/agents/`: `linux-amd64`, `linux-arm64`, `windows-amd64`, `windows-arm64`, `darwin-amd64`, `darwin-arm64`. See `agent/README.md` for manual build commands. If the server cannot build or find a binary, the endpoint returns JSON with a `message` explaining the reason (e.g. "Go binary not found").
 
-**Optional – ShieldObserve / Nagios:**
+**Optional – QynSight / Nagios:**
 
 ```bash
 NAGIOS_BIN=nagios
@@ -145,7 +145,7 @@ server {
 
 ```ini
 [Unit]
-Description=PortShield Backend API
+Description=Quenyx Backend API
 After=network.target
 
 [Service]
@@ -165,7 +165,7 @@ WantedBy=multi-user.target
 
 ```ini
 [Unit]
-Description=PortShield API Gateway
+Description=Quenyx API Gateway
 After=network.target
 
 [Service]
@@ -182,7 +182,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-### 7. Laravel scheduler (cron) – required for ShieldObserve
+### 7. Laravel scheduler (cron) – required for QynSight
 
 The scheduler runs `observe:run-checks` every minute for host/service monitoring. **Without this, Real-time Monitoring and Infrastructure Map will show stale or "never" data.**
 
@@ -224,7 +224,7 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
 3. **Add queue worker systemd service** `/etc/systemd/system/portshield-queue.service`:
    ```ini
    [Unit]
-   Description=PortShield Queue Worker
+   Description=Quenyx Queue Worker
    After=network.target
 
    [Service]
@@ -359,7 +359,7 @@ Before going live:
 | **HTTPS** | Use Nginx (or load balancer) with SSL; redirect HTTP → HTTPS |
 | **Gateway** | `BACKEND_BASE_URL` must point to backend (e.g. `http://127.0.0.1:8000` or internal LB URL) |
 | **No dev deps** | Backend: `composer install --no-dev`. Frontend/gateway: use built assets; no dev servers in production |
-| **Laravel scheduler** | Add crontab for `php artisan schedule:run` (see §7). Without it, ShieldObserve checks never run and "Last poll: never" appears |
+| **Laravel scheduler** | Add crontab for `php artisan schedule:run` (see §7). Without it, QynSight checks never run and "Last poll: never" appears |
 
 ---
 
@@ -398,4 +398,4 @@ If all pass, the platform is ready for production use.
 
 ## License
 
-**PROPRIETARY SOFTWARE - Copyright (c) 2026 PortShield CO. All rights reserved.**
+**PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**

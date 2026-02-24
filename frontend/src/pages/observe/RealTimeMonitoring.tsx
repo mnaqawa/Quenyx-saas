@@ -448,7 +448,7 @@ export default function RealTimeMonitoring() {
       {/* System metrics: monitoring server (same machine for all workspaces; workspace hosts are in Observe status below) */}
       <div className="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
         <span className="text-xs font-medium text-sky-200">Monitoring server</span>
-        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running ShieldObserve (not your monitored hosts)">
+        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running QynSight (not your monitored hosts)">
           Server metrics · workspace hosts in Observe status below
         </span>
       </div>
@@ -570,7 +570,7 @@ export default function RealTimeMonitoring() {
         <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-white">
           <h3 className="text-sm font-semibold text-sky-200">Per-host metrics (coming soon)</h3>
           <p className="mt-1 text-xs text-white/60">
-            CPU, memory, and disk for <strong>{selectedHost}</strong> will appear here when NRPE or the ShieldObserve agent is configured on the host. For now, use the service status and totals below.
+            CPU, memory, and disk for <strong>{selectedHost}</strong> will appear here when NRPE or the QynSight agent is configured on the host. For now, use the service status and totals below.
           </p>
         </div>
       )}

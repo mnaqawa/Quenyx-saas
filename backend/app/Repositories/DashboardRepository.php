@@ -52,10 +52,10 @@ class DashboardRepository
     {
         if (count($modules) === 0) {
             return [
-                ['label' => 'ShieldObserve', 'primary' => 6, 'secondary' => 2],
-                ['label' => 'ShieldRespond', 'primary' => 4, 'secondary' => 1],
-                ['label' => 'ShieldSecure', 'primary' => 5, 'secondary' => 2],
-                ['label' => 'ShieldNotify', 'primary' => 6, 'secondary' => 2],
+                ['label' => 'QynSight', 'primary' => 6, 'secondary' => 2],
+                ['label' => 'QynReact', 'primary' => 4, 'secondary' => 1],
+                ['label' => 'QynShield', 'primary' => 5, 'secondary' => 2],
+                ['label' => 'QynNotify', 'primary' => 6, 'secondary' => 2],
                 ['label' => 'Others', 'primary' => 5, 'secondary' => 1],
             ];
         }

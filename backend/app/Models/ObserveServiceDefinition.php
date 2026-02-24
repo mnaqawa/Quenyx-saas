@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Canonical service definition for ShieldObserve.
+ * Canonical service definition for QynSight.
  * Engine-agnostic; used for UI-driven service creation and to fix argument ordering (e.g. check_ping).
  *
  * args_schema contract (MUST be an ordered list; Nagios commands are positional):

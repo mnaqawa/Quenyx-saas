@@ -79,7 +79,7 @@ async function checkEntitlement(
 /**
  * Entitlement enforcement middleware
  * 
- * ENFORCED ROUTES (require shieldintegrations module):
+ * ENFORCED ROUTES (require qynintegrations module):
  * - /api/projects/:projectId/integrations*
  * 
  * ALLOWED ROUTES (no enforcement, pass through):
@@ -121,7 +121,7 @@ export async function enforceEntitlements(
     
     const token = authHeader.substring(7)
     const tokenHash = hashToken(token)
-    const requiredModule = 'shieldintegrations'
+    const requiredModule = 'qynintegrations'
     
     try {
       const hasAccess = await checkEntitlement(token, projectId, requiredModule)

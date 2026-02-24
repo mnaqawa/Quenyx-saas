@@ -1,5 +1,5 @@
 /**
- * Infrastructure Map — Observe module (ShieldObserve microservice).
+ * Infrastructure Map — Observe module (QynSight microservice).
  * All dynamic data (hosts, services, connections, status) comes from Observe APIs only; no fixtures or hardcoded variables.
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
@@ -79,7 +79,7 @@ function statusLabel(s: string): string {
 /** Tooltip explaining Pending: first check not run yet */
 function statusTooltip(s: string): string | undefined {
   if (s?.toLowerCase() === 'pending') {
-    return 'Pending = first check not run yet. ShieldObserve runs checks every minute. Add services in Monitored Targets for more checks.'
+    return 'Pending = first check not run yet. QynSight runs checks every minute. Add services in Monitored Targets for more checks.'
   }
   return undefined
 }
@@ -125,10 +125,10 @@ function ZoneBasedTopology({
       <p className="text-xs text-white/50 mb-3">
         Zone-based topology — assign zones in Device List. Layout inspired by enterprise network diagrams (DMZ → Web/App → DB).
       </p>
-      {/* Monitoring node (top-left, like ShieldObserve in PDF) */}
+      {/* Monitoring node (top-left, like QynSight in PDF) */}
       <div className="absolute right-4 top-4 z-10 rounded-xl border-2 border-sky-500/50 bg-sky-500/10 px-4 py-2 shadow-lg">
         <p className="text-[10px] font-medium text-sky-300/80 uppercase tracking-wider">Monitoring</p>
-        <p className="text-sm font-semibold text-sky-200">ShieldObserve</p>
+        <p className="text-sm font-semibold text-sky-200">QynSight</p>
       </div>
       {/* Zone containers in a flow layout */}
       <div className="grid grid-cols-1 gap-6 pt-14 md:grid-cols-2 lg:grid-cols-3">
@@ -201,7 +201,7 @@ function ZoneBasedTopology({
   )
 }
 
-// ShieldObserve cloud: centered at top, above networks (like PDF) — larger and clearer
+// QynSight cloud: centered at top, above networks (like PDF) — larger and clearer
 const CLOUD_NODE = { cx: 320, cy: 48, r: 72 }
 
 function LLDTopology({
@@ -271,7 +271,7 @@ function LLDTopology({
         })}
       </svg>
 
-      {/* ShieldObserve as cloud (top center) — larger, clearer diagram */}
+      {/* QynSight as cloud (top center) — larger, clearer diagram */}
       <div
         className="absolute z-20 flex flex-col items-center justify-center rounded-2xl border-2 border-sky-500/40 bg-sky-500/15 px-6 py-4 shadow-xl backdrop-blur-sm"
         style={{ left: cloudCx - CLOUD_NODE.r - 24, top: 4, width: (CLOUD_NODE.r + 24) * 2, minHeight: CLOUD_NODE.r * 1.4 }}
@@ -283,7 +283,7 @@ function LLDTopology({
           </svg>
           <div className="text-left">
             <p className="text-[11px] font-semibold text-sky-300/95 uppercase tracking-widest">Monitoring</p>
-            <p className="text-lg font-bold text-sky-100 tracking-tight">ShieldObserve</p>
+            <p className="text-lg font-bold text-sky-100 tracking-tight">QynSight</p>
           </div>
         </div>
       </div>
@@ -370,7 +370,7 @@ export default function InfrastructureMap() {
   const topologyRef = useRef<HTMLDivElement>(null)
 
   const refetchIntervalMs = autoRefresh ? autoRefreshSeconds * 1000 : 0
-  // Observe module: real data only from ShieldObserve microservice APIs (no fixtures / no hardcoded dynamic data)
+  // Observe module: real data only from QynSight microservice APIs (no fixtures / no hardcoded dynamic data)
   const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId, refetchIntervalMs, true)
   const { data: servicesData } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
@@ -618,7 +618,7 @@ export default function InfrastructureMap() {
       view: viewType,
       layer: layerFilter,
       definitions: {
-        'Compute Layer': 'Hosts and servers monitored by ShieldObserve',
+        'Compute Layer': 'Hosts and servers monitored by QynSight',
         'Network Layer': 'Logical network segments (from host addressing)',
         'Storage Layer': 'Storage resources (define in Monitored Targets)',
         'Security Layer': 'Security zones and policies (define in Monitored Targets)',
@@ -780,7 +780,7 @@ export default function InfrastructureMap() {
 
     const rectsAndLabels: string[] = []
     rectsAndLabels.push(rect(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, strokeNet))
-    rectsAndLabels.push(label(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, ['Monitoring', 'ShieldObserve']))
+    rectsAndLabels.push(label(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, ['Monitoring', 'QynSight']))
     hostPositions.forEach((h) => {
       const stroke = h.status === 'ok' ? strokeOk : h.status === 'warning' ? strokeWarn : strokeCrit
       rectsAndLabels.push(rect(h.x, h.y, nodeW, nodeH, stroke))
@@ -1153,7 +1153,7 @@ export default function InfrastructureMap() {
           <>
             <h3 className="mb-1 text-sm font-semibold">Network Connections</h3>
             <p className="mb-2 text-xs text-white/50">
-              Layer: {layerFilter} — real data from ShieldObserve microservice
+              Layer: {layerFilter} — real data from QynSight microservice
               {apiConnectionsData?.from_integrations?.length ? (
                 <span className="ml-2 rounded bg-sky-500/20 px-2 py-0.5 text-sky-200">+ {apiConnectionsData.from_integrations.join(', ')}</span>
               ) : null}
@@ -1497,7 +1497,7 @@ export default function InfrastructureMap() {
       <details className="rounded-2xl border border-white/10 bg-[#0f151d] p-4 text-white">
         <summary className="cursor-pointer text-xs font-semibold text-white/70 uppercase tracking-wider">Layer definitions</summary>
         <dl className="mt-3 space-y-2 text-xs text-white/60">
-          <div><dt className="font-medium text-white/80">Compute Layer</dt><dd>Hosts and servers monitored by ShieldObserve (real data from Monitored Targets).</dd></div>
+          <div><dt className="font-medium text-white/80">Compute Layer</dt><dd>Hosts and servers monitored by QynSight (real data from Monitored Targets).</dd></div>
           <div><dt className="font-medium text-white/80">Network Layer</dt><dd>Logical network segments; derived from host addressing. Add network metadata in Monitored Targets for richer LLD.</dd></div>
           <div><dt className="font-medium text-white/80">Storage Layer</dt><dd>Storage resources. Define in Monitored Targets or integrate with storage monitoring for live data.</dd></div>
           <div><dt className="font-medium text-white/80">Security Layer</dt><dd>Security zones and policies. Define in Monitored Targets or link to security tools for live data.</dd></div>

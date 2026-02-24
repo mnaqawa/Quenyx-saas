@@ -30,8 +30,8 @@ function Subscriptions() {
       }
     })
     const uniqueModules = Array.from(moduleMap.values())
-    const core = uniqueModules.find((m) => m.key === 'shieldcore') ?? null
-    const others = uniqueModules.filter((m) => m.key !== 'shieldcore')
+    const core = uniqueModules.find((m) => m.key === 'qyncore') ?? null
+    const others = uniqueModules.filter((m) => m.key !== 'qyncore')
 
     // Determine recommended plan for target module (based on allowed_by_plan, not override)
     let recommended: PlanKey | null = null

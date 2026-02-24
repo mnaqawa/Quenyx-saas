@@ -136,11 +136,11 @@ export default function Targets() {
 
   const workspaceId = id || selectedWorkspaceId
 
-  const isLocked = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
-    ? !allowedByKey['shieldobserve']
+  const isLocked = modulesWithAccess?.find((m) => m.key === 'qynsight')
+    ? !allowedByKey['qynsight']
     : false
 
-  const canEdit = !isLocked && (allowedByKey['shieldobserve'] ?? false)
+  const canEdit = !isLocked && (allowedByKey['qynsight'] ?? false)
 
   const definitionsByKey = useMemo(() => {
     const map = new Map<string, ServiceDefinition>()
@@ -158,7 +158,7 @@ export default function Targets() {
         const [targetsResponse, defsResponse] = await Promise.all([
           gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(
             `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
-            { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
+            { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
           ),
           observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
         ])
@@ -402,14 +402,14 @@ export default function Targets() {
       const result = await gatewayClient.put<TargetHost[] | PutResult>(
         `workspaces/${workspaceId}/observe/targets`,
         payload,
-        { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
+        { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
       )
 
       const hostsFromResponse = Array.isArray(result) ? result : (result?.targets ?? [])
       const merged = mergeResponseWithCurrent(hosts, hostsFromResponse)
       setHosts(normalizeHostsServiceKeys(merged))
 
-      setSuccess('Targets saved. Checks run by ShieldObserve.')
+      setSuccess('Targets saved. Checks run by QynSight.')
       setError(null)
       setValidationErrors((prev) => {
         const next = { ...prev }
@@ -599,14 +599,14 @@ export default function Targets() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>ShieldObserve is locked. Some features are disabled.</span>
+            <span>QynSight is locked. Some features are disabled.</span>
           </div>
         </div>
       )}
 
       <PageHeader
         title="Monitored Targets"
-        subtitle="Define hosts and services to monitor with ShieldObserve"
+        subtitle="Define hosts and services to monitor with QynSight. For agent-enrolled hosts, Private IP and Public IP are updated automatically when the agent reports (e.g. after DHCP change)."
         actions={
           <>
             {canEdit && (
@@ -899,7 +899,7 @@ export default function Targets() {
                                           />
                                         </label>
                                       </div>
-                                      <p className="text-[10px] text-white/50">How often ShieldObserve runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).</p>
+                                      <p className="text-[10px] text-white/50">How often QynSight runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).</p>
                                     </div>
                                     {Object.entries(groups).map(([sectionName, fields]) => (
                                       <div key={sectionName} className="space-y-2">

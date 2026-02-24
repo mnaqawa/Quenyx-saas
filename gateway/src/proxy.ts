@@ -6,7 +6,7 @@ import { hashToken } from './cache'
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'
 const OBSERVE_ENGINE_URL = process.env.OBSERVE_ENGINE_URL || ''
 
-/** True if path (under /api) is an observe API (ShieldObserve microservice). */
+/** True if path (under /api) is an observe API (QynSight microservice). */
 function isObservePath(req: Request): boolean {
   const path = (req.url || req.path || '').split('?')[0]
   return /^\/?(workspaces|projects)\/[^/]+\/observe(\/|$)/.test(path)

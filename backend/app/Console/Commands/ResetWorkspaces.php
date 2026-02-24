@@ -16,7 +16,7 @@ class ResetWorkspaces extends Command
      *
      * @var string
      */
-    protected $signature = 'portshield:reset-workspaces {email : User email address} {--count=4 : Number of sample workspaces to create}';
+    protected $signature = 'quenyx:reset-workspaces {email : User email address} {--count=4 : Number of sample workspaces to create}';
 
     /**
      * The console command description.

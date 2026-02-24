@@ -3,33 +3,33 @@
 // "Coming Soon / Locked" behavior, and future gateway API scoping
 
 export type ModuleStatus = 'ready' | 'comingSoon'
-export type ModuleKey = 
-  | 'shieldobserve' 
-  | 'shieldcore' 
-  | 'shieldautomate' 
-  | 'shieldbalance' 
-  | 'shielddesk' 
-  | 'shieldintegrations' 
-  | 'shieldinventory' 
-  | 'shieldknowledge' 
-  | 'shieldnotify' 
-  | 'shieldrespond' 
-  | 'shieldsecure' 
-  | 'shieldvoice' 
+export type ModuleKey =
+  | 'qynsight'
+  | 'qyncore'
+  | 'qynrun'
+  | 'qynbalance'
+  | 'qynsupport'
+  | 'qynintegrations'
+  | 'qynasset'
+  | 'qynknow'
+  | 'qynnotify'
+  | 'qynreact'
+  | 'qynshield'
+  | 'qynva'
   | string
 
 export interface RouteConfig {
-  key: string // Unique identifier for the route
-  label: string // Used for sidebar navigation
-  path: string // Full route path (may contain :id, :moduleKey placeholders)
-  title: string // PageHeader/breadcrumb title
-  readyOnly?: boolean // If true, only shown when module is ready
+  key: string
+  label: string
+  path: string
+  title: string
+  readyOnly?: boolean
 }
 
 export interface ModuleSidebarConfig {
-  icon?: string // Optional icon identifier
-  order: number // Display order in sidebar
-  children?: RouteConfig[] // Nested routes (e.g., ShieldObserve subpages)
+  icon?: string
+  order: number
+  children?: RouteConfig[]
 }
 
 export interface ModuleConfig {
@@ -37,294 +37,194 @@ export interface ModuleConfig {
   displayName: string
   status: ModuleStatus
   requiresWorkspace: boolean
-  baseRoutePattern: string // Route pattern (e.g., '/app/workspaces/:id/observe' or '/app/workspaces/:id/modules/:moduleKey')
+  baseRoutePattern: string
   description?: string
   sidebar: ModuleSidebarConfig
 }
 
-// ShieldObserve routes configuration
-const shieldObserveRoutes: RouteConfig[] = [
-  {
-    key: 'real-time-monitoring',
-    label: 'Real-time Monitoring',
-    path: '/app/workspaces/:id/observe/real-time-monitoring',
-    title: 'Real-time Monitoring',
-  },
-  {
-    key: 'infrastructure-map',
-    label: 'Infrastructure Map',
-    path: '/app/workspaces/:id/observe/infrastructure-map',
-    title: 'Infrastructure Map',
-  },
-  {
-    key: 'performance-analytics',
-    label: 'Performance Analytics',
-    path: '/app/workspaces/:id/observe/performance-analytics',
-    title: 'Performance Analytics',
-  },
-  {
-    key: 'capacity-planning',
-    label: 'Capacity Planning',
-    path: '/app/workspaces/:id/observe/capacity-planning',
-    title: 'Capacity Planning',
-  },
-  {
-    key: 'alert-management',
-    label: 'Alert Management',
-    path: '/app/workspaces/:id/observe/alert-management',
-    title: 'Alert Management',
-  },
-  {
-    key: 'instance-management',
-    label: 'Instance Management',
-    path: '/app/workspaces/:id/observe/instance-management',
-    title: 'Instance Management',
-  },
-  {
-    key: 'services',
-    label: 'Services',
-    path: '/app/workspaces/:id/observe/services',
-    title: 'Services',
-  },
-  {
-    key: 'reports',
-    label: 'Reports',
-    path: '/app/workspaces/:id/observe/reports',
-    title: 'Reports',
-  },
-  {
-    key: 'data-sources',
-    label: 'Data Sources',
-    path: '/app/workspaces/:id/observe/data-sources',
-    title: 'Data Sources',
-  },
-  {
-    key: 'targets',
-    label: 'Targets',
-    path: '/app/workspaces/:id/observe/targets',
-    title: 'Monitored Targets',
-  },
+// QynSight (monitoring) routes configuration
+const qynSightRoutes: RouteConfig[] = [
+  { key: 'real-time-monitoring', label: 'Real-time Monitoring', path: '/app/workspaces/:id/observe/real-time-monitoring', title: 'Real-time Monitoring' },
+  { key: 'infrastructure-map', label: 'Infrastructure Map', path: '/app/workspaces/:id/observe/infrastructure-map', title: 'Infrastructure Map' },
+  { key: 'performance-analytics', label: 'Performance Analytics', path: '/app/workspaces/:id/observe/performance-analytics', title: 'Performance Analytics' },
+  { key: 'capacity-planning', label: 'Capacity Planning', path: '/app/workspaces/:id/observe/capacity-planning', title: 'Capacity Planning' },
+  { key: 'alert-management', label: 'Alert Management', path: '/app/workspaces/:id/observe/alert-management', title: 'Alert Management' },
+  { key: 'instance-management', label: 'Instance Management', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management' },
+  { key: 'services', label: 'Services', path: '/app/workspaces/:id/observe/services', title: 'Services' },
+  { key: 'reports', label: 'Reports', path: '/app/workspaces/:id/observe/reports', title: 'Reports' },
+  { key: 'data-sources', label: 'Data Sources', path: '/app/workspaces/:id/observe/data-sources', title: 'Data Sources' },
+  { key: 'targets', label: 'Targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
 ]
 
-// Module registry - all modules in the platform
-// This should match the backend ModuleSeeder SHIELD_MODULES list
 export const modules: ModuleConfig[] = [
   {
-    key: 'shieldobserve',
-    displayName: 'ShieldObserve',
+    key: 'qynsight',
+    displayName: 'QynSight',
     status: 'ready',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/observe',
     description: 'Real-time infrastructure monitoring and performance insights across your environment.',
-    sidebar: {
-      order: 1,
-      children: shieldObserveRoutes,
-    },
+    sidebar: { order: 1, children: qynSightRoutes },
   },
   {
-    key: 'shieldcore',
-    displayName: 'ShieldCore',
+    key: 'qyncore',
+    displayName: 'QynCore',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Central configuration and governance hub for platform control and policy management.',
-    sidebar: {
-      order: 2,
-    },
+    sidebar: { order: 2 },
   },
   {
-    key: 'shieldautomate',
-    displayName: 'ShieldAutomate',
+    key: 'qynrun',
+    displayName: 'QynRun',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Workflow automation and process orchestration across systems and teams.',
-    sidebar: {
-      order: 3,
-    },
+    sidebar: { order: 3 },
   },
   {
-    key: 'shieldbalance',
-    displayName: 'ShieldBalance',
+    key: 'qynbalance',
+    displayName: 'QynBalance',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Load balancing and traffic management for optimal resource distribution.',
-    sidebar: {
-      order: 4,
-    },
+    sidebar: { order: 4 },
   },
   {
-    key: 'shielddesk',
-    displayName: 'ShieldDesk',
+    key: 'qynsupport',
+    displayName: 'QynSupport',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
-    sidebar: {
-      order: 5,
-    },
+    sidebar: { order: 5 },
   },
   {
-    key: 'shieldintegrations',
-    displayName: 'ShieldIntegrations',
+    key: 'qynintegrations',
+    displayName: 'QynIntegrations',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Third-party integrations and API connections for external services.',
-    sidebar: {
-      order: 6,
-    },
+    sidebar: { order: 6 },
   },
   {
-    key: 'shieldinventory',
-    displayName: 'ShieldInventory',
+    key: 'qynasset',
+    displayName: 'QynAsset',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Comprehensive asset discovery, inventory management, and automated health tracking.',
-    sidebar: {
-      order: 7,
-    },
+    sidebar: { order: 7 },
   },
   {
-    key: 'shieldknowledge',
-    displayName: 'ShieldKnowledge',
+    key: 'qynknow',
+    displayName: 'QynKnow',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Knowledge management for documentation, playbooks, and operational procedures.',
-    sidebar: {
-      order: 8,
-    },
+    sidebar: { order: 8 },
   },
   {
-    key: 'shieldnotify',
-    displayName: 'ShieldNotify',
+    key: 'qynnotify',
+    displayName: 'QynNotify',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Alert and notification management across email, SMS, and in-app channels.',
-    sidebar: {
-      order: 9,
-    },
+    sidebar: { order: 9 },
   },
   {
-    key: 'shieldrespond',
-    displayName: 'ShieldRespond',
+    key: 'qynreact',
+    displayName: 'QynReact',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Automated incident response and orchestration for rapid recovery and resolution.',
-    sidebar: {
-      order: 10,
-    },
+    sidebar: { order: 10 },
   },
   {
-    key: 'shieldsecure',
-    displayName: 'ShieldSecure',
+    key: 'qynshield',
+    displayName: 'QynShield',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
-    sidebar: {
-      order: 11,
-    },
+    sidebar: { order: 11 },
   },
   {
-    key: 'shieldvoice',
-    displayName: 'ShieldVoice',
+    key: 'qynva',
+    displayName: 'QynVA',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
     description: 'AI voice and IVR operations for automated customer support and service analytics.',
-    sidebar: {
-      order: 12,
-    },
+    sidebar: { order: 12 },
   },
 ]
 
-// Routes by module key for quick lookup
 export const routesByModule: Record<string, RouteConfig[]> = {
-  shieldobserve: shieldObserveRoutes,
-  // Other modules don't have nested routes yet
+  qynsight: qynSightRoutes,
 }
 
-// Helper: Get module by key
 export function getModule(key: string): ModuleConfig | undefined {
   return modules.find((m) => m.key === key)
 }
 
-// Helper: Get module base path (replaces :id and :moduleKey with actual values)
 export function getModuleBasePath(key: string, workspaceId: string | number): string {
   const module = getModule(key)
   if (!module) return '#'
-
   let path = module.baseRoutePattern
   path = path.replace(':id', String(workspaceId))
   path = path.replace(':moduleKey', key)
-
   return path
 }
 
-// Helper: Get page title from pathname
 export function getPageTitleFromPath(pathname: string): string {
-  // Try to match against known routes
   for (const module of modules) {
     if (module.sidebar.children) {
       for (const route of module.sidebar.children) {
-        // Replace :id with a pattern matcher
         const routePattern = route.path.replace(':id', '[^/]+')
         const regex = new RegExp(`^${routePattern}$`)
-        if (regex.test(pathname)) {
-          return route.title
-        }
+        if (regex.test(pathname)) return route.title
       }
     }
   }
-
-  // Fallback: extract from pathname or return module display name
   const pathParts = pathname.split('/').filter(Boolean)
   if (pathParts.length > 0) {
     const lastPart = pathParts[pathParts.length - 1]
-    // Convert kebab-case to Title Case
     return lastPart
       .split('-')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
   }
-
-  return 'PortShield vOPS HUB'
+  return 'Quenyx vOPS HUB'
 }
 
-// Helper: Check if module is ready
 export function isModuleReady(key: string): boolean {
   const module = getModule(key)
   return module?.status === 'ready' || false
 }
 
-// Helper: Check if module is locked (non-UI helper)
 export function isModuleLocked(key: string, allowedByKey: Record<string, boolean>): boolean {
   return !allowedByKey[key]
 }
 
-// Helper: Get routes for a module
 export function getModuleRoutes(key: string): RouteConfig[] {
   return routesByModule[key] || []
 }
 
-// Backward compatibility: Re-export as moduleRegistry for existing code
 export const moduleRegistry = modules
-
-// Backward compatibility: Re-export helpers
 export function getModuleByKey(key: string): ModuleConfig | undefined {
   return getModule(key)
 }
-
 export function getReadyModules(): ModuleConfig[] {
   return modules.filter((m) => m.status === 'ready')
 }
-
 export function getComingSoonModules(): ModuleConfig[] {
   return modules.filter((m) => m.status === 'comingSoon')
 }

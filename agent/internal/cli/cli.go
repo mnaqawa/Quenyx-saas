@@ -8,7 +8,7 @@ import (
 
 func Run() error {
 	enroll := flag.NewFlagSet("enroll", flag.ExitOnError)
-	enrollURL := enroll.String("url", "", "Platform URL (e.g. https://portshield.example.com)")
+	enrollURL := enroll.String("url", "", "Platform URL (e.g. https://quenyx.example.com)")
 	enrollWorkspace := enroll.Int("workspace", 0, "Workspace ID")
 	enrollToken := enroll.String("token", "", "Enrollment token from the portal")
 
@@ -51,7 +51,7 @@ func Run() error {
 }
 
 func printUsage() {
-	fmt.Println(`PortShield Agent - Cross-network monitoring and asset inventory
+	fmt.Println(`Quenyx Agent - Cross-network monitoring and asset inventory
 
 Usage:
   portshield-agent enroll --url=URL --workspace=ID --token=TOKEN

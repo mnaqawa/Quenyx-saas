@@ -79,9 +79,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // Check if ShieldObserve is available and unlocked
-  const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
-  const hasObserveAccess = observeModule ? allowedByKey['shieldobserve'] : false
+  // Check if QynSight is available and unlocked
+  const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
+  const hasObserveAccess = observeModule ? allowedByKey['qynsight'] : false
   
   // Fetch Observe summary data if workspace is selected and module is accessible
   const { data: observeData, loading: observeLoading } = useObserveServices({
@@ -219,7 +219,7 @@ function Dashboard() {
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
             <p className="font-semibold">Get Started</p>
             <p className="mt-1 text-xs text-sky-200/80">
-              Create your first workspace to start using PortShield vOPS HUB.
+              Create your first workspace to start using Quenyx vOPS HUB.
             </p>
           </div>
         )}
@@ -420,7 +420,7 @@ function Dashboard() {
         <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-white">ShieldObserve Summary</h2>
+              <h2 className="text-sm font-semibold text-white">QynSight Summary</h2>
               <p className="mt-1 text-xs text-white/60">Real-time monitoring status and alerts</p>
             </div>
             {observeData && (
@@ -601,10 +601,10 @@ function Dashboard() {
 
       <section className="px-6 py-6 text-center text-white/70">
         <p className="text-sm font-semibold text-white/80">
-          PortShield vOPS HUB • Virtual IT Operations Platform • v2.1.0
+          Quenyx vOPS HUB • Virtual IT Operations Platform • v2.1.0
         </p>
         <p className="mt-2 text-xs text-white/50">
-          Unified monitoring and control for all your integrated PortShield vOPS HUB modules
+          Unified monitoring and control for all your integrated Quenyx vOPS HUB modules
         </p>
       </section>
     </div>

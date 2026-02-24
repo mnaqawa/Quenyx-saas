@@ -2,7 +2,7 @@
   "name": "portshield-agent",
   "version": "1.0.0",
   "private": true,
-  "description": "PortShield agent (Go). Use 'npm run build' to build the binary.",
+  "description": "Quenyx agent (Go). Use 'npm run build' to build the binary.",
   "scripts": {
     "build": "go build -o portshield-agent .",
     "build:windows": "go build -o portshield-agent.exe ."

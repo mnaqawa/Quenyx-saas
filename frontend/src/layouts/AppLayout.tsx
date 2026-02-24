@@ -15,12 +15,12 @@ function AppLayout() {
   // Find selected workspace using string comparison
   const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
-  // ShieldObserve subpages configuration (from shared constants)
+  // QynSight subpages configuration (from shared constants)
 
-  // Check if ShieldObserve is locked
+  // Check if QynSight is locked
   const isObserveLocked = useMemo(() => {
-    const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
-    return observeModule ? !allowedByKey['shieldobserve'] : false
+    const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
+    return observeModule ? !allowedByKey['qynsight'] : false
   }, [modulesWithAccess, allowedByKey])
 
   // Check if we're on any observe route
@@ -170,7 +170,7 @@ function AppLayout() {
             </div>
           ) : (
             <>
-              {/* ShieldObserve - always visible, even when locked, with expandable subpages */}
+              {/* QynSight - always visible, even when locked, with expandable subpages */}
               <div className="relative">
                 <button
                   type="button"
@@ -181,7 +181,7 @@ function AppLayout() {
                       : 'text-white/60 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <span>ShieldObserve</span>
+                  <span>QynSight</span>
                   <svg
                     width="12"
                     height="12"
@@ -196,7 +196,7 @@ function AppLayout() {
                 </button>
                 {isObserveExpanded && (
                   <div className="ml-4 mt-1 space-y-0.5 border-l border-white/5 pl-10">
-                    {(routesByModule.shieldobserve || []).map((route) => {
+                    {(routesByModule.qynsight || []).map((route) => {
                       const routePath = selectedWorkspaceId
                         ? route.path.replace(':id', String(selectedWorkspaceId))
                         : '#'
@@ -230,8 +230,8 @@ function AppLayout() {
               {/* Other modules - use platformRegistry as source of truth */}
               {platformModules
                 .filter((moduleConfig) => {
-                  // Show all modules except shieldobserve (which is shown separately above)
-                  return moduleConfig.key !== 'shieldobserve'
+                  // Show all modules except qynsight (which is shown separately above)
+                  return moduleConfig.key !== 'qynsight'
                 })
                 .sort((a, b) => (a.sidebar.order || 999) - (b.sidebar.order || 999))
                 .map((moduleConfig) => {

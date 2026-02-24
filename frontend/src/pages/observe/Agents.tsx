@@ -1,5 +1,5 @@
 /**
- * Agents — Install and manage PortShield agents for cross-network monitoring and asset inventory.
+ * Agents — Install and manage Quenyx agents for cross-network monitoring and asset inventory.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
@@ -70,10 +70,10 @@ export default function Agents({ embedded = false }: AgentsProps) {
     permissions: Record<string, PermissionInfo>
   }>({ protocols: {}, permissions: {} })
 
-  // When embedded in Integrations, agents are platform-wide (ShieldObserve, ShieldInventory, VA, etc.)
+  // When embedded in Integrations, agents are platform-wide (QynSight, QynAsset, VA, etc.)
   const canEdit = embedded
     ? !!selectedWorkspaceId
-    : !!(allowedByKey['shieldobserve'] ?? false)
+    : !!(allowedByKey['qynsight'] ?? false)
 
   const fetchAgents = useCallback(async () => {
     if (!workspaceId) return
@@ -223,7 +223,7 @@ export default function Agents({ embedded = false }: AgentsProps) {
                   </td>
                   <td className="px-4 py-3 text-sm text-white/70">
                     {a.primary_protocol === 'psap'
-                      ? 'PortShield Agent Protocol (PSAP)'
+                      ? 'Quenyx Agent Protocol (PSAP)'
                       : a.primary_protocol === 'http_api'
                         ? 'HTTP API (Push)'
                         : a.primary_protocol === 'snmp'
@@ -334,7 +334,7 @@ function InstallAgentModal({
               <section>
                 <h3 className="mb-2 text-sm font-medium text-white/80">Protocol</h3>
                 <p className="mb-3 text-xs text-white/50">
-                  Choose how the agent communicates. PortShield Agent Protocol (PSAP) or HTTP API (push).
+                  Choose how the agent communicates. Quenyx Agent Protocol (PSAP) or HTTP API (push).
                 </p>
                 <p className="mb-3 rounded border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
                   <strong>Current behavior:</strong> The agent always sends data to the platform over HTTPS (HTTP API push). No port needs to be open on the platform. PSAP (port 9444) is stored as your preference for when platform→agent pull is implemented; with PSAP, port 9444 would be opened on the <em>agent host</em>, not on this server.

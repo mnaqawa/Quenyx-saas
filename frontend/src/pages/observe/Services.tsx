@@ -80,8 +80,8 @@ export default function Services() {
   }, [searchQuery, selectedStatuses, limit, problemsOnly, refreshInterval, setSearchParams, searchParams])
 
   const isLocked = useMemo(() => {
-    const observeModule = modulesWithAccess?.find((m) => m.key === 'shieldobserve')
-    return observeModule ? !allowedByKey['shieldobserve'] : false
+    const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
+    return observeModule ? !allowedByKey['qynsight'] : false
   }, [modulesWithAccess, allowedByKey])
 
   // Auto-refresh based on interval - trigger re-fetch by updating a dependency
@@ -168,7 +168,7 @@ export default function Services() {
     return groups
   }, [data?.items])
 
-  // Display host name without workspace prefix for section headers (e.g. ws84-PortShield-DEV-Platform → PortShield-DEV-Platform)
+  // Display host name without workspace prefix for section headers (e.g. ws84-Quenyx-DEV-Platform → Quenyx-DEV-Platform)
   const hostDisplayName = (host: string) => {
     if (!selectedWorkspaceId) return host
     const prefix = `ws${selectedWorkspaceId}-`
@@ -209,7 +209,7 @@ export default function Services() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>ShieldObserve is locked. Some features are disabled.</span>
+            <span>QynSight is locked. Some features are disabled.</span>
           </div>
         </div>
       )}

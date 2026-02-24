@@ -1,4 +1,4 @@
-// Types for ShieldObserve module
+// Types for QynSight module
 
 export interface RealTimeMetrics {
   cpu: {

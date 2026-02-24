@@ -32,7 +32,7 @@ func runInstall(user string) error {
 
 func installSystemd(exe, user string) error {
 	unit := fmt.Sprintf(`[Unit]
-Description=PortShield Agent
+Description=Quenyx Agent
 After=network.target
 
 [Service]

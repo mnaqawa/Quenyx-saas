@@ -1,10 +1,10 @@
-# PortShield Agent
+# Quenyx Agent
 
 Lightweight agent for cross-network monitoring and asset inventory. Runs on Linux, Windows, and macOS.
 
 ## Quick start
 
-1. In the PortShield portal, go to **ShieldObserve → Agents → Install Agent**.
+1. In the Quenyx portal, go to **QynSight → Agents → Install Agent**.
 2. Select protocol (HTTP API recommended) and permissions.
 3. Generate an enrollment token.
 4. On your server, run:
@@ -90,7 +90,7 @@ The agent collects:
 ## Protocols
 
 - **HTTP API (default)**: Agent pushes data to the platform. Works across firewalls; only outbound HTTPS required.
-- **PSAP (PortShield Agent Protocol)**: Platform connects to agent on port 9444 (requires inbound access).
+- **PSAP (Quenyx Agent Protocol)**: Platform connects to agent on port 9444 (requires inbound access).
 - **SNMP**: Platform polls agent via SNMP (requires SNMP agent on host).
 
 ## Config location

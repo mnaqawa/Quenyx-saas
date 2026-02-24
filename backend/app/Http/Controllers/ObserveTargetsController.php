@@ -491,7 +491,7 @@ class ObserveTargetsController extends Controller
                 ]);
             }
 
-            // Return updated targets (no Nagios publish; we use ShieldObserve native engine only)
+            // Return updated targets (no Nagios publish; we use QynSight native engine only)
             $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
             $hosts = ObserveTargetHost::where('workspace_id', $project->id)
                 ->with(['services' => fn ($q) => $q->orderBy('name')])
@@ -533,7 +533,7 @@ class ObserveTargetsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Targets saved. Checks run by ShieldObserve engine.',
+                'message' => 'Targets saved. Checks run by QynSight engine.',
                 'data' => [
                     'targets' => $hosts,
                 ],
@@ -712,7 +712,7 @@ class ObserveTargetsController extends Controller
                         'last_check_at' => null,
                         'duration_sec' => null,
                         'attempt' => null,
-                        'output' => 'Pending first check (ShieldObserve)',
+                        'output' => 'Pending first check (QynSight)',
                         'perfdata' => null,
                     ]
                 );
@@ -735,7 +735,7 @@ class ObserveTargetsController extends Controller
                         'last_check_at' => null,
                         'duration_sec' => null,
                         'attempt' => null,
-                        'output' => 'Pending first check (ShieldObserve)',
+                        'output' => 'Pending first check (QynSight)',
                         'perfdata' => null,
                     ]
                 );

@@ -36,8 +36,8 @@ function App() {
     validateRegistryInDevelopment()
   }, [])
 
-  // Generate ShieldObserve routes from platformRegistry
-  const observeRoutes = routesByModule.shieldobserve || []
+  // Generate QynSight routes from platformRegistry
+  const observeRoutes = routesByModule.qynsight || []
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -60,7 +60,7 @@ function App() {
             <Route path="integrations" element={<Integrations />} />
             <Route path="help" element={<Help />} />
             <Route path="profile" element={<Profile />} />
-            {/* ShieldObserve routes - generated from platformRegistry */}
+            {/* QynSight routes - generated from platformRegistry */}
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
               {/* Route mapping: route.key -> component */}
               {observeRoutes.find((r) => r.key === 'real-time-monitoring') && (

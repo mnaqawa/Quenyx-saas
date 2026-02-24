@@ -131,7 +131,7 @@ function Integrations() {
         <h2 className="text-sm font-semibold text-white">Agents</h2>
         <p className="text-xs text-white/60">
           Install agents on servers and workstations for cross-network monitoring, asset discovery (ShieldInventory),
-          vulnerability assessment, and ShieldObserve. Works across firewalls—only outbound HTTPS required.
+          vulnerability assessment, and QynSight. Works across firewalls—only outbound HTTPS required.
         </p>
         <Agents embedded />
       </section>

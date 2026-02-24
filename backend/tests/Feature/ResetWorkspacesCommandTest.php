@@ -29,7 +29,7 @@ class ResetWorkspacesCommandTest extends TestCase
         // Mock production environment
         Config::set('app.env', 'production');
 
-        $result = Artisan::call('portshield:reset-workspaces', [
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
         ]);
 
@@ -67,7 +67,7 @@ class ResetWorkspacesCommandTest extends TestCase
         ]);
 
         // Run command with --count=2 (non-interactive)
-        $result = Artisan::call('portshield:reset-workspaces', [
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 2,
         ]);
@@ -149,7 +149,7 @@ class ResetWorkspacesCommandTest extends TestCase
         ]);
 
         // Run command
-        Artisan::call('portshield:reset-workspaces', [
+        Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 1,
         ]);
@@ -171,7 +171,7 @@ class ResetWorkspacesCommandTest extends TestCase
     {
         Config::set('app.env', 'local');
 
-        $result = Artisan::call('portshield:reset-workspaces', [
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'nonexistent@example.com',
         ]);
 
@@ -194,7 +194,7 @@ class ResetWorkspacesCommandTest extends TestCase
         ]);
 
         // Test count too high
-        $result = Artisan::call('portshield:reset-workspaces', [
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 10,
         ]);
@@ -204,7 +204,7 @@ class ResetWorkspacesCommandTest extends TestCase
         $this->assertStringContainsString('Count must be between', $output);
 
         // Test count too low
-        $result = Artisan::call('portshield:reset-workspaces', [
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 0,
         ]);

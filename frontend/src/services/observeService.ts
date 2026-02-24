@@ -26,21 +26,21 @@ export const observeService = {
     // Using gatewayClient for future-proofing (currently routes to direct API)
     return gatewayClient.get<RealTimeMetrics>(
       `workspaces/${workspaceId}/observe/real-time/metrics`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getSystemInfo(workspaceId: number): Promise<SystemInfo> {
     return gatewayClient.get<SystemInfo>(
       `workspaces/${workspaceId}/observe/real-time/system-info`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getPerformanceThresholds(workspaceId: number): Promise<Array<{ metric: string; warning: string; critical: string }>> {
     return gatewayClient.get<Array<{ metric: string; warning: string; critical: string }>>(
       `workspaces/${workspaceId}/observe/real-time/thresholds`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -48,7 +48,7 @@ export const observeService = {
   async getNetworkTopology(workspaceId: number): Promise<NetworkNode[]> {
     return gatewayClient.get<NetworkNode[]>(
       `workspaces/${workspaceId}/observe/infrastructure/topology`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -59,14 +59,14 @@ export const observeService = {
     const q = includeIntegrations ? '?include_integrations=1' : ''
     return gatewayClient.get<InfrastructureConnectionsResponse>(
       `workspaces/${workspaceId}/observe/infrastructure/connections${q}`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getPortScans(workspaceId: number): Promise<PortScanResult[]> {
     return gatewayClient.get<PortScanResult[]>(
       `workspaces/${workspaceId}/observe/infrastructure/port-scans`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -92,7 +92,7 @@ export const observeService = {
     const res = await gatewayClient.post<{ scanned: number; total: number; errors: string[] }>(
       `workspaces/${workspaceId}/observe/infrastructure/port-scans/run`,
       body,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
     const data = res as { scanned?: number; total?: number; errors?: string[] }
     return {
@@ -107,7 +107,7 @@ export const observeService = {
     const endpoint = timeRange
       ? `workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(timeRange)}`
       : `workspaces/${workspaceId}/observe/performance/metrics`
-    return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
+    return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId, moduleKey: 'qynsight' })
   },
 
   // Capacity Planning
@@ -115,21 +115,21 @@ export const observeService = {
     const endpoint = range
       ? `workspaces/${workspaceId}/observe/capacity/metrics?range=${encodeURIComponent(range)}`
       : `workspaces/${workspaceId}/observe/capacity/metrics`
-    return gatewayClient.get<CapacityMetric[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
+    return gatewayClient.get<CapacityMetric[]>(endpoint, { workspaceId, moduleKey: 'qynsight' })
   },
 
   // Alert Management
   async getAlertRules(workspaceId: number): Promise<AlertRule[]> {
     return gatewayClient.get<AlertRule[]>(
       `workspaces/${workspaceId}/observe/alerts/rules`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getAlertSummary(workspaceId: number): Promise<AlertSummary> {
     return gatewayClient.get<AlertSummary>(
       `workspaces/${workspaceId}/observe/alerts/summary`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -145,7 +145,7 @@ export const observeService = {
   async getTargets(workspaceId: number): Promise<Array<{ name: string; address: string; [k: string]: unknown }>> {
     const res = await gatewayClient.get<Array<{ name: string; address: string }> | { targets?: Array<{ name: string; address: string }> }>(
       `workspaces/${workspaceId}/observe/targets`,
-      { workspaceId: String(workspaceId), moduleKey: 'shieldobserve' }
+      { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
     )
     return Array.isArray(res) ? res : res?.targets ?? []
   },
@@ -158,7 +158,7 @@ export const observeService = {
     return gatewayClient.get<{
       totals: { ok: number; warning: number; critical: number; unknown: number; pending: number }
       last_poll_at: string | null
-    }>(`workspaces/${workspaceId}/observe/summary`, { workspaceId, moduleKey: 'shieldobserve' })
+    }>(`workspaces/${workspaceId}/observe/summary`, { workspaceId, moduleKey: 'qynsight' })
   },
 
   // Services
@@ -180,13 +180,13 @@ export const observeService = {
     const endpoint = `workspaces/${workspaceId}/observe/services${
       queryParams.toString() ? `?${queryParams.toString()}` : ''
     }`
-    return gatewayClient.get<ObserveServicesResponse>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
+    return gatewayClient.get<ObserveServicesResponse>(endpoint, { workspaceId, moduleKey: 'qynsight' })
   },
 
   async getInstanceSummary(workspaceId: number): Promise<InstanceSummary> {
     return gatewayClient.get<InstanceSummary>(
       `workspaces/${workspaceId}/observe/instances/summary`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -194,14 +194,14 @@ export const observeService = {
   async getReports(workspaceId: number): Promise<Report[]> {
     return gatewayClient.get<Report[]>(
       `workspaces/${workspaceId}/observe/reports`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getReportSummary(workspaceId: number): Promise<ReportSummary> {
     return gatewayClient.get<ReportSummary>(
       `workspaces/${workspaceId}/observe/reports/summary`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -209,14 +209,14 @@ export const observeService = {
   async getDataSources(workspaceId: number): Promise<DataSource[]> {
     return gatewayClient.get<DataSource[]>(
       `workspaces/${workspaceId}/observe/data-sources`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
   async getDataSourceSummary(workspaceId: number): Promise<DataSourceSummary> {
     return gatewayClient.get<DataSourceSummary>(
       `workspaces/${workspaceId}/observe/data-sources/summary`,
-      { workspaceId, moduleKey: 'shieldobserve' }
+      { workspaceId, moduleKey: 'qynsight' }
     )
   },
 
@@ -232,6 +232,6 @@ export const observeService = {
     const endpoint = `workspaces/${workspaceId}/observe/service-definitions${
       queryParams.toString() ? `?${queryParams.toString()}` : ''
     }`
-    return gatewayClient.get<ServiceDefinition[]>(endpoint, { workspaceId, moduleKey: 'shieldobserve' })
+    return gatewayClient.get<ServiceDefinition[]>(endpoint, { workspaceId, moduleKey: 'qynsight' })
   },
 }

@@ -1,6 +1,6 @@
-# PortShield Frontend
+# Quenyx Frontend
 
-React + TypeScript + Vite frontend for PortShield vOPS HUB.
+React + TypeScript + Vite frontend for Quenyx vOPS HUB.
 
 ## Requirements
 

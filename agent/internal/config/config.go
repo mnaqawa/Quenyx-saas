@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-// PSAPPort is the default TCP port for PortShield Agent Protocol (when primary_protocol is psap).
+// PSAPPort is the default TCP port for Quenyx Agent Protocol (when primary_protocol is psap).
 const PSAPPort = 9444
 
 type Config struct {

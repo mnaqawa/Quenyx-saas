@@ -65,7 +65,7 @@ app.listen(PORT, () => {
   console.log(`Gateway server running on port ${PORT}`)
   console.log(`Backend URL: ${process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'}`)
   if (process.env.OBSERVE_ENGINE_URL) {
-    console.log(`Observe engine (ShieldObserve) URL: ${process.env.OBSERVE_ENGINE_URL}`)
+    console.log(`Observe engine (QynSight) URL: ${process.env.OBSERVE_ENGINE_URL}`)
   }
   console.log(`Entitlements cache TTL: ${process.env.ENTITLEMENTS_CACHE_TTL_MS || 30000}ms`)
 })

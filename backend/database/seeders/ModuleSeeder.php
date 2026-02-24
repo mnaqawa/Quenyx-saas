@@ -9,208 +9,35 @@ use Illuminate\Database\Seeder;
 class ModuleSeeder extends Seeder
 {
     /**
-     * Authoritative list of allowed Shield modules
-     * This is the source of truth - only these modules should exist
+     * Authoritative list of Quenyx modules (Qyn*).
+     * This is the source of truth - only these modules should exist.
      */
-    private const SHIELD_MODULES = [
-        [
-            'key' => 'shieldcore',
-            'name' => 'ShieldCore',
-            'description' => 'Central configuration and governance hub for platform control and policy management.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldobserve',
-            'name' => 'ShieldObserve',
-            'description' => 'Real-time infrastructure monitoring and performance insights across your environment.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldinventory',
-            'name' => 'ShieldInventory',
-            'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.',
-            'status' => 'maintenance',
-        ],
-        [
-            'key' => 'shieldrespond',
-            'name' => 'ShieldRespond',
-            'description' => 'Automated incident response and orchestration for rapid recovery and resolution.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldsecure',
-            'name' => 'ShieldSecure',
-            'description' => 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldnotify',
-            'name' => 'ShieldNotify',
-            'description' => 'Alert and notification management across email, SMS, and in-app channels.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldvoice',
-            'name' => 'ShieldVoice',
-            'description' => 'AI voice and IVR operations for automated customer support and service analytics.',
-            'status' => 'inactive',
-        ],
-        [
-            'key' => 'shieldknowledge',
-            'name' => 'ShieldKnowledge',
-            'description' => 'Knowledge management for documentation, playbooks, and operational procedures.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldautomate',
-            'name' => 'ShieldAutomate',
-            'description' => 'Workflow automation and process orchestration across systems and teams.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldbalance',
-            'name' => 'ShieldBalance',
-            'description' => 'Load balancing and traffic management for optimal resource distribution.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shielddesk',
-            'name' => 'ShieldDesk',
-            'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
-            'status' => 'active',
-        ],
-        [
-            'key' => 'shieldintegrations',
-            'name' => 'ShieldIntegrations',
-            'description' => 'Third-party integrations and API connections for external services.',
-            'status' => 'active',
-        ],
+    private const QUENYX_MODULES = [
+        ['key' => 'qyncore', 'name' => 'QynCore', 'description' => 'Central configuration and governance hub for platform control and policy management.', 'status' => 'active'],
+        ['key' => 'qynsight', 'name' => 'QynSight', 'description' => 'Real-time infrastructure monitoring and performance insights across your environment.', 'status' => 'active'],
+        ['key' => 'qynasset', 'name' => 'QynAsset', 'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.', 'status' => 'maintenance'],
+        ['key' => 'qynreact', 'name' => 'QynReact', 'description' => 'Automated incident response and orchestration for rapid recovery and resolution.', 'status' => 'active'],
+        ['key' => 'qynshield', 'name' => 'QynShield', 'description' => 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.', 'status' => 'active'],
+        ['key' => 'qynnotify', 'name' => 'QynNotify', 'description' => 'Alert and notification management across email, SMS, and in-app channels.', 'status' => 'active'],
+        ['key' => 'qynva', 'name' => 'QynVA', 'description' => 'AI voice and IVR operations for automated customer support and service analytics.', 'status' => 'inactive'],
+        ['key' => 'qynknow', 'name' => 'QynKnow', 'description' => 'Knowledge management for documentation, playbooks, and operational procedures.', 'status' => 'active'],
+        ['key' => 'qynrun', 'name' => 'QynRun', 'description' => 'Workflow automation and process orchestration across systems and teams.', 'status' => 'active'],
+        ['key' => 'qynbalance', 'name' => 'QynBalance', 'description' => 'Load balancing and traffic management for optimal resource distribution.', 'status' => 'active'],
+        ['key' => 'qynsupport', 'name' => 'QynSupport', 'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.', 'status' => 'active'],
+        ['key' => 'qynintegrations', 'name' => 'QynIntegrations', 'description' => 'Third-party integrations and API connections for external services.', 'status' => 'active'],
     ];
 
-    /**
-     * Run the database seeds.
-     * Idempotent: uses updateOrCreate to prevent duplicates
-     */
     public function run(): void
     {
-        foreach (self::SHIELD_MODULES as $moduleData) {
+        foreach (self::QUENYX_MODULES as $data) {
             Module::updateOrCreate(
-                ['key' => $moduleData['key']],
+                ['key' => $data['key']],
                 [
-                    'name' => $moduleData['name'],
-                    'description' => $moduleData['description'],
-                    'status' => $moduleData['status'],
+                    'name' => $data['name'],
+                    'description' => $data['description'],
+                    'status' => $data['status'],
                 ]
             );
         }
-        // Use updateOrCreate to handle existing modules
-        Module::updateOrCreate(
-            ['key' => 'shieldcore'],
-            [
-                'name' => 'ShieldCore',
-                'description' => 'Central configuration and governance hub for platform control and policy management.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldobserve'],
-            [
-                'name' => 'ShieldObserve',
-                'description' => 'Real-time infrastructure monitoring and performance insights across your environment.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldinventory'],
-            [
-                'name' => 'ShieldInventory',
-                'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.',
-                'status' => 'maintenance',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldrespond'],
-            [
-                'name' => 'ShieldRespond',
-                'description' => 'Automated incident response and orchestration for rapid recovery and resolution.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldsecure'],
-            [
-                'name' => 'ShieldSecure',
-                'description' => 'Security operations center for threat monitoring, vulnerability scanning, and posture defense.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldnotify'],
-            [
-                'name' => 'ShieldNotify',
-                'description' => 'Alert and notification management across email, SMS, and in-app channels.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldvoice'],
-            [
-                'name' => 'ShieldVoice',
-                'description' => 'AI voice and IVR operations for automated customer support and service analytics.',
-                'status' => 'inactive',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldknowledge'],
-            [
-                'name' => 'ShieldKnowledge',
-                'description' => 'Knowledge management for documentation, playbooks, and operational procedures.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldautomate'],
-            [
-                'name' => 'ShieldAutomate',
-                'description' => 'Workflow automation and process orchestration across systems and teams.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shieldbalance'],
-            [
-                'name' => 'ShieldBalance',
-                'description' => 'Load balancing and traffic management for optimal resource distribution.',
-                'status' => 'active',
-            ]
-        );
-
-        Module::updateOrCreate(
-            ['key' => 'shielddesk'],
-            [
-                'name' => 'ShieldDesk',
-                'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
-                'status' => 'active',
-            ]
-        );
-
-        // Add integrations module (used by gateway)
-        Module::updateOrCreate(
-            ['key' => 'shieldintegrations'],
-            [
-                'name' => 'ShieldIntegrations',
-                'description' => 'Third-party integrations and API connections for external services.',
-                'status' => 'active',
-            ]
-        );
     }
 }
