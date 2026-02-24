@@ -10,12 +10,19 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        $password = config('app.env') === 'production'
+            ? env('SEED_ADMIN_PASSWORD')
+            : (env('SEED_ADMIN_PASSWORD') ?: 'ChangeMeAfterFirstLogin');
+        if (empty($password)) {
+            throw new \RuntimeException('Set SEED_ADMIN_PASSWORD in .env to run UserSeeder in production.');
+        }
+
         $oldAdmin = User::where('email', 'admin@portshield.test')->first();
         $newAdmin = User::where('email', 'admin@quenyx.test')->first();
 
         $attrs = [
             'name' => 'Quenyx Admin',
-            'password' => Hash::make('AWGPBU2vuGc9ur3'),
+            'password' => Hash::make($password),
             'api_calls_30d' => 2400,
             'last_login_at' => now()->subDay(),
         ];

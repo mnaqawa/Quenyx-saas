@@ -11,9 +11,6 @@ function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
   const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
-  
-  // Find selected workspace using string comparison
-  const selectedWorkspace = workspaces.find((w) => String(w.id) === selectedWorkspaceId) ?? null
 
   // QynSight subpages configuration (from shared constants)
 
@@ -373,6 +370,8 @@ function AppLayout() {
                     <option value="">Loading workspaces...</option>
                   ) : workspacesError && !workspacesError.includes('Unauthenticated') ? (
                     <option value="">Error loading workspaces</option>
+                  ) : workspaces.length === 0 ? (
+                    <option value="">No workspaces</option>
                   ) : !selectedWorkspaceId ? (
                     <option value="">Select a workspace</option>
                   ) : null}
