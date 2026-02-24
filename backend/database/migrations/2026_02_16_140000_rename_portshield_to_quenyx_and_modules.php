@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -27,10 +28,33 @@ return new class extends Migration
         ];
 
         foreach ($map as $oldKey => $new) {
-            DB::table('modules')->where('key', $oldKey)->update([
-                'key' => $new['key'],
-                'name' => $new['name'],
-            ]);
+            $newKey = $new['key'];
+            $newName = $new['name'];
+            $oldRow = DB::table('modules')->where('key', $oldKey)->first();
+            $newRow = DB::table('modules')->where('key', $newKey)->first();
+
+            if ($newRow && $oldRow) {
+                // Both exist: keep the original row (preserves IDs referenced elsewhere), reassign subscriptions, drop duplicate overrides, then drop duplicate module
+                $oldId = $oldRow->id;
+                $newId = $newRow->id;
+                if ($oldId !== $newId) {
+                    if (Schema::hasTable('module_subscriptions')) {
+                        DB::table('module_subscriptions')->where('module_id', $newId)->update(['module_id' => $oldId]);
+                    }
+                    if (Schema::hasTable('project_module_overrides')) {
+                        DB::table('project_module_overrides')->where('module_id', $newId)->delete();
+                    }
+                    DB::table('modules')->where('id', $newId)->delete();
+                }
+            }
+            if ($oldRow) {
+                DB::table('modules')->where('key', $oldKey)->update([
+                    'key' => $newKey,
+                    'name' => $newName,
+                ]);
+            } elseif ($newRow) {
+                DB::table('modules')->where('key', $newKey)->update(['name' => $newName]);
+            }
         }
 
         // Update plan features: modules_allowed stored as JSON with old keys
