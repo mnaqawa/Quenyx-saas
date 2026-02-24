@@ -23,11 +23,15 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	if hostname == "" {
 		hostname = "unknown"
 	}
+	privateIP := getPrivateIP()
+	publicIP := getPublicIP()
 
 	body := map[string]interface{}{
 		"workspace_id":    workspaceID,
 		"token":           token,
 		"hostname":        hostname,
+		"private_ip":      privateIP,
+		"public_ip":       publicIP,
 		"os":              runtime.GOOS,
 		"arch":            runtime.GOARCH,
 		"agent_version":   "1.0.0",

@@ -66,8 +66,21 @@ func runAgent(cfgPath string) error {
 }
 
 func sendHeartbeat(baseURL, agentID, secret string) {
+	privateIP := getPrivateIP()
+	publicIP := getPublicIP()
+	body := map[string]interface{}{}
+	if privateIP != "" {
+		body["private_ip"] = privateIP
+	}
+	if publicIP != "" {
+		body["public_ip"] = publicIP
+	}
+	jsonBody, _ := json.Marshal(body)
+	if len(jsonBody) == 2 {
+		jsonBody = []byte("{}")
+	}
 	u, _ := url.JoinPath(baseURL, "/api/agents/", agentID, "/heartbeat")
-	req, _ := http.NewRequest("POST", u, bytes.NewReader([]byte("{}")))
+	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Agent-Secret", secret)
 	client := &http.Client{Timeout: 30 * time.Second}

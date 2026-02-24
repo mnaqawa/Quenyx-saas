@@ -336,6 +336,9 @@ function InstallAgentModal({
                 <p className="mb-3 text-xs text-white/50">
                   Choose how the agent communicates. PortShield Agent Protocol (PSAP) or HTTP API (push).
                 </p>
+                <p className="mb-3 rounded border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                  <strong>Current behavior:</strong> The agent always sends data to the platform over HTTPS (HTTP API push). No port needs to be open on the platform. PSAP (port 9444) is stored as your preference for when platform→agent pull is implemented; with PSAP, port 9444 would be opened on the <em>agent host</em>, not on this server.
+                </p>
                 <div className="space-y-2">
                   {protocolEntriesSorted.map(([key, info]) => (
                     <label

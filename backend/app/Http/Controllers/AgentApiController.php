@@ -32,8 +32,10 @@ class AgentApiController extends Controller
             $validated = $request->validate([
                 'workspace_id' => ['required', 'integer', 'exists:projects,id'],
                 'token' => ['required', 'string', 'min:10'],
-                'hostname' => ['required', 'string', 'max:255'],
-                'os' => ['nullable', 'string', 'max:100'],
+            'hostname' => ['required', 'string', 'max:255'],
+            'private_ip' => ['nullable', 'string', 'max:45'],
+            'public_ip' => ['nullable', 'string', 'max:45'],
+            'os' => ['nullable', 'string', 'max:100'],
                 'arch' => ['nullable', 'string', 'max:50'],
                 'agent_version' => ['nullable', 'string', 'max:50'],
                 'primary_protocol' => ['nullable', 'string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
@@ -98,7 +100,9 @@ class AgentApiController extends Controller
             $enrollmentToken->update(['used_at' => now()]);
 
             $hostName = $validated['hostname'];
-            $hostAddress = $validated['hostname'];
+            $privateIp = $validated['private_ip'] ?? null;
+            $publicIp = $validated['public_ip'] ?? null;
+            $hostAddress = $privateIp ?: $validated['hostname'];
             for ($i = 0; $i < 3; $i++) {
                 $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
                 try {
@@ -106,6 +110,7 @@ class AgentApiController extends Controller
                         'workspace_id' => $agent->workspace_id,
                         'name' => $name,
                         'address' => $hostAddress,
+                        'public_ip' => $publicIp,
                         'agent_id' => $agent->id,
                         'source' => 'agent',
                         'enabled' => true,
@@ -165,6 +170,23 @@ class AgentApiController extends Controller
         }
 
         $agent->markSeen();
+
+        $privateIp = $request->input('private_ip');
+        $publicIp = $request->input('public_ip');
+        if ((is_string($privateIp) && $privateIp !== '') || (is_string($publicIp) && $publicIp !== '')) {
+            ObserveTargetHost::where('agent_id', $agent->id)->get()->each(function (ObserveTargetHost $host) use ($privateIp, $publicIp) {
+                $updates = [];
+                if (is_string($privateIp) && $privateIp !== '') {
+                    $updates['address'] = $privateIp;
+                }
+                if (is_string($publicIp) && $publicIp !== '') {
+                    $updates['public_ip'] = $publicIp;
+                }
+                if ($updates !== []) {
+                    $host->update($updates);
+                }
+            });
+        }
 
         Log::info('Agent heartbeat', [
             'agent_id' => $agent->id,

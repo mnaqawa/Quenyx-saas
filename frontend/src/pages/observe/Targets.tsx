@@ -10,6 +10,8 @@ interface TargetHost {
   id?: number
   name: string
   address: string
+  /** Optional public IP (e.g. for agent behind NAT). */
+  public_ip?: string | null
   check_command: string
   tags: string[]
   enabled: boolean
@@ -192,6 +194,7 @@ export default function Targets() {
       {
         name: '',
         address: '',
+        public_ip: '',
         check_command: 'check-host-alive',
         tags: [],
         enabled: true,
@@ -376,6 +379,7 @@ export default function Targets() {
         hosts: hosts.map((host) => ({
           name: host.name,
           address: host.address,
+          public_ip: host.public_ip || undefined,
           check_command: host.check_command,
           tags: host.tags,
           enabled: host.enabled,
@@ -690,7 +694,7 @@ export default function Targets() {
                         />
                         <input
                           type="text"
-                          placeholder="Address (IP/hostname)"
+                          placeholder="Private IP / hostname"
                           value={host.address}
                           onChange={(e) => handleUpdateHost(hostIndex, 'address', e.target.value)}
                           disabled={saving}
@@ -699,6 +703,14 @@ export default function Targets() {
                               ? 'border-rose-500/50 bg-rose-500/10'
                               : 'border-white/10 bg-white/5'
                           }`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Public IP (optional)"
+                          value={host.public_ip ?? ''}
+                          onChange={(e) => handleUpdateHost(hostIndex, 'public_ip', e.target.value)}
+                          disabled={saving}
+                          className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
                         />
                         <input
                           type="text"
@@ -713,6 +725,7 @@ export default function Targets() {
                       <>
                         <span className="text-sm font-medium text-white">{host.name}</span>
                         <span className="text-xs text-white/60">{host.address}</span>
+                        <span className="text-xs text-white/50">{host.public_ip ?? '—'}</span>
                         <span className="text-xs text-white/50">{host.check_command}</span>
                       </>
                     )}
