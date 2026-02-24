@@ -30,16 +30,16 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog (only Shield modules)
+            // Get all modules from catalog (Quenyx modules: qyn* / Qyn*)
             $allModules = Module::query()
                 ->where(function ($query) {
-                    $query->where('key', 'like', 'shield%')
-                        ->orWhere('name', 'like', 'Shield%');
+                    $query->where('key', 'like', 'qyn%')
+                        ->orWhere('name', 'like', 'Qyn%');
                 })
                 ->orderBy('name')
                 ->get()
-                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
-                ->values(); // Convert back to indexed collection
+                ->keyBy('key')
+                ->values();
 
             // Build access overlay
             $modulesAccess = $allModules
@@ -85,16 +85,16 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog (only Shield modules)
+            // Get all modules from catalog (Quenyx modules: qyn* / Qyn*)
             $allModules = Module::query()
                 ->where(function ($query) {
-                    $query->where('key', 'like', 'shield%')
-                        ->orWhere('name', 'like', 'Shield%');
+                    $query->where('key', 'like', 'qyn%')
+                        ->orWhere('name', 'like', 'Qyn%');
                 })
                 ->orderBy('name')
                 ->get()
-                ->keyBy('key') // Ensures unique by key (last one wins if duplicates exist)
-                ->values(); // Convert back to indexed collection
+                ->keyBy('key')
+                ->values();
 
             // Get plan modules
             $plan = $this->entitlementService->getEffectivePlan($project);

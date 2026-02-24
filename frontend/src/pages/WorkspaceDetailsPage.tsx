@@ -121,12 +121,7 @@ function WorkspaceDetailsPage() {
       </div>
 
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs text-white/50">{t('projects.statusLabel')}</p>
-            <p className="text-sm font-semibold">{project.status}</p>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => setEditing((prev) => !prev)}
@@ -142,7 +137,6 @@ function WorkspaceDetailsPage() {
             >
               {deleting ? t('projects.deleting') : t('projects.delete')}
             </button>
-          </div>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">

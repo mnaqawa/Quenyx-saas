@@ -373,13 +373,12 @@ function AppLayout() {
                     <option value="">Loading workspaces...</option>
                   ) : workspacesError && !workspacesError.includes('Unauthenticated') ? (
                     <option value="">Error loading workspaces</option>
-                  ) : workspaces.length === 0 ? (
-                    <option value="">No workspaces</option>
                   ) : !selectedWorkspaceId ? (
                     <option value="">Select a workspace</option>
-                  ) : selectedWorkspace ? null : (
-                    <option value={selectedWorkspaceId}>Selected workspace</option>
-                  )}
+                  ) : null}
+                  {selectedWorkspaceId && !workspaces.some((w) => String(w.id) === String(selectedWorkspaceId)) ? (
+                    <option value={selectedWorkspaceId}>Workspace {selectedWorkspaceId}</option>
+                  ) : null}
                   {workspaces.map((workspace) => (
                     <option key={workspace.id} value={String(workspace.id)} className="bg-slate-900 text-white">
                       {workspace.name}

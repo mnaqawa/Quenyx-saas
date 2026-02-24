@@ -10,8 +10,8 @@ class ModuleRepository
     {
         return Module::query()
             ->where(function ($query) {
-                $query->where('key', 'like', 'shield%')
-                    ->orWhere('name', 'like', 'Shield%');
+                $query->where('key', 'like', 'qyn%')
+                    ->orWhere('name', 'like', 'Qyn%');
             })
             ->with('subscriptions')
             ->get()
@@ -38,8 +38,8 @@ class ModuleRepository
     {
         return Module::query()
             ->where(function ($query) {
-                $query->where('key', 'like', 'shield%')
-                    ->orWhere('name', 'like', 'Shield%');
+                $query->where('key', 'like', 'qyn%')
+                    ->orWhere('name', 'like', 'Qyn%');
             })
             ->orderBy('name')
             ->get()
