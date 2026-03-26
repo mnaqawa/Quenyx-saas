@@ -68,12 +68,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Extract Project objects from WorkspaceListItem[]
-      // Convert ProjectSummary to Project (they have compatible structure)
-      const projects: Project[] = workspaceListItems.map((item) => ({
-        ...item.project,
-        status: item.project.status as Project['status'],
-      }))
+      // Accept both API shapes:
+      // 1) WorkspaceListItem[]: [{ project: {...}, my_role: ... }]
+      // 2) Project[]: [{ id, name, status, ... }]
+      const projects: Project[] = workspaceListItems
+        .map((item: any) => {
+          const p = item?.project ?? item
+          if (!p || p.id == null) {
+            return null
+          }
+          return {
+            ...p,
+            status: (p.status ?? 'active') as Project['status'],
+          } as Project
+        })
+        .filter((p): p is Project => p !== null)
       setWorkspaces(projects)
       setWorkspacesError(null)
 
