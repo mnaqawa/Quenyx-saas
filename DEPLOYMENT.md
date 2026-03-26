@@ -41,7 +41,8 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-Default seed login: `admin@portshield.test` / `Password123!` (change in production.)
+Set `SEED_ADMIN_PASSWORD` in backend `.env` before running seeds.
+Seed admin login will be: `admin@quenyx.test` / `<SEED_ADMIN_PASSWORD>`.
 
 ### 3. Frontend (reproducible build)
 
@@ -354,7 +355,8 @@ Before going live:
 | **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_*` for production DB |
 | **CORS** | Set `SANCTUM_STATEFUL_DOMAINS` / frontend domain in backend; allow only your frontend origin |
 | **Frontend build** | `VITE_API_BASE_URL` set to your API base (e.g. `https://your-domain/api`) so requests go to gateway |
-| **Seeded credentials** | Change default login (`admin@portshield.test` / `Password123!`) or remove test users after first admin creation |
+| **Seeded credentials** | Set `SEED_ADMIN_PASSWORD` before seeding; rotate after first login if required |
+| **Gateway internal secret** | Set strong `GATEWAY_INTERNAL_SECRET` in both backend and gateway env; deployment should fail if missing |
 | **Workspaces** | Seeder creates only **Production Env** and **Staging Env**; adjust in `ProjectSeeder` if needed |
 | **HTTPS** | Use Nginx (or load balancer) with SSL; redirect HTTP → HTTPS |
 | **Gateway** | `BACKEND_BASE_URL` must point to backend (e.g. `http://127.0.0.1:8000` or internal LB URL) |

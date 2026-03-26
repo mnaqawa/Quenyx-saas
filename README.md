@@ -98,9 +98,9 @@ In-app **Getting started** (sidebar) links to a short guide. For production depl
 
 Backend will be available at `http://localhost:8000`
 
-**Default Login Credentials:**
-- Email: `admin@portshield.test`
-- Password: `Password123!`
+**Seed Admin Credentials:**
+- Email: `admin@quenyx.test`
+- Password comes from `SEED_ADMIN_PASSWORD` in backend `.env` before running `php artisan db:seed`.
 
 ### Frontend Setup
 
