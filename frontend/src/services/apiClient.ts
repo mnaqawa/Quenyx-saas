@@ -1,21 +1,25 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
-const TOKEN_STORAGE_KEY = 'portshield.auth.token'
-const WORKSPACE_STORAGE_KEY = 'portshield.selected_workspace_id'
-const OLD_WORKSPACE_STORAGE_KEY = 'portshield.selected_project_id'
+const TOKEN_STORAGE_KEY = 'quenyx.auth.token'
+const LEGACY_TOKEN_STORAGE_KEY = 'portshield.auth.token'
+const WORKSPACE_STORAGE_KEY = 'quenyx.selected_workspace_id'
+const OLD_WORKSPACE_STORAGE_KEY = 'portshield.selected_workspace_id'
+const LEGACY_PROJECT_WORKSPACE_KEY = 'portshield.selected_project_id'
 
 /** Emitted when a workspace-scoped API returns 404 (workspace deleted or invalid) */
-export const WORKSPACE_404_EVENT = 'portshield:workspace-404'
+export const WORKSPACE_404_EVENT = 'quenyx:workspace-404'
 
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem(TOKEN_STORAGE_KEY)
+  return localStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY)
 }
 
 export const setAuthToken = (token: string): void => {
   localStorage.setItem(TOKEN_STORAGE_KEY, token)
+  localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY)
 }
 
 export const clearAuthToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY)
 }
 
 // Legacy types for backward compatibility during migration
@@ -140,10 +144,13 @@ class ApiClient {
           const workspaceMatch = url.match(/\/workspaces\/(\d+)\//) || url.match(/\/projects\/(\d+)\//)
           if (workspaceMatch) {
             const workspaceId = workspaceMatch[1]
-            const stored = localStorage.getItem(WORKSPACE_STORAGE_KEY) || localStorage.getItem(OLD_WORKSPACE_STORAGE_KEY)
+            const stored = localStorage.getItem(WORKSPACE_STORAGE_KEY)
+              || localStorage.getItem(OLD_WORKSPACE_STORAGE_KEY)
+              || localStorage.getItem(LEGACY_PROJECT_WORKSPACE_KEY)
             if (stored === workspaceId) {
               localStorage.removeItem(WORKSPACE_STORAGE_KEY)
               localStorage.removeItem(OLD_WORKSPACE_STORAGE_KEY)
+              localStorage.removeItem(LEGACY_PROJECT_WORKSPACE_KEY)
               window.dispatchEvent(new CustomEvent(WORKSPACE_404_EVENT, { detail: { workspaceId } }))
             }
           }

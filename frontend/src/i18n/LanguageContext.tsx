@@ -9,11 +9,12 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'portshield.language'
+const STORAGE_KEY = 'quenyx.language'
+const LEGACY_STORAGE_KEY = 'portshield.language'
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY)
     if (stored === 'ar' || stored === 'en') {
       return stored
     }

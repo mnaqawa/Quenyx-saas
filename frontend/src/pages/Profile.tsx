@@ -59,17 +59,17 @@ export default function Profile() {
   useEffect(() => {
     const prefs = profile?.preferences
     const prefLang = prefs?.language
-    const theme = prefs?.theme ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('portshield.theme') : null)
+    const theme = prefs?.theme ?? (typeof localStorage !== 'undefined' ? (localStorage.getItem('quenyx.theme') || localStorage.getItem('portshield.theme')) : null)
     if (prefLang === 'en' || prefLang === 'ar') {
       setLanguage(prefLang)
     }
     if (theme === 'light' || theme === 'dark') {
       document.documentElement.classList.remove('light', 'dark')
       document.documentElement.classList.add(theme)
-      if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', theme)
+      if (typeof localStorage !== 'undefined') localStorage.setItem('quenyx.theme', theme)
     } else if (theme === 'system') {
       document.documentElement.classList.remove('light', 'dark')
-      if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', 'system')
+      if (typeof localStorage !== 'undefined') localStorage.setItem('quenyx.theme', 'system')
     }
   }, [profile?.preferences, setLanguage])
 
@@ -124,7 +124,7 @@ export default function Profile() {
       document.documentElement.classList.remove('light', 'dark')
       document.documentElement.classList.add(theme)
     }
-    if (typeof localStorage !== 'undefined') localStorage.setItem('portshield.theme', theme)
+    if (typeof localStorage !== 'undefined') localStorage.setItem('quenyx.theme', theme)
     const prefs: UserProfilePreferences = { ...profile?.preferences, theme }
     try {
       const updated = await profileService.updateProfile({ preferences: prefs })
@@ -158,7 +158,7 @@ export default function Profile() {
   }
 
   const stats = profile?.stats ?? { active_modules: 0, integrations: 0, api_calls_30d: 0 }
-  const theme = profile?.preferences?.theme ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('portshield.theme') : null) ?? 'system'
+  const theme = profile?.preferences?.theme ?? (typeof localStorage !== 'undefined' ? (localStorage.getItem('quenyx.theme') || localStorage.getItem('portshield.theme')) : null) ?? 'system'
 
   return (
     <div className="space-y-6">
