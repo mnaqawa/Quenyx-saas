@@ -21,7 +21,10 @@ class NagiosConfigPublisher
     public function __construct(?ObserveServiceCommandResolver $resolver = null)
     {
         $this->gatewayUrl = config('app.gateway_url', 'http://127.0.0.1:4000');
-        $this->internalSecret = config('app.gateway_internal_secret', 'dev-secret-change-in-production');
+        $this->internalSecret = (string) config('app.gateway_internal_secret', '');
+        if ($this->internalSecret === '') {
+            throw new \RuntimeException('GATEWAY_INTERNAL_SECRET is required.');
+        }
         $this->resolver = $resolver ?? app(ObserveServiceCommandResolver::class);
     }
 

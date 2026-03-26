@@ -10,11 +10,9 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = config('app.env') === 'production'
-            ? env('SEED_ADMIN_PASSWORD')
-            : (env('SEED_ADMIN_PASSWORD') ?: 'ChangeMeAfterFirstLogin');
+        $password = env('SEED_ADMIN_PASSWORD');
         if (empty($password)) {
-            throw new \RuntimeException('Set SEED_ADMIN_PASSWORD in .env to run UserSeeder in production.');
+            throw new \RuntimeException('Set SEED_ADMIN_PASSWORD in .env before running UserSeeder.');
         }
 
         $oldAdmin = User::where('email', 'admin@portshield.test')->first();

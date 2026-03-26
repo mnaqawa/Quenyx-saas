@@ -29,5 +29,5 @@ return [
     
     // Gateway configuration (used for agent install instructions; set GATEWAY_BASE_URL in .env to your public URL)
     'gateway_url' => env('GATEWAY_BASE_URL', env('APP_URL', 'http://127.0.0.1:4000')),
-    'gateway_internal_secret' => env('GATEWAY_INTERNAL_SECRET', 'dev-secret-change-in-production'),
+    'gateway_internal_secret' => env('GATEWAY_INTERNAL_SECRET'),
 ];

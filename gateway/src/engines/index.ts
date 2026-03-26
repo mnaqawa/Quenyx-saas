@@ -8,12 +8,19 @@ import {
   checkObjectsCacheForHostPrefix,
 } from './nagiosConfig'
 
-const INTERNAL_SECRET = process.env.GATEWAY_INTERNAL_SECRET || 'dev-secret-change-in-production'
+const INTERNAL_SECRET = process.env.GATEWAY_INTERNAL_SECRET || ''
 
 /**
  * Middleware to check internal secret header
  */
 function checkInternalSecret(req: Request, res: Response, next: () => void): void {
+  if (!INTERNAL_SECRET) {
+    res.status(500).json({
+      success: false,
+      message: 'Gateway internal secret is not configured',
+    })
+    return
+  }
   const providedSecret = req.headers['x-internal-secret']
   
   if (!providedSecret || providedSecret !== INTERNAL_SECRET) {
