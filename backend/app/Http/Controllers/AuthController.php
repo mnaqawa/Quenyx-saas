@@ -102,15 +102,16 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        // Log request data for debugging
+        // Safe login telemetry (never log plaintext credentials).
+        $email = (string) $request->input('email', '');
+        $maskedEmail = $email !== '' ? preg_replace('/(^.).*(@.*$)/', '$1***$2', $email) : null;
         Log::info('Login request received', [
             'has_email' => $request->has('email'),
             'has_password' => $request->has('password'),
-            'email_value' => $request->input('email'),
-            'password_length' => $request->input('password') ? strlen($request->input('password')) : 0,
+            'email_masked' => $maskedEmail,
+            'password_length' => $request->input('password') ? strlen((string) $request->input('password')) : 0,
             'content_type' => $request->header('Content-Type'),
             'request_method' => $request->method(),
-            'all_input' => $request->all(),
         ]);
 
         $credentials = $request->validate([
