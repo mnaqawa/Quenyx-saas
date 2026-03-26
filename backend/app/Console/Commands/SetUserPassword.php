@@ -28,6 +28,9 @@ class SetUserPassword extends Command
         $user = User::query()->whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
         if ($user === null) {
             $this->error("No user found for email: {$email}");
+            $this->line('If the admin account was never created or the DB was reset, run:');
+            $this->line('  php artisan user:ensure-admin --force');
+            $this->line('(requires SEED_ADMIN_PASSWORD in .env)');
             return 1;
         }
 
