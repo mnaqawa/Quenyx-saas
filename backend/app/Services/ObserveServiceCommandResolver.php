@@ -47,6 +47,16 @@ class ObserveServiceCommandResolver
             if ($key === null) {
                 continue;
             }
+            // HTTP port default depends on use_ssl (80/443), so keep null unless explicitly overridden.
+            if (
+                $definition->service_key === 'http'
+                && $key === 'port'
+                && !array_key_exists('port', $overrides)
+            ) {
+                $merged[$key] = null;
+                continue;
+            }
+
             $merged[$key] = array_key_exists($key, $overrides)
                 ? $overrides[$key]
                 : ($arg['default'] ?? null);

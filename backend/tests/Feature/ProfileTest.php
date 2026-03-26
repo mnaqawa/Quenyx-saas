@@ -145,17 +145,19 @@ class ProfileTest extends TestCase
             'password' => Hash::make('password'),
         ]);
 
-        // Missing name
-        $response = $this->actingAsUser($user)
-            ->putJson('/api/auth/me', []);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name']);
-
         // Empty name
         $response = $this->actingAsUser($user)
             ->putJson('/api/auth/me', [
                 'name' => '',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+
+        // Name too long
+        $response = $this->actingAsUser($user)
+            ->putJson('/api/auth/me', [
+                'name' => str_repeat('a', 256),
             ]);
 
         $response->assertStatus(422)

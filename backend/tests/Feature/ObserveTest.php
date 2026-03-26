@@ -39,7 +39,7 @@ class ObserveTest extends TestCase
         // Create sample observe data with workspace-scoped host names (ObserveController filters by ws{id}- prefix)
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
-            'engine_key' => 'nagios',
+            'engine_key' => 'native',
             'engine_service_key' => $prefix . 'host1::service1',
             'host_name' => $prefix . 'host1',
             'service_name' => 'service1',
@@ -52,7 +52,7 @@ class ObserveTest extends TestCase
 
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
-            'engine_key' => 'nagios',
+            'engine_key' => 'native',
             'engine_service_key' => $prefix . 'host1::service2',
             'host_name' => $prefix . 'host1',
             'service_name' => 'service2',
@@ -65,7 +65,7 @@ class ObserveTest extends TestCase
 
         ObserveService::create([
             'workspace_id' => $this->workspace->id,
-            'engine_key' => 'nagios',
+            'engine_key' => 'native',
             'engine_service_key' => $prefix . 'host2::service1',
             'host_name' => $prefix . 'host2',
             'service_name' => 'service1',
@@ -78,7 +78,7 @@ class ObserveTest extends TestCase
         
         ObserveMeta::create([
             'workspace_id' => $this->workspace->id,
-            'engine_key' => 'nagios',
+            'engine_key' => 'native',
             'last_poll_at' => now(),
             'service_totals_json' => [
                 'ok' => 1,
