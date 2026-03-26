@@ -282,12 +282,9 @@ class ObserveTest extends TestCase
         $this->assertNotNull($pingService);
         $this->assertEquals('check_ping', $pingService->check_command);
 
-        // Test that publish can read back targets without SQL errors
-        // This verifies the table names are correct
+        // Test that readback works without SQL errors
+        // This verifies targets/services persistence paths are valid
         try {
-            $publisher = new \App\Services\NagiosConfigPublisher();
-            // Mock the HTTP calls to gateway to avoid actual network calls in test
-            // Just verify it doesn't throw SQL errors when querying
             $hosts = ObserveTargetHost::where('workspace_id', $this->workspace->id)
                 ->where('enabled', true)
                 ->with(['services' => function ($query) {
