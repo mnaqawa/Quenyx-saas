@@ -28,7 +28,7 @@ export const authService = {
     // Backend returns { success: true, data: { token, user } }
     // apiClient unwraps it, so response is already { token, user }
     const response = await apiClient.post<LoginResponse>('/api/auth/login', {
-      email,
+      email: email.trim(),
       password,
     })
 

@@ -102,6 +102,11 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
+        // Normalize email before validation (trailing spaces / odd casing break lookups).
+        if ($request->has('email') && is_string($request->input('email'))) {
+            $request->merge(['email' => trim($request->input('email'))]);
+        }
+
         // Safe login telemetry (never log plaintext credentials).
         $email = (string) $request->input('email', '');
         $maskedEmail = $email !== '' ? preg_replace('/(^.).*(@.*$)/', '$1***$2', $email) : null;
@@ -119,16 +124,47 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        $normalizedEmail = strtolower($credentials['email']);
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+            ->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if ($user === null) {
+            Log::warning('Login failed', [
+                'reason' => 'user_not_found',
+                'email_masked' => $maskedEmail,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials.',
             ], 401);
         }
 
-        $token = $user->createToken('api')->plainTextToken;
+        if (!Hash::check($credentials['password'], $user->password)) {
+            Log::warning('Login failed', [
+                'reason' => 'password_mismatch',
+                'email_masked' => $maskedEmail,
+                'user_id' => $user->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials.',
+            ], 401);
+        }
+
+        try {
+            $token = $user->createToken('api')->plainTextToken;
+        } catch (\Throwable $e) {
+            Log::error('Login token creation failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Authentication service unavailable. Please try again.',
+            ], 503);
+        }
+
         $user->forceFill(['last_login_at' => now()])->save();
 
         return response()->json([
