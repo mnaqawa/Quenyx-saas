@@ -12,7 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Optional: poll Nagios via gateway when Nagios daemon is running (data merged with native; native preferred)
+        // Legacy alias command kept for compatibility (routes to native checks)
         // $schedule->command('observe:poll')->everyMinute()->withoutOverlapping(90);
 
         // QynSight engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required

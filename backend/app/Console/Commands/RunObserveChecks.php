@@ -136,7 +136,8 @@ class RunObserveChecks extends Command
                 $checkCommand = $service->check_command ?? '';
                 // Resolve check_command from definition when missing (e.g. disk, load, cpu)
                 if ($checkCommand === '' && $serviceKey !== '' && \Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
-                    $def = ObserveServiceDefinition::where('engine', 'nagios')->where('service_key', $serviceKey)->first();
+                    // Engine-agnostic lookup to support existing definitions during migration to native-only runtime.
+                    $def = ObserveServiceDefinition::where('service_key', $serviceKey)->first();
                     if ($def && $def->check_command !== '') {
                         $checkCommand = $def->check_command;
                     }

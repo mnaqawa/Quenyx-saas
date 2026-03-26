@@ -19,7 +19,7 @@ class ObserveController extends Controller
 {
     /**
      * Get active service definitions for capability-driven UI.
-     * GET /api/workspaces/{project}/observe/service-definitions?engine=nagios&status=active
+     * GET /api/workspaces/{project}/observe/service-definitions?engine=native&status=active
      */
     public function serviceDefinitions(Request $request, Project $project): JsonResponse
     {
@@ -29,11 +29,11 @@ class ObserveController extends Controller
             return response()->json(['success' => true, 'data' => []]);
         }
 
-        $engine = $request->query('engine', 'nagios');
+        $engine = trim((string) $request->query('engine', ''));
         $status = $request->query('status', 'active');
 
         $definitions = ObserveServiceDefinition::query()
-            ->where('engine', $engine)
+            ->when($engine !== '', fn ($q) => $q->where('engine', $engine))
             ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->orderBy('service_key')
             ->get()
@@ -61,13 +61,13 @@ class ObserveController extends Controller
         $this->authorize('view', $project);
 
         $meta = ObserveMeta::where('workspace_id', $project->id)
-            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('engine_key', 'native')
             ->orderByDesc('last_poll_at')
             ->first();
 
         $prefix = 'ws' . $project->id . '-';
         $allServices = ObserveService::where('workspace_id', $project->id)
-            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('engine_key', 'native')
             ->where('host_name', 'like', $prefix . '%')
             ->get();
         $totals = [
@@ -101,10 +101,10 @@ class ObserveController extends Controller
         $limit = (int) ($request->query('limit', 100));
         $problemsOnly = $request->query('problems') === '1' || $request->query('problemsOnly') === 'true';
 
-        // Build query with workspace scoping (include both nagios and native engine data)
+        // Build query with workspace scoping (native monitoring data only)
         $workspacePrefix = 'ws' . $project->id . '-';
         $query = ObserveService::where('workspace_id', $project->id)
-            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('engine_key', 'native')
             ->where('host_name', 'like', $workspacePrefix . '%');
 
         // Apply status filter
@@ -128,13 +128,8 @@ class ObserveController extends Controller
             });
         }
 
-        // Fetch all matching services (both engines); dedupe by (host_name, service_name), prefer native
-        $allRows = $query->get();
-        $keyFn = fn ($s) => $s->host_name . '::' . $s->service_name;
-        $deduped = $allRows->groupBy($keyFn)->map(function ($group) {
-            $native = $group->firstWhere('engine_key', 'native');
-            return $native ?? $group->first();
-        })->values();
+        // Fetch all matching services (native engine only)
+        $deduped = $query->get()->values();
 
         // Sort by host name first (group by host), then by severity within each host
         $severityOrder = fn ($s) => match ($s->state) {
@@ -170,13 +165,9 @@ class ObserveController extends Controller
             'pending' => 0,
         ];
 
-        // Get meta for last_poll_at (prefer latest from nagios or native)
+        // Get meta for last_poll_at (native engine)
         $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
-        $nagiosMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'nagios')->first();
-        $meta = $nativeMeta ?? $nagiosMeta;
-        if ($nativeMeta && $nagiosMeta && ($nagiosMeta->last_poll_at?->getTimestamp() ?? 0) > ($nativeMeta->last_poll_at?->getTimestamp() ?? 0)) {
-            $meta = $nagiosMeta;
-        }
+        $meta = $nativeMeta;
 
         // Seed ObserveMeta when none exists (e.g. fresh workspace, scheduler not run yet) to avoid "Last poll: never" UX
         if ($meta === null || $meta->last_poll_at === null) {
@@ -226,7 +217,7 @@ class ObserveController extends Controller
         })->toArray();
 
         $lastPollAt = $meta?->last_poll_at?->toIso8601String();
-        // Only report unreachable from native engine (QynSight). Nagios poll failures are ignored.
+        // Only report unreachable from native engine (QynSight).
         $engineUnreachable = $nativeMeta && trim((string) ($nativeMeta->error ?? '')) !== '';
         $engineUnreachableReason = $engineUnreachable
             ? (trim((string) ($nativeMeta->error ?? '')) ?: 'Monitoring engine could not be reached.')
@@ -574,7 +565,7 @@ class ObserveController extends Controller
         $prefix = 'ws' . $project->id . '-';
         $hosts = ObserveTargetHost::where('workspace_id', $project->id)->where('enabled', true)->get();
         $serviceRows = ObserveService::where('workspace_id', $project->id)
-            ->whereIn('engine_key', ['nagios', 'native'])
+            ->where('engine_key', 'native')
             ->where('host_name', 'like', $prefix . '%')
             ->get();
         $hostToState = [];

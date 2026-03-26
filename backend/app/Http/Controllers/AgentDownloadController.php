@@ -57,8 +57,8 @@ class AgentDownloadController extends Controller
         }
 
         $filename = $platform === 'windows-amd64' || $platform === 'windows-arm64'
-            ? 'portshield-agent.exe'
-            : 'portshield-agent';
+            ? 'quenyx-agent.exe'
+            : 'quenyx-agent';
 
         try {
             return response()->streamDownload(function () use ($path) {

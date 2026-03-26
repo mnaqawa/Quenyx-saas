@@ -285,7 +285,7 @@ class ObserveTargetsController extends Controller
 
                 // If service_key is provided, resolve it to check_command
                 if ($serviceKey !== null && $serviceKey !== '' && Schema::hasTable('observe_service_definitions')) {
-                    $def = ObserveServiceDefinition::forEngine('nagios')->where('service_key', $serviceKey)->first();
+                    $def = ObserveServiceDefinition::where('service_key', $serviceKey)->first();
                     if ($def) {
                         $serviceData['check_command'] = $def->check_command;
                         // check_args already set once above; do not overwrite
@@ -803,7 +803,7 @@ class ObserveTargetsController extends Controller
         if (!Schema::hasTable('observe_service_definitions')) {
             return $base;
         }
-        $fromDb = ObserveServiceDefinition::forEngine('nagios')
+        $fromDb = ObserveServiceDefinition::query()
             ->get()
             ->pluck('check_command')
             ->filter(fn ($c) => is_string($c) && $c !== '')
@@ -823,7 +823,7 @@ class ObserveTargetsController extends Controller
         if (!Schema::hasTable('observe_service_definitions')) {
             return $fallback;
         }
-        $fromDb = ObserveServiceDefinition::forEngine('nagios')
+        $fromDb = ObserveServiceDefinition::query()
             ->get()
             ->mapWithKeys(fn ($d) => [strtolower(trim($d->check_command ?? '')) => $d->service_key])
             ->all();
