@@ -59,6 +59,64 @@ class PollObserveData extends Command
     }
 
     /**
+     * Build candidate gateway URLs for an internal engine endpoint.
+     * Supports direct gateway root and reverse-proxy "/gateway" prefix.
+     *
+     * @return string[]
+     */
+    private function gatewayCandidates(string $suffix): array
+    {
+        $base = rtrim($this->gatewayUrl, '/');
+        $path = ltrim($suffix, '/');
+        return [
+            "{$base}/internal/engines/{$path}",
+            "{$base}/gateway/internal/engines/{$path}",
+        ];
+    }
+
+    /**
+     * GET gateway endpoint and return decoded JSON payload.
+     *
+     * @param string $suffix e.g. "nagios/services"
+     * @param array<string, mixed> $query
+     * @return array<string, mixed>|array<int, mixed>
+     */
+    private function getGatewayJson(string $suffix, array $query = []): array
+    {
+        $errors = [];
+        foreach ($this->gatewayCandidates($suffix) as $url) {
+            try {
+                $response = Http::timeout(60)
+                    ->withHeaders([
+                        'x-internal-secret' => $this->internalSecret,
+                    ])
+                    ->get($url, $query);
+
+                if (! $response->successful()) {
+                    $body = trim((string) $response->body());
+                    $snippet = mb_substr($body, 0, 180);
+                    $errors[] = "{$url} -> HTTP {$response->status()} {$snippet}";
+                    continue;
+                }
+
+                $json = $response->json();
+                if (! is_array($json)) {
+                    $contentType = (string) $response->header('content-type', 'unknown');
+                    $snippet = mb_substr(trim((string) $response->body()), 0, 180);
+                    $errors[] = "{$url} -> non-JSON payload (content-type: {$contentType}) {$snippet}";
+                    continue;
+                }
+
+                return $json;
+            } catch (\Throwable $e) {
+                $errors[] = "{$url} -> {$e->getMessage()}";
+            }
+        }
+
+        throw new \Exception('Gateway request failed: ' . implode(' | ', $errors));
+    }
+
+    /**
      * Infer service state from plugin/output text when gateway sends pending.
      * Matches common Nagios plugin output (e.g. "PING OK", "HTTP WARNING", "CRITICAL", "Connection refused").
      */
@@ -116,47 +174,37 @@ class PollObserveData extends Command
 
             // Fetch services from gateway with workspace scoping via host_prefix
             $workspacePrefix = 'ws' . $workspace->id . '-';
-            $servicesUrl = "{$this->gatewayUrl}/internal/engines/nagios/services";
-            $servicesResponse = Http::timeout(60)
-                ->withHeaders([
-                    'x-internal-secret' => $this->internalSecret,
-                ])
-                ->get($servicesUrl, [
-                    'host_prefix' => $workspacePrefix,
-                ]);
+            $servicesData = $this->getGatewayJson('nagios/services', [
+                'host_prefix' => $workspacePrefix,
+            ]);
 
-            if (!$servicesResponse->successful()) {
-                $errorBody = $servicesResponse->body();
-                if ($servicesResponse->status() === 404) {
-                    throw new \Exception("Gateway internal route not found (404). Gateway may not be updated or routes not mounted. URL: {$servicesUrl}");
+            // Accept both wrapped shape {success:true,data:[...]} and direct array payload
+            if (isset($servicesData['success']) && array_key_exists('data', $servicesData)) {
+                if (! $servicesData['success']) {
+                    throw new \Exception('Gateway returned success=false for nagios/services');
                 }
-                throw new \Exception("Gateway returned {$servicesResponse->status()}: {$errorBody}");
+                $services = $servicesData['data'];
+            } else {
+                $services = $servicesData;
             }
-
-            $servicesData = $servicesResponse->json();
-            if (!isset($servicesData['success']) || !$servicesData['success'] || !isset($servicesData['data'])) {
-                throw new \Exception('Invalid response format from gateway');
-            }
-
-            $services = $servicesData['data'];
             if (!is_array($services)) {
                 $services = [];
             }
 
             // Fetch summary
-            $summaryUrl = "{$this->gatewayUrl}/internal/engines/nagios/summary";
-            $summaryResponse = Http::timeout(30)
-                ->withHeaders([
-                    'x-internal-secret' => $this->internalSecret,
-                ])
-                ->get($summaryUrl);
-
             $summary = null;
-            if ($summaryResponse->successful()) {
-                $summaryData = $summaryResponse->json();
+            try {
+                $summaryData = $this->getGatewayJson('nagios/summary');
                 if (isset($summaryData['success']) && $summaryData['success'] && isset($summaryData['data'])) {
                     $summary = $summaryData['data'];
+                } elseif (! isset($summaryData['success'])) {
+                    $summary = $summaryData;
                 }
+            } catch (\Throwable $e) {
+                Log::warning('PollObserveData summary fetch failed', [
+                    'workspace_id' => $workspace->id,
+                    'message' => $e->getMessage(),
+                ]);
             }
 
             // Upsert services (gateway already filtered by host_prefix, but double-check for safety)
