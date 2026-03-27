@@ -11,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
@@ -139,6 +140,8 @@ class ProjectMembershipController extends Controller
                 ], 422);
             }
 
+            $normalizedEmail = strtolower(trim((string) $request->email));
+
             $user = $request->user();
             
             if (!$user) {
@@ -150,8 +153,8 @@ class ProjectMembershipController extends Controller
 
             // Check if user already has membership
             $existingMembership = $project->memberships()
-                ->whereHas('user', function ($query) use ($request) {
-                    $query->where('email', $request->email);
+                ->whereHas('user', function ($query) use ($normalizedEmail) {
+                    $query->whereRaw('LOWER(email) = ?', [$normalizedEmail]);
                 })
                 ->first();
 
@@ -163,7 +166,7 @@ class ProjectMembershipController extends Controller
             }
 
             // Check if owner
-            if ($project->owner->email === $request->email) {
+            if (strtolower((string) $project->owner->email) === $normalizedEmail) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Project owner is already a member',
@@ -178,7 +181,7 @@ class ProjectMembershipController extends Controller
 
             $invite = ProjectInvite::create([
                 'project_id' => $project->id,
-                'email' => $request->email,
+                'email' => $normalizedEmail,
                 'role' => $request->role,
                 'invited_by_user_id' => $user->id,
                 'status' => 'pending',
@@ -187,6 +190,29 @@ class ProjectMembershipController extends Controller
             ]);
 
             $invite->load('invitedBy:id,name');
+            $inviteUrl = rtrim((string) config('app.url'), '/') . '/invites/accept?token=' . urlencode($token);
+            $emailSent = false;
+
+            try {
+                Mail::raw(
+                    "You have been invited to join workspace '{$project->name}' on Quenyx.\n\n"
+                    . "Role: {$invite->role}\n"
+                    . "Accept invite: {$inviteUrl}\n\n"
+                    . "This invite expires at: " . ($invite->expires_at?->toIso8601String() ?? 'N/A') . "\n",
+                    function ($message) use ($invite, $project): void {
+                        $message->to($invite->email)
+                            ->subject("Quenyx Workspace Invite: {$project->name}");
+                    }
+                );
+                $emailSent = true;
+            } catch (\Throwable $mailError) {
+                Log::warning('ProjectMembershipController@invite mail send failed', [
+                    'project_id' => $project->id,
+                    'invite_id' => $invite->id,
+                    'email' => $invite->email,
+                    'error' => $mailError->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -195,6 +221,8 @@ class ProjectMembershipController extends Controller
                     'email' => $invite->email,
                     'role' => $invite->role,
                     'status' => $invite->status,
+                    'email_sent' => $emailSent,
+                    'invite_url' => $inviteUrl,
                     'invited_by' => [
                         'id' => $invite->invitedBy->id,
                         'name' => $invite->invitedBy->name,
@@ -229,7 +257,7 @@ class ProjectMembershipController extends Controller
             $this->authorize('create', [ProjectMembership::class, $project]);
 
             $validator = Validator::make($request->all(), [
-                'email' => ['required', 'email', 'exists:users,email'],
+                'email' => ['required', 'email'],
                 'role' => ['required', 'string', 'in:admin,member,viewer'],
             ]);
 
@@ -241,7 +269,20 @@ class ProjectMembershipController extends Controller
                 ], 422);
             }
 
-            $targetUser = User::where('email', $request->email)->firstOrFail();
+            $normalizedEmail = strtolower(trim((string) $request->email));
+            $targetUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+                ->first();
+
+            if (!$targetUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'email' => ['No registered user found with this email. Use Invite for new users.'],
+                    ],
+                ], 422);
+            }
 
             // Prevent adding owner as member
             if ($project->owner_id === $targetUser->id) {

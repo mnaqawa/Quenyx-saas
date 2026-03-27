@@ -18,6 +18,8 @@ export interface WorkspaceInvite {
   role: 'admin' | 'member' | 'viewer'
   status: 'pending' | 'accepted' | 'rejected' | 'expired'
   token?: string
+  invite_url?: string
+  email_sent?: boolean
   invited_by: {
     id: number
     name: string

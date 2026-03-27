@@ -96,7 +96,12 @@ function WorkspaceMembers() {
       await loadMemberships()
       setNotice('Member added successfully.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add member')
+      const msg = err instanceof Error ? err.message : 'Failed to add member'
+      if (msg.toLowerCase().includes('no registered user found')) {
+        setError(`${msg} Use Invite to onboard this email.`)
+      } else {
+        setError(msg)
+      }
     }
   }
 
@@ -105,12 +110,17 @@ function WorkspaceMembers() {
 
     setError(null)
     try {
-      await workspaceMembershipService.createInvite(Number(selectedWorkspaceId), newMemberEmail.trim(), newMemberRole)
+      const invite = await workspaceMembershipService.createInvite(Number(selectedWorkspaceId), newMemberEmail.trim(), newMemberRole)
       setNewMemberEmail('')
       setNewMemberRole('member')
       setInvitingMember(false)
       await loadMemberships()
-      setNotice('Invite created successfully.')
+      if (invite.email_sent === false) {
+        const urlHint = invite.invite_url ? ` Share link: ${invite.invite_url}` : ''
+        setNotice(`Invite created, but email could not be delivered from server.${urlHint}`)
+      } else {
+        setNotice('Invite created and email sent successfully.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create invite')
     }
@@ -500,6 +510,22 @@ function WorkspaceMembers() {
                             className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/70 transition hover:bg-white/10"
                           >
                             Copy Token
+                          </button>
+                        </div>
+                      )}
+                      {canManage && invite.invite_url && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <code className="rounded bg-white/5 px-2 py-1 text-[10px] text-white/80 font-mono break-all">
+                            {invite.invite_url}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invite.invite_url!)
+                            }}
+                            className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/70 transition hover:bg-white/10"
+                          >
+                            Copy Link
                           </button>
                         </div>
                       )}
