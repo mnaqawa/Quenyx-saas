@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Project;
 use App\Models\ProjectMembership;
 use App\Models\ProjectInvite;
@@ -10,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class ProjectMembershipController extends Controller
@@ -336,8 +338,26 @@ class ProjectMembershipController extends Controller
                 ], 403);
             }
 
+            $oldRole = $membership->role;
             $membership->update(['role' => $request->role]);
             $membership->load('user:id,name,email');
+
+            if ($oldRole !== $membership->role && Schema::hasTable('audit_logs')) {
+                AuditLog::create([
+                    'user_id' => $request->user()?->id,
+                    'project_id' => $project->id,
+                    'action' => 'workspace_membership_role_changed',
+                    'metadata' => [
+                        'membership_id' => $membership->id,
+                        'target_user_id' => $membership->user_id,
+                        'target_email' => $membership->user?->email,
+                        'old_role' => $oldRole,
+                        'new_role' => $membership->role,
+                        'changed_via' => 'workspace_memberships_update',
+                    ],
+                    'timestamp' => now(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

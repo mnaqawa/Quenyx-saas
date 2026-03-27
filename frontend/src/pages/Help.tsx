@@ -54,6 +54,19 @@ export default function Help() {
           <li className="flex gap-4">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white/70">4</span>
             <div>
+              <p className="font-medium text-white">Assign users (main/sub users)</p>
+              <p className="mt-1 text-xs text-white/60">
+                Workspace owners/admins can invite or directly add users, then set roles (admin/member/viewer) from Workspace Settings.
+              </p>
+              <div className="mt-2 flex gap-3">
+                <Link to="/settings/members" className="text-xs text-sky-300 hover:underline">Workspace Members</Link>
+                <Link to="/app/workspaces" className="text-xs text-sky-300 hover:underline">Workspaces</Link>
+              </div>
+            </div>
+          </li>
+          <li className="flex gap-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white/70">5</span>
+            <div>
               <p className="font-medium text-white">View Real-time Monitoring &amp; Dashboard</p>
               <p className="mt-1 text-xs text-white/60">
                 Dashboard shows a health-at-a-glance line and QynSight summary. Real-time Monitoring shows monitoring server metrics and workspace host/service status.

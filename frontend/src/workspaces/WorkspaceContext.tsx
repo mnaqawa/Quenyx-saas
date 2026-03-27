@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { Project } from '../types/project'
 import { ProjectEntitlements } from '../types/subscription'
 import { ModuleWithAccess } from '../types/module'
+import { Role } from '../types/workspace'
 import { workspaceService } from '../services/workspaceService'
 import { subscriptionService } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
@@ -11,6 +12,8 @@ interface WorkspaceContextValue {
   workspaces: Project[] // Keep Project type since backend returns Project
   selectedWorkspace: Project | null
   selectedWorkspaceId: string | null
+  selectedWorkspaceRole: Role | null
+  workspaceRolesById: Record<string, Role>
   setSelectedWorkspaceId: (workspaceId: string | number) => void
   refreshWorkspaces: () => Promise<void>
   isLoadingWorkspaces: boolean
@@ -43,6 +46,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return stored || null
   })
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
+  const [workspaceRolesById, setWorkspaceRolesById] = useState<Record<string, Role>>({})
   const [workspacesError, setWorkspacesError] = useState<string | null>(null)
   const [entitlements, setEntitlements] = useState<ProjectEntitlements | null>(null)
   const [isLoadingEntitlements, setIsLoadingEntitlements] = useState(false)
@@ -53,6 +57,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const refreshWorkspaces = useCallback(async () => {
     if (!getAuthToken()) {
       setWorkspaces([])
+      setWorkspaceRolesById({})
       setSelectedWorkspaceIdState(null)
       setWorkspacesError(null)
       return
@@ -67,6 +72,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (!Array.isArray(workspaceListItems)) {
         console.warn('Workspaces API returned non-array response:', workspaceListItems)
         setWorkspaces([])
+        setWorkspaceRolesById({})
         setWorkspacesError(null)
         return
       }
@@ -74,11 +80,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // Accept both API shapes:
       // 1) WorkspaceListItem[]: [{ project: {...}, my_role: ... }]
       // 2) Project[]: [{ id, name, status, ... }]
+      const roleMap: Record<string, Role> = {}
       const projects: Project[] = workspaceListItems
         .map((item: any) => {
           const p = item?.project ?? item
           if (!p || p.id == null) {
             return null
+          }
+          if (item?.my_role && typeof item.my_role === 'string') {
+            roleMap[String(p.id)] = item.my_role as Role
           }
           return {
             ...p,
@@ -87,6 +97,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         })
         .filter((p): p is Project => p !== null)
       setWorkspaces(projects)
+      setWorkspaceRolesById(roleMap)
       setWorkspacesError(null)
 
       // Backward compatibility: try new key first, then old key
@@ -120,6 +131,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         // For 401 errors, don't set error message - just clear workspaces
         // The app should redirect to login or show login prompt
         setWorkspaces([])
+        setWorkspaceRolesById({})
         setSelectedWorkspaceIdState(null)
         setWorkspacesError(null) // Don't show error for 401 - user needs to log in
         return
@@ -170,6 +182,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         || localStorage.getItem(LEGACY_PROJECT_KEY)
       if (!stored) {
         setWorkspaces([])
+        setWorkspaceRolesById({})
         setSelectedWorkspaceIdState(null)
       }
     } finally {
@@ -333,10 +346,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<WorkspaceContextValue>(() => {
     const selectedWorkspace =
       workspaces.find((workspace) => String(workspace.id) === selectedWorkspaceId) ?? null
+    const selectedWorkspaceRole = selectedWorkspaceId ? (workspaceRolesById[selectedWorkspaceId] ?? null) : null
     return {
       workspaces,
       selectedWorkspace,
       selectedWorkspaceId,
+      selectedWorkspaceRole,
+      workspaceRolesById,
       setSelectedWorkspaceId,
       refreshWorkspaces,
       isLoadingWorkspaces,
@@ -353,6 +369,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [
     workspaces,
     selectedWorkspaceId,
+    workspaceRolesById,
     setSelectedWorkspaceId,
     refreshWorkspaces,
     isLoadingWorkspaces,

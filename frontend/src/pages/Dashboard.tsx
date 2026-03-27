@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
+import { observeService } from '../services/observeService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { useObserveServices } from '../hooks/useObserveData'
@@ -74,10 +75,11 @@ const buildWeeklyUptime = (modules: Module[]): number[] => {
 function Dashboard() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { workspaces, workspacesError, isLoadingWorkspaces, selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
+  const { workspaces, workspacesError, isLoadingWorkspaces, selectedWorkspaceId, selectedWorkspaceRole, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [checkedGettingStarted, setCheckedGettingStarted] = useState(false)
   
   // Check if QynSight is available and unlocked
   const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
@@ -89,6 +91,7 @@ function Dashboard() {
     limit: 10, // Get top 10 problems for dashboard
     problemsOnly: true, // Only show problems
   })
+  const canManageOnboarding = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
 
   useEffect(() => {
     // Don't fetch dashboard if workspaces are still loading or if there's a workspace error
@@ -139,6 +142,58 @@ function Dashboard() {
 
     fetchDashboard()
   }, [isLoadingWorkspaces, workspacesError, workspaces.length])
+
+  useEffect(() => {
+    if (loading || isLoadingWorkspaces || checkedGettingStarted) {
+      return
+    }
+
+    // New user flow: no workspace yet -> send to Getting Started.
+    if (workspaces.length === 0) {
+      setCheckedGettingStarted(true)
+      navigate('/help', { replace: true })
+      return
+    }
+
+    // If workspace exists but no monitored services yet, guide user to setup.
+    if (!selectedWorkspaceId || !hasObserveAccess) {
+      return
+    }
+
+    let cancelled = false
+    observeService
+      .getObserveSummary(Number(selectedWorkspaceId))
+      .then((summary) => {
+        if (cancelled) return
+        const totals = summary?.totals
+        const totalServices =
+          (totals?.ok ?? 0) +
+          (totals?.warning ?? 0) +
+          (totals?.critical ?? 0) +
+          (totals?.unknown ?? 0) +
+          (totals?.pending ?? 0)
+
+        if (totalServices === 0) {
+          setCheckedGettingStarted(true)
+          navigate('/help', { replace: true })
+        }
+      })
+      .catch(() => {
+        // Keep dashboard available if summary check fails.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    loading,
+    isLoadingWorkspaces,
+    checkedGettingStarted,
+    workspaces.length,
+    selectedWorkspaceId,
+    hasObserveAccess,
+    navigate,
+  ])
 
   const metrics = useMemo(() => {
     const modules = data?.modules ?? []
@@ -267,6 +322,48 @@ function Dashboard() {
             <span className="text-white/50">No data yet</span>
           )}
         </div>
+      )}
+
+      {selectedWorkspaceId && canManageOnboarding && (
+        <section className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Role-based onboarding</h2>
+              <p className="mt-1 text-xs text-white/70">
+                Main users (owner/admin) can onboard sub users, workspace access, and monitoring setup from here.
+              </p>
+            </div>
+            <span className="rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1 text-[11px] font-medium text-sky-200">
+              {selectedWorkspaceRole === 'owner' ? 'Owner' : 'Admin'}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <Link
+              to="/app/workspaces"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 transition hover:bg-white/10"
+            >
+              Manage workspaces
+            </Link>
+            <Link
+              to="/settings/members"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 transition hover:bg-white/10"
+            >
+              Assign main/sub users
+            </Link>
+            <Link
+              to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 transition hover:bg-white/10"
+            >
+              Add hosts/services
+            </Link>
+            <Link
+              to={`/app/workspaces/${selectedWorkspaceId}/observe/real-time-monitoring`}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 transition hover:bg-white/10"
+            >
+              Verify monitoring
+            </Link>
+          </div>
+        </section>
       )}
 
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">

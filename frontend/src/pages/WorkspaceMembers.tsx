@@ -17,6 +17,9 @@ function WorkspaceMembers() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [dragMembershipId, setDragMembershipId] = useState<number | null>(null)
+  const [dragTargetRole, setDragTargetRole] = useState<Role | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -41,11 +44,18 @@ function WorkspaceMembers() {
     }
   }, [selectedWorkspaceId, currentUserId])
 
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(null), 2500)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
   const loadMemberships = async () => {
     if (!selectedWorkspaceId || currentUserId === null) return
 
     setLoading(true)
     setError(null)
+    setNotice(null)
     setUnauthorized(false)
     try {
       const data = await workspaceMembershipService.getWorkspaceMemberships(Number(selectedWorkspaceId))
@@ -84,6 +94,7 @@ function WorkspaceMembers() {
       setNewMemberRole('member')
       setAddingMember(false)
       await loadMemberships()
+      setNotice('Member added successfully.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add member')
     }
@@ -99,6 +110,7 @@ function WorkspaceMembers() {
       setNewMemberRole('member')
       setInvitingMember(false)
       await loadMemberships()
+      setNotice('Invite created successfully.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create invite')
     }
@@ -111,6 +123,7 @@ function WorkspaceMembers() {
     try {
       await workspaceMembershipService.updateMembershipRole(Number(selectedWorkspaceId), membershipId, newRole)
       await loadMemberships()
+      setNotice(`Role updated to ${newRole}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role')
     }
@@ -124,6 +137,7 @@ function WorkspaceMembers() {
     try {
       await workspaceMembershipService.removeMembership(Number(selectedWorkspaceId), membershipId)
       await loadMemberships()
+      setNotice('Member removed successfully.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove member')
     }
@@ -131,6 +145,55 @@ function WorkspaceMembers() {
 
   const canManage = canManageMembers(currentUserRole)
   const isOwner = canPromoteToOwner(currentUserRole)
+  const owners = memberships.filter((m) => m.role === 'owner')
+  const admins = memberships.filter((m) => m.role === 'admin')
+  const members = memberships.filter((m) => m.role === 'member')
+  const viewers = memberships.filter((m) => m.role === 'viewer')
+
+  const roleDropAllowed = (targetRole: Role) => {
+    if (!canManage) return false
+    if (targetRole === 'owner' && !isOwner) return false
+    return true
+  }
+
+  const handleTreeRoleDrop = async (targetRole: Role) => {
+    if (!canManage || dragMembershipId === null) return
+    const dragged = memberships.find((m) => m.id === dragMembershipId)
+    if (!dragged) return
+    if (dragged.role === 'owner') {
+      setError('Owner role cannot be changed by drag-and-drop.')
+      return
+    }
+    if (dragged.role === targetRole) return
+    await handleUpdateRole(dragMembershipId, targetRole)
+  }
+
+  const renderTreeNode = (membership: WorkspaceMembership, tone: string) => {
+    const isDraggable = canManage && membership.role !== 'owner' && membership.id !== null
+    const isDragging = dragMembershipId !== null && membership.id === dragMembershipId
+    return (
+      <div
+        key={`${membership.role}-${membership.user_id}`}
+        draggable={isDraggable}
+        onDragStart={() => {
+          if (membership.id !== null) setDragMembershipId(membership.id)
+        }}
+        onDragEnd={() => {
+          setDragMembershipId(null)
+          setDragTargetRole(null)
+        }}
+        className={`rounded-md border px-3 py-2 ${tone} ${isDraggable ? 'cursor-grab' : ''} ${
+          isDragging ? 'opacity-60' : ''
+        }`}
+        title={isDraggable ? 'Drag to another role group to reassign role' : undefined}
+      >
+        <p className="text-sm font-semibold text-white">{membership.user.name}</p>
+        <p className="text-xs text-white/70">
+          {membership.user.email} · {membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}
+        </p>
+      </div>
+    )
+  }
 
   if (!selectedWorkspaceId) {
     return (
@@ -175,6 +238,11 @@ function WorkspaceMembers() {
       {error && (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {error}
+        </div>
+      )}
+      {notice && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {notice}
         </div>
       )}
 
@@ -255,6 +323,104 @@ function WorkspaceMembers() {
         )}
 
         <div className="space-y-4">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-white/80">User Tree (Main/Sub users)</h3>
+            <div className="space-y-3 rounded-lg border border-white/5 bg-white/5 p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-sky-200">Main users</p>
+                <div className="mt-2 space-y-2">
+                  <div
+                    onDragOver={(e) => {
+                      if (!roleDropAllowed('owner')) return
+                      e.preventDefault()
+                      setDragTargetRole('owner')
+                    }}
+                    onDragLeave={() => setDragTargetRole((prev) => (prev === 'owner' ? null : prev))}
+                    onDrop={async (e) => {
+                      if (!roleDropAllowed('owner')) return
+                      e.preventDefault()
+                      await handleTreeRoleDrop('owner')
+                      setDragTargetRole(null)
+                    }}
+                    className={`space-y-2 rounded-md ${
+                      dragTargetRole === 'owner' ? 'ring-1 ring-sky-400/60 bg-sky-500/5 p-1.5' : ''
+                    }`}
+                  >
+                    {owners.map((m) => renderTreeNode(m, 'border-sky-500/20 bg-sky-500/10'))}
+                  </div>
+                  <div
+                    onDragOver={(e) => {
+                      if (!roleDropAllowed('admin')) return
+                      e.preventDefault()
+                      setDragTargetRole('admin')
+                    }}
+                    onDragLeave={() => setDragTargetRole((prev) => (prev === 'admin' ? null : prev))}
+                    onDrop={async (e) => {
+                      if (!roleDropAllowed('admin')) return
+                      e.preventDefault()
+                      await handleTreeRoleDrop('admin')
+                      setDragTargetRole(null)
+                    }}
+                    className={`space-y-2 rounded-md ${
+                      dragTargetRole === 'admin' ? 'ring-1 ring-indigo-400/60 bg-indigo-500/5 p-1.5' : ''
+                    }`}
+                  >
+                    {admins.map((m) => renderTreeNode(m, 'border-indigo-500/20 bg-indigo-500/10'))}
+                  </div>
+                  {owners.length + admins.length === 0 && (
+                    <p className="text-xs text-white/60">No main users defined.</p>
+                  )}
+                </div>
+              </div>
+              <div className="border-t border-white/10 pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Sub users</p>
+                <div className="mt-2 space-y-2">
+                  <div
+                    onDragOver={(e) => {
+                      if (!roleDropAllowed('member')) return
+                      e.preventDefault()
+                      setDragTargetRole('member')
+                    }}
+                    onDragLeave={() => setDragTargetRole((prev) => (prev === 'member' ? null : prev))}
+                    onDrop={async (e) => {
+                      if (!roleDropAllowed('member')) return
+                      e.preventDefault()
+                      await handleTreeRoleDrop('member')
+                      setDragTargetRole(null)
+                    }}
+                    className={`space-y-2 rounded-md ${
+                      dragTargetRole === 'member' ? 'ring-1 ring-emerald-400/60 bg-emerald-500/5 p-1.5' : ''
+                    }`}
+                  >
+                    {members.map((m) => renderTreeNode(m, 'border-emerald-500/20 bg-emerald-500/10'))}
+                  </div>
+                  <div
+                    onDragOver={(e) => {
+                      if (!roleDropAllowed('viewer')) return
+                      e.preventDefault()
+                      setDragTargetRole('viewer')
+                    }}
+                    onDragLeave={() => setDragTargetRole((prev) => (prev === 'viewer' ? null : prev))}
+                    onDrop={async (e) => {
+                      if (!roleDropAllowed('viewer')) return
+                      e.preventDefault()
+                      await handleTreeRoleDrop('viewer')
+                      setDragTargetRole(null)
+                    }}
+                    className={`space-y-2 rounded-md ${
+                      dragTargetRole === 'viewer' ? 'ring-1 ring-amber-400/60 bg-amber-500/5 p-1.5' : ''
+                    }`}
+                  >
+                    {viewers.map((m) => renderTreeNode(m, 'border-amber-500/20 bg-amber-500/10'))}
+                  </div>
+                  {members.length + viewers.length === 0 && (
+                    <p className="text-xs text-white/60">No sub users defined.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div>
             <h3 className="mb-3 text-sm font-semibold text-white/80">Members</h3>
             <div className="space-y-3">
