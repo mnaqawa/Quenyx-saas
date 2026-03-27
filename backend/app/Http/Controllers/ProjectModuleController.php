@@ -12,6 +12,26 @@ use Illuminate\Support\Facades\Log;
 
 class ProjectModuleController extends Controller
 {
+    /**
+     * Legacy -> canonical module key aliases.
+     *
+     * @var array<string, string>
+     */
+    private const MODULE_KEY_ALIASES = [
+        'shieldcore' => 'qyncore',
+        'shieldobserve' => 'qynsight',
+        'shieldinventory' => 'qynasset',
+        'shieldrespond' => 'qynreact',
+        'shieldsecure' => 'qynshield',
+        'shieldnotify' => 'qynnotify',
+        'shieldvoice' => 'qynva',
+        'shieldknowledge' => 'qynknow',
+        'shieldautomate' => 'qynrun',
+        'shieldbalance' => 'qynbalance',
+        'shielddesk' => 'qynsupport',
+        'shieldintegrations' => 'qynintegrations',
+    ];
+
     public function __construct(
         private EntitlementService $entitlementService
     ) {
@@ -30,26 +50,26 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog (Quenyx modules: qyn* / Qyn*)
+            // Get all modules from catalog and normalize legacy keys for backward compatibility.
             $allModules = Module::query()
-                ->where(function ($query) {
-                    $query->where('key', 'like', 'qyn%')
-                        ->orWhere('name', 'like', 'Qyn%');
-                })
                 ->orderBy('name')
                 ->get()
-                ->keyBy('key')
                 ->values();
 
             // Build access overlay
-            $modulesAccess = $allModules
-                ->map(function (Module $module) use ($allowedModules) {
-                    return [
-                        'key' => $module->key,
-                        'allowed' => in_array($module->key, $allowedModules, true),
-                    ];
-                })
-                ->values();
+            $allowedModulesLookup = array_flip(array_map(fn ($key) => $this->canonicalModuleKey((string) $key, null), $allowedModules));
+            $modulesAccessMap = [];
+            foreach ($allModules as $module) {
+                $moduleKey = $this->canonicalModuleKey($module->key, $module->name);
+                if (!str_starts_with($moduleKey, 'qyn') || isset($modulesAccessMap[$moduleKey])) {
+                    continue;
+                }
+                $modulesAccessMap[$moduleKey] = [
+                    'key' => $moduleKey,
+                    'allowed' => isset($allowedModulesLookup[$moduleKey]),
+                ];
+            }
+            $modulesAccess = array_values($modulesAccessMap);
 
             return response()->json([
                 'success' => true,
@@ -85,15 +105,10 @@ class ProjectModuleController extends Controller
             $entitlements = $this->entitlementService->getEntitlements($project);
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
-            // Get all modules from catalog (Quenyx modules: qyn* / Qyn*)
+            // Get all modules from catalog and normalize legacy keys for backward compatibility.
             $allModules = Module::query()
-                ->where(function ($query) {
-                    $query->where('key', 'like', 'qyn%')
-                        ->orWhere('name', 'like', 'Qyn%');
-                })
                 ->orderBy('name')
                 ->get()
-                ->keyBy('key')
                 ->values();
 
             // Get plan modules
@@ -101,22 +116,30 @@ class ProjectModuleController extends Controller
             $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
 
             // Get overrides
-            $overrides = ProjectModuleOverride::query()
+            $overridesRaw = ProjectModuleOverride::query()
                 ->where('project_id', $project->id)
                 ->with('module')
                 ->get()
-                ->keyBy(function ($override) {
-                    return $override->module->key;
-                });
+                ->values();
+            $overrides = [];
+            foreach ($overridesRaw as $override) {
+                $overrideKey = $this->canonicalModuleKey($override->module->key, $override->module->name ?? null);
+                $overrides[$overrideKey] = $override;
+            }
 
             // Merge catalog with access flags and override info
             // Use array with key-based deduplication to ensure absolute uniqueness
             $modulesMap = [];
+            $allowedModulesLookup = array_flip(array_map(fn ($key) => $this->canonicalModuleKey((string) $key, null), $allowedModules));
+            $planModulesLookup = array_flip(array_map(fn ($key) => $this->canonicalModuleKey((string) $key, null), $planModules));
             foreach ($allModules as $module) {
-                $moduleKey = $module->key;
-                if ($moduleKey && !isset($modulesMap[$moduleKey])) {
-                    $allowedByPlan = in_array($moduleKey, $planModules, true);
-                    $override = $overrides->get($moduleKey);
+                $moduleKey = $this->canonicalModuleKey($module->key, $module->name);
+                if (!str_starts_with($moduleKey, 'qyn') || isset($modulesMap[$moduleKey])) {
+                    continue;
+                }
+                if ($moduleKey) {
+                    $allowedByPlan = isset($planModulesLookup[$moduleKey]);
+                    $override = $overrides[$moduleKey] ?? null;
                     $overrideMode = $override ? $override->mode : null;
 
                     $modulesMap[$moduleKey] = [
@@ -126,7 +149,7 @@ class ProjectModuleController extends Controller
                         'status' => $module->status,
                         'allowed_by_plan' => $allowedByPlan,
                         'override' => $overrideMode,
-                        'allowed' => in_array($moduleKey, $allowedModules, true),
+                        'allowed' => isset($allowedModulesLookup[$moduleKey]),
                     ];
                 }
             }
@@ -147,5 +170,14 @@ class ProjectModuleController extends Controller
                 'message' => config('app.debug') ? $e->getMessage() : 'Failed to retrieve modules',
             ], 500);
         }
+    }
+
+    private function canonicalModuleKey(string $key, ?string $name): string
+    {
+        $candidate = strtolower(trim($key));
+        if ($candidate === '' && $name !== null) {
+            $candidate = strtolower(trim($name));
+        }
+        return self::MODULE_KEY_ALIASES[$candidate] ?? $candidate;
     }
 }

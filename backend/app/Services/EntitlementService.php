@@ -11,6 +11,26 @@ use App\Models\ProjectSubscription;
 class EntitlementService
 {
     /**
+     * Legacy -> canonical module key aliases.
+     *
+     * @var array<string, string>
+     */
+    private const MODULE_KEY_ALIASES = [
+        'shieldcore' => 'qyncore',
+        'shieldobserve' => 'qynsight',
+        'shieldinventory' => 'qynasset',
+        'shieldrespond' => 'qynreact',
+        'shieldsecure' => 'qynshield',
+        'shieldnotify' => 'qynnotify',
+        'shieldvoice' => 'qynva',
+        'shieldknowledge' => 'qynknow',
+        'shieldautomate' => 'qynrun',
+        'shieldbalance' => 'qynbalance',
+        'shielddesk' => 'qynsupport',
+        'shieldintegrations' => 'qynintegrations',
+    ];
+
+    /**
      * Get entitlements for a project based on its current plan + overrides
      *
      * @param Project $project
@@ -19,7 +39,8 @@ class EntitlementService
     public function getEntitlements(Project $project): array
     {
         $plan = $this->getEffectivePlan($project);
-        $planModules = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
+        $planModulesRaw = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
+        $planModules = $this->normalizeModuleKeys(is_array($planModulesRaw) ? $planModulesRaw : []);
 
         // Get effective modules (plan + overrides)
         $effectiveModules = $this->getEffectiveModules($project, $planModules);
@@ -43,21 +64,24 @@ class EntitlementService
      */
     public function getEffectiveModules(Project $project, array $planModules): array
     {
+        $normalizedPlanModules = $this->normalizeModuleKeys($planModules);
+
         // Get all overrides for this project
         $overrides = ProjectModuleOverride::query()
             ->where('project_id', $project->id)
             ->with('module')
             ->get()
             ->keyBy(function ($override) {
-                return $override->module->key;
+                return $this->canonicalModuleKey($override->module->key, $override->module->name ?? null);
             });
 
         // Get all modules to check
-        $allModules = Module::query()->get()->keyBy('key');
+        $allModules = Module::query()->get();
 
         $effectiveModules = [];
 
-        foreach ($allModules as $moduleKey => $module) {
+        foreach ($allModules as $module) {
+            $moduleKey = $this->canonicalModuleKey($module->key, $module->name ?? null);
             $override = $overrides->get($moduleKey);
 
             if ($override) {
@@ -68,13 +92,13 @@ class EntitlementService
                 // If mode is 'deny', don't add (explicitly denied)
             } else {
                 // No override, use plan entitlement
-                if (in_array($moduleKey, $planModules, true)) {
+                if (in_array($moduleKey, $normalizedPlanModules, true)) {
                     $effectiveModules[] = $moduleKey;
                 }
             }
         }
 
-        return $effectiveModules;
+        return array_values(array_unique($effectiveModules));
     }
 
     /**
@@ -133,7 +157,8 @@ class EntitlementService
     public function getAllowedModules(Project $project): array
     {
         $plan = $this->getEffectivePlan($project);
-        return $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
+        $raw = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
+        return $this->normalizeModuleKeys(is_array($raw) ? $raw : []);
     }
 
     /**
@@ -158,7 +183,8 @@ class EntitlementService
     public function hasModuleAccess(Project $project, string $moduleKey): bool
     {
         $allowedModules = $this->getAllowedModules($project);
-        return in_array($moduleKey, $allowedModules, true);
+        $canonical = $this->canonicalModuleKey($moduleKey, null);
+        return in_array($canonical, $allowedModules, true);
     }
 
     /**
@@ -184,5 +210,25 @@ class EntitlementService
         }
 
         return $plan;
+    }
+
+    /**
+     * @param array<int, string> $keys
+     * @return array<int, string>
+     */
+    private function normalizeModuleKeys(array $keys): array
+    {
+        $normalized = array_map(fn ($key) => $this->canonicalModuleKey((string) $key, null), $keys);
+        return array_values(array_unique(array_filter($normalized)));
+    }
+
+    private function canonicalModuleKey(string $key, ?string $name): string
+    {
+        $candidate = strtolower(trim($key));
+        if ($candidate === '' && $name !== null) {
+            $candidate = strtolower(trim($name));
+        }
+
+        return self::MODULE_KEY_ALIASES[$candidate] ?? $candidate;
     }
 }

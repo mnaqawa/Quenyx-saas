@@ -13,6 +13,7 @@ function Subscriptions() {
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
+  const [planError, setPlanError] = useState<string | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [highlightedModule, setHighlightedModule] = useState<string | null>(null)
 
@@ -118,13 +119,15 @@ function Subscriptions() {
     if (!selectedWorkspaceId || savingPlan) return
 
     setSavingPlan(true)
+    setPlanError(null)
     try {
       const subscription = await subscriptionService.updateProjectSubscription(Number(selectedWorkspaceId), planKey)
       setSubscription(subscription)
       await refreshEntitlements()
       await refreshModules()
-    } catch (err) {
-      // Handle error
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : 'Failed to update plan'
+      setPlanError(msg)
     } finally {
       setSavingPlan(false)
     }
@@ -221,6 +224,9 @@ function Subscriptions() {
                 </div>
                 {savingPlan && (
                   <p className="mt-2 text-xs text-white/60">Saving...</p>
+                )}
+                {planError && (
+                  <p className="mt-2 text-xs text-rose-300">{planError}</p>
                 )}
               </div>
             </div>

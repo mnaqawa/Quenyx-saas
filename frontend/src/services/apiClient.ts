@@ -89,10 +89,11 @@ class ApiClient {
         // Try to parse error response
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
         const contentType = response.headers.get('content-type')
+        let errorData: any = null
         
         if (contentType && contentType.includes('application/json')) {
           try {
-            const errorData = await response.json()
+            errorData = await response.json()
             if (errorData && typeof errorData === 'object') {
               if (errorData.message) {
                 errorMessage = errorData.message
@@ -105,10 +106,31 @@ class ApiClient {
             console.warn('Failed to parse error response as JSON:', parseError)
           }
         }
+
+        // Improve validation (422) messaging by flattening field errors.
+        if (response.status === 422 && errorData && typeof errorData === 'object' && errorData.errors) {
+          const errors = errorData.errors as Record<string, unknown>
+          const parts: string[] = []
+          for (const [field, val] of Object.entries(errors)) {
+            const msgs = Array.isArray(val) ? (val as unknown[]) : [val]
+            const cleaned = msgs
+              .map((m) => (typeof m === 'string' ? m : 'Invalid value'))
+              .filter(Boolean)
+            if (cleaned.length > 0) {
+              parts.push(`${field}: ${cleaned.join(', ')}`)
+            }
+          }
+          if (parts.length > 0) {
+            errorMessage = parts.join('. ')
+          }
+        }
         
         const error = new Error(`${errorMessage} (${url})`)
         ;(error as any).status = response.status
         ;(error as any).url = url
+        if (errorData && typeof errorData === 'object' && errorData.errors) {
+          ;(error as any).errors = errorData.errors
+        }
         
         // Standardized error mapping for gateway client
         if (response.status === 401) {
