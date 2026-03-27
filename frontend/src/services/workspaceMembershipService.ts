@@ -49,6 +49,10 @@ export const workspaceMembershipService = {
     return apiClient.post<WorkspaceInvite>(`/api/workspaces/${workspaceId}/memberships/invite`, { email, role })
   },
 
+  async deleteInvite(workspaceId: number, inviteId: number): Promise<void> {
+    await apiClient.delete(`/api/workspaces/${workspaceId}/memberships/invites/${inviteId}`)
+  },
+
   async updateMembershipRole(workspaceId: number, membershipId: number, role: 'owner' | 'admin' | 'member' | 'viewer'): Promise<WorkspaceMembership> {
     // apiClient unwraps { success: true, data: ... } so response is already WorkspaceMembership
     return apiClient.put<WorkspaceMembership>(`/api/workspaces/${workspaceId}/memberships/${membershipId}`, { role })

@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/memberships', [ProjectMembershipController::class, 'index']);
     Route::post('/projects/{project}/memberships', [ProjectMembershipController::class, 'store']);
     Route::post('/projects/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
+    Route::delete('/projects/{project}/memberships/invites/{invite}', [ProjectMembershipController::class, 'destroyInvite']);
     Route::put('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
     Route::delete('/projects/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
 
@@ -74,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'index']);
     Route::post('/workspaces/{project}/memberships', [ProjectMembershipController::class, 'store']);
     Route::post('/workspaces/{project}/memberships/invite', [ProjectMembershipController::class, 'invite']);
+    Route::delete('/workspaces/{project}/memberships/invites/{invite}', [ProjectMembershipController::class, 'destroyInvite']);
     Route::put('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'update']);
     Route::delete('/workspaces/{project}/memberships/{membership}', [ProjectMembershipController::class, 'destroy']);
     

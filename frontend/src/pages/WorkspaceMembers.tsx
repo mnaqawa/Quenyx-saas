@@ -153,6 +153,20 @@ function WorkspaceMembers() {
     }
   }
 
+  const handleDeleteInvite = async (inviteId: number) => {
+    if (!selectedWorkspaceId || !inviteId) return
+    if (!confirm('Delete this pending invite?')) return
+
+    setError(null)
+    try {
+      await workspaceMembershipService.deleteInvite(Number(selectedWorkspaceId), inviteId)
+      await loadMemberships()
+      setNotice('Invite deleted successfully.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete invite')
+    }
+  }
+
   const canManage = canManageMembers(currentUserRole)
   const isOwner = canPromoteToOwner(currentUserRole)
   const owners = memberships.filter((m) => m.role === 'owner')
@@ -530,9 +544,20 @@ function WorkspaceMembers() {
                         </div>
                       )}
                     </div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                      {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {canManage && invite.status === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInvite(invite.id)}
+                          className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200 transition hover:bg-rose-500/20"
+                        >
+                          Delete Invite
+                        </button>
+                      )}
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                        {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -125,7 +125,7 @@ class ApiClient {
           }
         }
         
-        const error = new Error(`${errorMessage} (${url})`)
+        const error = new Error(errorMessage)
         ;(error as any).status = response.status
         ;(error as any).url = url
         if (errorData && typeof errorData === 'object' && errorData.errors) {

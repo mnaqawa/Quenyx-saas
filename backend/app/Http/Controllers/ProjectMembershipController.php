@@ -194,17 +194,26 @@ class ProjectMembershipController extends Controller
             $emailSent = false;
 
             try {
-                Mail::raw(
-                    "You have been invited to join workspace '{$project->name}' on Quenyx.\n\n"
-                    . "Role: {$invite->role}\n"
-                    . "Accept invite: {$inviteUrl}\n\n"
-                    . "This invite expires at: " . ($invite->expires_at?->toIso8601String() ?? 'N/A') . "\n",
-                    function ($message) use ($invite, $project): void {
-                        $message->to($invite->email)
-                            ->subject("Quenyx Workspace Invite: {$project->name}");
-                    }
-                );
-                $emailSent = true;
+                $defaultMailer = config('mail.default');
+                if (is_string($defaultMailer) && trim($defaultMailer) !== '') {
+                    Mail::raw(
+                        "You have been invited to join workspace '{$project->name}' on Quenyx.\n\n"
+                        . "Role: {$invite->role}\n"
+                        . "Accept invite: {$inviteUrl}\n\n"
+                        . "This invite expires at: " . ($invite->expires_at?->toIso8601String() ?? 'N/A') . "\n",
+                        function ($message) use ($invite, $project): void {
+                            $message->to($invite->email)
+                                ->subject("Quenyx Workspace Invite: {$project->name}");
+                        }
+                    );
+                    $emailSent = true;
+                } else {
+                    Log::warning('ProjectMembershipController@invite mail skipped - mail.default not configured', [
+                        'project_id' => $project->id,
+                        'invite_id' => $invite->id,
+                        'email' => $invite->email,
+                    ]);
+                }
             } catch (\Throwable $mailError) {
                 Log::warning('ProjectMembershipController@invite mail send failed', [
                     'project_id' => $project->id,
@@ -244,6 +253,51 @@ class ProjectMembershipController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => config('app.debug') ? $e->getMessage() : 'Failed to create invite',
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete/cancel a pending invite.
+     */
+    public function destroyInvite(Request $request, Project $project, ProjectInvite $invite): JsonResponse
+    {
+        try {
+            $this->authorize('create', [ProjectMembership::class, $project]);
+
+            if ($invite->project_id !== $project->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invite not found',
+                ], 404);
+            }
+
+            if ($invite->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending invites can be deleted',
+                ], 409);
+            }
+
+            $invite->delete();
+
+            return response()->json([
+                'success' => true,
+                'data' => null,
+            ]);
+        } catch (AuthorizationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('ProjectMembershipController@destroyInvite failed', [
+                'project_id' => $project->id,
+                'invite_id' => $invite->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? $e->getMessage() : 'Failed to delete invite',
             ], 500);
         }
     }
