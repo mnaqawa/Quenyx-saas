@@ -252,6 +252,7 @@ class WorkspacesAliasTest extends TestCase
 
         // Pro plan includes qynintegrations; integrations API enforces this module
         $this->artisan('db:seed', ['--class' => 'PlanSeeder']);
+        $this->artisan('db:seed', ['--class' => 'ModuleSeeder']);
         $proPlan = Plan::where('key', 'pro')->first();
         $this->assertNotNull($proPlan);
         ProjectSubscription::create([

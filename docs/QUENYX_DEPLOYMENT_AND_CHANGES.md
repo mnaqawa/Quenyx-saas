@@ -10,10 +10,11 @@ This document lists what was implemented (rebrand from any legacy “portshield�
 |------|----------------|
 | **Branding** | User-facing and internal strings, package names, agent binary and config paths, docs, `LICENSE`, default DB name, seed data, and Go module path use **Quenyx** / `quenyx` consistently. |
 | **Integrations API (Laravel)** | `PUT` integration configuration now requires `authorize('update', $project)` (not `view`), so only owners/admins can write settings. All integration list/show/write endpoints require the **`qynintegrations`** module via `EntitlementService` (plan + overrides). |
-| **Gateway (Node)** | Entitlement middleware applies to both `/api/projects/:id/integrations* **and** `/api/workspaces/:id/integrations*`. Project ID is parsed from either URL shape. |
+| **Gateway (Node)** | Entitlement middleware applies to both `/api/projects/:id/integrations/*` and `/api/workspaces/:id/integrations/*`. Project ID is parsed from either URL shape. |
 | **Frontend localStorage** | Only `quenyx.*` keys (auth token, workspace id, etc.). Users who had pre-migration keys may need to sign in again and re-select a workspace. |
 | **Agent (Go)** | Module `github.com/quenyx/agent`; binary `quenyx-agent`; config under `~/.config/quenyx/` (Linux/mac) or `%APPDATA%\quenyx\` (Windows). |
 | **Migration filename** | Renamed to remove legacy naming: `2026_02_16_140000_align_legacy_modules_to_quenyx.php` (see §4 if this migration already ran under the old name). |
+| **Tests** | `tests/Feature/ProjectIntegrationAccessTest.php` covers free plan (no integrations), member vs admin upsert, and admin success path. Run `composer test` or `php artisan test` in `backend/`. |
 
 ---
 
@@ -31,6 +32,7 @@ This document lists what was implemented (rebrand from any legacy “portshield�
 - `database/seeders/UserSeeder.php`, `ProjectIntegrationConfigurationSeeder.php` — `admin@quenyx.test`, example URLs.
 - `database/migrations/2026_02_16_140000_align_legacy_modules_to_quenyx.php` — **replaces** old file name (see §4).
 - `tests/Feature/WorkspacesAliasTest.php` — Pro plan subscription for integrations alias test.
+- `tests/Feature/ProjectIntegrationAccessTest.php` — integration entitlement + `update` policy (member denied, admin allowed, free plan denied on list).
 - `README.md`, `TESTING.md`, `DEBUG_LOGGING.md` — dev paths and DB names.
 
 ### Frontend (Vite + React)
