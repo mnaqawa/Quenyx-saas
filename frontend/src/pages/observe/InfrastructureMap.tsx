@@ -23,7 +23,6 @@ export const ZONE_OPTIONS = ['Unassigned', 'DMZ', 'WebApp', 'DB', 'Internal', 'E
 export type ZoneId = (typeof ZONE_OPTIONS)[number] | string
 
 const DIAGRAM_STORAGE_KEY = 'quenyx-infra-diagram'
-const LEGACY_DIAGRAM_STORAGE_KEY = 'portshield-infra-diagram'
 
 export interface DiagramState {
   hostZones: Record<string, ZoneId>
@@ -35,7 +34,6 @@ function loadDiagram(workspaceId: string | null): DiagramState {
   if (!workspaceId) return { hostZones: {}, nodePositions: {}, customZones: [] }
   try {
     const raw = localStorage.getItem(`${DIAGRAM_STORAGE_KEY}-${workspaceId}`)
-      || localStorage.getItem(`${LEGACY_DIAGRAM_STORAGE_KEY}-${workspaceId}`)
     if (!raw) return { hostZones: {}, nodePositions: {}, customZones: [] }
     const parsed = JSON.parse(raw) as DiagramState
     return {

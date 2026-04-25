@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Rename brand PortShield → Quenyx and module keys/names to Qyn*.
+     * Rename legacy module keys to Qyn* and align branding to Quenyx.
      * Run after ModuleSeeder has been updated to use new keys (re-seed will create new rows if missing).
      */
     public function up(): void

@@ -57,7 +57,7 @@ NAGIOS_PASS=nagios
 Add to `docker-compose.nagios.yml`:
 ```yaml
 volumes:
-  - ./nagios/config:/opt/nagios/etc/objects/portshield
+  - ./nagios/config:/opt/nagios/etc/objects/quenyx
 ```
 
 ## Verification Commands
@@ -255,12 +255,12 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 2. **Check Docker volume mount:**
    ```bash
-   docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/
+   docker exec nagios-core ls -la /opt/nagios/etc/objects/quenyx/workspaces/
    ```
 
 3. **Check Nagios config includes workspace files:**
    ```bash
-   docker exec nagios-core cat /opt/nagios/etc/nagios.cfg | grep portshield
+   docker exec nagios-core cat /opt/nagios/etc/nagios.cfg | grep quenyx
    ```
 
 4. **Manually reload Nagios:**

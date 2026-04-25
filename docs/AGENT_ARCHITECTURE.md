@@ -1,4 +1,4 @@
-# PortShield Agent Architecture
+# Quenyx Agent Architecture
 
 ## Overview
 
@@ -8,7 +8,7 @@ Most infrastructure is located in **other networks** (DMZ, private subnets, clou
 - NAT and routing prevent direct access
 - Hosts may have no public IP
 
-**Solution:** Deploy a **lightweight agent** on each monitored host (Windows, Linux, macOS). The agent runs locally, collects data, and **pushes** it to the PortShield platform. Only outbound HTTPS from the agent to the platform is required—no inbound ports on the host.
+**Solution:** Deploy a **lightweight agent** on each monitored host (Windows, Linux, macOS). The agent runs locally, collects data, and **pushes** it to the Quenyx platform. Only outbound HTTPS from the agent to the platform is required—no inbound ports on the host.
 
 ---
 
@@ -24,7 +24,7 @@ Most infrastructure is located in **other networks** (DMZ, private subnets, clou
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        PortShield Platform                               │
+│                        Quenyx Platform                               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
 │  │   Gateway   │  │   Backend   │  │   Queue     │  │ Agent Ingest    │ │
 │  │   (API)     │  │   (Laravel) │  │   Worker    │  │ API + Jobs      │ │
@@ -170,11 +170,11 @@ Today, `observe_targets_hosts` assumes hosts are **reachable from the backend**.
 
 ## Portal: Install from UI
 
-Users can install the agent directly from the PortShield portal:
+Users can install the agent directly from the Quenyx portal:
 
 1. **Integrations** page → **Agents** section (platform-wide; used by ShieldObserve, ShieldInventory, VA scan, etc.)
 2. **Install Agent** → Opens modal with:
-   - **Protocol selection**: HTTP API (push), PortShield Agent Protocol (PSAP, port 9444), SNMP – with descriptions and port info
+   - **Protocol selection**: HTTP API (push), Quenyx Agent Protocol (PSAP, port 9444), SNMP – with descriptions and port info
    - **Permissions checklist**: System metrics, inventory, network, processes, filesystem
    - **Token expiry**: 1h, 24h, 72h, 7d, 30d
 3. **Generate token** → Returns enrollment token + install instructions for Linux, Windows, macOS
@@ -201,7 +201,7 @@ Users can install the agent directly from the PortShield portal:
 
 ### Phase 2: Minimal Agent (Go) ✅
 
-- Config: `~/.config/portshield/agent.json` (Linux/macOS) or `%APPDATA%\portshield\agent.json` (Windows)
+- Config: `~/.config/quenyx/agent.json` (Linux/macOS) or `%APPDATA%\quenyx\agent.json` (Windows)
 - `enroll`, `run`, `install` commands
 - Metrics: Linux (`/proc`), macOS (`sysctl`, `vm_stat`), Windows (placeholder)
 - Inventory: Hostname, OS, arch, CPU cores

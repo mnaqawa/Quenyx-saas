@@ -59,14 +59,14 @@ Then update `phpunit.xml` to use SQLite:
 1. Create a separate test database:
 ```bash
 mysql -u root -p
-CREATE DATABASE portshield_test;
+CREATE DATABASE quenyx_test;
 EXIT;
 ```
 
 2. Update `phpunit.xml` with your MySQL credentials:
 ```xml
 <env name="DB_CONNECTION" value="mysql"/>
-<env name="DB_DATABASE" value="portshield_test"/>
+<env name="DB_DATABASE" value="quenyx_test"/>
 <env name="DB_HOST" value="127.0.0.1"/>
 <env name="DB_PORT" value="3306"/>
 <env name="DB_USERNAME" value="your_username"/>

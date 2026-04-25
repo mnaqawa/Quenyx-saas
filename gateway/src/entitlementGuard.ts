@@ -4,11 +4,16 @@ import { getCacheKey, getCachedEntitlements, setCachedEntitlements, hashToken } 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'
 
 /**
- * Extract project ID from URL patterns like /api/projects/:projectId/...
+ * Extract project (workspace) ID from /api/projects/:id/... or /api/workspaces/:id/...
  */
 export function extractProjectId(path: string): number | null {
-  const match = path.match(/^\/api\/projects\/(\d+)/)
-  return match ? parseInt(match[1], 10) : null
+  const p = (path || '').split('?')[0]
+  const projects = p.match(/^\/api\/projects\/(\d+)/)
+  if (projects) {
+    return parseInt(projects[1], 10)
+  }
+  const workspaces = p.match(/^\/api\/workspaces\/(\d+)/)
+  return workspaces ? parseInt(workspaces[1], 10) : null
 }
 
 interface EntitlementsResponse {
@@ -81,7 +86,8 @@ async function checkEntitlement(
  * 
  * ENFORCED ROUTES (require qynintegrations module):
  * - /api/projects/:projectId/integrations*
- * 
+ * - /api/workspaces/:projectId/integrations* (alias)
+ *
  * ALLOWED ROUTES (no enforcement, pass through):
  * - /api/projects/:projectId/modules
  * - /api/projects/:projectId/modules/access
@@ -96,10 +102,11 @@ export async function enforceEntitlements(
 ): Promise<void> {
   const path = req.path
   
-  // ONLY enforce on project-scoped integrations routes
-  // Pattern: /api/projects/:projectId/integrations*
-  // Examples: /api/projects/1/integrations, /api/projects/1/integrations/2/configuration
-  if (path.match(/^\/api\/projects\/\d+\/integrations/)) {
+  // Enforce on project- and workspace-scoped integrations routes
+  const isIntegrationsRoute =
+    /^\/api\/projects\/\d+\/integrations/.test(path) ||
+    /^\/api\/workspaces\/\d+\/integrations/.test(path)
+  if (isIntegrationsRoute) {
     const projectId = extractProjectId(path)
     const authHeader = req.headers.authorization
     

@@ -36,7 +36,7 @@ func DefaultPath() (string, error) {
 		}
 		dir = filepath.Join(dir, ".config")
 	}
-	return filepath.Join(dir, "portshield", "agent.json"), nil
+	return filepath.Join(dir, "quenyx", "agent.json"), nil
 }
 
 func Load(path string) (*Config, error) {

@@ -159,7 +159,7 @@ Add to `docker-compose.nagios.yml`:
 
 ```yaml
 volumes:
-  - ./nagios/config:/opt/nagios/etc/objects/portshield
+  - ./nagios/config:/opt/nagios/etc/objects/quenyx
 ```
 
 ## Build Verification

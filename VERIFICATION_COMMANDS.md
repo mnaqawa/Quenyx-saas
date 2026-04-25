@@ -100,36 +100,36 @@ curl -s -H "x-internal-secret: dev-secret-change-in-production" \
 
 ```bash
 # Check bind mount exists in docker-compose
-grep -A 5 "volumes:" docker-compose.nagios.yml | grep "portshield"
+grep -A 5 "volumes:" docker-compose.nagios.yml | grep "quenyx"
 
-# Expected: Should show: - ./nagios/config:/opt/nagios/etc/objects/portshield
+# Expected: Should show: - ./nagios/config:/opt/nagios/etc/objects/quenyx
 
 # Verify directory structure
 ls -la nagios/config/
 ls -la nagios/config/workspaces/
 
 # Expected:
-# nagios/config/portshield.cfg exists
+# nagios/config/quenyx.cfg exists
 # nagios/config/workspaces/ directory exists
 ```
 
-### Step 5: Verify PortShield Config Loading
+### Step 5: Verify Quenyx Config Loading
 
 ```bash
-# Check portshield.cfg content
-cat nagios/config/portshield.cfg
+# Check quenyx.cfg content
+cat nagios/config/quenyx.cfg
 
 # Expected:
-# cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
+# cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces
 
-# Check if Nagios base config includes portshield.cfg
-docker exec nagios-core grep -n "portshield" /opt/nagios/etc/nagios.cfg
+# Check if Nagios base config includes quenyx.cfg
+docker exec nagios-core grep -n "quenyx" /opt/nagios/etc/nagios.cfg
 
-# Expected: Should show line with: cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg
+# Expected: Should show line with: cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg
 # (If not present, gateway will auto-add it on next config write)
 
 # Verify workspace configs are accessible in container
-docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/
+docker exec nagios-core ls -la /opt/nagios/etc/objects/quenyx/workspaces/
 
 # Expected: Should list workspace .cfg files (e.g., 84.cfg)
 ```
@@ -324,8 +324,8 @@ npm run build
 - [ ] Gateway services endpoint returns real service rows with all fields
 - [ ] Gateway services endpoint supports `host_prefix` filtering
 - [ ] Docker compose bind mount configured correctly
-- [ ] `portshield.cfg` exists and includes workspace directory
-- [ ] Nagios base config includes `portshield.cfg` (or auto-added)
+- [ ] `quenyx.cfg` exists and includes workspace directory
+- [ ] Nagios base config includes `quenyx.cfg` (or auto-added)
 - [ ] Workspace configs created in `nagios/config/workspaces/{id}.cfg`
 - [ ] Reload endpoint returns `validated: true, reloaded: true`
 - [ ] Nagios sees workspace-prefixed hosts (`ws{id}-...`)
@@ -372,9 +372,9 @@ npm run build
    cat nagios/config/workspaces/84.cfg
    ```
 
-2. **Check Nagios includes portshield.cfg:**
+2. **Check Nagios includes quenyx.cfg:**
    ```bash
-   docker exec nagios-core grep "portshield" /opt/nagios/etc/nagios.cfg
+   docker exec nagios-core grep "quenyx" /opt/nagios/etc/nagios.cfg
    ```
 
 3. **Validate and reload:**

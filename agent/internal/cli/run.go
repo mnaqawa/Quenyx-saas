@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/portshield/agent/internal/config"
-	"github.com/portshield/agent/internal/collector"
+	"github.com/quenyx/agent/internal/config"
+	"github.com/quenyx/agent/internal/collector"
 )
 
 func runAgent(cfgPath string) error {

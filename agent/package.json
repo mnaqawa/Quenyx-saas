@@ -1,10 +1,10 @@
 {
-  "name": "portshield-agent",
+  "name": "quenyx-agent",
   "version": "1.0.0",
   "private": true,
-  "description": "Quenyx agent (Go). Use 'npm run build' to build the binary.",
+  "description": "Quenyx host agent (Go)",
   "scripts": {
-    "build": "go build -o portshield-agent .",
-    "build:windows": "go build -o portshield-agent.exe ."
+    "build": "go build -o quenyx-agent .",
+    "build:windows": "go build -o quenyx-agent.exe ."
   }
 }

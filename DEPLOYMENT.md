@@ -23,7 +23,7 @@ Single server runs: Laravel backend, Node gateway, Nginx serving frontend static
 
 ```bash
 git clone <repository-url>
-cd portshield-saas
+cd quenyx-saas
 ```
 
 ### 2. Backend
@@ -74,7 +74,7 @@ ENTITLEMENTS_CACHE_TTL_MS=30000
 
 **Backend `.env` – Agent install instructions:**
 
-Set `GATEWAY_BASE_URL` in `backend/.env` to your **public** gateway URL (e.g. `https://portshield.example.com`). This is used for agent download and enrollment commands. If unset, it falls back to `APP_URL` or `http://127.0.0.1:4000`.
+Set `GATEWAY_BASE_URL` in `backend/.env` to your **public** gateway URL (e.g. `https://quenyx.example.com`). This is used for agent download and enrollment commands. If unset, it falls back to `APP_URL` or `http://127.0.0.1:4000`.
 
 ```bash
 GATEWAY_BASE_URL=https://your-public-domain.com
@@ -111,8 +111,8 @@ Example: site root = frontend build; `/api/` proxied to gateway.
 ```nginx
 server {
     listen 80;
-    server_name dev.portshield.net;
-    root /var/www/portshield/portshield-saas/frontend/dist;
+    server_name dev.quenyx.net;
+    root /var/www/quenyx/quenyx-saas/frontend/dist;
     index index.html;
 
     location / {
@@ -142,7 +142,7 @@ server {
 
 **Backend**
 
-`/etc/systemd/system/portshield-backend.service`:
+`/etc/systemd/system/quenyx-backend.service`:
 
 ```ini
 [Unit]
@@ -152,7 +152,7 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/var/www/portshield/portshield-saas/backend
+WorkingDirectory=/var/www/quenyx/quenyx-saas/backend
 ExecStart=/usr/bin/php artisan serve --host=127.0.0.1 --port=8000
 Restart=always
 
@@ -162,7 +162,7 @@ WantedBy=multi-user.target
 
 **Gateway**
 
-`/etc/systemd/system/portshield-gateway.service`:
+`/etc/systemd/system/quenyx-gateway.service`:
 
 ```ini
 [Unit]
@@ -172,7 +172,7 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/var/www/portshield/portshield-saas/gateway
+WorkingDirectory=/var/www/quenyx/quenyx-saas/gateway
 Environment="GATEWAY_PORT=4000"
 Environment="BACKEND_BASE_URL=http://127.0.0.1:8000"
 Environment="ENTITLEMENTS_CACHE_TTL_MS=30000"
@@ -196,7 +196,7 @@ sudo crontab -u www-data -e
 Add this line (adjust the path if your backend lives elsewhere):
 
 ```
-* * * * * cd /var/www/portshield/portshield-saas/backend && php artisan schedule:run >> /var/www/portshield/portshield-saas/backend/storage/logs/scheduler.log 2>&1
+* * * * * cd /var/www/quenyx/quenyx-saas/backend && php artisan schedule:run >> /var/www/quenyx/quenyx-saas/backend/storage/logs/scheduler.log 2>&1
 ```
 
 **Verify:**
@@ -222,7 +222,7 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
    QUEUE_CONNECTION=database
    ```
 
-3. **Add queue worker systemd service** `/etc/systemd/system/portshield-queue.service`:
+3. **Add queue worker systemd service** `/etc/systemd/system/quenyx-queue.service`:
    ```ini
    [Unit]
    Description=Quenyx Queue Worker
@@ -231,7 +231,7 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
    [Service]
    Type=simple
    User=www-data
-   WorkingDirectory=/var/www/portshield/portshield-saas/backend
+   WorkingDirectory=/var/www/quenyx/quenyx-saas/backend
    ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
    Restart=always
 
@@ -242,8 +242,8 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
 4. **Enable and start**:
    ```bash
    sudo systemctl daemon-reload
-   sudo systemctl enable portshield-queue
-   sudo systemctl start portshield-queue
+   sudo systemctl enable quenyx-queue
+   sudo systemctl start quenyx-queue
    ```
 
 **Verify:** Trigger a port scan from the UI; check `storage/logs/laravel.log` or the Port Scan tab for results.
@@ -252,8 +252,8 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable portshield-backend portshield-gateway portshield-queue
-sudo systemctl start portshield-backend portshield-gateway portshield-queue
+sudo systemctl enable quenyx-backend quenyx-gateway quenyx-queue
+sudo systemctl start quenyx-backend quenyx-gateway quenyx-queue
 sudo systemctl reload nginx
 ```
 
@@ -282,7 +282,7 @@ upstream gateway {
 
 server {
     listen 443 ssl http2;
-    server_name portshield.net;
+    server_name quenyx.net;
 
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;

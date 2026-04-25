@@ -33,7 +33,7 @@ Database tables use plural names (`observe_targets_hosts`, `observe_targets_serv
 
 ### Before Fix
 ```bash
-# Would fail with: SQLSTATE[42S02]: Table 'portshield_dev.observe_target_hosts' doesn't exist
+# Would fail with: SQLSTATE[42S02]: Table 'quenyx_dev.observe_target_hosts' doesn't exist
 curl -X PUT "http://127.0.0.1:8081/api/workspaces/84/observe/targets" ...
 php artisan observe:nagios:publish --workspace_id=84
 ```
@@ -43,7 +43,7 @@ php artisan observe:nagios:publish --workspace_id=84
 # Should succeed
 TOKEN=$(curl -s -X POST http://127.0.0.1:8081/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@portshield.test","password":"Password123!"}' | jq -r '.data.token')
+  -d '{"email":"admin@quenyx.test","password":"Password123!"}' | jq -r '.data.token')
 
 curl -s -X PUT "http://127.0.0.1:8081/api/workspaces/84/observe/targets" \
   -H "Authorization: Bearer $TOKEN" \

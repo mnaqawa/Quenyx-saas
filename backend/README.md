@@ -27,7 +27,7 @@ Laravel API-only backend for Quenyx vOPS HUB.
 
 3. **Update `.env` with your database credentials:**
    ```
-   DB_DATABASE=portshield
+   DB_DATABASE=quenyx
    DB_USERNAME=root
    DB_PASSWORD=your_password
    ```

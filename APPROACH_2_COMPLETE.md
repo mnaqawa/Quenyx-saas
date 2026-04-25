@@ -5,7 +5,7 @@
 Completed ShieldObserve Approach 2 end-to-end with:
 1. ✅ Gateway Nagios adapter wired to real Nagios JSON endpoints
 2. ✅ Docker compose bind mount configured
-3. ✅ Nagios loads PortShield configs (auto-included in nagios.cfg)
+3. ✅ Nagios loads Quenyx configs (auto-included in nagios.cfg)
 4. ✅ Reload reliability (validation + HUP/restart fallback)
 5. ✅ Workspace scoping enforced end-to-end (ws{id}- prefix)
 6. ✅ Backend poller uses gateway filtering (host_prefix parameter)
@@ -38,7 +38,7 @@ Completed ShieldObserve Approach 2 end-to-end with:
 ### Configuration (1 file)
 
 4. **`docker-compose.nagios.yml`**
-   - Already configured with bind mount: `./nagios/config:/opt/nagios/etc/objects/portshield`
+   - Already configured with bind mount: `./nagios/config:/opt/nagios/etc/objects/quenyx`
    - Workspaces directory created: `nagios/config/workspaces/`
 
 ### Documentation (2 files)
@@ -99,13 +99,13 @@ Completed ShieldObserve Approach 2 end-to-end with:
 **Bind Mount:**
 ```yaml
 volumes:
-  - ./nagios/config:/opt/nagios/etc/objects/portshield
+  - ./nagios/config:/opt/nagios/etc/objects/quenyx
 ```
 
 **Directory Structure:**
 ```
 nagios/config/
-  ├── portshield.cfg          # Includes workspace directory
+  ├── quenyx.cfg          # Includes workspace directory
   └── workspaces/
       ├── 84.cfg               # Workspace 84 config
       ├── 85.cfg               # Workspace 85 config
@@ -115,8 +115,8 @@ nagios/config/
 ### 4. Nagios Config Loading
 
 **Auto-Inclusion:**
-- `portshield.cfg` is automatically created if missing
-- `nagios.cfg` is automatically updated to include `portshield.cfg` (via `ensureNagiosIncludesPortshield()`)
+- `quenyx.cfg` is automatically created if missing
+- `nagios.cfg` is automatically updated to include `quenyx.cfg` (via `ensureNagiosIncludesWorkspacesCfgDir()`)
 - Workspace configs are loaded via `cfg_dir` directive
 
 **Reload Reliability:**
@@ -203,7 +203,7 @@ All components are now wired end-to-end:
 
 1. **Gateway** fetches real data from Nagios and supports workspace filtering
 2. **Docker Compose** properly mounts workspace configs
-3. **Nagios** automatically loads PortShield configs
+3. **Nagios** automatically loads Quenyx configs
 4. **Reload** is reliable with validation and fallback
 5. **Workspace Scoping** is enforced at multiple layers
 6. **Backend Poller** uses gateway filtering for efficiency

@@ -40,7 +40,7 @@
 
 **3.2 Config Generator:**
 - ✅ `NagiosConfigPublisher` service generates Nagios config format
-- ✅ Includes marker comment: `# PortShield Workspace {id}`
+- ✅ Includes marker comment: `# Quenyx Workspace {id}`
 - ✅ `php artisan observe:nagios:publish --workspace_id=ID` command
 - ✅ Auto-publish after successful PUT targets
 
@@ -195,7 +195,7 @@ NAGIOS_CONTAINER_NAME=nagios-core
 Add to `docker-compose.nagios.yml`:
 ```yaml
 volumes:
-  - ./nagios/config:/opt/nagios/etc/objects/portshield
+  - ./nagios/config:/opt/nagios/etc/objects/quenyx
 ```
 
 ## Summary

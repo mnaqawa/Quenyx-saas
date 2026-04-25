@@ -3,7 +3,7 @@
 ## Task Completed
 
 Stabilized Approach 2 (Targets → Publish → Reload → Poll) with fixes for:
-1. ✅ Nagios config loading (ensures base config includes portshield.cfg)
+1. ✅ Nagios config loading (ensures base config includes quenyx.cfg)
 2. ✅ Reload reliability (improved validation and reload logic)
 3. ✅ Workspace scoping (enforced end-to-end with ws{id}- prefix)
 4. ✅ Targets validation (sanitization, uniqueness, allowlist)
@@ -15,7 +15,7 @@ Stabilized Approach 2 (Targets → Publish → Reload → Poll) with fixes for:
 
 ### Gateway (1 file)
 - **`gateway/src/engines/nagiosConfig.ts`**
-  - Added `ensureNagiosIncludesPortshield()` function to auto-add portshield.cfg include to nagios.cfg
+  - Added `ensureNagiosIncludesWorkspacesCfgDir()` function to auto-add quenyx.cfg include to nagios.cfg
   - Fixed `reloadNagios()` validation logic to properly check exit codes and output
   - Improved validation success detection (checks both stdout and stderr)
 
@@ -44,8 +44,8 @@ Stabilized Approach 2 (Targets → Publish → Reload → Poll) with fixes for:
 ## Key Improvements
 
 ### 1. Nagios Config Loading
-- **Problem**: Nagios base config (`nagios.cfg`) didn't include `portshield.cfg`, so workspace configs weren't loaded
-- **Solution**: `ensureNagiosIncludesPortshield()` automatically appends the include line to `nagios.cfg` when writing configs
+- **Problem**: Nagios base config (`nagios.cfg`) didn't include `quenyx.cfg`, so workspace configs weren't loaded
+- **Solution**: `ensureNagiosIncludesWorkspacesCfgDir()` automatically appends the include line to `nagios.cfg` when writing configs
 - **Implementation**: Uses `docker exec` to check and append if missing (gracefully handles container not running)
 
 ### 2. Reload Reliability
@@ -104,11 +104,11 @@ php artisan tinker
 
 ### 4. Verify Nagios Config Loading
 ```bash
-# Check nagios.cfg includes portshield.cfg
-docker exec nagios-core grep "portshield" /opt/nagios/etc/nagios.cfg
+# Check nagios.cfg includes quenyx.cfg
+docker exec nagios-core grep "quenyx" /opt/nagios/etc/nagios.cfg
 
 # Check workspace configs exist
-docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/
+docker exec nagios-core ls -la /opt/nagios/etc/objects/quenyx/workspaces/
 ```
 
 ### 5. Verify Reload
@@ -169,7 +169,7 @@ php artisan migrate  # Run new migration
 ## Summary
 
 All stabilization tasks completed:
-- ✅ Nagios config loading fixed (auto-includes portshield.cfg)
+- ✅ Nagios config loading fixed (auto-includes quenyx.cfg)
 - ✅ Reload reliability improved (better validation and error handling)
 - ✅ Workspace scoping enforced end-to-end
 - ✅ Targets validation strengthened

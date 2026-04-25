@@ -1,5 +1,5 @@
 {
-  "name": "portshield-gateway",
+  "name": "quenyx-gateway",
   "version": "1.0.0",
   "description": "API Gateway for Quenyx vOPS HUB with entitlement enforcement",
   "main": "dist/server.js",

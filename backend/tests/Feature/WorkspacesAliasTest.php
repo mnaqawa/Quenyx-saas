@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Plan;
 use App\Models\Project;
 use App\Models\ProjectMembership;
+use App\Models\ProjectSubscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -246,6 +248,18 @@ class WorkspacesAliasTest extends TestCase
             'owner_id' => $user->id,
             'name' => 'Test Project',
             'status' => 'active',
+        ]);
+
+        // Pro plan includes qynintegrations; integrations API enforces this module
+        $this->artisan('db:seed', ['--class' => 'PlanSeeder']);
+        $proPlan = Plan::where('key', 'pro')->first();
+        $this->assertNotNull($proPlan);
+        ProjectSubscription::create([
+            'project_id' => $project->id,
+            'plan_id' => $proPlan->id,
+            'status' => 'active',
+            'starts_at' => now(),
+            'ends_at' => null,
         ]);
 
         // Seed integrations (required for integrations endpoint)

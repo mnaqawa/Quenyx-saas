@@ -64,7 +64,7 @@ npm start
 **Deploy / Restart (e.g. systemd):** After any code change you must rebuild so `dist/` is updated, then restart:
 
 ```bash
-cd /path/to/gateway && npm run build && systemctl restart portshield-gateway
+cd /path/to/gateway && npm run build && systemctl restart quenyx-gateway
 ```
 
 Restarting without rebuilding will keep running the old compiled code.

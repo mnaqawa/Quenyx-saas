@@ -46,7 +46,7 @@ RestartSec=10
 WantedBy=multi-user.target
 `, user, exe)
 
-	path := "/etc/systemd/system/portshield-agent.service"
+	path := "/etc/systemd/system/quenyx-agent.service"
 	if os.Getuid() != 0 {
 		return fmt.Errorf("install requires root. Run: sudo %s install", exe)
 	}
@@ -55,17 +55,17 @@ WantedBy=multi-user.target
 	}
 	cmd := exec.Command("systemctl", "daemon-reload")
 	cmd.Run()
-	cmd = exec.Command("systemctl", "enable", "portshield-agent")
+	cmd = exec.Command("systemctl", "enable", "quenyx-agent")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("enable service: %w (%s)", err, string(out))
 	}
-	fmt.Println("Installed. Start with: sudo systemctl start portshield-agent")
+	fmt.Println("Installed. Start with: sudo systemctl start quenyx-agent")
 	return nil
 }
 
 func installWindowsService(exe string) error {
 	// TODO: Use golang.org/x/sys/windows/svc or similar
-	return fmt.Errorf("Windows service install not yet implemented. Run manually from this directory: .\\portshield-agent.exe run  or use the full path: %s run", exe)
+	return fmt.Errorf("Windows service install not yet implemented. Run manually from this directory: .\\quenyx-agent.exe run  or use the full path: %s run", exe)
 }
 
 func installLaunchd(exe string) error {
@@ -74,7 +74,7 @@ func installLaunchd(exe string) error {
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.portshield.agent</string>
+  <string>com.quenyx.agent</string>
   <key>ProgramArguments</key>
   <array>
     <string>%s</string>
@@ -88,7 +88,7 @@ func installLaunchd(exe string) error {
 </plist>
 `, exe)
 
-	path := "/Library/LaunchDaemons/com.portshield.agent.plist"
+	path := "/Library/LaunchDaemons/com.quenyx.agent.plist"
 	if os.Getuid() != 0 {
 		return fmt.Errorf("install requires root. Run: sudo %s install", exe)
 	}

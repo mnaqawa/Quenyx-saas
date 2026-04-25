@@ -17,7 +17,7 @@ Monorepo for Quenyx vOPS HUB (Virtual IT Operations Platform) with API gateway, 
 ## Project Structure
 
 ```
-portshield-saas/
+quenyx-saas/
 ├── backend/          # Laravel API-only backend
 ├── frontend/         # React + TypeScript + Vite frontend
 ├── gateway/          # Node.js API gateway with entitlement enforcement
@@ -25,6 +25,8 @@ portshield-saas/
 ├── DEPLOYMENT.md      # Full deployment guide (single-node & multi-node)
 └── README.md         # This file
 ```
+
+**Deploy / rebrand / file-level change log:** [docs/QUENYX_DEPLOYMENT_AND_CHANGES.md](docs/QUENYX_DEPLOYMENT_AND_CHANGES.md) (migrations, env, build order, post-deploy checks).
 
 ## Features
 
@@ -80,7 +82,7 @@ In-app **Getting started** (sidebar) links to a short guide. For production depl
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
    DB_PORT=3306
-   DB_DATABASE=portshield_dev
+   DB_DATABASE=quenyx_dev
    DB_USERNAME=your_username
    DB_PASSWORD=your_password
    ```

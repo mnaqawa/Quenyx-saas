@@ -26,24 +26,24 @@ This runbook provides step-by-step commands for verifying and troubleshooting th
 3. **Docker Socket Permissions (for gateway reload):**
    ```bash
    # Add gateway service user to docker group (if running as systemd service)
-   sudo usermod -aG docker portshield
+   sudo usermod -aG docker quenyx
    # Or run gateway as a user that has Docker access
    ```
    
-   **Nagios reload when Docker unavailable:** Config is still written when Docker is unavailable; only reload is skipped. The reload API returns `reload_skipped: true` and a clear message. To apply config: run `docker exec nagios-core kill -HUP 1` or `docker restart nagios-core` as a user with Docker access, or grant the gateway user Docker access (e.g. `usermod -aG docker portshield`).
+   **Nagios reload when Docker unavailable:** Config is still written when Docker is unavailable; only reload is skipped. The reload API returns `reload_skipped: true` and a clear message. To apply config: run `docker exec nagios-core kill -HUP 1` or `docker restart nagios-core` as a user with Docker access, or grant the gateway user Docker access (e.g. `usermod -aG docker quenyx`).
 
 4. **Environment Variables** configured:
    - Backend `.env`: `GATEWAY_BASE_URL`, `GATEWAY_INTERNAL_SECRET`, `OBSERVE_AUTO_PUBLISH_NAGIOS=true`
    - Gateway `.env`: `GATEWAY_INTERNAL_SECRET`, `NAGIOS_CONFIG_DIR`, `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, `NAGIOS_USER`, `NAGIOS_PASS`
 
-5. **NAGIOS_CONFIG_DIR and permissions (required when gateway runs as `portshield`):**
-   - **Use an absolute path.** Example: `NAGIOS_CONFIG_DIR=/var/www/portshield/portshield-saas/nagios/config`
-   - The path must be the same directory that `docker-compose.nagios.yml` mounts into the container as `/opt/nagios/etc/objects/portshield`. If compose uses `./nagios/config` relative to the project root, set `NAGIOS_CONFIG_DIR` to the absolute project path: `/var/www/portshield/portshield-saas/nagios/config`.
-   - Create the directory and make it writable by the gateway user (`portshield`):
+5. **NAGIOS_CONFIG_DIR and permissions (required when gateway runs as `quenyx`):**
+   - **Use an absolute path.** Example: `NAGIOS_CONFIG_DIR=/var/www/quenyx/quenyx-saas/nagios/config`
+   - The path must be the same directory that `docker-compose.nagios.yml` mounts into the container as `/opt/nagios/etc/objects/quenyx`. If compose uses `./nagios/config` relative to the project root, set `NAGIOS_CONFIG_DIR` to the absolute project path: `/var/www/quenyx/quenyx-saas/nagios/config`.
+   - Create the directory and make it writable by the gateway user (`quenyx`):
      ```bash
-     NAGIOS_BASE=/var/www/portshield/portshield-saas/nagios
+     NAGIOS_BASE=/var/www/quenyx/quenyx-saas/nagios
      sudo mkdir -p "$NAGIOS_BASE/config/workspaces"
-     sudo chown -R portshield:portshield "$NAGIOS_BASE"
+     sudo chown -R quenyx:quenyx "$NAGIOS_BASE"
      sudo chmod -R 775 "$NAGIOS_BASE"
      ```
    - If you use a relative `NAGIOS_CONFIG_DIR` (e.g. `./nagios/config`) and systemd `WorkingDirectory` is the gateway dir, the gateway will write under the wrong place (e.g. `/var/www/.../gateway/nagios/config/...`) and may hit permission errors when switching to the correct path. Always set `NAGIOS_CONFIG_DIR` to the absolute host path.
@@ -120,28 +120,28 @@ curl -X PUT http://127.0.0.1:8000/api/workspaces/84/observe/targets \
 
 ### Step 3: Verify Nagios Config Files
 
-After publish, the PUT `/internal/engines/nagios/config` response includes `written_path` (absolute path where the gateway wrote the file). Use it to confirm the file landed at the intended host path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`).
+After publish, the PUT `/internal/engines/nagios/config` response includes `written_path` (absolute path where the gateway wrote the file). Use it to confirm the file landed at the intended host path (e.g. `/var/www/quenyx/quenyx-saas/nagios/config/workspaces/84.cfg`).
 
 **How workspace configs are loaded:** Nagios loads workspace configs via a **cfg_dir** directive in the **main** `/opt/nagios/etc/nagios.cfg`. The gateway ensures this line exists in `nagios.cfg`:
 
-- `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`
+- `cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces`
 
-Workspace configs are **not** loaded via `cfg_file=.../portshield.cfg`. The directive `cfg_dir` is valid only in the main `nagios.cfg`; if you put `cfg_dir` inside a file that is itself included via `cfg_file`, Nagios reports "Unexpected token or statement" and loads only localhost.
+Workspace configs are **not** loaded via `cfg_file=.../quenyx.cfg`. The directive `cfg_dir` is valid only in the main `nagios.cfg`; if you put `cfg_dir` inside a file that is itself included via `cfg_file`, Nagios reports "Unexpected token or statement" and loads only localhost.
 
 ```bash
 # On host: check workspace config exists at the path returned in written_path
-ls -la /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
+ls -la /var/www/quenyx/quenyx-saas/nagios/config/workspaces/84.cfg
 
 # View config content (should show ws84- prefixed host names)
-cat /var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg
+cat /var/www/quenyx/quenyx-saas/nagios/config/workspaces/84.cfg
 
 # Inside container: must see the same file (bind mount)
-docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg
+docker exec nagios-core ls -l /opt/nagios/etc/objects/quenyx/workspaces/84.cfg
 
 # Verify nagios.cfg loads workspaces via cfg_dir (required)
-docker exec nagios-core grep -n "portshield" /opt/nagios/etc/nagios.cfg
-# Expected: A line containing cfg_dir=/opt/nagios/etc/objects/portshield/workspaces
-# There must NOT be: cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg (see Issue 2 if present)
+docker exec nagios-core grep -n "quenyx" /opt/nagios/etc/nagios.cfg
+# Expected: A line containing cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces
+# There must NOT be: cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg (see Issue 2 if present)
 ```
 
 ### Step 4: Verify Nagios Reload
@@ -258,33 +258,33 @@ php artisan observe:nagios:publish --workspace_id=84
 - Publish succeeds but Nagios hostlist only shows localhost
 - Workspace hosts (e.g. `ws84-*`) do not appear in `statusjson.cgi?query=hostlist`
 
-**Cause:** Workspace configs must be loaded via **cfg_dir** in the main `nagios.cfg`. The directive `cfg_dir` is valid only in the main config file. If `nagios.cfg` included `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` and that file contained `cfg_dir=...`, Nagios reports "Unexpected token or statement in file '...portshield.cfg' on line 6" and loads only localhost.
+**Cause:** Workspace configs must be loaded via **cfg_dir** in the main `nagios.cfg`. The directive `cfg_dir` is valid only in the main config file. If `nagios.cfg` included `cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg` and that file contained `cfg_dir=...`, Nagios reports "Unexpected token or statement in file '...quenyx.cfg' on line 6" and loads only localhost.
 
 **Verification steps:**
 
 1. **Confirm workspace cfg exists inside the container** (must match host path via bind mount):
    ```bash
-   docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg
+   docker exec nagios-core ls -l /opt/nagios/etc/objects/quenyx/workspaces/84.cfg
    ```
    If "No such file", the host path is wrong or the gateway wrote elsewhere. Check PUT response `written_path` and `NAGIOS_CONFIG_DIR`.
 
-2. **Ensure `nagios.cfg` loads workspaces via cfg_dir (not cfg_file to portshield.cfg):**
+2. **Ensure `nagios.cfg` loads workspaces via cfg_dir (not cfg_file to quenyx.cfg):**
    ```bash
-   docker exec nagios-core grep "portshield" /opt/nagios/etc/nagios.cfg
+   docker exec nagios-core grep "quenyx" /opt/nagios/etc/nagios.cfg
    ```
-   **Expected:** A line `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`.  
-   **Invalid (remove if present):** `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` — that pattern leads to "Unexpected token" because portshield.cfg would contain cfg_dir, which is not allowed inside an included object file.
+   **Expected:** A line `cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces`.  
+   **Invalid (remove if present):** `cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg` — that pattern leads to "Unexpected token" because quenyx.cfg would contain cfg_dir, which is not allowed inside an included object file.
 
 **Troubleshooting: Remove old cfg_file line if present**
 
-If you see `cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg` in `nagios.cfg`, remove it and ensure `cfg_dir=.../workspaces` is in `nagios.cfg` instead:
+If you see `cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg` in `nagios.cfg`, remove it and ensure `cfg_dir=.../workspaces` is in `nagios.cfg` instead:
 
    ```bash
    # Remove the legacy cfg_file line (invalid pattern)
-   docker exec nagios-core sed -i '\|cfg_file=/opt/nagios/etc/objects/portshield/portshield.cfg|d' /opt/nagios/etc/nagios.cfg
+   docker exec nagios-core sed -i '\|cfg_file=/opt/nagios/etc/objects/quenyx/quenyx.cfg|d' /opt/nagios/etc/nagios.cfg
 
    # Ensure cfg_dir for workspaces exists (add if missing)
-   docker exec nagios-core sh -c "grep -q 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces' /opt/nagios/etc/nagios.cfg || (echo '' >> /opt/nagios/etc/nagios.cfg && echo '# PortShield workspace configs (auto-added)' >> /opt/nagios/etc/nagios.cfg && echo 'cfg_dir=/opt/nagios/etc/objects/portshield/workspaces' >> /opt/nagios/etc/nagios.cfg)"
+   docker exec nagios-core sh -c "grep -q 'cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces' /opt/nagios/etc/nagios.cfg || (echo '' >> /opt/nagios/etc/nagios.cfg && echo '# Quenyx workspace configs (auto-added)' >> /opt/nagios/etc/nagios.cfg && echo 'cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces' >> /opt/nagios/etc/nagios.cfg)"
 
    # Reload Nagios
    docker exec nagios-core kill -HUP 1
@@ -325,9 +325,9 @@ After Save & Publish, the backend runs four checks and returns `nagios_post_publ
 
 1. **Verify config is included in nagios.cfg**
    ```bash
-   docker exec nagios-core cat /opt/nagios/etc/nagios.cfg | grep -E "cfg_dir|cfg_file" | grep portshield
+   docker exec nagios-core cat /opt/nagios/etc/nagios.cfg | grep -E "cfg_dir|cfg_file" | grep quenyx
    ```
-   Expected: a line like `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces`. If missing, publish will report `cfg_includes_ok: false`.
+   Expected: a line like `cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces`. If missing, publish will report `cfg_includes_ok: false`.
 
 2. **Run Nagios validation (same as gateway after write)**
    ```bash
@@ -455,12 +455,12 @@ After Save & Publish, the backend runs four checks and returns `nagios_post_publ
 
 ## Quick Verification Checklist
 
-- [ ] **NAGIOS_CONFIG_DIR** set to absolute path; dir exists and is writable by `portshield` (`mkdir -p .../workspaces && chown -R portshield:portshield .../nagios && chmod -R 775 .../nagios`)
+- [ ] **NAGIOS_CONFIG_DIR** set to absolute path; dir exists and is writable by `quenyx` (`mkdir -p .../workspaces && chown -R quenyx:quenyx .../nagios && chmod -R 775 .../nagios`)
 - [ ] Gateway internal routes accessible (`/_debug/routes`)
 - [ ] Targets can be created via API (`PUT /observe/targets`)
-- [ ] **Publish:** PUT config returns `written_path`; file exists on host at that path (e.g. `/var/www/portshield/portshield-saas/nagios/config/workspaces/84.cfg`)
-- [ ] **Container sees cfg:** `docker exec nagios-core ls -l /opt/nagios/etc/objects/portshield/workspaces/84.cfg` shows the file
-- [ ] **nagios.cfg** contains `cfg_dir=/opt/nagios/etc/objects/portshield/workspaces` and does **not** contain `cfg_file=.../portshield.cfg` (see Issue 2 if hostlist only shows localhost)
+- [ ] **Publish:** PUT config returns `written_path`; file exists on host at that path (e.g. `/var/www/quenyx/quenyx-saas/nagios/config/workspaces/84.cfg`)
+- [ ] **Container sees cfg:** `docker exec nagios-core ls -l /opt/nagios/etc/objects/quenyx/workspaces/84.cfg` shows the file
+- [ ] **nagios.cfg** contains `cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces` and does **not** contain `cfg_file=.../quenyx.cfg` (see Issue 2 if hostlist only shows localhost)
 - [ ] Reload endpoint returns `validated: true, reloaded: true` (or reload manually after auto-fix)
 - [ ] **Nagios hostlist includes ws84-***: `statusjson.cgi?query=hostlist` shows workspace-prefixed hosts
 - [ ] **Gateway host_prefix=ws84- returns >0:** `.../internal/engines/nagios/services?host_prefix=ws84-` returns `.data` length > 0
@@ -502,7 +502,7 @@ curl -s -u nagiosadmin:nagios "http://127.0.0.1:8080/nagios/cgi-bin/statusjson.c
 # Expect at least one host object.
 
 # Option C: container sees workspace config
-docker exec nagios-core ls -la /opt/nagios/etc/objects/portshield/workspaces/84.cfg
+docker exec nagios-core ls -la /opt/nagios/etc/objects/quenyx/workspaces/84.cfg
 # Expect file listing (not "No such file").
 ```
 
@@ -552,15 +552,15 @@ OBSERVE_AUTO_PUBLISH_NAGIOS=true  # Default: true in dev
 ### Gateway `.env`
 ```bash
 GATEWAY_INTERNAL_SECRET=dev-secret-change-in-production
-# REQUIRED when gateway runs as portshield: use absolute path matching the bind mount source
-NAGIOS_CONFIG_DIR=/var/www/portshield/portshield-saas/nagios/config
+# REQUIRED when gateway runs as quenyx: use absolute path matching the bind mount source
+NAGIOS_CONFIG_DIR=/var/www/quenyx/quenyx-saas/nagios/config
 NAGIOS_CONTAINER_NAME=nagios-core
 NAGIOS_BASE_URL=http://127.0.0.1:8080/nagios
 NAGIOS_USER=nagiosadmin
 NAGIOS_PASS=nagios
 ```
 
-**Config path and permissions:** Use an absolute path for `NAGIOS_CONFIG_DIR` so gateway writes to the same directory the Nagios container mounts. Ensure that directory exists and is writable by the gateway user (e.g. `portshield`): `mkdir -p /var/www/portshield/portshield-saas/nagios/config/workspaces && chown -R portshield:portshield /var/www/portshield/portshield-saas/nagios && chmod -R 775 /var/www/portshield/portshield-saas/nagios`. PUT `/internal/engines/nagios/config` returns `written_path` in the JSON response so you can confirm where the file was written.
+**Config path and permissions:** Use an absolute path for `NAGIOS_CONFIG_DIR` so gateway writes to the same directory the Nagios container mounts. Ensure that directory exists and is writable by the gateway user (e.g. `quenyx`): `mkdir -p /var/www/quenyx/quenyx-saas/nagios/config/workspaces && chown -R quenyx:quenyx /var/www/quenyx/quenyx-saas/nagios && chmod -R 775 /var/www/quenyx/quenyx-saas/nagios`. PUT `/internal/engines/nagios/config` returns `written_path` in the JSON response so you can confirm where the file was written.
 
 ## Database table names (no mismatch)
 
@@ -603,7 +603,7 @@ Example insert aligned with schema (use `service_name`, not `service_description
 
 ```sql
 INSERT INTO observe_services (workspace_id, engine_key, engine_service_key, host_name, service_name, state, last_check_at, duration_sec, attempt, output, perfdata, created_at, updated_at)
-VALUES (84, 'nagios', 'ws84-PortShield-SaaS::check live', 'ws84-PortShield-SaaS', 'check live', 'ok', NOW(), 0, '1/3', NULL, NULL, NOW(), NOW());
+VALUES (84, 'nagios', 'ws84-Quenyx-SaaS::check live', 'ws84-Quenyx-SaaS', 'check live', 'ok', NOW(), 0, '1/3', NULL, NULL, NOW(), NOW());
 ```
 
 ## Frontend redeploy (use real API, not fixtures)

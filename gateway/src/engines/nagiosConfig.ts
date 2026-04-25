@@ -314,8 +314,8 @@ async function ensureNagiosIncludesWorkspacesCfgDir(): Promise<void> {
     const tmpPath = path.join(os.tmpdir(), `quenyx-nagios-${Date.now()}.cfg`)
     await fs.writeFile(tmpPath, out, 'utf-8')
     try {
-      await execAsync(`docker cp "${tmpPath.replace(/"/g, '\\"')}" ${NAGIOS_CONTAINER_NAME}:/tmp/nagios_ps.cfg`, { timeout: 5000 })
-      await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} mv /tmp/nagios_ps.cfg ${NAGIOS_CFG_PATH}`, { timeout: 5000 })
+      await execAsync(`docker cp "${tmpPath.replace(/"/g, '\\"')}" ${NAGIOS_CONTAINER_NAME}:/tmp/quenyx-nagios-cfg-tmp.cfg`, { timeout: 5000 })
+      await execAsync(`docker exec ${NAGIOS_CONTAINER_NAME} mv /tmp/quenyx-nagios-cfg-tmp.cfg ${NAGIOS_CFG_PATH}`, { timeout: 5000 })
     } finally {
       await fs.unlink(tmpPath).catch(() => {})
     }

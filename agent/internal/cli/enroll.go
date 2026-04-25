@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/portshield/agent/internal/config"
+	"github.com/quenyx/agent/internal/config"
 )
 
 func runEnroll(platformURL string, workspaceID int, token string) error {
@@ -108,9 +108,9 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	fmt.Printf("Enrolled successfully. Config saved to %s\n", cfgPath)
 	switch runtime.GOOS {
 	case "windows":
-		fmt.Println("To start the agent, run: .\\portshield-agent.exe run")
+		fmt.Println("To start the agent, run: .\\quenyx-agent.exe run")
 	default:
-		fmt.Println("To start the agent, run: ./portshield-agent run  (or add it to PATH and run: portshield-agent run)")
+		fmt.Println("To start the agent, run: ./quenyx-agent run  (or add it to PATH and run: quenyx-agent run)")
 	}
 	return nil
 }

@@ -31,8 +31,6 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined)
 
 const STORAGE_KEY = 'quenyx.selected_workspace_id'
-const OLD_STORAGE_KEY = 'portshield.selected_workspace_id'
-const LEGACY_PROJECT_KEY = 'portshield.selected_project_id' // Backward compatibility
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Project[]>([])
@@ -41,8 +39,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
     const stored = localStorage.getItem(STORAGE_KEY)
-      || localStorage.getItem(OLD_STORAGE_KEY)
-      || localStorage.getItem(LEGACY_PROJECT_KEY)
     return stored || null
   })
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
@@ -100,17 +96,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setWorkspaceRolesById(roleMap)
       setWorkspacesError(null)
 
-      // Backward compatibility: try new key first, then old key
-      let stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) {
-        stored = localStorage.getItem(OLD_STORAGE_KEY) || localStorage.getItem(LEGACY_PROJECT_KEY)
-        if (stored) {
-          // Migrate old keys to new key
-          localStorage.setItem(STORAGE_KEY, stored)
-          localStorage.removeItem(OLD_STORAGE_KEY)
-          localStorage.removeItem(LEGACY_PROJECT_KEY)
-        }
-      }
+      const stored = localStorage.getItem(STORAGE_KEY)
       const storedId = stored || null
       const validId =
         storedId && projects.some((workspace) => String(workspace.id) === storedId)
@@ -178,8 +164,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       // On error, preserve existing selection if possible
       const stored = localStorage.getItem(STORAGE_KEY)
-        || localStorage.getItem(OLD_STORAGE_KEY)
-        || localStorage.getItem(LEGACY_PROJECT_KEY)
       if (!stored) {
         setWorkspaces([])
         setWorkspaceRolesById({})

@@ -13,13 +13,13 @@ func Run() error {
 	enrollToken := enroll.String("token", "", "Enrollment token from the portal")
 
 	run := flag.NewFlagSet("run", flag.ExitOnError)
-	runConfig := run.String("config", "", "Config file path (default: ~/.config/portshield/agent.json)")
+	runConfig := run.String("config", "", "Config file path (default: ~/.config/quenyx/agent.json)")
 
 	configCmd := flag.NewFlagSet("config", flag.ExitOnError)
 	configPath := configCmd.String("config", "", "Config file path to show")
 
 	install := flag.NewFlagSet("install", flag.ExitOnError)
-	installUser := install.String("user", "portshield", "User to run the agent (Linux systemd)")
+	installUser := install.String("user", "quenyx", "User to run the agent (Linux systemd)")
 
 	if len(os.Args) < 2 {
 		printUsage()
@@ -54,10 +54,10 @@ func printUsage() {
 	fmt.Println(`Quenyx Agent - Cross-network monitoring and asset inventory
 
 Usage:
-  portshield-agent enroll --url=URL --workspace=ID --token=TOKEN
-  portshield-agent run [--config=PATH]
-  portshield-agent config [--config=PATH]
-  portshield-agent install [--user=USER]
+  quenyx-agent enroll --url=URL --workspace=ID --token=TOKEN
+  quenyx-agent run [--config=PATH]
+  quenyx-agent config [--config=PATH]
+  quenyx-agent install [--user=USER]
 
 Commands:
   enroll   Register with the platform using an enrollment token from the portal

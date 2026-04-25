@@ -2,7 +2,7 @@
 
 ## Overview
 
-**ShieldObserve** is the monitoring module and **observe engine** for PortShield. It provides all monitoring features (host/service checks, plugins, scheduling, services UI) and is designed as a **microservice**: it must be accessed **only via the gateway**. No other module or service should call the observe engine directly (e.g. by hitting the backend URL); they must go through the gateway.
+**ShieldObserve** is the monitoring module and **observe engine** for Quenyx. It provides all monitoring features (host/service checks, plugins, scheduling, services UI) and is designed as a **microservice**: it must be accessed **only via the gateway**. No other module or service should call the observe engine directly (e.g. by hitting the backend URL); they must go through the gateway.
 
 ## Observe Engine (no Nagios required)
 

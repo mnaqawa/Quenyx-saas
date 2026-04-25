@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/portshield/agent/internal/config"
+	"github.com/quenyx/agent/internal/config"
 )
 
 func runConfigShow(cfgPath string) error {

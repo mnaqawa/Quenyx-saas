@@ -101,7 +101,7 @@ This document describes the release gates implemented for ShieldObserve publish 
 | Variable | Purpose |
 |----------|---------|
 | `NAGIOS_CONFIG_DIR` | Host path to config root (absolute recommended). |
-| `NAGIOS_CONTAINER_WORKSPACES_DIR` | Container path to workspaces dir (default `/opt/nagios/etc/objects/portshield/workspaces`). |
+| `NAGIOS_CONTAINER_WORKSPACES_DIR` | Container path to workspaces dir (default `/opt/nagios/etc/objects/quenyx/workspaces`). |
 | `NAGIOS_RELOAD_TIMEOUT_MS` | Timeout for reload step (default 15000). |
 | `NAGIOS_RELOAD_RETRIES` | Retries after reload/verify (default 2). |
 | `NAGIOS_RELOAD_VERIFY_SLEEP_MS` | Sleep before re-validating after reload (default 2000). |

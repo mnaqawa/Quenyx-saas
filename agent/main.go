@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/portshield/agent/internal/cli"
+	"github.com/quenyx/agent/internal/cli"
 )
 
 var version = "1.0.0"
@@ -15,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	if *ver {
-		fmt.Println("portshield-agent", version)
+		fmt.Println("quenyx-agent", version)
 		os.Exit(0)
 	}
 

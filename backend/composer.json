@@ -1,7 +1,7 @@
 {
     "name": "laravel/laravel",
     "type": "project",
-    "description": "PortShield vOPS HUB Backend API",
+    "description": "Quenyx vOPS HUB Backend API",
     "keywords": ["laravel", "framework", "api"],
     "license": "proprietary",
     "require": {

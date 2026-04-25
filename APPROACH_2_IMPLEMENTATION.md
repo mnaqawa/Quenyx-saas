@@ -96,7 +96,7 @@ VITE_OBSERVE_USE_FIXTURES=false  # Set to false to use real API
 2. **Update docker-compose.nagios.yml** (add volume mount):
    ```yaml
    volumes:
-     - ./nagios/config:/opt/nagios/etc/objects/portshield
+     - ./nagios/config:/opt/nagios/etc/objects/quenyx
    ```
 
 3. **Start services:**

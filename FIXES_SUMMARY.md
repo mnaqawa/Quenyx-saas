@@ -74,7 +74,7 @@
    - Added `checkDockerAccess()` function
    - Preflight check before reload operations
    - Returns structured error with action required message
-   - Also checks Docker access in `ensureNagiosIncludesPortshield()`
+   - Also checks Docker access in `ensureNagiosIncludesWorkspacesCfgDir()`
 
 ### Documentation (1 file)
 
@@ -96,7 +96,7 @@ php artisan migrate
 ```bash
 TOKEN=$(curl -s -X POST http://127.0.0.1:8081/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@portshield.test","password":"Password123!"}' | jq -r '.data.token')
+  -d '{"email":"admin@quenyx.test","password":"Password123!"}' | jq -r '.data.token')
 
 curl -s -X PUT "http://127.0.0.1:8081/api/workspaces/84/observe/targets" \
   -H "Authorization: Bearer $TOKEN" \

@@ -24,7 +24,7 @@ class ProjectIntegrationConfigurationSeeder extends Seeder
                         'settings' => [
                             'endpoint' => $integration->endpoint ?? 'Not configured',
                             'api_key' => 'key_' . $project->id . '_' . $integration->id,
-                            'webhook_url' => 'https://hooks.portshield.local/' . $project->id,
+                            'webhook_url' => 'https://hooks.quenyx.local/' . $project->id,
                         ],
                     ]
                 );

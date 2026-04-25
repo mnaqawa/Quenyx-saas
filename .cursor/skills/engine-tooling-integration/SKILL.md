@@ -5,7 +5,7 @@ description: Deep practical integration knowledge for Wazuh SIEM pipelines and a
 
 # Engine Tooling Integration
 
-Apply this skill when integrating PortShield (or any platform) with Wazuh, SonarQube, Nagios, Prometheus, Grafana, FreeIPA/AD, GLPI/FusionInventory, or Kaspersky EDR/KSC. Focus: **stable identifiers**, **correct mapping**, **production readiness**.
+Apply this skill when integrating Quenyx (or any platform) with Wazuh, SonarQube, Nagios, Prometheus, Grafana, FreeIPA/AD, GLPI/FusionInventory, or Kaspersky EDR/KSC. Focus: **stable identifiers**, **correct mapping**, **production readiness**.
 
 ## Cross-Cutting Principles
 

@@ -5,7 +5,7 @@ If the Laravel log file (`storage/logs/laravel.log`) is empty but you're seeing 
 ## 1. Check Log File Permissions
 
 ```bash
-cd /var/www/portshield/portshield-saas/backend
+cd /var/www/quenyx/quenyx-saas/backend
 ls -la storage/logs/
 chmod -R 775 storage/logs/
 chown -R www-data:www-data storage/logs/

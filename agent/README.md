@@ -11,10 +11,10 @@ Lightweight agent for cross-network monitoring and asset inventory. Runs on Linu
 
 ```bash
 # Linux
-./portshield-agent enroll --url="https://your-portshield.com" --workspace=1 --token="ps_xxx..."
+./quenyx-agent enroll --url="https://app.quenyx.example.com" --workspace=1 --token="ps_xxx..."
 
 # Then run the agent
-./portshield-agent run
+./quenyx-agent run
 ```
 
 ## Commands
@@ -29,19 +29,19 @@ Lightweight agent for cross-network monitoring and asset inventory. Runs on Linu
 
 ```bash
 # Linux amd64
-GOOS=linux GOARCH=amd64 go build -o portshield-agent .
+GOOS=linux GOARCH=amd64 go build -o quenyx-agent .
 
 # Linux arm64
-GOOS=linux GOARCH=arm64 go build -o portshield-agent .
+GOOS=linux GOARCH=arm64 go build -o quenyx-agent .
 
 # Windows amd64
-GOOS=windows GOARCH=amd64 go build -o portshield-agent.exe .
+GOOS=windows GOARCH=amd64 go build -o quenyx-agent.exe .
 
 # macOS amd64
-GOOS=darwin GOARCH=amd64 go build -o portshield-agent .
+GOOS=darwin GOARCH=amd64 go build -o quenyx-agent .
 
 # macOS arm64 (Apple Silicon)
-GOOS=darwin GOARCH=arm64 go build -o portshield-agent .
+GOOS=darwin GOARCH=arm64 go build -o quenyx-agent .
 ```
 
 ### Deploy binaries for portal download
@@ -51,11 +51,11 @@ The Install Agent instructions use `/api/agents/download/{platform}`. To serve t
 **Option A – Build on the same server (install Go first):**
 
 ```bash
-cd /var/www/portshield/portshield-saas   # or your repo root
+cd /var/www/quenyx/quenyx-saas   # or your repo root
 apt install -y golang-go
 cd agent
 chmod +x build-linux-amd64.sh
-./build-linux-amd64.sh ../backend        # builds and copies to backend/storage/app/agents/linux-amd64
+./build-linux-amd64.sh        # builds and copies to ../backend/storage/app/agents/linux-amd64 when that dir exists
 ```
 
 **Option B – Build on your laptop/CI (Go installed), then copy to server:**
@@ -63,17 +63,17 @@ chmod +x build-linux-amd64.sh
 ```bash
 # On your machine (from repo root):
 cd agent
-./build-linux-amd64.sh ../backend        # if backend is next to agent
+./build-linux-amd64.sh        # if backend is next to agent
 # Or just build and copy manually:
-GOOS=linux GOARCH=amd64 go build -o portshield-agent .
-scp portshield-agent root@your-server:/var/www/portshield/portshield-saas/backend/storage/app/agents/linux-amd64
+GOOS=linux GOARCH=amd64 go build -o quenyx-agent .
+scp quenyx-agent root@your-server:/var/www/quenyx/quenyx-saas/backend/storage/app/agents/linux-amd64
 ```
 
 **Storage paths (inside backend):**
 
 - `storage/app/agents/linux-amd64` (no extension)
 - `storage/app/agents/linux-arm64`
-- `storage/app/agents/windows-amd64` (served as `portshield-agent.exe`)
+- `storage/app/agents/windows-amd64` (served as `quenyx-agent.exe`)
 - `storage/app/agents/darwin-amd64`, `darwin-arm64`
 
 Ensure `storage/app/agents` exists and is writable by the web server. If a binary is missing, the download endpoint returns JSON (so users see an error instead of a script).
@@ -95,5 +95,5 @@ The agent collects:
 
 ## Config location
 
-- **Linux/macOS**: `~/.config/portshield/agent.json`
-- **Windows**: `%APPDATA%\portshield\agent.json`
+- **Linux/macOS**: `~/.config/quenyx/agent.json`
+- **Windows**: `%APPDATA%\quenyx\agent.json`
