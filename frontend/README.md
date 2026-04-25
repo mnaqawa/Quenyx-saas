@@ -4,8 +4,8 @@ React + TypeScript + Vite frontend for Quenyx vOPS HUB.
 
 ## Requirements
 
-- Node.js >= 18
-- npm or yarn
+- **Node.js >= 18** (20+ or 22 LTS recommended)
+- npm (use `npm install` after changing `package.json`; for CI, commit an updated `package-lock.json` after a local `npm install`)
 
 ## Local Setup
 
