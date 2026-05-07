@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
 import { Project, ProjectStatus, UpdateProjectInput } from '../types/project'
@@ -36,7 +36,7 @@ function WorkspaceDetailsPage() {
     }
   }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId])
 
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     if (!projectId || !Number.isFinite(projectId)) {
       setError('Invalid workspace id')
       setLoading(false)
@@ -53,11 +53,11 @@ function WorkspaceDetailsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
-    loadProject()
-  }, [projectId])
+    void loadProject()
+  }, [loadProject])
 
   const handleSave = async () => {
     if (!project) return

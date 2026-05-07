@@ -15,5 +15,5 @@ export interface ProjectSubscription {
 export interface ProjectEntitlements {
   plan: PlanSummary
   modules_allowed: string[]
-  limits: Record<string, any>
+  limits: Record<string, unknown>
 }

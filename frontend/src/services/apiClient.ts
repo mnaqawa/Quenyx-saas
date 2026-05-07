@@ -1,3 +1,5 @@
+import type { RequestError } from '../lib/requestError'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN_STORAGE_KEY = 'quenyx.auth.token'
 const WORKSPACE_STORAGE_KEY = 'quenyx.selected_workspace_id'
@@ -31,6 +33,19 @@ export interface ApiSuccess<T> {
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiError
 
+type ErrorJson = {
+  message?: string
+  error?: string
+  errors?: Record<string, unknown>
+}
+
+type SuccessEnvelope = { success: true; data: unknown }
+type FailureEnvelope = { success: false; message?: string; error?: string; errors?: unknown }
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
 class ApiClient {
   private baseUrl: string
 
@@ -38,15 +53,12 @@ class ApiClient {
     this.baseUrl = baseUrl
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     }
 
     const mergedHeaders = {
@@ -66,7 +78,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config)
-      
+
       // Log request details for debugging (only in development)
       if (import.meta.env.DEV) {
         console.log('API Request:', {
@@ -78,36 +90,33 @@ class ApiClient {
           headers: mergedHeaders,
         })
       }
-      
-      // Check if response is ok (status 200-299)
+
       if (!response.ok) {
-        // Try to parse error response
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
         const contentType = response.headers.get('content-type')
-        let errorData: any = null
-        
+        let errorData: ErrorJson | null = null
+
         if (contentType && contentType.includes('application/json')) {
           try {
-            errorData = await response.json()
-            if (errorData && typeof errorData === 'object') {
-              if (errorData.message) {
-                errorMessage = errorData.message
-              } else if (errorData.error) {
-                errorMessage = errorData.error
+            const json: unknown = await response.json()
+            if (isRecord(json)) {
+              errorData = json as ErrorJson
+              if (typeof json.message === 'string') {
+                errorMessage = json.message
+              } else if (typeof json.error === 'string') {
+                errorMessage = json.error
               }
             }
           } catch (parseError) {
-            // If JSON parsing fails, use status text
             console.warn('Failed to parse error response as JSON:', parseError)
           }
         }
 
-        // Improve validation (422) messaging by flattening field errors.
-        if (response.status === 422 && errorData && typeof errorData === 'object' && errorData.errors) {
-          const errors = errorData.errors as Record<string, unknown>
+        if (response.status === 422 && errorData?.errors && isRecord(errorData.errors)) {
+          const errors = errorData.errors
           const parts: string[] = []
           for (const [field, val] of Object.entries(errors)) {
-            const msgs = Array.isArray(val) ? (val as unknown[]) : [val]
+            const msgs = Array.isArray(val) ? val : [val]
             const cleaned = msgs
               .map((m) => (typeof m === 'string' ? m : 'Invalid value'))
               .filter(Boolean)
@@ -119,44 +128,41 @@ class ApiClient {
             errorMessage = parts.join('. ')
           }
         }
-        
-        const error = new Error(errorMessage)
-        ;(error as any).status = response.status
-        ;(error as any).url = url
-        if (errorData && typeof errorData === 'object' && errorData.errors) {
-          ;(error as any).errors = errorData.errors
+
+        const err = new Error(errorMessage) as RequestError
+        err.status = response.status
+        err.url = url
+        if (errorData?.errors && isRecord(errorData.errors)) {
+          err.errors = errorData.errors
         }
-        
-        // Standardized error mapping for gateway client
+
         if (response.status === 401) {
           clearAuthToken()
-          const authError = new Error('Unauthorized')
-          ;(authError as any).status = 401
-          ;(authError as any).isAuthError = true
-          ;(authError as any).url = url
-          ;(authError as any).userMessage = 'Unauthorized'
+          const authError = new Error('Unauthorized') as RequestError
+          authError.status = 401
+          authError.isAuthError = true
+          authError.url = url
+          authError.userMessage = 'Unauthorized'
           if (import.meta.env.DEV) {
             console.error('API Error (401):', { url, status: response.status, message: errorMessage })
           }
           throw authError
         }
-        
+
         if (response.status === 403) {
-          // Use "Locked" only when backend explicitly indicates entitlement/module lock
           const isEntitlementLock = /locked|entitlement|module\s*access/i.test(errorMessage)
           const msg = isEntitlementLock ? 'Locked' : 'Access denied'
-          const forbiddenError = new Error(msg)
-          ;(forbiddenError as any).status = 403
-          ;(forbiddenError as any).url = url
-          ;(forbiddenError as any).userMessage = msg
-          ;(forbiddenError as any).isEntitlementLock = isEntitlementLock
+          const forbiddenError = new Error(msg) as RequestError
+          forbiddenError.status = 403
+          forbiddenError.url = url
+          forbiddenError.userMessage = msg
+          forbiddenError.isEntitlementLock = isEntitlementLock
           if (import.meta.env.DEV) {
             console.error('API Error (403):', { url, status: response.status, message: errorMessage })
           }
           throw forbiddenError
         }
 
-        // 404 on workspace-scoped endpoints: workspace may have been deleted
         if (response.status === 404) {
           const workspaceMatch = url.match(/\/workspaces\/(\d+)\//) || url.match(/\/projects\/(\d+)\//)
           if (workspaceMatch) {
@@ -168,19 +174,18 @@ class ApiClient {
             }
           }
         }
-        
+
         if (response.status >= 500) {
-          const serverError = new Error('Service unavailable')
-          ;(serverError as any).status = response.status
-          ;(serverError as any).url = url
-          ;(serverError as any).userMessage = 'Service unavailable'
+          const serverError = new Error('Service unavailable') as RequestError
+          serverError.status = response.status
+          serverError.url = url
+          serverError.userMessage = 'Service unavailable'
           if (import.meta.env.DEV) {
             console.error('API Error (5xx):', { url, status: response.status, message: errorMessage })
           }
           throw serverError
         }
-        
-        // Log error details in development
+
         if (import.meta.env.DEV) {
           console.error('API Error:', {
             url,
@@ -189,100 +194,105 @@ class ApiClient {
             message: errorMessage,
           })
         }
-        
-        throw error
+
+        throw err
       }
 
-      // Parse JSON response
-      let data
+      let data: unknown
       try {
         const text = await response.text()
         if (!text) {
           throw new Error('Empty response from server')
         }
-        data = JSON.parse(text)
+        data = JSON.parse(text) as unknown
       } catch (parseError) {
         throw new Error(`Failed to parse response: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`)
       }
 
-      // Strict envelope handling: backend MUST return { success, data } or { success, message }
-      if (!data || typeof data !== 'object' || !('success' in data)) {
+      if (!isRecord(data) || !('success' in data)) {
         throw new Error('Invalid API response: missing success field')
       }
 
       if (data.success === false) {
-        // Handle error responses
+        const fail = data as FailureEnvelope
         if (response.status === 401) {
           clearAuthToken()
-          // For 401, throw AuthenticationException-like error
-          const error = new Error(data.message || 'Unauthenticated')
-          ;(error as any).status = 401
-          ;(error as any).isAuthError = true
-          ;(error as any).url = url
-          throw error
+          const e401 = new Error(
+            typeof fail.message === 'string' ? fail.message : 'Unauthenticated'
+          ) as RequestError
+          e401.status = 401
+          e401.isAuthError = true
+          e401.url = url
+          throw e401
         }
-        
-        // Extract error message - prioritize message field, fallback to error field
-        let message = data.message || data.error || `Server error (${response.status})`
-        
-        // For validation errors (422), include field-specific errors in message
-        if (response.status === 422 && data.errors) {
-          const errorFields = Object.keys(data.errors)
-          const errorMessages = errorFields.map(field => {
-            const fieldErrors = Array.isArray(data.errors[field]) ? data.errors[field] : [data.errors[field]]
-            return `${field}: ${fieldErrors.join(', ')}`
+
+        let message =
+          (typeof fail.message === 'string' && fail.message) ||
+          (typeof fail.error === 'string' && fail.error) ||
+          `Server error (${response.status})`
+
+        if (response.status === 422 && fail.errors && isRecord(fail.errors)) {
+          const fe = fail.errors
+          const errorFields = Object.keys(fe)
+          const errorMessages = errorFields.map((field) => {
+            const v = fe[field]
+            const fieldErrors = Array.isArray(v) ? v : [v]
+            return `${field}: ${fieldErrors.map((x) => String(x)).join(', ')}`
           })
           if (errorMessages.length > 0) {
             message = errorMessages.join('. ')
           }
         }
-        
-        const error = new Error(message)
-        ;(error as any).errors = data.errors || null
-        ;(error as any).status = response.status
-        ;(error as any).url = url
-        throw error
+
+        const e = new Error(message) as RequestError
+        e.errors = fail.errors ?? null
+        e.status = response.status
+        e.url = url
+        throw e
       }
 
       if (data.success === true) {
-        // Success response: must have data field
+        const ok = data as SuccessEnvelope
         if (!('data' in data)) {
           throw new Error('Invalid API response: success=true but missing data field')
         }
-        return data.data as T
+        return ok.data as T
       }
 
-      // Invalid success value
-      throw new Error(`Invalid API response: success=${data.success}`)
-    } catch (error) {
-      // Re-throw if it's already an Error we created
-      if (error instanceof Error) {
-        // Add more context for network errors
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Network request failed')) {
-          const networkError = new Error(`Network error - cannot connect to ${url}. Please check your connection and ensure the server is running.`)
-          ;(networkError as any).url = url
-          ;(networkError as any).originalError = error
+      throw new Error(`Invalid API response: success=${String((data as { success?: unknown }).success)}`)
+    } catch (raw: unknown) {
+      if (raw instanceof Error) {
+        if (
+          raw.message.includes('Failed to fetch') ||
+          raw.message.includes('NetworkError') ||
+          raw.message.includes('Network request failed')
+        ) {
+          const networkError = new Error(
+            `Network error - cannot connect to ${url}. Please check your connection and ensure the server is running.`
+          ) as RequestError
+          networkError.url = url
+          networkError.originalError = raw
           throw networkError
         }
-        // Preserve URL in error if not already present
-        if (!(error as any).url) {
-          ;(error as any).url = url
+        if (raw.message.includes('timeout') || raw.message.includes('aborted')) {
+          const timeoutError = new Error('Gateway timeout') as RequestError
+          timeoutError.status = 504
+          timeoutError.url = url
+          timeoutError.userMessage = 'Request timed out'
+          throw timeoutError
         }
-        throw error
+        const re = raw as RequestError
+        if (!re.url) {
+          re.url = url
+        }
+        throw raw
       }
-      // Handle timeout errors
-      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('aborted'))) {
-        const timeoutError = new Error('Gateway timeout')
-        ;(timeoutError as any).status = 504
-        ;(timeoutError as any).url = url
-        ;(timeoutError as any).userMessage = 'Request timed out'
-        throw timeoutError
-      }
-      
-      // Otherwise wrap network/parsing errors
-      const wrappedError = new Error(error instanceof Error ? error.message : 'Network error')
-      ;(wrappedError as any).url = url
-      ;(wrappedError as any).userMessage = 'Network error - please check your connection'
+
+      const wrappedError = new Error(
+        typeof raw === 'string' ? raw : 'Network error'
+      ) as RequestError
+      wrappedError.url = url
+      wrappedError.userMessage = 'Network error - please check your connection'
       throw wrappedError
     }
   }
@@ -292,7 +302,6 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
-    // Log request body in development
     if (import.meta.env.DEV && body) {
       console.log('POST Request Body:', body)
     }

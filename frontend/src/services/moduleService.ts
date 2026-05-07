@@ -69,7 +69,7 @@ export interface AuditLog {
     old_mode?: string | null
     new_mode?: string | null
     allowed_by_plan?: boolean
-    [key: string]: any
+    [key: string]: unknown
   }
   timestamp: string
   created_at: string

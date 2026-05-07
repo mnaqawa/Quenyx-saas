@@ -9,7 +9,7 @@ export interface Plan {
   features: {
     modules_allowed: string[]
     modules?: string[] // Legacy support
-    limits?: Record<string, any>
+    limits?: Record<string, unknown>
   }
 }
 

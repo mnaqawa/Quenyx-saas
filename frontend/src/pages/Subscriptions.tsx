@@ -4,13 +4,13 @@ import { subscriptionService, Plan } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import { PlanKey } from '../types/subscription'
+import { PlanKey, type ProjectSubscription } from '../types/subscription'
 
 function Subscriptions() {
   const { t } = useLanguage()
   const [searchParams, setSearchParams] = useSearchParams()
   const { selectedWorkspaceId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useWorkspaceContext()
-  const [subscription, setSubscription] = useState<any>(null)
+  const [subscription, setSubscription] = useState<ProjectSubscription | null>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
   const [planError, setPlanError] = useState<string | null>(null)
@@ -68,8 +68,8 @@ function Subscriptions() {
       try {
         const subscription = await subscriptionService.getProjectSubscription(Number(selectedWorkspaceId))
         setSubscription(subscription)
-      } catch (err) {
-        // Ignore errors for now
+      } catch {
+        // Ignore load errors; UI works without subscription row
       } finally {
         setLoadingSubscription(false)
       }
@@ -83,8 +83,8 @@ function Subscriptions() {
       try {
         const plans = await subscriptionService.getPlans()
         setPlans(plans)
-      } catch (err) {
-        // Ignore errors
+      } catch {
+        // Plan catalog is optional for module highlight UX
       }
     }
 
@@ -125,7 +125,7 @@ function Subscriptions() {
       setSubscription(subscription)
       await refreshEntitlements()
       await refreshModules()
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update plan'
       setPlanError(msg)
     } finally {
@@ -140,8 +140,8 @@ function Subscriptions() {
       await moduleService.updateModuleOverride(Number(selectedWorkspaceId), moduleKey, mode)
       await refreshModules()
       await refreshEntitlements()
-    } catch (err) {
-      // Handle error
+    } catch {
+      // Override is best-effort; refreshModules still surfaces list issues
     }
   }
 

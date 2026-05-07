@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/observe/PageHeader'
 import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
 import type { ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
+import { getRequestErrorFieldErrors } from '../../lib/requestError'
 
 interface TargetHost {
   id?: number
@@ -163,11 +164,14 @@ export default function Targets() {
           observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
         ])
         // Handle both raw array and gateway-wrapped { data: hosts } so service types show after nav/signout
-        const hostsList = Array.isArray(targetsResponse)
+        const hostsList: TargetHost[] = Array.isArray(targetsResponse)
           ? targetsResponse
-          : (targetsResponse && typeof targetsResponse === 'object' && Array.isArray((targetsResponse as any).data)
-              ? (targetsResponse as any).data
-              : [])
+          : typeof targetsResponse === 'object' &&
+              targetsResponse !== null &&
+              'data' in targetsResponse &&
+              Array.isArray((targetsResponse as { data: TargetHost[] }).data)
+            ? (targetsResponse as { data: TargetHost[] }).data
+            : []
         if (hostsList.length >= 0) {
           setHosts(normalizeHostsServiceKeys(hostsList))
         }
@@ -176,7 +180,9 @@ export default function Targets() {
           const cacheKey = `observe_defs_${workspaceId}`
           try {
             localStorage.setItem(cacheKey, JSON.stringify({ data: defsResponse, version: '1.0', timestamp: Date.now() }))
-          } catch {}
+          } catch {
+            void 0
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load targets')
@@ -229,7 +235,7 @@ export default function Targets() {
 
   const handleUpdateHost = (hostIndex: number, field: keyof TargetHost, value: unknown) => {
     const newHosts = [...hosts]
-    ;(newHosts[hostIndex] as any)[field] = value
+    newHosts[hostIndex] = { ...newHosts[hostIndex], [field]: value } as TargetHost
     setHosts(newHosts)
   }
 
@@ -240,7 +246,9 @@ export default function Targets() {
     value: unknown
   ) => {
     const newHosts = [...hosts]
-    ;(newHosts[hostIndex].services[serviceIndex] as any)[field] = value
+    const services = [...newHosts[hostIndex].services]
+    services[serviceIndex] = { ...services[serviceIndex], [field]: value } as TargetService
+    newHosts[hostIndex] = { ...newHosts[hostIndex], services }
     if (field === 'service_key' && typeof value === 'string') {
       const def = definitionsByKey.get(value)
       if (def) {
@@ -416,10 +424,10 @@ export default function Targets() {
         delete next.nagios
         return next
       })
-    } catch (err: any) {
-      const fieldErrors = err?.errors ?? err?.response?.data?.errors
-      if (fieldErrors && typeof fieldErrors === 'object') {
-        setValidationErrors(fieldErrors)
+    } catch (err: unknown) {
+      const fromApi = getRequestErrorFieldErrors(err)
+      if (fromApi) {
+        setValidationErrors(fromApi as Record<string, string[]>)
         setError('Validation failed. Please fix the highlighted fields.')
       } else {
         setError(err instanceof Error ? err.message : 'Failed to save targets')

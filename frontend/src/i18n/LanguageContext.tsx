@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- hook colocated with provider for i18n */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { translations, Language } from './translations'
 

@@ -33,10 +33,31 @@ import type {
   DataSource,
   DataSourceSummary,
   ObserveServicesResponse,
+  ObserveServiceRow,
 } from '../types/observe'
 
 // Data source toggle: use fixtures if VITE_OBSERVE_USE_FIXTURES=true, otherwise use real API
 const USE_FIXTURES = import.meta.env.VITE_OBSERVE_USE_FIXTURES === 'true' || false
+
+const statusOrder = (s: string) =>
+  ['critical', 'warning', 'unknown', 'unreachable', 'pending', 'ok'].indexOf(s.toLowerCase())
+
+function pickWorstStatusString(statuses: string[]): string {
+  return statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b), 'pending')
+}
+
+function extractTargetsList(list: unknown): Array<{ name: string; address: string }> {
+  if (Array.isArray(list)) {
+    return list as Array<{ name: string; address: string }>
+  }
+  if (list !== null && typeof list === 'object' && 'targets' in list) {
+    const t = (list as { targets: unknown }).targets
+    if (Array.isArray(t)) {
+      return t as Array<{ name: string; address: string }>
+    }
+  }
+  return []
+}
 
 // Real-time Monitoring hooks
 export function useRealTimeMetrics() {
@@ -479,7 +500,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     observeService
       .getTargets(Number(workspaceId))
       .then((list) => {
-        if (!cancelled) setTargets(Array.isArray(list) ? list : (list as any)?.targets ?? [])
+        if (!cancelled) setTargets(extractTargetsList(list))
       })
       .catch(() => {
         if (!cancelled) setTargets([])
@@ -491,7 +512,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     const id = intervalMs ? window.setInterval(() => {
       if (cancelled) return
       observeService.getTargets(Number(workspaceId)).then((list) => {
-        if (!cancelled) setTargets(Array.isArray(list) ? list : (list as any)?.targets ?? [])
+        if (!cancelled) setTargets(extractTargetsList(list))
       }).catch(() => { if (!cancelled) setTargets([]) })
     }, intervalMs) : 0
     return () => {
@@ -500,21 +521,17 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     }
   }, [workspaceId, refetchIntervalMs])
 
-  const statusOrder = (s: string) =>
-    ['critical', 'warning', 'unknown', 'unreachable', 'pending', 'ok'].indexOf(s.toLowerCase())
-  const worstStatus = (statuses: string[]) =>
-    statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b), 'pending')
-
   const hostToStatus = useMemo(() => {
     const map = new Map<string, string>()
     if (!servicesData?.items) return map
     const prefix = workspaceId ? `ws${workspaceId}-` : ''
     for (const item of servicesData.items) {
-      const hostName = item.host?.startsWith(prefix) ? item.host.slice(prefix.length) : item.host
+      const row = item as ObserveServiceRow
+      const hostName = row.host?.startsWith(prefix) ? row.host.slice(prefix.length) : row.host
       if (!hostName) continue
       const current = map.get(hostName)
-      const s = (item as any).status ?? 'pending'
-      map.set(hostName, current ? worstStatus([current, s]) : s)
+      const s: string = row.status ?? 'pending'
+      map.set(hostName, current ? pickWorstStatusString([current, s]) : s)
     }
     return map
   }, [servicesData?.items, workspaceId])
@@ -713,7 +730,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
         if (useFixtures) {
           // Use fixtures with filtering
           await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate delay
-          let filtered = { ...servicesFixture }
+          const filtered = { ...servicesFixture }
 
           // Apply problemsOnly filter
           if (problemsOnly) {

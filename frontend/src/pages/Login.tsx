@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getAuthToken } from '../services/apiClient'
 import { authService } from '../services/authService'
 import { useLanguage } from '../i18n/LanguageContext'
+import { getRequestErrorFieldErrors } from '../lib/requestError'
 
 function Login() {
   const navigate = useNavigate()
@@ -52,15 +53,15 @@ function Login() {
       let errorMessage = t('common.errorGeneric')
       if (err instanceof Error) {
         errorMessage = err.message
-        // If it's a validation error with field details, use that
-        if ((err as any).errors && typeof (err as any).errors === 'object') {
-          const errorFields = Object.keys((err as any).errors)
+        const fieldErrors = getRequestErrorFieldErrors(err)
+        if (fieldErrors) {
+          const errorFields = Object.keys(fieldErrors)
           if (errorFields.length > 0) {
             const firstField = errorFields[0]
-            const firstError = Array.isArray((err as any).errors[firstField]) 
-              ? (err as any).errors[firstField][0] 
-              : (err as any).errors[firstField]
-            errorMessage = firstError || err.message
+            const raw = fieldErrors[firstField]
+            const firstError = Array.isArray(raw) ? raw[0] : raw
+            errorMessage =
+              typeof firstError === 'string' && firstError.length > 0 ? firstError : err.message
           }
         }
       }

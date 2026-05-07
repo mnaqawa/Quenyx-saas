@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { inviteService } from '../services/inviteService'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { getAuthToken } from '../services/apiClient'
+import { getRequestErrorStatus } from '../lib/requestError'
 
 function InviteAcceptance() {
   const navigate = useNavigate()
@@ -63,7 +64,7 @@ function InviteAcceptance() {
               }, 1500)
     } catch (err) {
       if (err instanceof Error) {
-        const status = (err as any).status
+        const status = getRequestErrorStatus(err)
         if (status === 404) {
           setError('Invite not found. Please check the token and try again.')
         } else if (status === 403) {

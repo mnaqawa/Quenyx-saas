@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- hook colocated with provider */
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { Project } from '../types/project'
 import { ProjectEntitlements } from '../types/subscription'
@@ -7,6 +8,8 @@ import { workspaceService } from '../services/workspaceService'
 import { subscriptionService } from '../services/subscriptionService'
 import { moduleService } from '../services/moduleService'
 import { getAuthToken, WORKSPACE_404_EVENT } from '../services/apiClient'
+import { getRequestErrorStatus, type RequestError } from '../lib/requestError'
+import type { WorkspaceListItem } from '../types/workspace'
 
 interface WorkspaceContextValue {
   workspaces: Project[] // Keep Project type since backend returns Project
@@ -78,13 +81,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // 2) Project[]: [{ id, name, status, ... }]
       const roleMap: Record<string, Role> = {}
       const projects: Project[] = workspaceListItems
-        .map((item: any) => {
-          const p = item?.project ?? item
+        .map((item: WorkspaceListItem | Project) => {
+          const p = 'project' in item && item.project ? item.project : (item as Project)
           if (!p || p.id == null) {
             return null
           }
-          if (item?.my_role && typeof item.my_role === 'string') {
-            roleMap[String(p.id)] = item.my_role as Role
+          if ('my_role' in item && item.my_role && typeof item.my_role === 'string') {
+            roleMap[String(p.id)] = item.my_role
           }
           return {
             ...p,
@@ -109,9 +112,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         // Clear localStorage if no valid selection
         localStorage.removeItem(STORAGE_KEY)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // Check if this is an authentication error (401)
-      const isAuthError = err instanceof Error && ((err as any).status === 401 || (err as any).isAuthError || err.message.includes('Unauthenticated'))
+      const isAuthError =
+        err instanceof Error &&
+        (getRequestErrorStatus(err) === 401 ||
+          Boolean((err as RequestError).isAuthError) ||
+          err.message.includes('Unauthenticated'))
       
       if (isAuthError) {
         // For 401 errors, don't set error message - just clear workspaces
@@ -155,11 +162,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         error: err,
         message: errorMessage,
         errorType: err instanceof Error ? err.constructor.name : typeof err,
-        errorDetails: err instanceof Error ? {
-          message: err.message,
-          stack: err.stack,
-          status: (err as any).status,
-        } : err,
+        errorDetails:
+          err instanceof Error
+            ? {
+                message: err.message,
+                stack: err.stack,
+                status: getRequestErrorStatus(err),
+              }
+            : err,
       })
 
       // On error, preserve existing selection if possible
@@ -185,7 +195,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       // Convert string ID to number for API call (backend expects number)
       const entitlements = await subscriptionService.getProjectEntitlements(Number(selectedWorkspaceId))
       setEntitlements(entitlements)
-    } catch (err) {
+    } catch {
       setEntitlements(null)
     } finally {
       setIsLoadingEntitlements(false)
@@ -310,12 +320,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshModules()
   }, [refreshEntitlements, refreshModules])
 
-  const setSelectedWorkspaceId = (workspaceId: string | number) => {
-    // Always normalize to string for consistency
+  const setSelectedWorkspaceId = useCallback((workspaceId: string | number) => {
     const normalizedId = String(workspaceId)
     setSelectedWorkspaceIdState(normalizedId)
     localStorage.setItem(STORAGE_KEY, normalizedId)
-  }
+  }, [])
 
   const allowedByKey = useMemo(() => {
     const lookup: Record<string, boolean> = {}

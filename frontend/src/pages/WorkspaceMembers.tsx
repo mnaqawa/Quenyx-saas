@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { workspaceMembershipService, WorkspaceMembership, WorkspaceInvite } from '../services/workspaceMembershipService'
 import { authService } from '../services/authService'
 import { Role, canManageMembers, canPromoteToOwner } from '../rbac/permissions'
+import { getRequestErrorStatus } from '../lib/requestError'
 
 function WorkspaceMembers() {
   const { selectedWorkspaceId } = useWorkspaceContext()
@@ -26,31 +27,14 @@ function WorkspaceMembers() {
       try {
         const user = await authService.me()
         setCurrentUserId(user.id)
-      } catch (err) {
+      } catch {
         // Ignore
       }
     }
     fetchCurrentUser()
   }, [])
 
-  useEffect(() => {
-    if (selectedWorkspaceId && currentUserId !== null) {
-      loadMemberships()
-    } else {
-      setMemberships([])
-      setInvites([])
-      setCurrentUserRole(null)
-      setUnauthorized(false)
-    }
-  }, [selectedWorkspaceId, currentUserId])
-
-  useEffect(() => {
-    if (!notice) return
-    const timer = window.setTimeout(() => setNotice(null), 2500)
-    return () => window.clearTimeout(timer)
-  }, [notice])
-
-  const loadMemberships = async () => {
+  const loadMemberships = useCallback(async () => {
     if (!selectedWorkspaceId || currentUserId === null) return
 
     setLoading(true)
@@ -61,19 +45,18 @@ function WorkspaceMembers() {
       const data = await workspaceMembershipService.getWorkspaceMemberships(Number(selectedWorkspaceId))
       setMemberships(data.memberships || [])
       setInvites(data.invites || [])
-      
-      // Derive current user's role from memberships list by comparing user.id
+
       const userMembership = data.memberships.find((m) => m.user.id === currentUserId || m.user_id === currentUserId)
       if (userMembership) {
         setCurrentUserRole(userMembership.role)
       } else {
-        // Check if user is the owner (owner doesn't have a membership record, but appears in list)
-        const isOwner = data.memberships.some((m) => m.role === 'owner' && (m.user.id === currentUserId || m.user_id === currentUserId))
+        const isOwner = data.memberships.some(
+          (m) => m.role === 'owner' && (m.user.id === currentUserId || m.user_id === currentUserId)
+        )
         setCurrentUserRole(isOwner ? 'owner' : null)
       }
-    } catch (err) {
-      // Handle 403 unauthorized errors gracefully
-      if (err instanceof Error && (err as any).status === 403) {
+    } catch (err: unknown) {
+      if (getRequestErrorStatus(err) === 403) {
         setUnauthorized(true)
         setError('You do not have permission to view memberships for this workspace.')
       } else {
@@ -82,7 +65,24 @@ function WorkspaceMembers() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedWorkspaceId, currentUserId])
+
+  useEffect(() => {
+    if (selectedWorkspaceId && currentUserId !== null) {
+      void loadMemberships()
+    } else {
+      setMemberships([])
+      setInvites([])
+      setCurrentUserRole(null)
+      setUnauthorized(false)
+    }
+  }, [selectedWorkspaceId, currentUserId, loadMemberships])
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(null), 2500)
+    return () => window.clearTimeout(timer)
+  }, [notice])
 
   const handleAddMember = async () => {
     if (!selectedWorkspaceId || !newMemberEmail.trim()) return

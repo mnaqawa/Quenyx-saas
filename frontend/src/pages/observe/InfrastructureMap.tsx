@@ -435,7 +435,7 @@ export default function InfrastructureMap() {
     setCustomZoneInput('')
   }, [customZoneInput, diagram.customZones])
 
-  const getNodePosition = useCallback((hostName: string, index: number, _total: number) => {
+  const getNodePosition = useCallback((hostName: string, index: number) => {
     const saved = diagram.nodePositions[hostName]
     if (saved) return saved
     const row = Math.floor(index / 4)
@@ -445,7 +445,7 @@ export default function InfrastructureMap() {
 
   const handleNodeMouseDown = useCallback((e: React.MouseEvent, hostName: string) => {
     e.preventDefault()
-    const pos = diagram.nodePositions[hostName] ?? getNodePosition(hostName, 0, 1)
+    const pos = diagram.nodePositions[hostName] ?? getNodePosition(hostName, 0)
     setDraggingNode(hostName)
     setDragOffset({ x: e.clientX - pos.x, y: e.clientY - pos.y })
   }, [diagram.nodePositions, getNodePosition])
@@ -730,7 +730,7 @@ export default function InfrastructureMap() {
 
     const displayHosts = zoneFilter === 'All Zones' ? layerFiltered.hostsFiltered : hostsFilteredByZone
     const hostPositions = displayHosts.map((h, idx) => {
-      const pos = diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx, displayHosts.length)
+      const pos = diagram.nodePositions[h.name] ?? getNodePosition(h.name, idx)
       return { ...h, x: pos.x, y: pos.y }
     })
     const networkPositions = layerFiltered.networksFiltered.map((n, idx) => ({

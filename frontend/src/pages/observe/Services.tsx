@@ -166,7 +166,7 @@ export default function Services() {
     }
     if (currentItems.length) groups.push({ host: currentHost, items: currentItems })
     return groups
-  }, [data?.items])
+  }, [data])
 
   // Display host name without workspace prefix for section headers (e.g. ws84-Quenyx-DEV-Platform → Quenyx-DEV-Platform)
   const hostDisplayName = (host: string) => {

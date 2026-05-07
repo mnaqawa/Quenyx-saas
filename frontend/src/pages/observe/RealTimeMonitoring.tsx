@@ -419,8 +419,15 @@ export default function RealTimeMonitoring() {
       />
 
       {kpisError && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100" role="alert">
           {kpisError}
+          {kpisError === 'Unauthorized' && (
+            <p className="mt-2 text-xs text-rose-100/80">
+              The Observe API returned 401. Confirm you are still logged in, the app and API share cookies or tokens (CORS
+              / Sanctum stateful domains), and if you use the gateway, it forwards <code className="text-rose-50/90">Cookie</code>{' '}
+              and <code className="text-rose-50/90">Authorization</code> to the backend.
+            </p>
+          )}
         </div>
       )}
 
@@ -430,7 +437,8 @@ export default function RealTimeMonitoring() {
         </div>
       )}
 
-      {(engineUnreachable || stale) && (
+      {/* Do not show stale/scheduler hint when KPIs failed to load (e.g. 401); empty fallback data looks like "never" polled */}
+      {!kpisError && (engineUnreachable || stale) && (
         <div
           className={`rounded-lg border px-4 py-3 text-sm ${
             engineUnreachable

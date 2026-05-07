@@ -37,7 +37,7 @@ function WorkspaceAccessSettings() {
           const isOwner = membersData.memberships.some((m) => m.role === 'owner' && (m.user.id === currentUser.id || m.user_id === currentUser.id))
           setUserRole(isOwner ? 'owner' : null)
         }
-      } catch (err) {
+      } catch {
         // Ignore errors (e.g., 403 for non-admin/member users)
       } finally {
         setLoadingAuditLogs(false)

@@ -45,7 +45,7 @@ function AppLayout() {
     try {
       await authService.logout()
       navigate('/login')
-    } catch (error) {
+    } catch {
       // Even if logout API call fails, clear token and redirect
       navigate('/login')
     }
