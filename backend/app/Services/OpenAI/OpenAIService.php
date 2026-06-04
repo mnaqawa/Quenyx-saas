@@ -138,6 +138,7 @@ TXT;
         if ($this->supportsTemperature($model)) {
             $payload['temperature'] = self::TEMPERATURE;
         }
+        $this->applyModelSpecificOptions($payload, $model);
 
         $startedAt = microtime(true);
         Log::info('ai-agent.request.start', [
@@ -176,6 +177,16 @@ TXT;
         $this->logFinish($agentType, $model, $quick, $startedAt, $totalTokens, 'ok');
 
         if ($answer === '') {
+            Log::warning('ai-agent.empty_response', [
+                'agent' => $agentType,
+                'model' => $model,
+                'quick' => $quick,
+                'response_id' => $response->id ?? null,
+                'response_status' => $response->status ?? null,
+                'incomplete_details' => $response->incompleteDetails ?? null,
+                'total_tokens' => $totalTokens,
+            ]);
+
             throw new OpenAIServiceException(
                 'The AI returned an empty answer.',
                 502,
@@ -216,6 +227,27 @@ TXT;
 
         return ! str_starts_with($normalized, 'gpt-5')
             && ! preg_match('/^o\d/', $normalized);
+    }
+
+    /**
+     * Tune reasoning-capable models so tight max_output_tokens still leaves
+     * room for visible text instead of spending the whole budget internally.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function applyModelSpecificOptions(array &$payload, string $model): void
+    {
+        $normalized = strtolower(trim($model));
+        if (! str_starts_with($normalized, 'gpt-5')) {
+            return;
+        }
+
+        $payload['reasoning'] = [
+            'effort' => 'minimal',
+        ];
+        $payload['text'] = [
+            'verbosity' => 'low',
+        ];
     }
 
     /**

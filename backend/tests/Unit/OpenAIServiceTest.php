@@ -118,6 +118,8 @@ class OpenAIServiceTest extends TestCase
             return $method === 'create'
                 && ($parameters['max_output_tokens'] ?? null) === 600
                 && ! array_key_exists('temperature', $parameters)
+                && ($parameters['reasoning']['effort'] ?? null) === 'minimal'
+                && ($parameters['text']['verbosity'] ?? null) === 'low'
                 && ($tool['max_num_results'] ?? null) === 3
                 && ($tool['ranking_options']['ranker'] ?? null) === 'auto'
                 && ($tool['ranking_options']['score_threshold'] ?? null) === 0.3;
