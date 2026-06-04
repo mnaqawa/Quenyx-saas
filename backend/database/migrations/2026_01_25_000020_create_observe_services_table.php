@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('observe_services', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained('projects')->onDelete('cascade');
-            $table->string('engine_key', 50)->default('nagios');
+            $table->string('engine_key', 50)->default('native');
             $table->string('engine_service_key'); // ${host_name}::${service_name}
             $table->string('host_name');
             $table->string('service_name');

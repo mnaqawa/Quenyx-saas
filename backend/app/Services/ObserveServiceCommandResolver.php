@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Resolves ObserveServiceDefinition + overrides into final Nagios check_command strings.
+ * Resolves ObserveServiceDefinition + overrides into final native check command strings.
  * UI never generates engine syntax; order comes from args_schema / service-type rules.
  */
 class ObserveServiceCommandResolver

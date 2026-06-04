@@ -27,9 +27,9 @@ interface TargetService {
   service_key?: string
   overrides?: Record<string, unknown>
   enabled: boolean
-  /** Seconds between checks (Nagios check_interval). Configurable per service. */
+  /** Seconds between native QynSight checks. Configurable per service. */
   check_interval?: number | null
-  /** Seconds before retry (Nagios retry_interval). Configurable per service. */
+  /** Seconds before native QynSight retry. Configurable per service. */
   retry_interval?: number | null
 }
 
@@ -161,7 +161,7 @@ export default function Targets() {
             `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
             { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
           ),
-          observeService.getServiceDefinitions(Number(workspaceId), { engine: 'nagios', status: 'active' }),
+          observeService.getServiceDefinitions(Number(workspaceId), { engine: 'native', status: 'active' }),
         ])
         // Handle both raw array and gateway-wrapped { data: hosts } so service types show after nav/signout
         const hostsList: TargetHost[] = Array.isArray(targetsResponse)
@@ -421,7 +421,7 @@ export default function Targets() {
       setError(null)
       setValidationErrors((prev) => {
         const next = { ...prev }
-        delete next.nagios
+        delete next.native
         return next
       })
     } catch (err: unknown) {
@@ -642,9 +642,9 @@ export default function Targets() {
       {error && (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 space-y-2">
           <div>{error}</div>
-          {validationErrors.nagios?.length > 0 && (
+          {validationErrors.native?.length > 0 && (
             <ul className="list-disc list-inside text-rose-200/90 text-xs space-y-1">
-              {validationErrors.nagios.map((msg, i) => (
+              {validationErrors.native.map((msg, i) => (
                 <li key={i}>{msg}</li>
               ))}
             </ul>

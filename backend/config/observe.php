@@ -3,7 +3,7 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Custom command allowlist (Nagios)
+    | Custom command allowlist (native QynSight)
     |--------------------------------------------------------------------------
     | When service_key=custom, the command name MUST be in this list.
     | Empty = no custom commands allowed. Add engine-specific commands as needed.

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('observe_meta', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained('projects')->onDelete('cascade');
-            $table->string('engine_key', 50)->default('nagios');
+            $table->string('engine_key', 50)->default('native');
             $table->dateTime('last_poll_at')->nullable();
             $table->json('service_totals_json')->nullable(); // Store totals as JSON
             $table->text('error')->nullable(); // Store error message if poll failed

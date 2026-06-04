@@ -16,7 +16,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
     {
         $definitions = [
             [
-                'engine' => 'nagios',
+                'engine' => 'native',
                 'service_key' => 'ping',
                 'display_name' => 'Ping',
                 'description' => 'Checks host reachability and latency using ICMP. Alerts on packet loss or high round-trip time. Use this to ensure the host is online and responsive.',
@@ -31,7 +31,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'status' => 'active',
             ],
             [
-                'engine' => 'nagios',
+                'engine' => 'native',
                 'service_key' => 'http',
                 'display_name' => 'HTTP',
                 'description' => 'Performs an HTTP GET to the given URL and checks the response status. Use this to monitor web apps, APIs, or any HTTP service. You can set path, port, and expected status code.',
@@ -45,7 +45,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'status' => 'active',
             ],
             [
-                'engine' => 'nagios',
+                'engine' => 'native',
                 'service_key' => 'tcp_port',
                 'display_name' => 'TCP Port',
                 'description' => 'Checks if a TCP port is open and accepting connections. Ideal for databases, SSH, mail, or any service that listens on a port.',
@@ -57,7 +57,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'status' => 'active',
             ],
             [
-                'engine' => 'nagios',
+                'engine' => 'native',
                 'service_key' => 'plugin',
                 'display_name' => 'Custom Script',
                 'description' => 'Runs your own monitoring script by name. Place the script (e.g. my_check.sh or my_check.php) in the observe plugins directory and enter its name here. The script receives the host address and your args via environment variables and must exit 0=OK, 1=Warning, 2=Critical, 3=Unknown.',
@@ -69,7 +69,7 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'status' => 'active',
             ],
             [
-                'engine' => 'nagios',
+                'engine' => 'native',
                 'service_key' => 'custom',
                 'display_name' => 'Custom',
                 'description' => null,

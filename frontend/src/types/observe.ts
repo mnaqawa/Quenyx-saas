@@ -217,7 +217,7 @@ export interface DataSourceSummary {
   lastUpdate: string
 }
 
-// Services page types (Nagios-derived fields)
+// Services page types (native QynSight check fields)
 export interface ObserveServiceRow {
   host: string
   service: string

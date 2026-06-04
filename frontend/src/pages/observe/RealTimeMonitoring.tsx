@@ -15,6 +15,7 @@ import {
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { AiAgentDrawer, type AiAnalyzeRequest } from '../../components/observe/AiAgentDrawer'
 import { observeService } from '../../services/observeService'
 import type { RealTimeMetrics, SystemInfo } from '../../types/observe'
 
@@ -128,6 +129,8 @@ export default function RealTimeMonitoring() {
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoaded, setTargetsLoaded] = useState(false)
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
+  const [aiAnalyzeRequest, setAiAnalyzeRequest] = useState<AiAnalyzeRequest | null>(null)
 
   // Reset workspace-scoped state when workspace changes so we never show another workspace's data
   useEffect(() => {
@@ -296,6 +299,17 @@ export default function RealTimeMonitoring() {
   const loadStr = systemInfo?.loadAverage ?? ''
   const load1m = loadStr ? parseFloat(loadStr.split(',')[0]?.trim() || '0') : null
 
+  const openAiAgent = useCallback((host?: string) => {
+    setAiDrawerOpen(true)
+    if (host) {
+      setAiAnalyzeRequest({
+        id: Date.now(),
+        host,
+        persona: 'anomaly_detector',
+      })
+    }
+  }, [])
+
   if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0 && !targetsLoaded) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -368,6 +382,14 @@ export default function RealTimeMonitoring() {
         subtitle="Monitoring server metrics and workspace hosts &amp; services (real data)."
         actions={
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openAiAgent()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+            >
+              <span>AI Agent</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] text-emerald-200">LIVE</span>
+            </button>
             <select
               value={hostList.length === 0 ? '' : selectedHost}
               onChange={(e) => setSelectedHost(e.target.value)}
@@ -576,7 +598,16 @@ export default function RealTimeMonitoring() {
       {/* Per-host metrics (future: NRPE/agent) – placeholder when a host is selected */}
       {selectedHost && (
         <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-white">
-          <h3 className="text-sm font-semibold text-sky-200">Per-host metrics (coming soon)</h3>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h3 className="text-sm font-semibold text-sky-200">Per-host metrics (coming soon)</h3>
+            <button
+              type="button"
+              onClick={() => openAiAgent(selectedHost)}
+              className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/25"
+            >
+              Analyze with AI
+            </button>
+          </div>
           <p className="mt-1 text-xs text-white/60">
             CPU, memory, and disk for <strong>{selectedHost}</strong> will appear here when NRPE or the QynSight agent is configured on the host. For now, use the service status and totals below.
           </p>
@@ -738,6 +769,12 @@ export default function RealTimeMonitoring() {
           </div>
         </div>
       </div>
+      <AiAgentDrawer
+        workspaceId={wsId}
+        open={aiDrawerOpen}
+        analyzeRequest={aiAnalyzeRequest}
+        onClose={() => setAiDrawerOpen(false)}
+      />
     </div>
   )
 }

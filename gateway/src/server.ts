@@ -24,7 +24,7 @@ app.use((req: Request, res: Response, next) => {
   next()
 })
 
-// Body parsing for internal engine routes (PUT /nagios/config needs JSON body)
+// Body parsing for internal engine status routes
 app.use('/internal/engines', express.json({ limit: '10mb' }))
 
 // Register internal engine routes (before entitlement enforcement)
@@ -42,7 +42,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'gateway' })
 })
 
-// Readiness: can reach Nagios, can write config dir, can read statusjson.cgi
+// Readiness: gateway is up; QynSight checks are native and run through backend scheduler.
 app.get('/ready', async (req: Request, res: Response) => {
   try {
     const result = await runReadinessChecks()

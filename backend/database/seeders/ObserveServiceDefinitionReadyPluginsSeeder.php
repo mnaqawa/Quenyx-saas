@@ -6,8 +6,7 @@ use App\Models\ObserveServiceDefinition;
 use Illuminate\Database\Seeder;
 
 /**
- * Predefined "ready" service types based on standard Nagios Plugins / NRPE.
- * These mirror the official nagios-plugins (https://nagios-plugins.org/doc/man/).
+ * Predefined "ready" service types based on QynSight native checks and compatible plugin names.
  * You can remove or add: set status to 'disabled' to hide, 'active' to show.
  * Execution: native engine runs them as plugins (script name = check_command) when not http/tcp_port/ping.
  */
@@ -17,6 +16,7 @@ class ObserveServiceDefinitionReadyPluginsSeeder extends Seeder
     {
         $definitions = $this->getNrpeReadyDefinitions();
         foreach ($definitions as $attrs) {
+            $attrs['engine'] = 'native';
             ObserveServiceDefinition::updateOrCreate(
                 [
                     'engine' => $attrs['engine'],
@@ -28,7 +28,7 @@ class ObserveServiceDefinitionReadyPluginsSeeder extends Seeder
     }
 
     /**
-     * NRPE / standard Nagios plugin definitions. status: active = shown by default, disabled = add when needed.
+     * Native/plugin definitions. status: active = shown by default, disabled = add when needed.
      */
     private function getNrpeReadyDefinitions(): array
     {

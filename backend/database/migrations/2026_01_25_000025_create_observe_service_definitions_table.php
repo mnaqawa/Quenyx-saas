@@ -8,13 +8,13 @@ return new class extends Migration
 {
     /**
      * Canonical service definition layer for ShieldObserve.
-     * Engine-agnostic; args_schema is an ordered list (position matters for Nagios etc.).
+     * Engine-agnostic; args_schema is an ordered list for native QynSight checks.
      */
     public function up(): void
     {
         Schema::create('observe_service_definitions', function (Blueprint $table) {
             $table->id();
-            $table->string('engine', 50)->default('nagios');
+            $table->string('engine', 50)->default('native');
             $table->string('service_key', 100); // Canonical ID: ping, http, tcp_port, custom
             $table->string('display_name');
             $table->string('check_command'); // Engine command name, e.g. check_ping
