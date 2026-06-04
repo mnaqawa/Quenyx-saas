@@ -232,6 +232,7 @@ TXT;
     /**
      * Tune reasoning-capable models so tight max_output_tokens still leaves
      * room for visible text instead of spending the whole budget internally.
+     * File Search rejects "minimal", so use the lowest compatible effort.
      *
      * @param array<string, mixed> $payload
      */
@@ -243,7 +244,7 @@ TXT;
         }
 
         $payload['reasoning'] = [
-            'effort' => 'minimal',
+            'effort' => 'low',
         ];
         $payload['text'] = [
             'verbosity' => 'low',
