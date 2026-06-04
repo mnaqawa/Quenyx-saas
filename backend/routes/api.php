@@ -163,6 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/agents/metadata', [\App\Http\Controllers\AgentController::class, 'metadata']);
     Route::delete('/projects/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
 
+    // LEGACY AI routes. Superseded by /api/ai-agent/query and components/ai/AIAgentDrawer.tsx.
+    // TODO: Remove once all clients migrate to the knowledge-base agent. Kept for backward compatibility.
     // AI agent (QynSight) — workspace canonical
     Route::get('/workspaces/{project}/ai/personas', [\App\Http\Controllers\AiAgentController::class, 'personas']);
     Route::post('/workspaces/{project}/ai/chat', [\App\Http\Controllers\AiAgentController::class, 'chat']);

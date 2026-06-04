@@ -1,3 +1,6 @@
+// LEGACY component.
+// Superseded by /api/ai-agent/query and components/ai/AIAgentDrawer.tsx (OpenAI Responses API + File Search).
+// TODO: Remove once all entry points migrate to the knowledge-base agent. Kept for backward compatibility.
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   aiAgentService,

@@ -21,6 +21,16 @@ class AIAgentQueryRequest extends FormRequest
         return [
             'agent' => ['required', 'string', Rule::in(OpenAIService::supportedAgents())],
             'question' => ['required', 'string', 'max:5000'],
+
+            // Optional workspace context. Membership is verified in the controller.
+            'workspace_id' => ['sometimes', 'nullable', 'integer'],
+
+            // Optional QynSight operational context (free-form but bounded).
+            'context' => ['sometimes', 'nullable', 'array'],
+            'context.source' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'context.host' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'context.metrics' => ['sometimes', 'nullable', 'array'],
+            'context.services' => ['sometimes', 'nullable', 'array'],
         ];
     }
 

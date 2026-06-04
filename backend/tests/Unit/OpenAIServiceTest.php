@@ -91,12 +91,40 @@ class OpenAIServiceTest extends TestCase
         $this->assertSame('anomaly_detector', $answer->agentType);
 
         $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            $instructions = (string) ($parameters['instructions'] ?? '');
+
             return $method === 'create'
                 && ($parameters['model'] ?? null) === 'gpt-5-mini'
                 && ($parameters['input'] ?? null) === 'Detect anomalies across all servers.'
-                && ($parameters['instructions'] ?? null) === 'Detect anomalies and unusual system behaviour.'
+                && str_contains($instructions, 'Anomaly Detector')
+                && str_contains($instructions, 'Quenyx vOPS HUB')
+                && str_contains($instructions, 'Nagios')
                 && ($parameters['tools'][0]['type'] ?? null) === 'file_search'
                 && in_array('vs_test123', $parameters['tools'][0]['vector_store_ids'] ?? [], true);
+        });
+    }
+
+    public function test_context_is_appended_to_input_as_json(): void
+    {
+        $client = new ClientFake([
+            CreateResponse::fake(),
+        ]);
+        $this->app->instance(ClientContract::class, $client);
+
+        $service = app(OpenAIService::class);
+        $service->askKnowledgeBase('Analyze host db-1.', 'performance_analyst', [
+            'workspace' => ['id' => 7, 'name' => 'Prod'],
+            'qynsight' => ['source' => 'qynsight_realtime', 'host' => 'db-1'],
+        ]);
+
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            $input = (string) ($parameters['input'] ?? '');
+
+            return $method === 'create'
+                && str_contains($input, 'Analyze host db-1.')
+                && str_contains($input, 'Operational context (JSON):')
+                && str_contains($input, 'qynsight_realtime')
+                && str_contains($input, '"id": 7');
         });
     }
 }

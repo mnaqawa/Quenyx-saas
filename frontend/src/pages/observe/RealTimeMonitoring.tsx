@@ -308,9 +308,27 @@ export default function RealTimeMonitoring() {
         agent: 'anomaly_detector',
         question: `Analyze host "${host}" and detect anomalies or unusual behaviour across its metrics.`,
         autoSend: true,
+        context: {
+          source: 'qynsight_realtime',
+          host,
+          metrics: {
+            cpu_pct: cpuVal,
+            memory_pct: memVal,
+            disk_pct: diskVal,
+            network_pct: netVal,
+            load_1m: load1m,
+          },
+          services: [
+            { status: 'ok', count: serviceTotals.ok },
+            { status: 'warning', count: serviceTotals.warning },
+            { status: 'critical', count: serviceTotals.critical },
+            { status: 'unknown', count: serviceTotals.unknown },
+            { status: 'pending', count: serviceTotals.pending },
+          ],
+        },
       })
     }
-  }, [])
+  }, [cpuVal, memVal, diskVal, netVal, load1m, serviceTotals])
 
   if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0 && !targetsLoaded) {
     return (
@@ -773,6 +791,7 @@ export default function RealTimeMonitoring() {
       </div>
       <AIAgentDrawer
         open={aiDrawerOpen}
+        workspaceId={wsId}
         seed={aiSeed}
         onClose={() => setAiDrawerOpen(false)}
       />

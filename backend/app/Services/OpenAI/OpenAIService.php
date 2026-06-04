@@ -17,16 +17,38 @@ use Throwable;
  */
 class OpenAIService
 {
+    /** Maximum characters of serialized context appended to the model input. */
+    private const MAX_CONTEXT_CHARS = 8000;
+
     /**
-     * Supported agent types mapped to their system instructions.
+     * Shared platform grounding prepended to every agent's instructions.
+     */
+    private const SHARED_INSTRUCTIONS = <<<'TXT'
+You are an AI operations assistant for Quenyx vOPS HUB.
+
+Platform facts you must always respect:
+- Quenyx vOPS HUB is a modular operations platform. Workspaces are the tenant containers; all monitoring data is scoped to a workspace.
+- QynSight is the active monitoring module and the product runtime.
+- QynSight uses NATIVE monitoring (Laravel-scheduled checks via the `observe:run-checks` command). This is the runtime engine.
+- Nagios is legacy and deprecated. Never recommend Nagios, Nagios plugins-as-runtime, or Nagios-specific tooling as the monitoring runtime.
+
+Answering rules:
+- Use the knowledge base (File Search) as your primary source of truth.
+- Keep answers concise, operational, and actionable.
+- If operational context (JSON) is provided, ground your answer in it.
+- If the knowledge base does not contain the answer, say so clearly instead of inventing details.
+TXT;
+
+    /**
+     * Supported agent types mapped to their role-specific instructions.
      *
      * @var array<string, string>
      */
     private const AGENT_INSTRUCTIONS = [
-        'performance_analyst' => 'Analyze performance metrics and identify bottlenecks.',
-        'anomaly_detector' => 'Detect anomalies and unusual system behaviour.',
-        'compliance' => 'Provide NCA and SAMA compliance guidance.',
-        'capacity_planner' => 'Predict future infrastructure requirements.',
+        'performance_analyst' => 'Act as a Performance Analyst: analyze performance metrics and identify bottlenecks.',
+        'anomaly_detector' => 'Act as an Anomaly Detector: detect anomalies and unusual system behaviour.',
+        'compliance' => 'Act as a Compliance advisor: provide NCA and SAMA compliance guidance for the GCC region.',
+        'capacity_planner' => 'Act as a Capacity Planner: predict future infrastructure requirements and headroom risks.',
     ];
 
     public function __construct(private readonly ClientContract $client)
@@ -44,12 +66,14 @@ class OpenAIService
     /**
      * Ask the knowledge base a question as a specific agent persona.
      *
+     * @param  array<string, mixed>  $context  Optional operational context (workspace, QynSight telemetry).
+     *
      * @throws OpenAIServiceException
      */
-    public function askKnowledgeBase(string $question, string $agentType): KnowledgeBaseAnswer
+    public function askKnowledgeBase(string $question, string $agentType, array $context = []): KnowledgeBaseAnswer
     {
-        $instructions = self::AGENT_INSTRUCTIONS[$agentType] ?? null;
-        if ($instructions === null) {
+        $agentInstructions = self::AGENT_INSTRUCTIONS[$agentType] ?? null;
+        if ($agentInstructions === null) {
             throw new OpenAIServiceException(
                 "Unsupported agent type: {$agentType}.",
                 422,
@@ -67,12 +91,14 @@ class OpenAIService
         }
 
         $model = (string) (config('openai.model') ?: 'gpt-5-mini');
+        $instructions = self::SHARED_INSTRUCTIONS."\n\n".$agentInstructions;
+        $input = $this->buildInput($question, $context);
 
         try {
             $response = $this->client->responses()->create([
                 'model' => $model,
                 'instructions' => $instructions,
-                'input' => $question,
+                'input' => $input,
                 'tools' => [[
                     'type' => 'file_search',
                     'vector_store_ids' => [$vectorStoreId],
@@ -112,6 +138,34 @@ class OpenAIService
             responseId: $response->id ?? null,
             totalTokens: $response->usage?->totalTokens ?? null,
         );
+    }
+
+    /**
+     * Compose the model input: the user question plus optional operational
+     * context serialized as JSON text (safely escaped and size-capped).
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function buildInput(string $question, array $context): string
+    {
+        if ($context === []) {
+            return $question;
+        }
+
+        $json = json_encode(
+            $context,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
+
+        if ($json === false || $json === 'null') {
+            return $question;
+        }
+
+        if (mb_strlen($json) > self::MAX_CONTEXT_CHARS) {
+            $json = mb_substr($json, 0, self::MAX_CONTEXT_CHARS)."\n... [context truncated]";
+        }
+
+        return $question."\n\n---\nOperational context (JSON):\n".$json;
     }
 
     /**

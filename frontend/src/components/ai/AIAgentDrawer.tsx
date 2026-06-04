@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { queryAiAgent } from '../../services/aiAgentService'
 import type {
+  AIAgentContext,
+  AIAgentQueryRequest,
   AIAgentSeed,
   AIAgentTab,
   AIAgentType,
@@ -10,6 +12,8 @@ import type {
 interface AIAgentDrawerProps {
   open: boolean
   onClose: () => void
+  /** Workspace the questions are scoped to (sent for server-side membership check). */
+  workspaceId?: number | null
   /** Agent tab selected when the drawer first opens. */
   defaultAgent?: AIAgentType
   /** Optional seed to prefill / auto-send a question when its `id` changes. */
@@ -71,7 +75,7 @@ function formatTimestamp(ms: number): string {
   })
 }
 
-export function AIAgentDrawer({ open, onClose, defaultAgent, seed }: AIAgentDrawerProps) {
+export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }: AIAgentDrawerProps) {
   const [activeAgent, setActiveAgent] = useState<AIAgentType>(defaultAgent ?? 'performance_analyst')
   const [conversations, setConversations] =
     useState<Record<AIAgentType, ChatMessage[]>>(EMPTY_CONVERSATIONS)
@@ -90,7 +94,7 @@ export function AIAgentDrawer({ open, onClose, defaultAgent, seed }: AIAgentDraw
   const messages = conversations[activeAgent]
 
   const send = useCallback(
-    async (rawQuestion: string, agent: AIAgentType) => {
+    async (rawQuestion: string, agent: AIAgentType, context?: AIAgentContext) => {
       const question = rawQuestion.trim()
       if (!question || sending) return
 
@@ -110,8 +114,12 @@ export function AIAgentDrawer({ open, onClose, defaultAgent, seed }: AIAgentDraw
       const controller = new AbortController()
       abortRef.current = controller
 
+      const body: AIAgentQueryRequest = { agent, question }
+      if (workspaceId != null) body.workspace_id = workspaceId
+      if (context) body.context = context
+
       try {
-        const result = await queryAiAgent({ agent, question }, controller.signal)
+        const result = await queryAiAgent(body, controller.signal)
         const assistantMessage: ChatMessage = {
           id: newId(),
           role: 'assistant',
@@ -140,7 +148,7 @@ export function AIAgentDrawer({ open, onClose, defaultAgent, seed }: AIAgentDraw
         }
       }
     },
-    [sending]
+    [sending, workspaceId]
   )
 
   // Abort any in-flight request when the drawer closes or unmounts.
@@ -168,7 +176,7 @@ export function AIAgentDrawer({ open, onClose, defaultAgent, seed }: AIAgentDraw
     setActiveAgent(agent)
     setError(null)
     if (seed.autoSend) {
-      void send(seed.question, agent)
+      void send(seed.question, agent, seed.context)
     } else {
       setInput(seed.question)
     }

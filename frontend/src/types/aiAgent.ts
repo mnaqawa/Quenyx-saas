@@ -18,9 +18,21 @@ export interface AIAgentTab {
   dotClass: string
 }
 
+/** Optional QynSight operational context attached to a query. */
+export interface AIAgentContext {
+  source?: string
+  host?: string
+  metrics?: Record<string, unknown>
+  services?: unknown[]
+}
+
 export interface AIAgentQueryRequest {
   agent: AIAgentType
   question: string
+  /** Optional workspace the question is scoped to (membership verified server-side). */
+  workspace_id?: number | null
+  /** Optional QynSight runtime context injected into the model prompt. */
+  context?: AIAgentContext | null
 }
 
 export interface AIAgentQueryMeta {
@@ -67,4 +79,6 @@ export interface AIAgentSeed {
   question: string
   agent?: AIAgentType
   autoSend?: boolean
+  /** Optional context to attach to the seeded question (e.g. host analysis). */
+  context?: AIAgentContext
 }

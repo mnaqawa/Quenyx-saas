@@ -14,7 +14,12 @@ use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * User-facing AI agent for QynSight. Backed by a real LLM (see config/ai.php).
+ * LEGACY AI agent for QynSight (streaming chat-completions + personas).
+ *
+ * @deprecated Superseded by /api/ai-agent/query (App\Http\Controllers\API\AIAgentController)
+ *             and components/ai/AIAgentDrawer.tsx, which use the OpenAI Responses API +
+ *             File Search over the Vector Store. Kept for backward compatibility.
+ * TODO: Remove once all clients migrate to the knowledge-base agent.
  */
 class AiAgentController extends Controller
 {
