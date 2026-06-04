@@ -174,4 +174,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{project}/ai/chat', [\App\Http\Controllers\AiAgentController::class, 'chat']);
     Route::post('/projects/{project}/ai/chat/stream', [\App\Http\Controllers\AiAgentController::class, 'stream']);
     Route::post('/projects/{project}/ai/analyze', [\App\Http\Controllers\AiAgentController::class, 'analyze']);
+
+    // Knowledge base agent (OpenAI Responses API + File Search over Vector Store)
+    Route::post('/ai-agent/query', [\App\Http\Controllers\API\AIAgentController::class, 'query']);
 });
