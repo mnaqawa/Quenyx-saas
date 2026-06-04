@@ -117,10 +117,26 @@ class OpenAIServiceTest extends TestCase
 
             return $method === 'create'
                 && ($parameters['max_output_tokens'] ?? null) === 600
-                && ($parameters['temperature'] ?? null) === 0.2
+                && ! array_key_exists('temperature', $parameters)
                 && ($tool['max_num_results'] ?? null) === 3
                 && ($tool['ranking_options']['ranker'] ?? null) === 'auto'
                 && ($tool['ranking_options']['score_threshold'] ?? null) === 0.3;
+        });
+    }
+
+    public function test_temperature_is_sent_for_compatible_models(): void
+    {
+        config(['openai.model' => 'gpt-4.1-mini']);
+        $client = new ClientFake([CreateResponse::fake(['model' => 'gpt-4.1-mini'])]);
+        $this->app->instance(ClientContract::class, $client);
+
+        $service = app(OpenAIService::class);
+        $service->askKnowledgeBase('Summarize performance.', 'performance_analyst');
+
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            return $method === 'create'
+                && ($parameters['model'] ?? null) === 'gpt-4.1-mini'
+                && ($parameters['temperature'] ?? null) === 0.2;
         });
     }
 

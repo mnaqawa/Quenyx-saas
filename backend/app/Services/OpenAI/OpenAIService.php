@@ -124,7 +124,6 @@ TXT;
             'instructions' => $instructions,
             'input' => $input,
             'max_output_tokens' => $quick ? self::MAX_OUTPUT_TOKENS_QUICK : self::MAX_OUTPUT_TOKENS,
-            'temperature' => self::TEMPERATURE,
             'tools' => [[
                 'type' => 'file_search',
                 'vector_store_ids' => [$vectorStoreId],
@@ -135,6 +134,10 @@ TXT;
                 ],
             ]],
         ];
+
+        if ($this->supportsTemperature($model)) {
+            $payload['temperature'] = self::TEMPERATURE;
+        }
 
         $startedAt = microtime(true);
         Log::info('ai-agent.request.start', [
@@ -201,6 +204,18 @@ TXT;
         }
 
         return (string) (config('openai.model') ?: 'gpt-5-mini');
+    }
+
+    /**
+     * Some Responses API reasoning models (including gpt-5-mini) reject the
+     * temperature parameter. Keep sampling deterministic where supported.
+     */
+    private function supportsTemperature(string $model): bool
+    {
+        $normalized = strtolower(trim($model));
+
+        return ! str_starts_with($normalized, 'gpt-5')
+            && ! preg_match('/^o\d/', $normalized);
     }
 
     /**
