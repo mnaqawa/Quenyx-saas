@@ -4,9 +4,10 @@ namespace Tests\Unit;
 
 use App\Exceptions\OpenAIServiceException;
 use App\Services\OpenAI\OpenAIService;
-use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Contracts\ClientContract;
 use OpenAI\Resources\Responses;
 use OpenAI\Responses\Responses\CreateResponse;
+use OpenAI\Testing\ClientFake;
 use Tests\TestCase;
 
 class OpenAIServiceTest extends TestCase
@@ -32,7 +33,8 @@ class OpenAIServiceTest extends TestCase
 
     public function test_unknown_agent_throws_invalid_agent(): void
     {
-        OpenAI::fake();
+        $client = new ClientFake();
+        $this->app->instance(ClientContract::class, $client);
         $service = app(OpenAIService::class);
 
         try {
@@ -47,7 +49,8 @@ class OpenAIServiceTest extends TestCase
     public function test_missing_vector_store_throws_before_calling_openai(): void
     {
         config(['openai.vector_store_id' => '']);
-        OpenAI::fake();
+        $client = new ClientFake();
+        $this->app->instance(ClientContract::class, $client);
         $service = app(OpenAIService::class);
 
         try {
@@ -58,14 +61,28 @@ class OpenAIServiceTest extends TestCase
             $this->assertSame(500, $e->status);
         }
 
-        OpenAI::assertNothingSent();
+        $client->assertNothingSent();
     }
 
     public function test_ask_knowledge_base_uses_responses_api_with_file_search(): void
     {
-        OpenAI::fake([
-            CreateResponse::fake(),
+        $client = new ClientFake([
+            CreateResponse::fake([
+                'model' => 'gpt-5-mini',
+                'output' => [[
+                    'type' => 'message',
+                    'id' => 'msg_test',
+                    'status' => 'completed',
+                    'role' => 'assistant',
+                    'content' => [[
+                        'type' => 'output_text',
+                        'text' => 'Detected anomalies across all servers.',
+                        'annotations' => [],
+                    ]],
+                ]],
+            ]),
         ]);
+        $this->app->instance(ClientContract::class, $client);
 
         $service = app(OpenAIService::class);
         $answer = $service->askKnowledgeBase('Detect anomalies across all servers.', 'anomaly_detector');
@@ -73,7 +90,7 @@ class OpenAIServiceTest extends TestCase
         $this->assertNotSame('', $answer->answer);
         $this->assertSame('anomaly_detector', $answer->agentType);
 
-        OpenAI::assertSent(Responses::class, function (string $method, array $parameters): bool {
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
             return $method === 'create'
                 && ($parameters['model'] ?? null) === 'gpt-5-mini'
                 && ($parameters['input'] ?? null) === 'Detect anomalies across all servers.'

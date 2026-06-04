@@ -7,8 +7,8 @@ return [
     | OpenAI API Key & Organization
     |--------------------------------------------------------------------------
     |
-    | Consumed by the openai-php/laravel package when resolving the shared
-    | OpenAI client. Keep these in the environment, never in version control.
+    | Consumed when resolving the shared OpenAI PHP client. Keep these in the
+    | environment, never in version control.
     |
     */
 

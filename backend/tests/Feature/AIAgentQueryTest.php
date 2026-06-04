@@ -5,8 +5,9 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Contracts\ClientContract;
 use OpenAI\Responses\Responses\CreateResponse;
+use OpenAI\Testing\ClientFake;
 use Tests\TestCase;
 
 class AIAgentQueryTest extends TestCase
@@ -43,7 +44,7 @@ class AIAgentQueryTest extends TestCase
 
     public function test_query_validates_agent_and_question(): void
     {
-        OpenAI::fake();
+        $this->app->instance(ClientContract::class, new ClientFake());
 
         $this->actingAs($this->user(), 'sanctum')
             ->postJson('/api/ai-agent/query', [
@@ -56,9 +57,23 @@ class AIAgentQueryTest extends TestCase
 
     public function test_query_returns_structured_answer(): void
     {
-        OpenAI::fake([
-            CreateResponse::fake(),
+        $client = new ClientFake([
+            CreateResponse::fake([
+                'model' => 'gpt-5-mini',
+                'output' => [[
+                    'type' => 'message',
+                    'id' => 'msg_test',
+                    'status' => 'completed',
+                    'role' => 'assistant',
+                    'content' => [[
+                        'type' => 'output_text',
+                        'text' => 'Detected anomalies across all servers.',
+                        'annotations' => [],
+                    ]],
+                ]],
+            ]),
         ]);
+        $this->app->instance(ClientContract::class, $client);
 
         $response = $this->actingAs($this->user(), 'sanctum')
             ->postJson('/api/ai-agent/query', [
