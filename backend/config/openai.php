@@ -41,6 +41,24 @@ return [
 
     'model' => env('OPENAI_MODEL', 'gpt-5-mini'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Per-agent Model Overrides
+    |--------------------------------------------------------------------------
+    |
+    | Optionally pin a different model per agent type. When an override is
+    | empty/unset, the agent falls back to the default `model` above. This lets
+    | you tune cost/latency per persona without code changes.
+    |
+    */
+
+    'models' => [
+        'performance_analyst' => env('OPENAI_MODEL_PERFORMANCE_ANALYST'),
+        'anomaly_detector' => env('OPENAI_MODEL_ANOMALY_DETECTOR'),
+        'compliance' => env('OPENAI_MODEL_COMPLIANCE'),
+        'capacity_planner' => env('OPENAI_MODEL_CAPACITY_PLANNER'),
+    ],
+
     'vector_store_id' => env('OPENAI_VECTOR_STORE_ID'),
 
 ];

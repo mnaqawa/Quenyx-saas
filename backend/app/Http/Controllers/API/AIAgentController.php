@@ -61,6 +61,7 @@ class AIAgentController extends Controller
                 (string) $validated['question'],
                 (string) $validated['agent'],
                 $context,
+                (bool) ($validated['quick'] ?? false),
             );
         } catch (OpenAIServiceException $e) {
             return response()->json([

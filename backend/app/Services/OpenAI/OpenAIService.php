@@ -4,6 +4,7 @@ namespace App\Services\OpenAI;
 
 use App\DTOs\KnowledgeBaseAnswer;
 use App\Exceptions\OpenAIServiceException;
+use Illuminate\Support\Facades\Log;
 use OpenAI\Contracts\ClientContract;
 use OpenAI\Exceptions\ErrorException;
 use OpenAI\Exceptions\TransporterException;
@@ -20,23 +21,43 @@ class OpenAIService
     /** Maximum characters of serialized context appended to the model input. */
     private const MAX_CONTEXT_CHARS = 8000;
 
+    /** Output token ceilings (standard vs. quick mode). */
+    private const MAX_OUTPUT_TOKENS = 600;
+    private const MAX_OUTPUT_TOKENS_QUICK = 300;
+
+    /** Sampling temperature (low = focused/deterministic). */
+    private const TEMPERATURE = 0.2;
+
+    /** File Search retrieval limits (standard vs. quick mode). */
+    private const FILE_SEARCH_MAX_RESULTS = 3;
+    private const FILE_SEARCH_MAX_RESULTS_QUICK = 2;
+
+    /** File Search ranking threshold; drop low-relevance chunks. */
+    private const FILE_SEARCH_SCORE_THRESHOLD = 0.3;
+
     /**
      * Shared platform grounding prepended to every agent's instructions.
      */
     private const SHARED_INSTRUCTIONS = <<<'TXT'
 You are an AI operations assistant for Quenyx vOPS HUB.
 
-Platform facts you must always respect:
-- Quenyx vOPS HUB is a modular operations platform. Workspaces are the tenant containers; all monitoring data is scoped to a workspace.
-- QynSight is the active monitoring module and the product runtime.
-- QynSight uses NATIVE monitoring (Laravel-scheduled checks via the `observe:run-checks` command). This is the runtime engine.
-- Nagios is legacy and deprecated. Never recommend Nagios, Nagios plugins-as-runtime, or Nagios-specific tooling as the monitoring runtime.
+Platform facts (background — do NOT repeat unless the user explicitly asks about the platform itself):
+- Quenyx vOPS HUB is a modular operations platform. Workspaces are tenant containers; monitoring data is scoped to a workspace.
+- QynSight is the active monitoring module and the product runtime. It uses NATIVE monitoring (Laravel-scheduled checks via `observe:run-checks`).
+- Nagios is legacy and deprecated. Never recommend Nagios or Nagios plugins as the monitoring runtime.
 
 Answering rules:
-- Use the knowledge base (File Search) as your primary source of truth.
-- Keep answers concise, operational, and actionable.
-- If operational context (JSON) is provided, ground your answer in it.
-- If the knowledge base does not contain the answer, say so clearly instead of inventing details.
+- Answer in a maximum of 8 bullet points. Be short, direct, and operational.
+- Do not repeat the platform background above unless the user explicitly asks about it.
+- For monitoring/operational questions, prioritize the provided QynSight operational context (JSON) over File Search; only consult the knowledge base when the context is insufficient.
+- Use the knowledge base (File Search) only when it is actually needed to answer.
+- If neither the context nor the knowledge base contains the answer, say so clearly instead of inventing details.
+TXT;
+
+    /** Extra directive appended in quick mode for terse, low-cost answers. */
+    private const QUICK_INSTRUCTIONS = <<<'TXT'
+
+Quick mode: respond with at most 3-4 short bullets. No preamble, no closing summary.
 TXT;
 
     /**
@@ -67,10 +88,11 @@ TXT;
      * Ask the knowledge base a question as a specific agent persona.
      *
      * @param  array<string, mixed>  $context  Optional operational context (workspace, QynSight telemetry).
+     * @param  bool  $quick  When true, request a shorter/cheaper answer (lower token ceiling, fewer retrieved chunks).
      *
      * @throws OpenAIServiceException
      */
-    public function askKnowledgeBase(string $question, string $agentType, array $context = []): KnowledgeBaseAnswer
+    public function askKnowledgeBase(string $question, string $agentType, array $context = [], bool $quick = false): KnowledgeBaseAnswer
     {
         $agentInstructions = self::AGENT_INSTRUCTIONS[$agentType] ?? null;
         if ($agentInstructions === null) {
@@ -90,23 +112,46 @@ TXT;
             );
         }
 
-        $model = (string) (config('openai.model') ?: 'gpt-5-mini');
+        $model = $this->resolveModel($agentType);
         $instructions = self::SHARED_INSTRUCTIONS."\n\n".$agentInstructions;
+        if ($quick) {
+            $instructions .= self::QUICK_INSTRUCTIONS;
+        }
         $input = $this->buildInput($question, $context);
 
+        $payload = [
+            'model' => $model,
+            'instructions' => $instructions,
+            'input' => $input,
+            'max_output_tokens' => $quick ? self::MAX_OUTPUT_TOKENS_QUICK : self::MAX_OUTPUT_TOKENS,
+            'temperature' => self::TEMPERATURE,
+            'tools' => [[
+                'type' => 'file_search',
+                'vector_store_ids' => [$vectorStoreId],
+                'max_num_results' => $quick ? self::FILE_SEARCH_MAX_RESULTS_QUICK : self::FILE_SEARCH_MAX_RESULTS,
+                'ranking_options' => [
+                    'ranker' => 'auto',
+                    'score_threshold' => self::FILE_SEARCH_SCORE_THRESHOLD,
+                ],
+            ]],
+        ];
+
+        $startedAt = microtime(true);
+        Log::info('ai-agent.request.start', [
+            'agent' => $agentType,
+            'model' => $model,
+            'quick' => $quick,
+            'max_output_tokens' => $payload['max_output_tokens'],
+            'file_search_max_num_results' => $payload['tools'][0]['max_num_results'],
+        ]);
+
         try {
-            $response = $this->client->responses()->create([
-                'model' => $model,
-                'instructions' => $instructions,
-                'input' => $input,
-                'tools' => [[
-                    'type' => 'file_search',
-                    'vector_store_ids' => [$vectorStoreId],
-                ]],
-            ]);
+            $response = $this->client->responses()->create($payload);
         } catch (ErrorException $e) {
+            $this->logFinish($agentType, $model, $quick, $startedAt, null, 'error');
             throw $this->mapErrorException($e);
         } catch (TransporterException $e) {
+            $this->logFinish($agentType, $model, $quick, $startedAt, null, 'timeout');
             throw new OpenAIServiceException(
                 'The AI request timed out or OpenAI could not be reached. Please retry.',
                 504,
@@ -114,6 +159,7 @@ TXT;
                 $e,
             );
         } catch (Throwable $e) {
+            $this->logFinish($agentType, $model, $quick, $startedAt, null, 'error');
             throw new OpenAIServiceException(
                 'Unexpected error while contacting the AI provider.',
                 502,
@@ -123,6 +169,9 @@ TXT;
         }
 
         $answer = trim((string) ($response->outputText ?? ''));
+        $totalTokens = $response->usage?->totalTokens ?? null;
+        $this->logFinish($agentType, $model, $quick, $startedAt, $totalTokens, 'ok');
+
         if ($answer === '') {
             throw new OpenAIServiceException(
                 'The AI returned an empty answer.',
@@ -136,8 +185,47 @@ TXT;
             agentType: $agentType,
             model: (string) ($response->model ?? $model),
             responseId: $response->id ?? null,
-            totalTokens: $response->usage?->totalTokens ?? null,
+            totalTokens: $totalTokens,
         );
+    }
+
+    /**
+     * Resolve the model for an agent: per-agent env override, else the global
+     * default (OPENAI_MODEL), else gpt-5-mini.
+     */
+    private function resolveModel(string $agentType): string
+    {
+        $override = trim((string) config("openai.models.$agentType"));
+        if ($override !== '') {
+            return $override;
+        }
+
+        return (string) (config('openai.model') ?: 'gpt-5-mini');
+    }
+
+    /**
+     * Emit a structured timing log for one Responses API call.
+     */
+    private function logFinish(
+        string $agentType,
+        string $model,
+        bool $quick,
+        float $startedAt,
+        ?int $totalTokens,
+        string $outcome,
+    ): void {
+        $finishedAt = microtime(true);
+
+        Log::info('ai-agent.request.finish', [
+            'agent' => $agentType,
+            'model' => $model,
+            'quick' => $quick,
+            'outcome' => $outcome,
+            'started_at' => date('c', (int) $startedAt),
+            'finished_at' => date('c', (int) $finishedAt),
+            'duration_ms' => (int) round(($finishedAt - $startedAt) * 1000),
+            'total_tokens' => $totalTokens,
+        ]);
     }
 
     /**

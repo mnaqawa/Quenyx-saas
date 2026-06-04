@@ -308,6 +308,7 @@ export default function RealTimeMonitoring() {
         agent: 'anomaly_detector',
         question: `Analyze host "${host}" and detect anomalies or unusual behaviour across its metrics.`,
         autoSend: true,
+        quick: true,
         context: {
           source: 'qynsight_realtime',
           host,

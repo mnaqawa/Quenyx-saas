@@ -36,11 +36,11 @@ class AiAgentTestCommand extends Command
             return self::FAILURE;
         }
 
-        $question = (string) ($this->option('question') ?: 'What is Quenyx vOPS HUB?');
-        $this->line('Sending test question: <comment>'.$question.'</comment>');
+        $question = (string) ($this->option('question') ?: 'Give a short 3-bullet summary of Quenyx vOPS HUB.');
+        $this->line('Sending test question (quick mode): <comment>'.$question.'</comment>');
 
         try {
-            $answer = $service->askKnowledgeBase($question, 'performance_analyst');
+            $answer = $service->askKnowledgeBase($question, 'performance_analyst', [], true);
         } catch (OpenAIServiceException $e) {
             $this->error('AI agent call failed ['.$e->errorCode.', HTTP '.$e->status.']: '.$e->getMessage());
 

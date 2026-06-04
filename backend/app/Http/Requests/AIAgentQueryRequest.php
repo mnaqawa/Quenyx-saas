@@ -22,6 +22,9 @@ class AIAgentQueryRequest extends FormRequest
             'agent' => ['required', 'string', Rule::in(OpenAIService::supportedAgents())],
             'question' => ['required', 'string', 'max:5000'],
 
+            // Quick mode: shorter, cheaper answers (predefined actions set this).
+            'quick' => ['sometimes', 'boolean'],
+
             // Optional workspace context. Membership is verified in the controller.
             'workspace_id' => ['sometimes', 'nullable', 'integer'],
 

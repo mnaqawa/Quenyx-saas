@@ -29,6 +29,8 @@ export interface AIAgentContext {
 export interface AIAgentQueryRequest {
   agent: AIAgentType
   question: string
+  /** Quick mode: shorter, cheaper answers. Set by predefined actions; false for free-text chat. */
+  quick?: boolean
   /** Optional workspace the question is scoped to (membership verified server-side). */
   workspace_id?: number | null
   /** Optional QynSight runtime context injected into the model prompt. */
@@ -79,6 +81,8 @@ export interface AIAgentSeed {
   question: string
   agent?: AIAgentType
   autoSend?: boolean
+  /** Quick mode for this seeded question (predefined actions use quick=true). */
+  quick?: boolean
   /** Optional context to attach to the seeded question (e.g. host analysis). */
   context?: AIAgentContext
 }

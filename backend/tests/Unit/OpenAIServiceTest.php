@@ -104,6 +104,58 @@ class OpenAIServiceTest extends TestCase
         });
     }
 
+    public function test_payload_includes_speed_and_cost_options(): void
+    {
+        $client = new ClientFake([CreateResponse::fake()]);
+        $this->app->instance(ClientContract::class, $client);
+
+        $service = app(OpenAIService::class);
+        $service->askKnowledgeBase('Summarize performance.', 'performance_analyst');
+
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            $tool = $parameters['tools'][0] ?? [];
+
+            return $method === 'create'
+                && ($parameters['max_output_tokens'] ?? null) === 600
+                && ($parameters['temperature'] ?? null) === 0.2
+                && ($tool['max_num_results'] ?? null) === 3
+                && ($tool['ranking_options']['ranker'] ?? null) === 'auto'
+                && ($tool['ranking_options']['score_threshold'] ?? null) === 0.3;
+        });
+    }
+
+    public function test_quick_mode_lowers_token_ceiling_and_retrieval(): void
+    {
+        $client = new ClientFake([CreateResponse::fake()]);
+        $this->app->instance(ClientContract::class, $client);
+
+        $service = app(OpenAIService::class);
+        $service->askKnowledgeBase('Short summary please.', 'performance_analyst', [], true);
+
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            $tool = $parameters['tools'][0] ?? [];
+
+            return $method === 'create'
+                && ($parameters['max_output_tokens'] ?? null) === 300
+                && ($tool['max_num_results'] ?? null) === 2
+                && str_contains((string) ($parameters['instructions'] ?? ''), 'Quick mode');
+        });
+    }
+
+    public function test_per_agent_model_override_is_used(): void
+    {
+        config(['openai.models.compliance' => 'gpt-5']);
+        $client = new ClientFake([CreateResponse::fake(['model' => 'gpt-5'])]);
+        $this->app->instance(ClientContract::class, $client);
+
+        $service = app(OpenAIService::class);
+        $service->askKnowledgeBase('Compliance check.', 'compliance');
+
+        $client->assertSent(Responses::class, function (string $method, array $parameters): bool {
+            return $method === 'create' && ($parameters['model'] ?? null) === 'gpt-5';
+        });
+    }
+
     public function test_context_is_appended_to_input_as_json(): void
     {
         $client = new ClientFake([

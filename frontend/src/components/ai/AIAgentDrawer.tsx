@@ -94,7 +94,7 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
   const messages = conversations[activeAgent]
 
   const send = useCallback(
-    async (rawQuestion: string, agent: AIAgentType, context?: AIAgentContext) => {
+    async (rawQuestion: string, agent: AIAgentType, context?: AIAgentContext, quick = false) => {
       const question = rawQuestion.trim()
       if (!question || sending) return
 
@@ -115,6 +115,7 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
       abortRef.current = controller
 
       const body: AIAgentQueryRequest = { agent, question }
+      if (quick) body.quick = true
       if (workspaceId != null) body.workspace_id = workspaceId
       if (context) body.context = context
 
@@ -176,7 +177,7 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
     setActiveAgent(agent)
     setError(null)
     if (seed.autoSend) {
-      void send(seed.question, agent, seed.context)
+      void send(seed.question, agent, seed.context, seed.quick ?? false)
     } else {
       setInput(seed.question)
     }
