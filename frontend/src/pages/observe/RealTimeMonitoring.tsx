@@ -496,13 +496,6 @@ export default function RealTimeMonitoring() {
         </div>
       )}
 
-      {/* System metrics: monitoring server (same machine for all workspaces; workspace hosts are in Observe status below) */}
-      <div className="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-        <span className="text-xs font-medium text-sky-200">Monitoring server</span>
-        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running QynSight (not your monitored hosts)">
-          Server metrics · workspace hosts in Observe status below
-        </span>
-      </div>
       <div className="grid gap-4 md:grid-cols-5">
         <MetricCard
           title="CPU Usage"
