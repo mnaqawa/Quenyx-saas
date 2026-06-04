@@ -153,15 +153,13 @@ export default function RealTimeMonitoring() {
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
 
-  const { hostTotals, serviceTotals, problems, lastPollAt, engineUnreachable, stale } = useMemo(() => {
+  const { hostTotals, serviceTotals, problems, lastPollAt } = useMemo(() => {
     if (!servicesData) {
       return {
         hostTotals: { up: 0, down: 0, unreachable: 0, pending: 0 },
         serviceTotals: { ok: 0, warning: 0, critical: 0, unknown: 0, pending: 0, unreachable: 0 },
         problems: 0,
         lastPollAt: null as string | null,
-        engineUnreachable: false,
-        stale: true,
       }
     }
     const items = servicesData.items ?? []
@@ -175,8 +173,6 @@ export default function RealTimeMonitoring() {
           (servicesData.serviceTotals?.unknown ?? 0) +
           (servicesData.serviceTotals?.unreachable ?? 0),
         lastPollAt: servicesData.last_poll_at ?? null,
-        engineUnreachable: servicesData.engine_unreachable ?? false,
-        stale: servicesData.stale ?? true,
       }
     }
     const hostKey = prefix ? `${prefix}${selectedHost}` : selectedHost
@@ -193,8 +189,6 @@ export default function RealTimeMonitoring() {
       serviceTotals: serviceTotalsFiltered,
       problems: warning + critical + unknown + unreachable,
       lastPollAt: servicesData.last_poll_at ?? null,
-      engineUnreachable: servicesData.engine_unreachable ?? false,
-      stale: servicesData.stale ?? true,
     }
   }, [servicesData, selectedHost, prefix])
 
@@ -480,22 +474,13 @@ export default function RealTimeMonitoring() {
         </div>
       )}
 
-      {/* Do not show stale/scheduler hint when KPIs failed to load (e.g. 401); empty fallback data looks like "never" polled */}
-      {!kpisError && (engineUnreachable || stale) && (
-        <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            engineUnreachable
-              ? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
-              : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-100'
-          }`}
-          role="alert"
-        >
-          {engineUnreachable
-            ? 'Monitoring engine is unreachable. Status may be outdated.'
-            : `Data may be stale. Last poll: ${lastPollAt ? new Date(lastPollAt).toLocaleString() : 'never'}. Ensure the Laravel scheduler runs \`observe:run-checks\` every minute.`}
-        </div>
-      )}
-
+      {/* System metrics: monitoring server (same machine for all workspaces; workspace hosts are in Observe status below) */}
+      <div className="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+        <span className="text-xs font-medium text-sky-200">Monitoring server</span>
+        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running QynSight (not your monitored hosts)">
+          Server metrics · workspace hosts in Observe status below
+        </span>
+      </div>
       <div className="grid gap-4 md:grid-cols-5">
         <MetricCard
           title="CPU Usage"
