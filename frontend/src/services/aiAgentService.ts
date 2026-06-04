@@ -1,5 +1,6 @@
 import { getAuthToken } from './apiClient'
 import { gatewayClient } from './gatewayClient'
+import type { AIAgentQueryRequest, AIAgentQueryResponse } from '../types/aiAgent'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -44,6 +45,97 @@ export interface AiChatResponse {
     completion_tokens: number
     total_tokens: number
   }
+}
+
+/** Stable, machine-readable error from the knowledge-base agent endpoint. */
+export class AiAgentError extends Error {
+  readonly code: string
+  readonly status: number
+
+  constructor(message: string, code: string, status: number) {
+    super(message)
+    this.name = 'AiAgentError'
+    this.code = code
+    this.status = status
+  }
+}
+
+interface AiAgentErrorBody {
+  code?: string
+  message?: string
+  errors?: Record<string, string[] | string>
+}
+
+function flattenValidationErrors(errors: Record<string, string[] | string>): string {
+  return Object.values(errors)
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ')
+}
+
+/**
+ * Ask the knowledge base a question as a specific agent.
+ *
+ * Talks directly to POST /api/ai-agent/query. The endpoint returns a flat
+ * { success, answer, agent, meta } envelope (no `data` wrapper), so this
+ * bypasses the standard apiClient and parses the response itself.
+ */
+export async function queryAiAgent(
+  body: AIAgentQueryRequest,
+  signal?: AbortSignal
+): Promise<AIAgentQueryResponse> {
+  const token = getAuthToken()
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/ai-agent/query`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    throw new AiAgentError(
+      'Could not reach the AI agent. Check your connection and try again.',
+      'network_error',
+      0
+    )
+  }
+
+  let json: unknown = null
+  try {
+    json = await response.json()
+  } catch {
+    json = null
+  }
+
+  if (!response.ok) {
+    const errorBody = (json ?? {}) as AiAgentErrorBody
+    let message = errorBody.message || `AI agent request failed (${response.status}).`
+    if (response.status === 422 && errorBody.errors) {
+      message = flattenValidationErrors(errorBody.errors) || message
+    }
+    if (response.status === 401) {
+      message = 'Your session has expired. Please sign in again.'
+    }
+    throw new AiAgentError(message, errorBody.code || 'request_failed', response.status)
+  }
+
+  const data = (json ?? {}) as Partial<AIAgentQueryResponse>
+  if (data.success !== true || typeof data.answer !== 'string') {
+    throw new AiAgentError(
+      'The AI agent returned an unexpected response.',
+      'invalid_response',
+      response.status
+    )
+  }
+
+  return data as AIAgentQueryResponse
 }
 
 function buildAiPath(workspaceId: number, path: string): string {

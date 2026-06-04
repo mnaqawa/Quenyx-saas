@@ -15,7 +15,8 @@ import {
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
-import { AiAgentDrawer, type AiAnalyzeRequest } from '../../components/observe/AiAgentDrawer'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
 import type { RealTimeMetrics, SystemInfo } from '../../types/observe'
 
@@ -130,7 +131,7 @@ export default function RealTimeMonitoring() {
   const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoaded, setTargetsLoaded] = useState(false)
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
-  const [aiAnalyzeRequest, setAiAnalyzeRequest] = useState<AiAnalyzeRequest | null>(null)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
 
   // Reset workspace-scoped state when workspace changes so we never show another workspace's data
   useEffect(() => {
@@ -302,10 +303,11 @@ export default function RealTimeMonitoring() {
   const openAiAgent = useCallback((host?: string) => {
     setAiDrawerOpen(true)
     if (host) {
-      setAiAnalyzeRequest({
+      setAiSeed({
         id: Date.now(),
-        host,
-        persona: 'anomaly_detector',
+        agent: 'anomaly_detector',
+        question: `Analyze host "${host}" and detect anomalies or unusual behaviour across its metrics.`,
+        autoSend: true,
       })
     }
   }, [])
@@ -769,10 +771,9 @@ export default function RealTimeMonitoring() {
           </div>
         </div>
       </div>
-      <AiAgentDrawer
-        workspaceId={wsId}
+      <AIAgentDrawer
         open={aiDrawerOpen}
-        analyzeRequest={aiAnalyzeRequest}
+        seed={aiSeed}
         onClose={() => setAiDrawerOpen(false)}
       />
     </div>
