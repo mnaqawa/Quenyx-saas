@@ -1,6 +1,6 @@
 # Quenyx platform: changes, files, and deployment
 
-This document lists what was implemented (rebrand from any legacy “portshield” naming, security hardening for integrations, gateway alignment), which files are involved, and how to deploy and run the stack.
+This document lists what was implemented (consistent **Quenyx** branding, security hardening for integrations, gateway alignment), which files are involved, and how to deploy and run the stack.
 
 ---
 
@@ -144,7 +144,7 @@ Use the same order on each app server (adjust paths to your layout, e.g. `/var/w
 ```bash
 cd /var/www
 # git pull your branch, or clone fresh
-cd quenyx-saas   # or your checkout folder name; renaming portshield-saas to quenyx-saas is optional
+cd quenyx-saas   # or your checkout folder name
 ```
 
 ### 5.2 Backend
