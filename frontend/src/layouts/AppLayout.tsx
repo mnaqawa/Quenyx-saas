@@ -377,6 +377,93 @@ function AppLayoutInner() {
           )}
         </nav>
         </div>
+        <div className="relative mt-auto border-t border-white/10 px-3 py-3" ref={userMenuRef}>
+          {isUserMenuOpen && (
+            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#161c24] py-1 shadow-2xl shadow-black/50">
+              <Link
+                to="/profile"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                {t('nav.profile')}
+              </Link>
+              <Link
+                to="/subscriptions"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+                {t('nav.subscriptions')}
+              </Link>
+              <Link
+                to="/settings/access"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                {t('projects.settings')}
+              </Link>
+              <div className="my-1 border-t border-white/10" />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsUserMenuOpen(false)
+                  handleLogout()
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose-300 transition hover:bg-rose-500/10 hover:text-rose-200"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                {t('nav.logout')}
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            aria-haspopup="menu"
+            aria-expanded={isUserMenuOpen}
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-white/10"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-xs font-semibold text-orange-200">
+              {userInitials}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-white">
+                {currentUser?.name ?? 'Account'}
+              </span>
+              <span className="block truncate text-xs text-white/50">
+                {currentUser?.email ?? ''}
+              </span>
+            </span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`shrink-0 text-white/40 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+        </div>
       </aside>
       <main
         className={[
@@ -496,83 +583,6 @@ function AppLayoutInner() {
                   new
                 </span>
               </button>
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                  aria-haspopup="menu"
-                  aria-expanded={isUserMenuOpen}
-                  aria-label={currentUser?.name ?? t('nav.account')}
-                  className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-2 transition hover:bg-white/10"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-[11px] font-semibold text-orange-200">
-                    {userInitials}
-                  </span>
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`shrink-0 text-white/40 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#161c24] shadow-2xl shadow-black/50 rtl:left-0 rtl:right-auto">
-                    <div className="border-b border-white/10 px-4 py-3">
-                      <p className="truncate text-sm font-medium text-white">
-                        {currentUser?.name ?? t('nav.account')}
-                      </p>
-                      <p className="truncate text-xs text-white/50">{currentUser?.email ?? ''}</p>
-                    </div>
-                    <div className="py-1">
-                      <Link
-                        to="/profile"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                          <circle cx="12" cy="7" r="4" />
-                        </svg>
-                        {t('nav.profile')}
-                      </Link>
-                      <Link
-                        to="/subscriptions"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="5" width="20" height="14" rx="2" />
-                          <line x1="2" y1="10" x2="22" y2="10" />
-                        </svg>
-                        {t('nav.subscriptions')}
-                      </Link>
-                      <div className="my-1 border-t border-white/10" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUserMenuOpen(false)
-                          handleLogout()
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose-300 transition hover:bg-rose-500/10 hover:text-rose-200"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                          <polyline points="16 17 21 12 16 7" />
-                          <line x1="21" y1="12" x2="9" y2="12" />
-                        </svg>
-                        {t('nav.logout')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
