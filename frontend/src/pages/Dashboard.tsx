@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardService, DashboardData, Module, PerformanceSeries, AlertsByModule } from '../services/dashboardService'
-import { observeService } from '../services/observeService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { useObserveServices } from '../hooks/useObserveData'
@@ -79,7 +78,6 @@ function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [checkedGettingStarted, setCheckedGettingStarted] = useState(false)
   
   // Check if QynSight is available and unlocked
   const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
@@ -142,58 +140,6 @@ function Dashboard() {
 
     fetchDashboard()
   }, [isLoadingWorkspaces, workspacesError, workspaces.length])
-
-  useEffect(() => {
-    if (loading || isLoadingWorkspaces || checkedGettingStarted) {
-      return
-    }
-
-    // New user flow: no workspace yet -> send to Getting Started.
-    if (workspaces.length === 0) {
-      setCheckedGettingStarted(true)
-      navigate('/help', { replace: true })
-      return
-    }
-
-    // If workspace exists but no monitored services yet, guide user to setup.
-    if (!selectedWorkspaceId || !hasObserveAccess) {
-      return
-    }
-
-    let cancelled = false
-    observeService
-      .getObserveSummary(Number(selectedWorkspaceId))
-      .then((summary) => {
-        if (cancelled) return
-        const totals = summary?.totals
-        const totalServices =
-          (totals?.ok ?? 0) +
-          (totals?.warning ?? 0) +
-          (totals?.critical ?? 0) +
-          (totals?.unknown ?? 0) +
-          (totals?.pending ?? 0)
-
-        if (totalServices === 0) {
-          setCheckedGettingStarted(true)
-          navigate('/help', { replace: true })
-        }
-      })
-      .catch(() => {
-        // Keep dashboard available if summary check fails.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    loading,
-    isLoadingWorkspaces,
-    checkedGettingStarted,
-    workspaces.length,
-    selectedWorkspaceId,
-    hasObserveAccess,
-    navigate,
-  ])
 
   const metrics = useMemo(() => {
     const modules = data?.modules ?? []

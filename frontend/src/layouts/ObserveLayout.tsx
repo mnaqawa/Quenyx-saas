@@ -23,7 +23,7 @@ export default function ObserveLayout() {
   const currentPageTitle = getPageTitleFromPath(location.pathname)
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6" data-tour="tour-observe-content">
       {/* Locked module banner - consistent with ComingSoon */}
       {isLocked && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-200">

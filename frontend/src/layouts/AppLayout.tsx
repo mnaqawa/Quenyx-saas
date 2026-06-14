@@ -1,16 +1,72 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import { authService } from '../services/authService'
+import { authService, type AuthUser } from '../services/authService'
 import { routesByModule, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules } from '../constants/platformRegistry'
+import { AIAgentDrawer } from '../components/ai/AIAgentDrawer'
+import { ProductTourProvider, useProductTour } from '../tour/ProductTour'
 
 function AppLayout() {
+  return (
+    <ProductTourProvider>
+      <AppLayoutInner />
+    </ProductTourProvider>
+  )
+}
+
+function AppLayoutInner() {
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { language, setLanguage, t } = useLanguage()
   const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
+  const { startTour } = useProductTour()
+  const [isAiAgentOpen, setIsAiAgentOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    authService
+      .me()
+      .then((user) => {
+        if (!cancelled) setCurrentUser(user)
+      })
+      .catch(() => {
+        // Ignore: header still works without user details
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsUserMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isUserMenuOpen])
+
+  const userInitials = useMemo(() => {
+    const name = currentUser?.name?.trim()
+    if (!name) return 'U'
+    const parts = name.split(/\s+/)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }, [currentUser])
 
   // QynSight subpages configuration (from shared constants)
 
@@ -76,6 +132,7 @@ function AppLayout() {
             </div>
           </div>
         </div>
+        <div data-tour="tour-nav">
         <nav className="flex flex-col gap-1 px-4 py-4">
           <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
             {t('nav.dashboard')}
@@ -103,28 +160,6 @@ function AppLayout() {
             {t('nav.projects')}
           </Link>
           <Link
-            to="/subscriptions"
-            className={[
-              'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/subscriptions')
-                ? 'bg-white/10 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            {t('nav.subscriptions')}
-          </Link>
-          <Link
-            to="/settings/access"
-            className={[
-              'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/settings/access') || isActive('/settings/members')
-                ? 'bg-white/10 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            Workspace Settings
-          </Link>
-          <Link
             to="/integrations"
             className={[
               'rounded-md px-3 py-2 text-sm font-medium transition',
@@ -134,26 +169,6 @@ function AppLayout() {
             ].join(' ')}
           >
             {t('nav.integrations')}
-          </Link>
-          <Link
-            to="/help"
-            className={[
-              'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/help')
-                ? 'bg-white/10 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            Getting started
-          </Link>
-          <Link
-            to="/profile"
-            className={[
-              'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/profile') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            {t('nav.profile')}
           </Link>
         </nav>
         <nav className="flex flex-col gap-1 px-4 pb-6">
@@ -313,12 +328,79 @@ function AppLayout() {
             </>
           )}
         </nav>
-        <div className="mt-auto border-t border-white/10 px-4 py-4">
+        </div>
+        <div className="relative mt-auto border-t border-white/10 px-3 py-3" ref={userMenuRef}>
+          {isUserMenuOpen && (
+            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#161c24] py-1 shadow-2xl shadow-black/50">
+              <Link
+                to="/profile"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                {t('nav.profile')}
+              </Link>
+              <Link
+                to="/subscriptions"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+                {t('nav.subscriptions')}
+              </Link>
+              <Link
+                to="/settings/access"
+                onClick={() => setIsUserMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                {t('projects.settings')}
+              </Link>
+              <div className="my-1 border-t border-white/10" />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsUserMenuOpen(false)
+                  handleLogout()
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose-300 transition hover:bg-rose-500/10 hover:text-rose-200"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                {t('nav.logout')}
+              </button>
+            </div>
+          )}
           <button
             type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+            onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            aria-haspopup="menu"
+            aria-expanded={isUserMenuOpen}
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-white/10"
           >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-xs font-semibold text-orange-200">
+              {userInitials}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-white">
+                {currentUser?.name ?? 'Account'}
+              </span>
+              <span className="block truncate text-xs text-white/50">
+                {currentUser?.email ?? ''}
+              </span>
+            </span>
             <svg
               width="16"
               height="16"
@@ -328,12 +410,10 @@ function AppLayout() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className={`shrink-0 text-white/40 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
+              <polyline points="18 15 12 9 6 15" />
             </svg>
-            Logout
           </button>
         </div>
       </aside>
@@ -356,7 +436,19 @@ function AppLayout() {
               </svg>
             </button>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 text-xs text-white/70">
+              <button
+                type="button"
+                onClick={startTour}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                {t('tour.button')}
+              </button>
+              <div className="flex items-center gap-2 text-xs text-white/70" data-tour="tour-workspace">
                 <span className="text-white/50">Workspace:</span>
                 <select
                   value={selectedWorkspaceId ?? ''}
@@ -364,7 +456,6 @@ function AppLayout() {
                     const workspaceId = event.target.value
                     if (workspaceId) {
                       setSelectedWorkspaceId(workspaceId)
-                      // Navigate to dashboard after selection
                       navigate('/dashboard')
                     }
                   }}
@@ -390,38 +481,54 @@ function AppLayout() {
                   ))}
                 </select>
               </div>
-              <span className="inline-flex items-center gap-2 text-xs text-white/70">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 2a10 10 0 100 20 10 10 0 000-20z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M2 12h20M12 2c3 3 3 15 0 20M12 2c-3 3-3 15 0 20"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  />
+              <div className="flex items-center gap-2" data-tour="tour-language">
+                <span className="inline-flex items-center gap-2 text-xs text-white/70">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 2a10 10 0 100 20 10 10 0 000-20z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M2 12h20M12 2c3 3 3 15 0 20M12 2c-3 3-3 15 0 20"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                    />
+                  </svg>
+                  {t('language.switch')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className={`rounded-full px-3 py-1 text-xs ${
+                    language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                  }`}
+                >
+                  {t('language.english')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('ar')}
+                  className={`rounded-full px-3 py-1 text-xs ${
+                    language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
+                  }`}
+                >
+                  {t('language.arabic')}
+                </button>
+              </div>
+              <button
+                type="button"
+                data-tour="tour-ai-agent"
+                onClick={() => setIsAiAgentOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/25"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
                 </svg>
-                {t('language.switch')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setLanguage('en')}
-                className={`rounded-full px-3 py-1 text-xs ${
-                  language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-                }`}
-              >
-                {t('language.english')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLanguage('ar')}
-                className={`rounded-full px-3 py-1 text-xs ${
-                  language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-                }`}
-              >
-                {t('language.arabic')}
+                AI Agent
+                <span className="rounded-full bg-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-100">
+                  new
+                </span>
               </button>
             </div>
           </div>
@@ -430,6 +537,11 @@ function AppLayout() {
           <Outlet />
         </div>
       </main>
+      <AIAgentDrawer
+        open={isAiAgentOpen}
+        onClose={() => setIsAiAgentOpen(false)}
+        workspaceId={selectedWorkspaceId ? Number(selectedWorkspaceId) : null}
+      />
     </div>
   )
 }

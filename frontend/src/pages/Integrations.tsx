@@ -121,7 +121,7 @@ function Integrations() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="tour-integrations">
       <div className="space-y-1 text-center">
         <h1 className="text-2xl font-semibold text-white">{t('integrations.title')}</h1>
         <p className="text-sm text-white/60">{t('integrations.subtitle')}</p>

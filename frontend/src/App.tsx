@@ -4,7 +4,6 @@ import AppLayout from './layouts/AppLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import Integrations from './pages/Integrations'
-import Help from './pages/Help'
 import Profile from './pages/Profile'
 import WorkspacesPage from './pages/WorkspacesPage'
 import WorkspaceDetailsPage from './pages/WorkspaceDetailsPage'
@@ -58,7 +57,6 @@ function App() {
             <Route path="settings/access" element={<WorkspaceAccessSettings />} />
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
-            <Route path="help" element={<Help />} />
             <Route path="profile" element={<Profile />} />
             {/* QynSight routes - generated from platformRegistry */}
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>

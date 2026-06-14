@@ -10,6 +10,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.profile': 'Profile',
     'nav.projects': 'Workspaces',
     'nav.modules': 'Modules',
+    'nav.logout': 'Log out',
+    'nav.account': 'Account',
     'common.customizeDashboard': 'Customize Dashboard',
     'common.loadingDashboard': 'Loading dashboard...',
     'common.loadingSubscriptions': 'Loading subscriptions...',
@@ -118,9 +120,44 @@ export const translations: Record<Language, Record<string, string>> = {
     'projects.delete': 'Delete',
     'projects.deleting': 'Deleting...',
     'projects.back': 'Back to Workspaces',
+    'projects.settings': 'Workspace settings',
     'language.english': 'English',
     'language.arabic': 'Arabic',
     'language.switch': 'Language',
+    'tour.label': 'Tour',
+    'tour.button': 'Tour',
+    'tour.skip': 'Skip tour',
+    'tour.back': 'Back',
+    'tour.next': 'Next',
+    'tour.done': 'Done',
+    'tour.close': 'Close tour',
+    'tour.step1.title': 'Welcome to Quenyx vOPS HUB',
+    'tour.step1.body':
+      'A 60-second tour of the cockpit — cross-workspace posture, live monitoring, alert rules, and the AI agent. Use ← → or the buttons to navigate.',
+    'tour.step2.title': 'Navigation',
+    'tour.step2.body':
+      'Top-level workspace pages (Dashboard, Workspaces, Integrations) and the QynSight module — real-time monitoring, infra map, alerts, capacity planning, and reports.',
+    'tour.step3.title': 'Workspace switcher',
+    'tour.step3.body':
+      'Jump between regional workspaces. Each is residency-pinned (KSA, UAE, GCC) — telemetry and AI calls never cross the border.',
+    'tour.step4.title': 'Bilingual UI',
+    'tour.step4.body':
+      'Switch to Arabic for a fully right-to-left interface. Layout, charts, and the agent panel all mirror automatically.',
+    'tour.step5.title': 'AI Agent',
+    'tour.step5.body':
+      'Open the agent for analyst, anomaly, compliance, or capacity guidance. The badge surfaces proactive findings discovered between sessions.',
+    'tour.step6.title': 'Performance Analytics',
+    'tour.step6.body':
+      'Deep CPU, memory, disk, and network analysis with GCC-aware baselines that adjust for prayer windows, Ramadan night-peaks, and weekends.',
+    'tour.step7.title': 'Alert Management',
+    'tour.step7.body':
+      'Triggered → acknowledged → resolved lifecycle with live MTTR. Re-opens and auto-closures are tracked too.',
+    'tour.step8.title': 'Alert Rules & Routing',
+    'tour.step8.body':
+      'Build threshold rules with sustained-for windows. GCC silence toggle suppresses non-critical pages during prayer and Ramadan windows.',
+    'tour.step9.title': 'Onboard your fleet',
+    'tour.step9.body':
+      'Generate an install token and run the one-line agent installer on Ubuntu or Windows hosts. You\'re set — explore freely from here.',
   },
   ar: {
     'app.name': 'Quenyx vOPS HUB',
@@ -131,6 +168,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.profile': 'الملف الشخصي',
     'nav.projects': 'مساحات العمل',
     'nav.modules': 'الوحدات',
+    'nav.logout': 'تسجيل الخروج',
+    'nav.account': 'الحساب',
     'common.customizeDashboard': 'تخصيص اللوحة',
     'common.loadingDashboard': 'جاري تحميل لوحة التحكم...',
     'common.loadingSubscriptions': 'جاري تحميل الاشتراكات...',
@@ -238,8 +277,43 @@ export const translations: Record<Language, Record<string, string>> = {
     'projects.delete': 'حذف',
     'projects.deleting': 'جاري الحذف...',
     'projects.back': 'العودة إلى مساحات العمل',
+    'projects.settings': 'إعدادات مساحة العمل',
     'language.english': 'English',
     'language.arabic': 'العربية',
     'language.switch': 'اللغة',
+    'tour.label': 'جولة',
+    'tour.button': 'جولة',
+    'tour.skip': 'تخطي الجولة',
+    'tour.back': 'رجوع',
+    'tour.next': 'التالي',
+    'tour.done': 'تم',
+    'tour.close': 'إغلاق الجولة',
+    'tour.step1.title': 'مرحباً بك في Quenyx vOPS HUB',
+    'tour.step1.body':
+      'جولة مدتها 60 ثانية في لوحة التحكم — الوضع عبر مساحات العمل، المراقبة المباشرة، قواعد التنبيه، ووكيل الذكاء الاصطناعي. استخدم ← → أو الأزرار للتنقل.',
+    'tour.step2.title': 'التنقل',
+    'tour.step2.body':
+      'صفحات مساحة العمل الرئيسية (لوحة التحكم، مساحات العمل، التكاملات) ووحدة QynSight — المراقبة المباشرة، خريطة البنية، التنبيهات، تخطيط السعة، والتقارير.',
+    'tour.step3.title': 'مبدّل مساحة العمل',
+    'tour.step3.body':
+      'انتقل بين مساحات العمل الإقليمية. كل مساحة مثبتة الإقامة (KSA، UAE، GCC) — لا تعبر البيانات والمكالمات الحدود أبداً.',
+    'tour.step4.title': 'واجهة ثنائية اللغة',
+    'tour.step4.body':
+      'بدّل إلى العربية لواجهة كاملة من اليمين إلى اليسار. التخطيط والرسوم البيانية ولوحة الوكيل تنعكس تلقائياً.',
+    'tour.step5.title': 'وكيل الذكاء الاصطناعي',
+    'tour.step5.body':
+      'افتح الوكيل للتحليل، كشف الشذوذ، الامتثال، أو إرشادات السعة. الشارة تعرض النتائج الاستباقية المكتشفة بين الجلسات.',
+    'tour.step6.title': 'تحليلات الأداء',
+    'tour.step6.body':
+      'تحليل عميق للمعالج والذاكرة والقرص والشبكة مع خطوط أساس واعية بـ GCC تتكيف مع أوقات الصلاة وذروات رمضان الليلية وعطلات نهاية الأسبوع.',
+    'tour.step7.title': 'إدارة التنبيهات',
+    'tour.step7.body':
+      'دورة حياة: مُفعّل → مُقرّ → مُحلّ مع MTTR مباشر. إعادة الفتح والإغلاق التلقائي يُتابَعان أيضاً.',
+    'tour.step8.title': 'قواعد التنبيه والتوجيه',
+    'tour.step8.body':
+      'أنشئ قواعد عتبة مع نوافذ sustained-for. مفتاح صمت GCC يوقف الصفحات غير الحرجة أثناء الصلاة ونوافذ رمضان.',
+    'tour.step9.title': 'أضف أسطولك',
+    'tour.step9.body':
+      'أنشئ رمز تثبيت وشغّل مثبت الوكيل بسطر واحد على Ubuntu أو Windows. أنت جاهز — استكشف بحرية من هنا.',
   },
 }
