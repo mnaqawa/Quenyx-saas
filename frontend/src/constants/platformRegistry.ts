@@ -56,6 +56,15 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'targets', label: 'Targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
 ]
 
+// TEMPORARY: while QynSight is the only module under active development, hide every
+// other module across navigation, subscriptions, and workspace settings.
+export const HIDE_NON_QYNSIGHT_MODULES = true
+export const ACTIVE_MODULE_KEYS = ['qynsight']
+
+export function isModuleTemporarilyVisible(key: string): boolean {
+  return !HIDE_NON_QYNSIGHT_MODULES || ACTIVE_MODULE_KEYS.includes(key)
+}
+
 export const modules: ModuleConfig[] = [
   {
     key: 'qynsight',

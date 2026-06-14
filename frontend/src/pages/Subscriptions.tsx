@@ -5,11 +5,12 @@ import { moduleService } from '../services/moduleService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { PlanKey, type ProjectSubscription } from '../types/subscription'
+import { isModuleTemporarilyVisible } from '../constants/platformRegistry'
 
 function Subscriptions() {
   const { t } = useLanguage()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { selectedWorkspaceId, entitlements, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useWorkspaceContext()
+  const { selectedWorkspaceId, refreshEntitlements, modulesWithAccess, isLoadingModules, modulesError, refreshModules } = useWorkspaceContext()
   const [subscription, setSubscription] = useState<ProjectSubscription | null>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
@@ -30,7 +31,7 @@ function Subscriptions() {
         moduleMap.set(module.key, module)
       }
     })
-    const uniqueModules = Array.from(moduleMap.values())
+    const uniqueModules = Array.from(moduleMap.values()).filter((module) => isModuleTemporarilyVisible(module.key))
     const core = uniqueModules.find((m) => m.key === 'qyncore') ?? null
     const others = uniqueModules.filter((m) => m.key !== 'qyncore')
 
@@ -145,6 +146,10 @@ function Subscriptions() {
     }
   }
 
+  const visibleAllowedModuleCount = useMemo(() => {
+    return modulesWithAccess?.filter((module) => module.allowed && isModuleTemporarilyVisible(module.key)).length ?? 0
+  }, [modulesWithAccess])
+
   if (!selectedWorkspaceId) {
     return (
       <div className="space-y-6">
@@ -192,7 +197,7 @@ function Subscriptions() {
                 <div>
                   <p className="text-xs text-white/50">Allowed Modules</p>
                   <p className="text-lg font-semibold">
-                    {entitlements?.modules_allowed.length ?? 0}
+                    {visibleAllowedModuleCount}
                   </p>
                 </div>
               </div>

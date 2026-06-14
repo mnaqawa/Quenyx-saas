@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService, type AuthUser } from '../services/authService'
-import { routesByModule, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules } from '../constants/platformRegistry'
+import { routesByModule, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleTemporarilyVisible } from '../constants/platformRegistry'
 import { AIAgentDrawer } from '../components/ai/AIAgentDrawer'
 import { ProductTourProvider, useProductTour } from '../tour/ProductTour'
 
@@ -248,7 +248,7 @@ function AppLayoutInner() {
               {platformModules
                 .filter((moduleConfig) => {
                   // Show all modules except qynsight (which is shown separately above)
-                  return moduleConfig.key !== 'qynsight'
+                  return moduleConfig.key !== 'qynsight' && isModuleTemporarilyVisible(moduleConfig.key)
                 })
                 .sort((a, b) => (a.sidebar.order || 999) - (b.sidebar.order || 999))
                 .map((moduleConfig) => {

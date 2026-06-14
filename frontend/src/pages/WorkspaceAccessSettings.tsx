@@ -5,6 +5,7 @@ import { moduleService, AuditLog } from '../services/moduleService'
 import { workspaceMembershipService } from '../services/workspaceMembershipService'
 import { authService } from '../services/authService'
 import { Role, canManageIntegrations } from '../rbac/permissions'
+import { isModuleTemporarilyVisible } from '../constants/platformRegistry'
 
 function WorkspaceAccessSettings() {
   const { selectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, refreshModules, refreshEntitlements } = useWorkspaceContext()
@@ -135,12 +136,14 @@ function WorkspaceAccessSettings() {
           Plan defines defaults; overrides let you enable/disable modules for this workspace.
         </p>
 
-        {modulesWithAccess && modulesWithAccess.length > 0 ? (
+        {modulesWithAccess && modulesWithAccess.some((module) => isModuleTemporarilyVisible(module.key)) ? (
           <div className="space-y-4">
             {modulesWithAccess
               .filter((module, index, self) => 
                 // Deduplicate by key (defensive filter)
-                module.key && index === self.findIndex((m) => m.key === module.key)
+                module.key &&
+                isModuleTemporarilyVisible(module.key) &&
+                index === self.findIndex((m) => m.key === module.key)
               )
               .map((module, index) => (
               <div
@@ -215,7 +218,7 @@ function WorkspaceAccessSettings() {
         ) : auditLogs.length > 0 ? (
           <div className="space-y-3">
             {auditLogs
-              .filter((log) => log.action === 'module_override_updated')
+              .filter((log) => log.action === 'module_override_updated' && isModuleTemporarilyVisible(log.metadata.module_key ?? ''))
               .map((log) => (
                 <div
                   key={log.id}
@@ -248,7 +251,7 @@ function WorkspaceAccessSettings() {
                   )}
                 </div>
               ))}
-            {auditLogs.filter((log) => log.action === 'module_override_updated').length === 0 && (
+            {auditLogs.filter((log) => log.action === 'module_override_updated' && isModuleTemporarilyVisible(log.metadata.module_key ?? '')).length === 0 && (
               <div className="text-sm text-white/60">No module override changes yet</div>
             )}
           </div>
