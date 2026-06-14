@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import { useOnboarding } from '../onboarding/OnboardingContext'
 import {
   TOUR_STORAGE_COMPLETED,
   TOUR_STORAGE_SKIPPED,
@@ -275,6 +276,7 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { selectedWorkspaceId } = useWorkspaceContext()
+  const { markOnboarded } = useOnboarding()
   const [isActive, setIsActive] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const autoStarted = useRef(false)
@@ -282,15 +284,17 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
   const completeTour = useCallback(() => {
     localStorage.setItem(TOUR_STORAGE_COMPLETED, 'true')
     localStorage.removeItem(TOUR_STORAGE_SKIPPED)
+    markOnboarded()
     setIsActive(false)
     setCurrentStep(0)
-  }, [])
+  }, [markOnboarded])
 
   const skipTour = useCallback(() => {
     localStorage.setItem(TOUR_STORAGE_SKIPPED, 'true')
+    markOnboarded()
     setIsActive(false)
     setCurrentStep(0)
-  }, [])
+  }, [markOnboarded])
 
   const startTour = useCallback(() => {
     setCurrentStep(0)
