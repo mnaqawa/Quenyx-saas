@@ -3,9 +3,28 @@ import { getAuthToken } from '../services/apiClient'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 /**
+ * Pages that intentionally work without a selected workspace. Each of these
+ * renders its own "no workspace / create one" empty state, so the guard must
+ * not bounce them to /app/workspaces (doing so causes onboarding/tour redirect
+ * loops for brand-new users who have no workspace yet).
+ */
+const WORKSPACE_OPTIONAL_PATHS = [
+  '/',
+  '/dashboard',
+  '/getting-started',
+  '/app/workspaces',
+  '/app/projects',
+  '/profile',
+  '/subscriptions',
+  '/integrations',
+  '/settings/access',
+  '/settings/members',
+]
+
+/**
  * Guard that ensures a workspace is selected before accessing app routes.
  * Redirects to /app/workspaces if no workspace is selected.
- * Exceptions: allows access to /app/workspaces (list) and /profile without selection.
+ * Exceptions: see WORKSPACE_OPTIONAL_PATHS (pages that handle the no-workspace state).
  */
 function WorkspaceGuard() {
   const token = getAuthToken()
@@ -17,13 +36,8 @@ function WorkspaceGuard() {
     return <Outlet />
   }
 
-  // Allow access to workspaces list page without selection
-  if (location.pathname === '/app/workspaces' || location.pathname === '/app/projects') {
-    return <Outlet />
-  }
-
-  // Allow access to profile page without selection
-  if (location.pathname === '/profile') {
+  // Allow access to pages that handle the no-workspace state themselves
+  if (WORKSPACE_OPTIONAL_PATHS.includes(location.pathname)) {
     return <Outlet />
   }
 
