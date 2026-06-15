@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -279,7 +278,6 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
   const { markOnboarded } = useOnboarding()
   const [isActive, setIsActive] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
-  const autoStarted = useRef(false)
 
   const completeTour = useCallback(() => {
     localStorage.setItem(TOUR_STORAGE_COMPLETED, 'true')
@@ -327,21 +325,9 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
     goToStep(currentStep - 1)
   }, [currentStep, goToStep])
 
-  // Auto-start for new users who have not completed or skipped the tour
-  useEffect(() => {
-    if (autoStarted.current) return
-    const completed = localStorage.getItem(TOUR_STORAGE_COMPLETED) === 'true'
-    const skipped = localStorage.getItem(TOUR_STORAGE_SKIPPED) === 'true'
-    if (completed || skipped) return
-
-    autoStarted.current = true
-    const timer = window.setTimeout(() => {
-      setCurrentStep(0)
-      setIsActive(true)
-      navigate('/dashboard')
-    }, 800)
-    return () => window.clearTimeout(timer)
-  }, [navigate])
+  // Note: the tour no longer auto-launches. First-time users are routed to the
+  // dedicated Getting Started page (see AppLayout), where they can start the tour
+  // explicitly. The tour is also available anytime via the header "Tour" button.
 
   const value = useMemo<ProductTourContextValue>(
     () => ({

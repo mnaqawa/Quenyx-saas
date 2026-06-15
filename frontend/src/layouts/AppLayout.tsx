@@ -25,19 +25,26 @@ function AppLayoutInner() {
   const { language, setLanguage, t } = useLanguage()
   const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
   const { startTour } = useProductTour()
-  const { isOnboarded, markOnboarded } = useOnboarding()
+  const { isOnboarded } = useOnboarding()
   const [isAiAgentOpen, setIsAiAgentOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isModulesExpanded, setIsModulesExpanded] = useState(true)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const firstRunRedirectDone = useRef(false)
 
-  // Existing users (with at least one workspace) are considered onboarded.
+  // First-time login: route the user to the Getting Started page once. The flag
+  // (quenyx.onboarded) is set when they finish the tour or click "Mark complete",
+  // so returning users land on their normal page and can navigate freely.
   useEffect(() => {
-    if (!isOnboarded && workspaces.length > 0) {
-      markOnboarded()
+    if (firstRunRedirectDone.current) return
+    firstRunRedirectDone.current = true
+    if (!isOnboarded && location.pathname !== '/getting-started') {
+      navigate('/getting-started', { replace: true })
     }
-  }, [isOnboarded, workspaces.length, markOnboarded])
+    // Intentionally run once on mount; later navigation must not re-trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Collapse the sidebar overlay automatically after navigating on mobile.
   useEffect(() => {

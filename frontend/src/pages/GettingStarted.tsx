@@ -7,9 +7,11 @@ import { useProductTour } from '../tour/ProductTour'
 export default function GettingStarted() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const { selectedWorkspaceId, workspaces } = useWorkspaceContext()
   const { markOnboarded } = useOnboarding()
   const { startTour } = useProductTour()
+
+  const hasWorkspace = workspaces.length > 0
 
   const steps = [
     { title: t('getStarted.step1.title'), desc: t('getStarted.step1.desc') },
@@ -19,30 +21,74 @@ export default function GettingStarted() {
     { title: t('getStarted.step5.title'), desc: t('getStarted.step5.desc') },
   ]
 
+  const features = [
+    { title: t('getStarted.feature1.title'), desc: t('getStarted.feature1.desc') },
+    { title: t('getStarted.feature2.title'), desc: t('getStarted.feature2.desc') },
+    { title: t('getStarted.feature3.title'), desc: t('getStarted.feature3.desc') },
+    { title: t('getStarted.feature4.title'), desc: t('getStarted.feature4.desc') },
+  ]
+
   const handleComplete = () => {
     markOnboarded()
     navigate('/dashboard')
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">{t('getStarted.title')}</h1>
-          <p className="mt-1 text-sm text-white/60">{t('getStarted.subtitle')}</p>
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Hero */}
+      <section className="overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-[#0f151d] to-[#0f151d] p-7 text-white">
+        <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-orange-200">
+          {t('getStarted.badge')}
+        </span>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">{t('getStarted.heroTitle')}</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">
+          {t('getStarted.heroSubtitle')}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={startTour}
+            className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+            </svg>
+            {t('getStarted.startTour')}
+          </button>
+          {!hasWorkspace ? (
+            <Link
+              to="/app/workspaces"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+            >
+              {t('getStarted.createWorkspace')}
+            </Link>
+          ) : (
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+            >
+              {t('getStarted.goToDashboard')}
+            </Link>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={startTour}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-orange-500/40 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-100 transition hover:bg-orange-500/25"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
-          </svg>
-          {t('getStarted.startTour')}
-        </button>
-      </div>
+      </section>
 
+      {/* What is Quenyx / feature highlights */}
+      <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-white">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-white/70">
+          {t('getStarted.featuresTitle')}
+        </h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {features.map((feature) => (
+            <div key={feature.title} className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">{feature.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/60">{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Setup steps */}
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-white">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-white/70">
           {t('getStarted.stepsTitle')}
@@ -66,6 +112,7 @@ export default function GettingStarted() {
         </ol>
       </section>
 
+      {/* Quick links */}
       <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-white">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-white/70">
           {t('getStarted.quickLinks')}
@@ -85,10 +132,14 @@ export default function GettingStarted() {
           <Link to="/integrations" className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white/80 transition hover:bg-white/10">
             {t('nav.integrations')}
           </Link>
+          <Link to="/subscriptions" className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white/80 transition hover:bg-white/10">
+            {t('nav.subscriptions')}
+          </Link>
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Footer actions */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
         <button
           type="button"
           onClick={handleComplete}
