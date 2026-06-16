@@ -348,7 +348,6 @@ function WorkspacesPage() {
   }, [workspacesError, isLoadingWorkspaces]) // Removed refreshWorkspaces from dependencies
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
-    setSelectedWorkspaceId(String(workspace.project.id))
     navigate(`/app/workspaces/${workspace.project.id}`)
   }
 

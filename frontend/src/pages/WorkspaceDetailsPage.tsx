@@ -3,7 +3,6 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
 import { Project, ProjectStatus, UpdateProjectInput } from '../types/project'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
@@ -13,7 +12,6 @@ function WorkspaceDetailsPage() {
   const { t } = useLanguage()
   const { id } = useParams()
   const navigate = useNavigate()
-  const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -23,18 +21,6 @@ function WorkspaceDetailsPage() {
   const [deleting, setDeleting] = useState(false)
 
   const projectId = id ? Number(id) : null
-
-  // Auto-select workspace from URL if different from current selection
-  // Do NOT require workspace to exist in loaded list (works for deep links/hard refresh)
-  // URL param is already string, but we normalize it to string for consistency
-  useEffect(() => {
-    if (projectId && Number.isFinite(projectId) && projectId > 0) {
-      const projectIdString = String(projectId)
-      if (selectedWorkspaceId !== projectIdString) {
-        setSelectedWorkspaceId(projectIdString)
-      }
-    }
-  }, [projectId, selectedWorkspaceId, setSelectedWorkspaceId])
 
   const loadProject = useCallback(async () => {
     if (!projectId || !Number.isFinite(projectId)) {
