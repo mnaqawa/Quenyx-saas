@@ -18,7 +18,7 @@ import { PageHeader } from '../../components/observe/PageHeader'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
-import type { RealTimeMetrics, SystemInfo } from '../../types/observe'
+import type { ObserveServiceRow, RealTimeMetrics, SystemInfo } from '../../types/observe'
 
 const MAX_POINTS = 120
 const LIVE_POLL_INTERVAL_SEC = 5
