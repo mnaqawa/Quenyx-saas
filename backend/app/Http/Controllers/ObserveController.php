@@ -15,6 +15,7 @@ use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ObserveController extends Controller
 {
@@ -258,6 +259,29 @@ class ObserveController extends Controller
         $to = now();
         $workspacePrefix = 'ws' . $project->id . '-';
 
+        if (! Schema::hasTable('observe_metrics_history')) {
+            return response()
+                ->json([
+                    'success' => true,
+                    'data' => [
+                        'range' => $range,
+                        'from' => $from->toIso8601String(),
+                        'to' => $to->toIso8601String(),
+                        'bucket_seconds' => $bucketSeconds,
+                        'host_count' => 0,
+                        'latest' => [
+                            'cpu' => null,
+                            'memory' => null,
+                            'disk' => null,
+                            'network' => null,
+                        ],
+                        'trends' => [],
+                        'hosts' => [],
+                    ],
+                ])
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        }
+
         $rows = ObserveMetricHistory::query()
             ->where('workspace_id', $project->id)
             ->where('recorded_at', '>=', $from)
@@ -358,8 +382,8 @@ class ObserveController extends Controller
     private function resolvePerformanceRange(string $range): array
     {
         return match ($range) {
-            '1h' => ['1h', now()->subHour(), 300],
-            '6h' => ['6h', now()->subHours(6), 900],
+            '1h' => ['1h', now()->subHour(), 60],
+            '6h' => ['6h', now()->subHours(6), 300],
             '7d' => ['7d', now()->subDays(7), 21600],
             '30d' => ['30d', now()->subDays(30), 86400],
             default => ['24h', now()->subDay(), 3600],

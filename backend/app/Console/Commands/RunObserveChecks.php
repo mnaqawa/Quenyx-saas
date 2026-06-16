@@ -12,6 +12,7 @@ use App\Services\NativeObserveCheckRunner;
 use App\Services\PerfMetricExtractor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class RunObserveChecks extends Command
 {
@@ -252,6 +253,10 @@ class RunObserveChecks extends Command
         array $result,
         \Illuminate\Support\Carbon $now
     ): void {
+        if (! Schema::hasTable('observe_metrics_history')) {
+            return;
+        }
+
         try {
             $metrics = $extractor->extract($serviceName, $result['perfdata'] ?? null, $result['output'] ?? null);
             if (empty($metrics)) {
@@ -282,6 +287,10 @@ class RunObserveChecks extends Command
      */
     private function pruneHistory(): void
     {
+        if (! Schema::hasTable('observe_metrics_history')) {
+            return;
+        }
+
         if (mt_rand(1, 50) !== 1) {
             return;
         }

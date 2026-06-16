@@ -325,6 +325,7 @@ export default function PerformanceAnalytics() {
 
   const shownMetrics: MetricKind[] = activeTab === 'overview' ? ['cpu', 'memory', 'disk', 'network'] : [activeTab]
   const hasSamples = series.some((s) => shownMetrics.some((k) => typeof s[k] === 'number'))
+  const showTrendDots = series.length <= 2
 
   return (
     <div className="space-y-6">
@@ -395,7 +396,8 @@ export default function PerformanceAnalytics() {
                     fill={`url(#grad-${k})`}
                     strokeWidth={2}
                     connectNulls
-                    dot={false}
+                    dot={showTrendDots ? { r: 3, strokeWidth: 2 } : false}
+                    activeDot={{ r: 4 }}
                   />
                 ))}
               </AreaChart>
