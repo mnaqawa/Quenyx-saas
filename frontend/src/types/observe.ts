@@ -53,6 +53,38 @@ export interface PerformanceMetric {
   percentage?: number
 }
 
+export type PerformanceMetricKind = 'cpu' | 'memory' | 'disk' | 'network'
+export type PerformanceHistoryRange = '1h' | '6h' | '24h' | '7d' | '30d'
+
+export interface PerformanceTrendPoint {
+  time: string
+  label: string
+  cpu: number | null
+  memory: number | null
+  disk: number | null
+  network: number | null
+}
+
+export interface PerformanceHistoryHost {
+  name: string
+  cpu: number | null
+  memory: number | null
+  disk: number | null
+  network: number | null
+  last_seen_at: string | null
+}
+
+export interface PerformanceHistoryResponse {
+  range: PerformanceHistoryRange
+  from: string
+  to: string
+  bucket_seconds: number
+  host_count: number
+  latest: Record<PerformanceMetricKind, number | null>
+  trends: PerformanceTrendPoint[]
+  hosts: PerformanceHistoryHost[]
+}
+
 export interface NetworkNode {
   id: string
   name: string

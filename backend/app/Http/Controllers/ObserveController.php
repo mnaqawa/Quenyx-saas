@@ -6,6 +6,7 @@ use App\Jobs\NmapPortScanJob;
 use App\Models\HostPortScan;
 use App\Models\ObserveService;
 use App\Models\ObserveMeta;
+use App\Models\ObserveMetricHistory;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\IntegrationConfiguration;
@@ -246,12 +247,150 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: performance metrics (no backend implementation yet). Returns empty array.
+     * Historical performance metrics from native observe samples.
+     * GET /api/workspaces/{project}/observe/performance/metrics?range=24h
      */
     public function performanceMetrics(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+
+        [$range, $from, $bucketSeconds] = $this->resolvePerformanceRange((string) $request->query('range', '24h'));
+        $to = now();
+        $workspacePrefix = 'ws' . $project->id . '-';
+
+        $rows = ObserveMetricHistory::query()
+            ->where('workspace_id', $project->id)
+            ->where('recorded_at', '>=', $from)
+            ->where('recorded_at', '<=', $to)
+            ->whereIn('metric', ['cpu', 'memory', 'disk', 'network'])
+            ->orderBy('recorded_at')
+            ->get(['host_name', 'service_name', 'metric', 'value', 'recorded_at']);
+
+        $bucketed = [];
+        $latestByHostMetric = [];
+        $hostNames = [];
+
+        foreach ($rows as $row) {
+            $recordedAt = $row->recorded_at;
+            if ($recordedAt === null) {
+                continue;
+            }
+            $metric = (string) $row->metric;
+            $value = (float) $row->value;
+            $hostName = (string) $row->host_name;
+            $displayHost = str_starts_with($hostName, $workspacePrefix)
+                ? substr($hostName, strlen($workspacePrefix))
+                : $hostName;
+            $hostNames[$displayHost] = true;
+
+            $bucketTs = intdiv($recordedAt->getTimestamp(), $bucketSeconds) * $bucketSeconds;
+            $bucketKey = (string) $bucketTs;
+            $bucketed[$bucketKey]['timestamp'] = $bucketTs;
+            $bucketed[$bucketKey][$metric][] = $value;
+
+            $hostKey = $displayHost . '|' . $metric;
+            $latestByHostMetric[$hostKey] = [
+                'host' => $displayHost,
+                'metric' => $metric,
+                'value' => $value,
+                'recorded_at' => $recordedAt->toIso8601String(),
+            ];
+        }
+
+        ksort($bucketed);
+        $trends = [];
+        foreach ($bucketed as $bucket) {
+            $point = [
+                'time' => now()->setTimestamp($bucket['timestamp'])->toIso8601String(),
+                'label' => now()->setTimestamp($bucket['timestamp'])->format($range === '30d' ? 'M d' : 'H:i'),
+                'cpu' => $this->avgOrNull($bucket['cpu'] ?? []),
+                'memory' => $this->avgOrNull($bucket['memory'] ?? []),
+                'disk' => $this->avgOrNull($bucket['disk'] ?? []),
+                'network' => $this->avgOrNull($bucket['network'] ?? []),
+            ];
+            $trends[] = $point;
+        }
+
+        $latest = [
+            'cpu' => $this->latestMetricAverage($latestByHostMetric, 'cpu'),
+            'memory' => $this->latestMetricAverage($latestByHostMetric, 'memory'),
+            'disk' => $this->latestMetricAverage($latestByHostMetric, 'disk'),
+            'network' => $this->latestMetricAverage($latestByHostMetric, 'network'),
+        ];
+
+        $hosts = [];
+        foreach (array_keys($hostNames) as $hostName) {
+            $hosts[] = [
+                'name' => $hostName,
+                'cpu' => $latestByHostMetric[$hostName . '|cpu']['value'] ?? null,
+                'memory' => $latestByHostMetric[$hostName . '|memory']['value'] ?? null,
+                'disk' => $latestByHostMetric[$hostName . '|disk']['value'] ?? null,
+                'network' => $latestByHostMetric[$hostName . '|network']['value'] ?? null,
+                'last_seen_at' => collect(['cpu', 'memory', 'disk', 'network'])
+                    ->map(fn ($metric) => $latestByHostMetric[$hostName . '|' . $metric]['recorded_at'] ?? null)
+                    ->filter()
+                    ->sortDesc()
+                    ->first(),
+            ];
+        }
+        usort($hosts, fn ($a, $b) => strcmp($a['name'], $b['name']));
+
+        return response()
+            ->json([
+                'success' => true,
+                'data' => [
+                    'range' => $range,
+                    'from' => $from->toIso8601String(),
+                    'to' => $to->toIso8601String(),
+                    'bucket_seconds' => $bucketSeconds,
+                    'host_count' => count($hostNames),
+                    'latest' => $latest,
+                    'trends' => $trends,
+                    'hosts' => $hosts,
+                ],
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
+
+    /**
+     * @return array{0: string, 1: \Illuminate\Support\Carbon, 2: int}
+     */
+    private function resolvePerformanceRange(string $range): array
+    {
+        return match ($range) {
+            '1h' => ['1h', now()->subHour(), 300],
+            '6h' => ['6h', now()->subHours(6), 900],
+            '7d' => ['7d', now()->subDays(7), 21600],
+            '30d' => ['30d', now()->subDays(30), 86400],
+            default => ['24h', now()->subDay(), 3600],
+        };
+    }
+
+    /**
+     * @param  array<int, float|int>  $values
+     */
+    private function avgOrNull(array $values): ?float
+    {
+        if (empty($values)) {
+            return null;
+        }
+
+        return round(array_sum($values) / count($values), 2);
+    }
+
+    /**
+     * @param  array<string, array{host: string, metric: string, value: float, recorded_at: string}>  $latestByHostMetric
+     */
+    private function latestMetricAverage(array $latestByHostMetric, string $metric): ?float
+    {
+        $values = [];
+        foreach ($latestByHostMetric as $item) {
+            if (($item['metric'] ?? '') === $metric) {
+                $values[] = (float) $item['value'];
+            }
+        }
+
+        return $this->avgOrNull($values);
     }
 
     /**

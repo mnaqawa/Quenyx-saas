@@ -12,17 +12,15 @@ import {
 } from 'recharts'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
+import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { StatCard } from '../../components/observe/StatCard'
 import { Tabs } from '../../components/observe/Tabs'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
-import type { ObserveServiceRow } from '../../types/observe'
+import type { ObserveServiceRow, PerformanceHistoryRange, PerformanceHistoryResponse } from '../../types/observe'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { type HostMetric, type MetricKind, pickHostMetric, worstStatus } from '../../utils/perfData'
-
-const LIVE_POLL_INTERVAL_SEC = 5
-const MAX_SAMPLES = 60
+import { type MetricKind, worstStatus } from '../../utils/perfData'
 
 const METRIC_COLORS: Record<MetricKind, string> = {
   cpu: '#0ea5e9',
@@ -33,20 +31,13 @@ const METRIC_COLORS: Record<MetricKind, string> = {
 
 interface HostRow {
   name: string
-  cpu: HostMetric | null
-  memory: HostMetric | null
-  disk: HostMetric | null
-  network: HostMetric | null
-  status: ObserveServiceRow['status']
-  services: number
-}
-
-interface TrendSample {
-  time: string
   cpu: number | null
   memory: number | null
   disk: number | null
   network: number | null
+  status: ObserveServiceRow['status']
+  services: number
+  lastSeenAt: string | null
 }
 
 const statusBadgeClass = (status: ObserveServiceRow['status']): string => {
@@ -70,15 +61,18 @@ const usageColor = (percent: number): string => {
   return 'bg-sky-500'
 }
 
+const formatPercent = (value: number | null): string => (value == null ? '—' : `${Math.round(value)}%`)
+
 export default function PerformanceAnalytics() {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const { selectedWorkspaceId } = useWorkspaceContext()
 
   const [activeTab, setActiveTab] = useState<'overview' | MetricKind>('overview')
-  const [isLive, setIsLive] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [series, setSeries] = useState<TrendSample[]>([])
+  const [range, setRange] = useState<PerformanceHistoryRange>('24h')
+  const [history, setHistory] = useState<PerformanceHistoryResponse | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
 
@@ -88,24 +82,38 @@ export default function PerformanceAnalytics() {
   const { data, loading, error } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
-    refreshKey,
     realDataOnly: true,
   })
 
-  // Reset live history when workspace changes
   useEffect(() => {
-    setSeries([])
-  }, [selectedWorkspaceId])
+    if (!wsId) {
+      setHistory(null)
+      setHistoryError(null)
+      return
+    }
+    let cancelled = false
+    setHistoryLoading(true)
+    setHistoryError(null)
+    observeService
+      .getPerformanceHistory(wsId, range)
+      .then((res) => {
+        if (!cancelled) setHistory(res)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setHistory(null)
+          setHistoryError(err instanceof Error ? err.message : t('common.errorGeneric'))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [range, t, wsId])
 
-  // Live polling
-  useEffect(() => {
-    if (!isLive || !selectedWorkspaceId) return
-    const id = window.setInterval(() => setRefreshKey((k) => k + 1), LIVE_POLL_INTERVAL_SEC * 1000)
-    return () => window.clearInterval(id)
-  }, [isLive, selectedWorkspaceId])
-
-  // Group services by host and derive per-host metrics (real data)
-  const hosts = useMemo<HostRow[]>(() => {
+  const serviceHostMap = useMemo(() => {
     const items = data?.items ?? []
     const map = new Map<string, ObserveServiceRow[]>()
     for (const item of items) {
@@ -114,56 +122,60 @@ export default function PerformanceAnalytics() {
       arr.push(item)
       map.set(name, arr)
     }
-    return [...map.entries()]
-      .map(([name, rows]) => ({
-        name,
-        cpu: pickHostMetric(rows, 'cpu'),
-        memory: pickHostMetric(rows, 'memory'),
-        disk: pickHostMetric(rows, 'disk'),
-        network: pickHostMetric(rows, 'network'),
-        status: worstStatus(rows),
-        services: rows.length,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name))
+    return map
   }, [data?.items, prefix])
 
-  const averages = useMemo(() => {
-    const avg = (kind: MetricKind): number | null => {
-      const vals = hosts
-        .map((h) => h[kind]?.percent)
-        .filter((v): v is number => typeof v === 'number')
-      if (vals.length === 0) return null
-      return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-    }
-    return {
-      cpu: avg('cpu'),
-      memory: avg('memory'),
-      disk: avg('disk'),
-      network: avg('network'),
-    }
-  }, [hosts])
+  const hosts = useMemo<HostRow[]>(() => {
+    const rows = new Map<string, HostRow>()
 
-  // Push a live sample each time data refreshes
-  useEffect(() => {
-    if (!data || !isLive) return
-    const time = new Date().toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-    setSeries((prev) => {
-      const next = [...prev, { time, ...averages }]
-      return next.length > MAX_SAMPLES ? next.slice(-MAX_SAMPLES) : next
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
+    for (const host of history?.hosts ?? []) {
+      const serviceRows = serviceHostMap.get(host.name) ?? []
+      rows.set(host.name, {
+        name: host.name,
+        cpu: host.cpu,
+        memory: host.memory,
+        disk: host.disk,
+        network: host.network,
+        status: serviceRows.length > 0 ? worstStatus(serviceRows) : 'pending',
+        services: serviceRows.length,
+        lastSeenAt: host.last_seen_at,
+      })
+    }
+
+    for (const [name, serviceRows] of serviceHostMap.entries()) {
+      if (rows.has(name)) continue
+      rows.set(name, {
+        name,
+        cpu: null,
+        memory: null,
+        disk: null,
+        network: null,
+        status: worstStatus(serviceRows),
+        services: serviceRows.length,
+        lastSeenAt: null,
+      })
+    }
+
+    return [...rows.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [history?.hosts, serviceHostMap])
+
+  const averages = useMemo(() => {
+    return {
+      cpu: history?.latest.cpu ?? null,
+      memory: history?.latest.memory ?? null,
+      disk: history?.latest.disk ?? null,
+      network: history?.latest.network ?? null,
+    }
+  }, [history?.latest])
+
+  const series = history?.trends ?? []
 
   const delta = useCallback(
     (kind: MetricKind): { direction: 'up' | 'down'; value: string } | undefined => {
       const pts = series.map((s) => s[kind]).filter((v): v is number => typeof v === 'number')
       if (pts.length < 2) return undefined
-      const d = pts[pts.length - 1] - pts[pts.length - 2]
+      const d = pts[pts.length - 1] - pts[0]
       if (Math.abs(d) < 0.5) return undefined
       return { direction: d > 0 ? 'up' : 'down', value: `${Math.abs(Math.round(d))}%` }
     },
@@ -186,19 +198,20 @@ export default function PerformanceAnalytics() {
           avg_disk_pct: averages.disk,
           avg_network_pct: averages.network,
           host_count: hosts.length,
+          range,
         },
         services: hosts.map((h) => ({
           host: h.name,
           status: h.status,
-          cpu_pct: h.cpu?.percent ?? null,
-          memory_pct: h.memory?.percent ?? null,
-          disk_pct: h.disk?.percent ?? null,
-          network_pct: h.network?.percent ?? null,
+          cpu_pct: h.cpu,
+          memory_pct: h.memory,
+          disk_pct: h.disk,
+          network_pct: h.network,
         })),
       },
     })
     setAiOpen(true)
-  }, [averages, hosts])
+  }, [averages, hosts, range])
 
   const tabs = [
     { id: 'overview', label: t('perf.tab.overview') },
@@ -222,6 +235,14 @@ export default function PerformanceAnalytics() {
     { kind: 'network', title: t('perf.kpi.network') },
   ]
 
+  const rangeOptions: Array<{ value: PerformanceHistoryRange; label: string }> = [
+    { value: '1h', label: t('perf.range.1h') },
+    { value: '6h', label: t('perf.range.6h') },
+    { value: '24h', label: t('perf.range.24h') },
+    { value: '7d', label: t('perf.range.7d') },
+    { value: '30d', label: t('perf.range.30d') },
+  ]
+
   const header = (
     <PageHeader
       title={t('perf.title')}
@@ -236,19 +257,18 @@ export default function PerformanceAnalytics() {
           >
             {t('perf.aiAgent')}
           </button>
-          <button
-            type="button"
-            onClick={() => setIsLive((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase transition ${
-              isLive
-                ? 'border border-rose-500/30 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30'
-                : 'border border-white/10 bg-white/10 text-white/70 hover:bg-white/20'
-            }`}
-            aria-pressed={isLive}
+          <select
+            value={range}
+            onChange={(event) => setRange(event.target.value as PerformanceHistoryRange)}
+            className="rounded-lg border border-white/10 bg-[#0f151d] px-3 py-1.5 text-xs font-medium text-white outline-none transition hover:border-orange-500/40"
+            aria-label={t('perf.rangeLabel')}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-rose-400 animate-pulse' : 'bg-white/50'}`} />
-            {isLive ? t('perf.live') : t('perf.paused')}
-          </button>
+            {rangeOptions.map((option) => (
+              <option key={option.value} value={option.value} className="bg-[#0f151d] text-white">
+                {option.label}
+              </option>
+            ))}
+          </select>
         </>
       }
     />
@@ -265,7 +285,7 @@ export default function PerformanceAnalytics() {
     )
   }
 
-  if (loading && !data) {
+  if ((loading && !data) || (historyLoading && !history)) {
     return (
       <div className="space-y-6">
         {header}
@@ -276,7 +296,7 @@ export default function PerformanceAnalytics() {
     )
   }
 
-  if (hosts.length === 0) {
+  if (!historyLoading && hosts.length === 0) {
     return (
       <div className="space-y-6">
         {header}
@@ -315,15 +335,20 @@ export default function PerformanceAnalytics() {
           {error}. {t('perf.showingLast')}
         </div>
       )}
+      {historyError && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
+          {historyError}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map(({ kind, title }) => (
           <StatCard
             key={kind}
             title={title}
-            value={averages[kind] != null ? `${averages[kind]}%` : '—'}
-            detail={`${hosts.length} ${t('perf.hosts')}`}
-            trend={averages[kind] != null ? delta(kind) && { ...delta(kind)!, label: t('perf.vsLastSample') } : undefined}
+            value={formatPercent(averages[kind])}
+            detail={`${history?.host_count ?? hosts.length} ${t('perf.hosts')}`}
+            trend={averages[kind] != null ? delta(kind) && { ...delta(kind)!, label: t('perf.vsRangeStart') } : undefined}
             percentage={averages[kind] ?? undefined}
           />
         ))}
@@ -331,15 +356,13 @@ export default function PerformanceAnalytics() {
 
       <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as 'overview' | MetricKind)} />
 
-      {/* Live trend chart */}
+      {/* Historical trend chart */}
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">{t('perf.trendTitle')}</h3>
-          {isLive && (
-            <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
-              {t('perf.live')}
-            </span>
-          )}
+          <span className="rounded bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-100">
+            {rangeOptions.find((option) => option.value === range)?.label}
+          </span>
         </div>
         <p className="mb-3 text-xs text-white/50">{t('perf.trendDesc')}</p>
         <div className="h-[300px] w-full">
@@ -355,7 +378,7 @@ export default function PerformanceAnalytics() {
                   ))}
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
                 <Tooltip
                   contentStyle={{ background: '#0f151d', border: '1px solid rgba(255,255,255,0.1)' }}
@@ -379,7 +402,7 @@ export default function PerformanceAnalytics() {
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-white/40">
-              {isLive ? t('perf.collecting') : t('perf.enableLive')}
+              {historyLoading ? t('common.loadingDashboard') : t('perf.noHistory')}
             </div>
           )}
         </div>
@@ -394,8 +417,8 @@ export default function PerformanceAnalytics() {
           <p className="mb-4 text-xs text-white/50">{t('perf.rankingDesc')}</p>
           {(() => {
             const ranked = hosts
-              .filter((h) => typeof h[activeTab]?.percent === 'number')
-              .sort((a, b) => (b[activeTab]!.percent ?? 0) - (a[activeTab]!.percent ?? 0))
+              .filter((h) => typeof h[activeTab] === 'number')
+              .sort((a, b) => ((b[activeTab] as number | null) ?? 0) - ((a[activeTab] as number | null) ?? 0))
             if (ranked.length === 0) {
               return (
                 <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-6 text-center text-xs text-white/60">
@@ -406,7 +429,7 @@ export default function PerformanceAnalytics() {
             return (
               <div className="space-y-3">
                 {ranked.map((h) => {
-                  const pct = h[activeTab]!.percent ?? 0
+                  const pct = (h[activeTab] as number | null) ?? 0
                   return (
                     <button
                       key={h.name}
@@ -418,7 +441,7 @@ export default function PerformanceAnalytics() {
                     >
                       <div className="mb-1 flex items-center justify-between text-xs">
                         <span className="font-medium text-white">{h.name}</span>
-                        <span className="tabular-nums text-white/70">{h[activeTab]!.display || `${pct}%`}</span>
+                        <span className="tabular-nums text-white/70">{formatPercent(pct)}</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-white/5">
                         <div className={`h-2 rounded-full ${usageColor(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -452,8 +475,8 @@ export default function PerformanceAnalytics() {
             </thead>
             <tbody>
               {hosts.map((h) => {
-                const cell = (m: HostMetric | null) =>
-                  m ? (m.display || '—') : <span className="text-white/30">{t('perf.notMonitored')}</span>
+                const cell = (m: number | null) =>
+                  m != null ? formatPercent(m) : <span className="text-white/30">{t('perf.notMonitored')}</span>
                 return (
                   <tr
                     key={h.name}

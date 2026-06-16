@@ -3,6 +3,8 @@ import type {
   RealTimeMetrics,
   SystemInfo,
   PerformanceMetric,
+  PerformanceHistoryRange,
+  PerformanceHistoryResponse,
   NetworkNode,
   CapacityMetric,
   AlertRule,
@@ -108,6 +110,16 @@ export const observeService = {
       ? `workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(timeRange)}`
       : `workspaces/${workspaceId}/observe/performance/metrics`
     return gatewayClient.get<PerformanceMetric[]>(endpoint, { workspaceId, moduleKey: 'qynsight' })
+  },
+
+  async getPerformanceHistory(
+    workspaceId: number,
+    range: PerformanceHistoryRange = '24h',
+  ): Promise<PerformanceHistoryResponse> {
+    return gatewayClient.get<PerformanceHistoryResponse>(
+      `workspaces/${workspaceId}/observe/performance/metrics?range=${encodeURIComponent(range)}`,
+      { workspaceId, moduleKey: 'qynsight' },
+    )
   },
 
   // Capacity Planning

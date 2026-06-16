@@ -3,12 +3,15 @@
 namespace App\Console\Commands;
 
 use App\Models\ObserveMeta;
+use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Services\NativeObserveCheckRunner;
+use App\Services\PerfMetricExtractor;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class RunObserveChecks extends Command
 {
@@ -19,6 +22,7 @@ class RunObserveChecks extends Command
     {
         $workspaceId = $this->option('workspace_id');
         $runner = new NativeObserveCheckRunner();
+        $extractor = new PerfMetricExtractor();
 
         $query = ObserveTargetHost::with(['services' => fn ($q) => $q->where('enabled', true)])
             ->where('enabled', true);
@@ -106,6 +110,7 @@ class RunObserveChecks extends Command
                         ],
                         $payload
                     );
+                    $this->recordHistory($extractor, $workspaceId, $hostName, 'Host-Alive', $result, $now);
                     $run++;
                 }
             }
@@ -200,6 +205,7 @@ class RunObserveChecks extends Command
                     ],
                     $payload
                 );
+                $this->recordHistory($extractor, $workspaceId, $hostName, $serviceName, $result, $now);
                 $run++;
             }
         }
@@ -222,10 +228,69 @@ class RunObserveChecks extends Command
             );
         }
 
+        // Retention: prune old history occasionally (not on every tick) to bound table growth.
+        $this->pruneHistory();
+
         $this->info("Ran {$run} native check(s).");
         if ($errors > 0) {
             $this->warn("{$errors} error(s).");
         }
         return $errors > 0 ? 1 : 0;
+    }
+
+    /**
+     * Persist per-metric history samples derived from a check result. Best-effort:
+     * any failure is logged and never interrupts the check loop.
+     *
+     * @param  array{state: string, output: string|null, perfdata: string|null}  $result
+     */
+    private function recordHistory(
+        PerfMetricExtractor $extractor,
+        int $workspaceId,
+        string $hostName,
+        string $serviceName,
+        array $result,
+        \Illuminate\Support\Carbon $now
+    ): void {
+        try {
+            $metrics = $extractor->extract($serviceName, $result['perfdata'] ?? null, $result['output'] ?? null);
+            if (empty($metrics)) {
+                return;
+            }
+            $rows = [];
+            foreach ($metrics as $metric => $value) {
+                $rows[] = [
+                    'workspace_id' => $workspaceId,
+                    'host_name' => $hostName,
+                    'service_name' => $serviceName,
+                    'metric' => $metric,
+                    'value' => $value,
+                    'recorded_at' => $now,
+                ];
+            }
+            if (! empty($rows)) {
+                ObserveMetricHistory::insert($rows);
+            }
+        } catch (\Throwable $e) {
+            Log::debug('RunObserveChecks::recordHistory failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete history older than the retention window. Gated by probability so it
+     * runs roughly once per ~50 invocations instead of every minute.
+     */
+    private function pruneHistory(): void
+    {
+        if (mt_rand(1, 50) !== 1) {
+            return;
+        }
+        try {
+            $days = (int) config('observe.metrics_retention_days', 31);
+            $days = $days >= 1 ? $days : 31;
+            ObserveMetricHistory::where('recorded_at', '<', now()->subDays($days))->delete();
+        } catch (\Throwable $e) {
+            Log::debug('RunObserveChecks::pruneHistory failed', ['error' => $e->getMessage()]);
+        }
     }
 }

@@ -17,6 +17,15 @@ return [
 
     'stale_threshold_seconds' => (int) env('OBSERVE_STALE_THRESHOLD_SECONDS', 300),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Performance metrics history retention (days)
+    |--------------------------------------------------------------------------
+    | Per-check CPU/memory/disk/network samples are stored in observe_metrics_history
+    | to power Performance Analytics time ranges (1h..30d). Older rows are pruned.
+    */
+    'metrics_retention_days' => (int) env('OBSERVE_METRICS_RETENTION_DAYS', 31),
+
     'publish_lock_seconds' => (int) env('OBSERVE_PUBLISH_LOCK_SECONDS', 60),
 
     /*
