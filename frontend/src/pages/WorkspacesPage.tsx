@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
+import { observeService } from '../services/observeService'
 import { CreateProjectInput, ProjectStatus } from '../types/project'
 import { WorkspaceListItem, Role } from '../types/workspace'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -8,8 +9,142 @@ import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 
 const statusOptions: ProjectStatus[] = ['active', 'paused', 'archived']
 
-const formatDate = (value: string) => {
-  return new Date(value).toLocaleDateString()
+const statusDotClass = (status: string): string => {
+  switch (status) {
+    case 'active':
+      return 'bg-emerald-400'
+    case 'paused':
+      return 'bg-amber-400'
+    case 'archived':
+      return 'bg-white/30'
+    default:
+      return 'bg-white/30'
+  }
+}
+
+interface WorkspaceMetrics {
+  hosts: number
+  alerts: number
+}
+
+interface WorkspaceCardProps {
+  item: WorkspaceListItem
+  isActive: boolean
+  roleBadgeClass: string
+  onOpen: () => void
+  onSwitch: () => void
+}
+
+function WorkspaceCard({ item, isActive, roleBadgeClass, onOpen, onSwitch }: WorkspaceCardProps) {
+  const { t } = useLanguage()
+  const [metrics, setMetrics] = useState<WorkspaceMetrics | null>(null)
+  const [loadingMetrics, setLoadingMetrics] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingMetrics(true)
+    observeService
+      .getServices(item.project.id, { limit: 1 })
+      .then((res) => {
+        const payload =
+          res && typeof res === 'object' && 'data' in res
+            ? (res as { data: typeof res }).data
+            : res
+        const ht = payload?.hostTotals
+        const st = payload?.serviceTotals
+        const hosts = ht ? ht.up + ht.down + ht.unreachable + ht.pending : 0
+        const alerts = st ? (st.warning ?? 0) + (st.critical ?? 0) : 0
+        if (!cancelled) setMetrics({ hosts, alerts })
+      })
+      .catch(() => {
+        if (!cancelled) setMetrics(null)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMetrics(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [item.project.id])
+
+  const metricValue = (value: number | undefined) => {
+    if (loadingMetrics) return '—'
+    if (metrics == null) return '—'
+    return String(value ?? 0)
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+      className={`cursor-pointer rounded-2xl border p-5 text-white transition hover:border-white/25 ${
+        isActive ? 'border-orange-500/60 bg-orange-500/[0.06]' : 'border-white/10 bg-[#0f151d]'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass(item.project.status)}`} />
+          <h3 className="truncate text-base font-semibold">{item.project.name}</h3>
+        </div>
+        {isActive ? (
+          <span className="shrink-0 rounded-full border border-orange-500/40 bg-orange-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-200">
+            {t('projects.active')}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onSwitch()
+            }}
+            className="shrink-0 text-xs font-semibold text-orange-300 transition hover:text-orange-200"
+          >
+            {t('projects.switch')}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-1.5 flex items-center gap-2 text-xs text-white/50">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        <span className="capitalize">{item.project.status}</span>
+        <span className="text-white/20">·</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${roleBadgeClass}`}>
+          {item.my_role.charAt(0).toUpperCase() + item.my_role.slice(1)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[11px] uppercase tracking-wider text-white/50">{t('projects.hosts')}</p>
+          <p className="mt-1 text-lg font-semibold text-white">{metricValue(metrics?.hosts)}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[11px] uppercase tracking-wider text-white/50">{t('projects.activeAlerts')}</p>
+          <p
+            className={`mt-1 text-lg font-semibold ${
+              loadingMetrics || metrics == null
+                ? 'text-white'
+                : (metrics?.alerts ?? 0) > 0
+                ? 'text-rose-300'
+                : 'text-emerald-300'
+            }`}
+          >
+            {metricValue(metrics?.alerts)}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function WorkspacesPage() {
@@ -275,6 +410,18 @@ function WorkspacesPage() {
         </div>
       ) : (
         <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {orderedWorkspaces.map((workspace) => (
+              <WorkspaceCard
+                key={workspace.project.id}
+                item={workspace}
+                isActive={selectedWorkspaceId === String(workspace.project.id)}
+                roleBadgeClass={getRoleBadgeColor(workspace.my_role)}
+                onOpen={() => handleOpenWorkspace(workspace)}
+                onSwitch={() => setSelectedWorkspaceId(String(workspace.project.id))}
+              />
+            ))}
+          </div>
           <section className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <h2 className="text-sm font-semibold">{t('projects.createTitle')}</h2>
             <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-[2fr,1fr,auto]">
@@ -317,31 +464,6 @@ function WorkspacesPage() {
             </form>
             {success ? <p className="mt-3 text-xs text-emerald-300">{success}</p> : null}
           </section>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {orderedWorkspaces.map((workspace) => (
-            <div
-              key={workspace.project.id}
-              className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white transition hover:border-white/20 cursor-pointer"
-              onClick={() => handleOpenWorkspace(workspace)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold">{workspace.project.name}</h3>
-                  <p className="text-xs text-white/50">{workspace.project.status}</p>
-                </div>
-                <span className={`rounded-full border px-3 py-1 text-[10px] font-medium ${getRoleBadgeColor(workspace.my_role)}`}>
-                  {workspace.my_role.charAt(0).toUpperCase() + workspace.my_role.slice(1)}
-                </span>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-xs text-white/60">
-                  {t('projects.updatedAt')} {formatDate(workspace.project.updated_at)}
-                </span>
-                <span className="text-xs text-sky-200">Open →</span>
-              </div>
-            </div>
-          ))}
-        </div>
         </>
       )}
     </div>
