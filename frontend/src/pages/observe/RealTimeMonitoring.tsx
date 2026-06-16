@@ -23,6 +23,123 @@ import type { RealTimeMetrics, SystemInfo } from '../../types/observe'
 const MAX_POINTS = 120
 const LIVE_POLL_INTERVAL_SEC = 5
 
+type MetricKind = 'cpu' | 'memory' | 'disk' | 'network'
+
+interface PerfMetric {
+  label: string
+  value: number
+  uom: string
+  max?: number
+}
+
+interface HostMetric {
+  percent: number | null
+  display: string
+  service: string
+  status: ObserveServiceRow['status']
+}
+
+const METRIC_KEYWORDS: Record<MetricKind, RegExp> = {
+  cpu: /\b(cpu|processor|load)\b/i,
+  memory: /\b(mem|memory|ram|swap)\b/i,
+  disk: /\b(disk|partition|storage|filesystem|mount|space|volume)\b/i,
+  network: /\b(network|traffic|bandwidth|latency|ping|interface|eth\d*|nic)\b/i,
+}
+
+// Parse Nagios-style performance data: 'label'=value[UOM];warn;crit;min;max ...
+function parsePerfData(perf?: string): PerfMetric[] {
+  if (!perf) return []
+  const out: PerfMetric[] = []
+  const regex = /('[^']+'|"[^"]+"|[^=\s]+)=([^;\s]+)(?:;[^;\s]*)?(?:;[^;\s]*)?(?:;[^;\s]*)?(?:;([^;\s]*))?/g
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(perf)) !== null) {
+    const label = match[1].replace(/^['"]|['"]$/g, '')
+    const valueStr = match[2]
+    const numMatch = valueStr.match(/-?\d+(?:\.\d+)?/)
+    if (!numMatch) continue
+    const value = parseFloat(numMatch[0])
+    const uom = valueStr.slice(numMatch[0].length)
+    const max = match[3] ? parseFloat(match[3]) : undefined
+    out.push({ label, value, uom, max: Number.isFinite(max) ? max : undefined })
+  }
+  return out
+}
+
+const BYTE_UOM = /^(b|kb|mb|gb|tb|kib|mib|gib|tib)$/i
+
+// Derive a percentage (or a raw display) for a metric kind from a single service row.
+function extractMetric(row: ObserveServiceRow, kind: MetricKind): { percent: number | null; display: string } {
+  const perf = parsePerfData(row.perfData)
+  const info = row.info || row.status_information || row.pluginOutput || ''
+
+  // 1) Prefer a percentage metric in perfdata
+  const pctMetric =
+    perf.find((p) => p.uom === '%' && METRIC_KEYWORDS[kind].test(p.label)) ?? perf.find((p) => p.uom === '%')
+  let percent: number | null = pctMetric ? pctMetric.value : null
+
+  // 2) Byte metric with a max -> used%
+  if (percent == null) {
+    const byteMetric = perf.find((p) => BYTE_UOM.test(p.uom) && p.max && p.max > 0)
+    if (byteMetric && byteMetric.max) percent = (byteMetric.value / byteMetric.max) * 100
+  }
+
+  // 3) Fallback: a percentage in the plugin output text
+  if (percent == null) {
+    const pm = info.match(/(\d+(?:\.\d+)?)\s*%/)
+    if (pm) {
+      let v = parseFloat(pm[1])
+      if (/\b(free|available)\b/i.test(info)) v = 100 - v
+      percent = v
+    }
+  }
+
+  // 4) CPU load average (not a percentage) -> show raw load
+  if (percent == null && kind === 'cpu') {
+    const lm = info.match(/load average:\s*([\d.]+)/i)
+    if (lm) return { percent: null, display: `load ${lm[1]}` }
+    const loadPerf = perf.find((p) => /load1?/i.test(p.label))
+    if (loadPerf) return { percent: null, display: `load ${loadPerf.value}` }
+  }
+
+  if (percent != null && Number.isFinite(percent)) {
+    const rounded = Math.round(Math.max(0, Math.min(100, percent)))
+    return { percent: rounded, display: `${rounded}%` }
+  }
+  return { percent: null, display: '' }
+}
+
+// Pick the best service for a metric kind among a host's services.
+function pickHostMetric(rows: ObserveServiceRow[], kind: MetricKind): HostMetric | null {
+  const candidates = rows.filter((r) => METRIC_KEYWORDS[kind].test(r.service))
+  if (candidates.length === 0) return null
+  let fallback: HostMetric | null = null
+  for (const row of candidates) {
+    const { percent, display } = extractMetric(row, kind)
+    if (display) {
+      return { percent, display, service: row.service, status: row.status }
+    }
+    if (!fallback) {
+      fallback = { percent: null, display: '', service: row.service, status: row.status }
+    }
+  }
+  return fallback
+}
+
+const svcBadgeClass = (status: ObserveServiceRow['status']): string => {
+  switch (status) {
+    case 'critical':
+      return 'border-rose-500/30 bg-rose-500/20 text-rose-200'
+    case 'warning':
+      return 'border-amber-500/30 bg-amber-500/20 text-amber-200'
+    case 'unknown':
+      return 'border-purple-500/30 bg-purple-500/20 text-purple-200'
+    case 'pending':
+      return 'border-sky-500/30 bg-sky-500/20 text-sky-200'
+    default:
+      return 'border-emerald-500/30 bg-emerald-500/20 text-emerald-200'
+  }
+}
+
 function MetricCard({
   title,
   value,
@@ -191,6 +308,28 @@ export default function RealTimeMonitoring() {
       lastPollAt: servicesData.last_poll_at ?? null,
     }
   }, [servicesData, selectedHost, prefix])
+
+  // Services that belong to the currently selected host (real data).
+  const hostServices = useMemo<ObserveServiceRow[]>(() => {
+    if (!selectedHost || !servicesData?.items) return []
+    const hostKey = prefix ? `${prefix}${selectedHost}` : selectedHost
+    return servicesData.items.filter(
+      (item) => item.host === hostKey || item.host === selectedHost || item.host.endsWith(selectedHost),
+    )
+  }, [servicesData?.items, selectedHost, prefix])
+
+  // Per-host CPU / memory / disk / network derived from the host's own service checks.
+  const perHost = useMemo(
+    () => ({
+      cpu: pickHostMetric(hostServices, 'cpu'),
+      memory: pickHostMetric(hostServices, 'memory'),
+      disk: pickHostMetric(hostServices, 'disk'),
+      network: pickHostMetric(hostServices, 'network'),
+    }),
+    [hostServices],
+  )
+
+  const hasAnyHostMetric = !!(perHost.cpu || perHost.memory || perHost.disk || perHost.network)
 
   // Fetch host list for dropdown (real data: only targets added in this workspace)
   useEffect(() => {
@@ -594,11 +733,16 @@ export default function RealTimeMonitoring() {
         </div>
       </div>
 
-      {/* Per-host metrics (future: NRPE/agent) – placeholder when a host is selected */}
+      {/* Per-host metrics – derived from the selected host's own service checks (real data) */}
       {selectedHost && (
-        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-white">
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h3 className="text-sm font-semibold text-sky-200">Per-host metrics (coming soon)</h3>
+            <div>
+              <h3 className="text-sm font-semibold">Per-host metrics</h3>
+              <p className="mt-1 text-xs text-white/60">
+                CPU, memory, disk and network for <strong>{selectedHost}</strong>, derived from its service checks.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => openAiAgent(selectedHost)}
@@ -607,9 +751,81 @@ export default function RealTimeMonitoring() {
               Analyze with AI
             </button>
           </div>
-          <p className="mt-1 text-xs text-white/60">
-            CPU, memory, and disk for <strong>{selectedHost}</strong> will appear here when NRPE or the QynSight agent is configured on the host. For now, use the service status and totals below.
-          </p>
+
+          {hasAnyHostMetric ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {([
+                { kind: 'cpu', title: 'CPU', metric: perHost.cpu, icon: Icons.cpu },
+                { kind: 'memory', title: 'Memory', metric: perHost.memory, icon: Icons.memory },
+                { kind: 'disk', title: 'Disk', metric: perHost.disk, icon: Icons.disk },
+                { kind: 'network', title: 'Network', metric: perHost.network, icon: Icons.network },
+              ] as const).map(({ kind, title, metric, icon }) => (
+                <MetricCard
+                  key={kind}
+                  title={title}
+                  value={metric ? (metric.display || '—') : '—'}
+                  detail={
+                    metric
+                      ? `${metric.service} • ${metric.status.toUpperCase()}`
+                      : 'Not monitored — add a check'
+                  }
+                  percentage={metric?.percent ?? undefined}
+                  icon={icon}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-6 text-center text-xs text-white/60">
+              No CPU / memory / disk / network checks found for <strong>{selectedHost}</strong>. Add service checks in{' '}
+              {selectedWorkspaceId ? (
+                <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`} className="text-sky-300 hover:underline">
+                  Monitored Targets
+                </Link>
+              ) : (
+                'Monitored Targets'
+              )}{' '}
+              to see per-host metrics here.
+            </div>
+          )}
+
+          {hostServices.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+                Service checks for {selectedHost}
+              </p>
+              <div className="overflow-hidden rounded-lg border border-white/10">
+                {hostServices.map((svc, index) => {
+                  return (
+                    <button
+                      key={`${svc.service}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        selectedWorkspaceId &&
+                        navigate(
+                          `/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(selectedHost)}`,
+                        )
+                      }
+                      className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover:bg-white/5 ${
+                        index !== hostServices.length - 1 ? 'border-b border-white/5' : ''
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium text-white">{svc.service}</span>
+                        {svc.info && <span className="block truncate text-[10px] text-white/45">{svc.info}</span>}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${svcBadgeClass(
+                          svc.status,
+                        )}`}
+                      >
+                        {svc.status}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
