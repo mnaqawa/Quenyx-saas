@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { workspaceService } from '../services/workspaceService'
 import { observeService } from '../services/observeService'
@@ -20,6 +20,97 @@ const statusDotClass = (status: string): string => {
     default:
       return 'bg-white/30'
   }
+}
+
+interface StatusDropdownProps {
+  value: ProjectStatus
+  onChange: (value: ProjectStatus) => void
+  label: (status: ProjectStatus) => string
+}
+
+function StatusDropdown({ value, onChange, label }: StatusDropdownProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white transition hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${statusDotClass(value)}`} />
+          <span className="capitalize">{label(value)}</span>
+        </span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-white/10 bg-[#161c24] py-1 shadow-2xl shadow-black/50"
+        >
+          {statusOptions.map((option) => (
+            <li key={option} role="option" aria-selected={option === value}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(option)
+                  setOpen(false)
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-white/10 ${
+                  option === value ? 'bg-white/5 text-white' : 'text-white/80'
+                }`}
+              >
+                <span className={`h-2 w-2 rounded-full ${statusDotClass(option)}`} />
+                <span className="capitalize">{label(option)}</span>
+                {option === value ? (
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="ml-auto text-orange-300"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
 }
 
 interface WorkspaceMetrics {
@@ -75,17 +166,8 @@ function WorkspaceCard({ item, isActive, roleBadgeClass, onOpen, onSwitch }: Wor
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onOpen()
-        }
-      }}
-      className={`cursor-pointer rounded-2xl border p-5 text-white transition hover:border-white/25 ${
-        isActive ? 'border-orange-500/60 bg-orange-500/[0.06]' : 'border-white/10 bg-[#0f151d]'
+      className={`rounded-2xl border p-5 text-white transition ${
+        isActive ? 'border-orange-500/60 bg-orange-500/[0.06]' : 'border-white/10 bg-[#0f151d] hover:border-white/25'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -94,21 +176,11 @@ function WorkspaceCard({ item, isActive, roleBadgeClass, onOpen, onSwitch }: Wor
           <h3 className="truncate text-base font-semibold">{item.project.name}</h3>
         </div>
         {isActive ? (
-          <span className="shrink-0 rounded-full border border-orange-500/40 bg-orange-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-200">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
             {t('projects.active')}
           </span>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSwitch()
-            }}
-            className="shrink-0 text-xs font-semibold text-orange-300 transition hover:text-orange-200"
-          >
-            {t('projects.switch')}
-          </button>
-        )}
+        ) : null}
       </div>
 
       <div className="mt-1.5 flex items-center gap-2 text-xs text-white/50">
@@ -142,6 +214,45 @@ function WorkspaceCard({ item, isActive, roleBadgeClass, onOpen, onSwitch }: Wor
             {metricValue(metrics?.alerts)}
           </p>
         </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        {isActive ? (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
+          >
+            {t('projects.openWorkspace')}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onSwitch}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-sm font-semibold text-orange-200 transition hover:bg-orange-500/20 hover:text-orange-100"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="17 1 21 5 17 9" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <polyline points="7 23 3 19 7 15" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              {t('projects.setActive')}
+            </button>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              {t('projects.open')}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -438,19 +549,11 @@ function WorkspacesPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-white/60">{t('projects.statusLabel')}</label>
-                <select
+                <StatusDropdown
                   value={form.status}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, status: event.target.value as ProjectStatus }))
-                  }
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option} className="text-slate-900">
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(status) => setForm((prev) => ({ ...prev, status }))}
+                  label={(status) => t(`projects.status.${status}`)}
+                />
               </div>
               <div className="flex items-end">
                 <button
