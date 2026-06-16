@@ -28,6 +28,11 @@ interface StatusDropdownProps {
   label: (status: ProjectStatus) => string
 }
 
+interface WorkspaceFormState {
+  name: string
+  status: ProjectStatus
+}
+
 function StatusDropdown({ value, onChange, label }: StatusDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
@@ -269,7 +274,7 @@ function WorkspacesPage() {
     isLoadingWorkspaces,
     workspacesError
   } = useWorkspaceContext()
-  const [form, setForm] = useState<CreateProjectInput>({ name: '', status: 'active' })
+  const [form, setForm] = useState<WorkspaceFormState>({ name: '', status: 'active' })
   const [creating, setCreating] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [hasAutoSelected, setHasAutoSelected] = useState(false)
