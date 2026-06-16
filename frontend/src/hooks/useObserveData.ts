@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import {
   realTimeMetricsFixture,
@@ -708,23 +708,31 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
   const [data, setData] = useState<ObserveServicesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Track the last workspace so we only blank the view when it actually changes,
+  // not on every live poll/refresh (which caused the UI to "flap").
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     if (!workspaceId) {
       setData(null)
       setLoading(false)
       setError(null)
+      prevWorkspaceRef.current = workspaceId
       return
     }
-    // Clear previous workspace data immediately when switching so UI never shows wrong workspace
-    setData(null)
-    setLoading(true)
+
+    const workspaceChanged = prevWorkspaceRef.current !== workspaceId
+    prevWorkspaceRef.current = workspaceId
+
+    // Only clear data when switching workspaces so we never show another workspace's data.
+    // On live refreshes we keep the previous data visible and update it in place.
+    if (workspaceChanged) {
+      setData(null)
+      setLoading(true)
+    }
     setError(null)
 
     const fetchData = async () => {
-      setLoading(true)
-      setError(null)
-      
       try {
         const useFixtures = USE_FIXTURES && !realDataOnly
         if (useFixtures) {
@@ -794,12 +802,15 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load services'
         setError(errorMessage)
-        // On error, fall back to empty data
-        setData({
-          hostTotals: { up: 0, down: 0, unreachable: 0, pending: 0 },
-          serviceTotals: { ok: 0, warning: 0, unknown: 0, critical: 0, pending: 0 },
-          items: [],
-        })
+        // Keep the last successful data on a transient poll error; only fall back to
+        // empty data if we have nothing to show yet (avoids flapping during live polling).
+        setData((prev) =>
+          prev ?? {
+            hostTotals: { up: 0, down: 0, unreachable: 0, pending: 0 },
+            serviceTotals: { ok: 0, warning: 0, unknown: 0, critical: 0, pending: 0 },
+            items: [],
+          },
+        )
       } finally {
         setLoading(false)
       }
