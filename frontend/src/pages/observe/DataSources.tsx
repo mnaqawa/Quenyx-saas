@@ -81,7 +81,10 @@ export default function DataSources() {
                       {t(`dataSources.type.${source.type}`)} • {formatRecordCount(source.recordCount)} {t('dataSources.records')} • {t('dataSources.lastSync')}: {source.lastSync}
                     </p>
                   </div>
-                  <StatusBadge status={source.status === 'connected' ? 'ok' : source.status} label={source.status} />
+                  <StatusBadge
+                    status={source.status === 'connected' ? 'connected' : source.status === 'error' ? 'error' : 'syncing'}
+                    label={source.status}
+                  />
                 </div>
               ))}
             </div>

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { observeService } from '../../services/observeService'
 import type { MonitoringProfileCheck, MonitoringProfileCheckUpdate } from '../../types/observe'

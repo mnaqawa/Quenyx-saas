@@ -62,7 +62,7 @@ export default function Reports() {
                     {report.category} • {report.date ? new Date(report.date).toLocaleString() : '—'} • {report.size}
                   </p>
                 </div>
-                <StatusBadge status={report.status === 'failed' ? 'error' : 'ok'} label={report.status} />
+                <StatusBadge status={report.status === 'failed' ? 'error' : 'completed'} label={report.status} />
               </div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ComponentProps } from 'react'
 import { useAlertRules, useAlertSummary } from '../../hooks/useObserveData'
 import { StatCard } from '../../components/observe/StatCard'
 import { PageHeader } from '../../components/observe/PageHeader'
@@ -9,17 +9,25 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
 import type { AlertHistoryEvent, CreateAlertRulePayload, NotificationChannel } from '../../types/observe'
 
+type BadgeStatus = ComponentProps<typeof StatusBadge>['status']
+
+function severityToBadgeStatus(severity: string): BadgeStatus {
+  if (severity === 'critical') return 'critical'
+  if (severity === 'warning') return 'warning'
+  return 'degraded'
+}
+
 export default function AlertManagement() {
   const { t } = useLanguage()
   const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
-  const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
-  const { summary, loading: summaryLoading } = useAlertSummary(refreshKey)
   const [activeTab, setActiveTab] = useState('rules')
   const [history, setHistory] = useState<AlertHistoryEvent[]>([])
   const [channels, setChannels] = useState<NotificationChannel[]>([])
   const [tabLoading, setTabLoading] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
+  const { summary, loading: summaryLoading } = useAlertSummary(refreshKey)
 
   const canEdit = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
   const safeRules = Array.isArray(rules) ? rules : []
@@ -176,7 +184,7 @@ export default function AlertManagement() {
                 <div key={e.id} className="rounded-lg border border-white/5 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold">{e.title}</h4>
-                    <StatusBadge status={e.severity} label={e.severity} />
+                    <StatusBadge status={severityToBadgeStatus(e.severity)} label={e.severity} />
                   </div>
                   <p className="mt-1 text-xs text-white/60">{e.message}</p>
                   <p className="mt-2 text-xs text-white/40">
@@ -206,7 +214,7 @@ export default function AlertManagement() {
                     <h4 className="text-sm font-semibold">{ch.name}</h4>
                     <p className="text-xs text-white/50">{ch.type}</p>
                   </div>
-                  <StatusBadge status={ch.configured ? 'ok' : 'unknown'} label={ch.configured ? t('alerts.configured') : t('alerts.notConfigured')} />
+                  <StatusBadge status={ch.configured ? 'connected' : 'stopped'} label={ch.configured ? t('alerts.configured') : t('alerts.notConfigured')} />
                 </div>
               ))}
             </div>
