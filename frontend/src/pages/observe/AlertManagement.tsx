@@ -472,23 +472,45 @@ function CreateAlertRuleModal({
     }
   }, [workspaceId])
 
-  const selectedHost = useMemo(
-    () => hosts.find((h) => h.id === form.target_host_id) ?? null,
-    [hosts, form.target_host_id]
-  )
+  const allServiceOptions = useMemo(() => {
+    const items: Array<{
+      hostId: number
+      hostName: string
+      serviceKey: string
+      serviceName: string
+      optionValue: string
+    }> = []
 
-  const serviceOptions = useMemo(() => {
-    if (!selectedHost) return []
-    return (selectedHost.services ?? []).filter((s) => s.enabled !== false)
-  }, [selectedHost])
+    for (const host of hosts) {
+      for (const svc of (host.services ?? []).filter((s) => s.enabled !== false)) {
+        const serviceKey = svc.service_key || svc.name
+        items.push({
+          hostId: host.id,
+          hostName: host.name,
+          serviceKey,
+          serviceName: svc.name,
+          optionValue: `${host.id}:${serviceKey}`,
+        })
+      }
+    }
 
-  const scopeNeedsHost =
-    form.target_scope === 'selected_target' || form.target_scope === 'selected_service'
+    return items.sort((a, b) =>
+      `${a.hostName} ${a.serviceName}`.localeCompare(`${b.hostName} ${b.serviceName}`)
+    )
+  }, [hosts])
+
+  const selectedServiceValue =
+    form.target_host_id != null && form.target_service_key
+      ? `${form.target_host_id}:${form.target_service_key}`
+      : ''
+
+  const scopeNeedsHost = form.target_scope === 'selected_target'
+  const scopeNeedsService = form.target_scope === 'selected_service'
 
   const formValid =
     form.name.trim() !== '' &&
     (!scopeNeedsHost || form.target_host_id != null) &&
-    (form.target_scope !== 'selected_service' || Boolean(form.target_service_key))
+    (!scopeNeedsService || (form.target_host_id != null && Boolean(form.target_service_key)))
 
   const submit = async () => {
     if (!formValid) return
@@ -522,6 +544,30 @@ function CreateAlertRuleModal({
       ...form,
       target_host_id: hostId,
       target_service_key: null,
+    })
+  }
+
+  const handleServiceSelection = (optionValue: string) => {
+    if (!optionValue) {
+      setForm({
+        ...form,
+        target_host_id: null,
+        target_service_key: null,
+      })
+      return
+    }
+
+    const separator = optionValue.indexOf(':')
+    if (separator === -1) return
+
+    const hostId = Number(optionValue.slice(0, separator))
+    const serviceKey = optionValue.slice(separator + 1)
+    if (!hostId || !serviceKey) return
+
+    setForm({
+      ...form,
+      target_host_id: hostId,
+      target_service_key: serviceKey,
     })
   }
 
@@ -587,44 +633,40 @@ function CreateAlertRuleModal({
                   ))}
                 </select>
               )}
-              {scopeNeedsHost && !hostsLoading && !form.target_host_id && (
+              {!hostsLoading && !form.target_host_id && (
                 <p className="text-xs text-amber-400/90">{t('alerts.validation.selectHost')}</p>
               )}
             </FormField>
           )}
 
-          {form.target_scope === 'selected_service' && form.target_host_id && (
+          {scopeNeedsService && (
             <FormField
               label={t('alerts.field.selectService')}
               hint={t('alerts.field.selectServiceHint')}
               required
             >
-              {serviceOptions.length === 0 ? (
-                <p className="text-xs text-amber-400/90">{t('alerts.noTargetsConfigured')}</p>
+              {hostsLoading ? (
+                <p className="text-xs text-white/50">{t('agents.loading')}</p>
+              ) : allServiceOptions.length === 0 ? (
+                <p className="text-xs text-amber-400/90">
+                  {hosts.length === 0 ? t('alerts.noTargetsConfigured') : t('alerts.noServicesConfigured')}
+                </p>
               ) : (
                 <select
-                  value={form.target_service_key ?? ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      target_service_key: e.target.value || null,
-                    })
-                  }
+                  value={selectedServiceValue}
+                  onChange={(e) => handleServiceSelection(e.target.value)}
                   className={inputClass}
                 >
                   <option value="">{t('alerts.field.selectServicePlaceholder')}</option>
-                  {serviceOptions.map((svc) => {
-                    const key = svc.service_key || svc.name
-                    return (
-                      <option key={`${svc.id ?? key}`} value={key}>
-                        {svc.name}
-                        {svc.service_key && svc.service_key !== svc.name ? ` (${svc.service_key})` : ''}
-                      </option>
-                    )
-                  })}
+                  {allServiceOptions.map((item) => (
+                    <option key={item.optionValue} value={item.optionValue}>
+                      {item.hostName} — {item.serviceName}
+                      {item.serviceKey !== item.serviceName ? ` (${item.serviceKey})` : ''}
+                    </option>
+                  ))}
                 </select>
               )}
-              {!form.target_service_key && (
+              {!hostsLoading && !selectedServiceValue && (
                 <p className="text-xs text-amber-400/90">{t('alerts.validation.selectService')}</p>
               )}
             </FormField>
