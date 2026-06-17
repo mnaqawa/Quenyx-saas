@@ -62,10 +62,6 @@ export default function Services() {
   const [problemsOnly, setProblemsOnly] = useState(() => {
     return searchParams.get('problems') === '1'
   })
-  const [refreshInterval, setRefreshInterval] = useState(() => {
-    const intervalParam = searchParams.get('interval')
-    return intervalParam ? `${intervalParam} seconds` : '90 seconds'
-  })
   const [drawerService, setDrawerService] = useState<ObserveServiceRow | null>(null)
   const [rechecking, setRechecking] = useState(false)
   const [recheckError, setRecheckError] = useState<string | null>(null)
@@ -77,8 +73,6 @@ export default function Services() {
     if (selectedStatuses.length > 0) params.set('status', selectedStatuses.join(','))
     if (limit !== 100) params.set('limit', limit.toString())
     if (problemsOnly) params.set('problems', '1')
-    const intervalSeconds = refreshInterval.replace(' seconds', '')
-    if (intervalSeconds !== '90') params.set('interval', intervalSeconds)
     
     // Only update URL if params changed (avoid infinite loop)
     const currentParams = searchParams.toString()
@@ -86,7 +80,7 @@ export default function Services() {
     if (currentParams !== newParams) {
       setSearchParams(params, { replace: true })
     }
-  }, [searchQuery, selectedStatuses, limit, problemsOnly, refreshInterval, setSearchParams, searchParams])
+  }, [searchQuery, selectedStatuses, limit, problemsOnly, setSearchParams, searchParams])
 
   const isLocked = useMemo(() => {
     const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
