@@ -161,9 +161,9 @@ export default function CapacityPlanning() {
           health: data.health,
           risk_score: data.summary.capacity_risk_score,
           runway: data.runway,
+          advisor: data.advisor,
         },
         services: data.resource_analysis.distribution,
-        advisor: data.advisor,
       },
     })
     setAiOpen(true)
