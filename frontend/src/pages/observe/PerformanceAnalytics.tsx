@@ -169,7 +169,7 @@ export default function PerformanceAnalytics() {
     }
   }, [history?.latest])
 
-  const series = history?.trends ?? []
+  const series = useMemo(() => history?.trends ?? [], [history?.trends])
 
   const delta = useCallback(
     (kind: MetricKind): { direction: 'up' | 'down'; value: string } | undefined => {
