@@ -7,6 +7,7 @@ import type {
   PerformanceHistoryResponse,
   CapacityPlanningRange,
   CapacityPlanningResponse,
+  CapacityScenarioParams,
   NetworkNode,
   CapacityMetric,
   AlertRule,
@@ -128,9 +129,16 @@ export const observeService = {
   async getCapacityPlanning(
     workspaceId: number,
     range: CapacityPlanningRange = '30d',
+    scenario?: CapacityScenarioParams,
   ): Promise<CapacityPlanningResponse> {
+    const params = new URLSearchParams({ range })
+    if (scenario?.scenario_template) params.set('scenario_template', scenario.scenario_template)
+    if (scenario?.growth_pct != null) params.set('growth_pct', String(scenario.growth_pct))
+    if (scenario?.horizon_days != null) params.set('horizon_days', String(scenario.horizon_days))
+    if (scenario?.target_resource) params.set('target_resource', scenario.target_resource)
+    if (scenario?.hosts) params.set('hosts', scenario.hosts)
     return gatewayClient.get<CapacityPlanningResponse>(
-      `workspaces/${workspaceId}/observe/capacity-planning?range=${encodeURIComponent(range)}`,
+      `workspaces/${workspaceId}/observe/capacity-planning?${params.toString()}`,
       { workspaceId, moduleKey: 'qynsight' },
     )
   },

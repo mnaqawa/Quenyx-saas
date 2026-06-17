@@ -165,6 +165,74 @@ export type CapacityStatus = 'critical' | 'warning' | 'healthy' | 'insufficient_
 export type CapacityPlanningRange = '7d' | '30d' | '90d'
 export type CapacityTab = 'overview' | 'resource-analysis' | 'optimization' | 'scenarios' | 'budget'
 
+export type CapacityHealthStatus = 'healthy' | 'watch' | 'risk' | 'critical' | 'no_data'
+export type CapacityDataConfidence = 'no_data' | 'low' | 'medium' | 'high'
+
+export interface CapacityHealth {
+  health_status: CapacityHealthStatus
+  risk_score: number | null
+  shortest_runway_days: number | null
+  primary_risk: string | null
+  recommended_action: string | null
+  data_confidence: CapacityDataConfidence
+}
+
+export interface CapacityRunwayResource {
+  months: number | null
+  days: number | null
+  status: CapacityStatus
+}
+
+export interface CapacityRunway {
+  cpu: CapacityRunwayResource
+  memory: CapacityRunwayResource
+  storage: CapacityRunwayResource
+}
+
+export interface CapacityTopRisk {
+  host: string
+  resource: string
+  utilization_pct: number
+  trend: 'up' | 'down' | 'flat' | 'unknown'
+  runway_days: number | null
+  risk_level: 'critical' | 'warning' | 'healthy' | 'insufficient_data'
+  last_sample_at: string | null
+}
+
+export interface CapacityStructuredAdvisor {
+  available: boolean
+  findings: string[]
+  business_impact: string[]
+  recommended_actions: string[]
+  confidence: CapacityDataConfidence
+  data_used: {
+    history_samples?: number
+    resources?: Record<string, boolean>
+  }
+}
+
+export interface CapacityScenarioTemplate {
+  id: string
+  name: string
+  default_growth_pct: number
+  default_horizon_days: number
+  default_resource: string
+}
+
+export interface CapacityForecastRequirements {
+  cpu: number | null
+  memory: number | null
+  storage: number | null
+  timeline_days: number | null
+}
+
+export interface CapacityBudget {
+  forecasted_requirements: CapacityForecastRequirements
+  cost_estimate_available: boolean
+  billing_integration_status: 'not_connected' | 'connected'
+  has_forecast?: boolean
+}
+
 export interface CapacityPlanningSummary {
   cpu_runway_months: number | null
   memory_runway_months: number | null
@@ -178,6 +246,11 @@ export interface CapacityPlanningSummary {
     cost: CapacityStatus
     risk: CapacityStatus
   }
+  health_status?: CapacityHealthStatus
+  shortest_runway_days?: number | null
+  primary_risk?: string | null
+  recommended_action?: string | null
+  data_confidence?: CapacityDataConfidence
 }
 
 export interface CapacityForecastPoint {
@@ -218,11 +291,20 @@ export interface CapacityDistribution {
 
 export interface CapacityInsight {
   id: string
+  type?: string
+  title?: string
+  severity?: 'high' | 'medium' | 'low'
   priority: 'high' | 'medium' | 'low'
   affected_resource: string
+  resource?: string
+  evidence?: string
   issue: string
   recommendation: string
+  recommended_action?: string
   expected_impact: string
+  operational_impact?: string
+  cost_impact_status?: 'unavailable' | 'available'
+  cost_impact_message?: string
   estimated_saving: number | null
   created_at: string
 }
@@ -233,6 +315,17 @@ export interface CapacityScenario {
   description: string
   limiting_resource: string
   runway_months: number | null
+  template?: string
+  growth_pct?: number
+  horizon_days?: number
+  target_resource?: string
+  current_runway_days?: number | null
+  current_runway_months?: number | null
+  projected_runway_days?: number | null
+  projected_runway_months?: number | null
+  risk_change?: string
+  impact_summary?: string
+  calculable?: boolean
 }
 
 export interface CapacityBudgetPlanning {
@@ -241,9 +334,36 @@ export interface CapacityBudgetPlanning {
   budget_variance: number | null
   saving_opportunities: Array<{ title: string; amount: number | null }>
   provider_breakdown: Array<{ provider: string; amount: number | null }>
+  forecasted_requirements?: CapacityForecastRequirements
+  cost_estimate_available?: boolean
+  billing_integration_status?: 'not_connected' | 'connected'
+}
+
+export interface CapacityScenarioParams {
+  scenario_template?: string
+  growth_pct?: number
+  horizon_days?: number
+  target_resource?: string
+  hosts?: string
 }
 
 export interface CapacityPlanningResponse {
+  health?: CapacityHealth
+  runway?: CapacityRunway
+  forecast?: CapacityForecastPoint[]
+  top_risks?: CapacityTopRisk[]
+  resource_consumers?: {
+    top_cpu_consumers: CapacityConsumer[]
+    top_memory_consumers: CapacityConsumer[]
+    top_storage_consumers: CapacityConsumer[]
+    distribution: CapacityDistribution[]
+  }
+  budget?: CapacityBudget
+  advisor?: CapacityStructuredAdvisor
+  scenarios?: {
+    templates: CapacityScenarioTemplate[]
+    calculated: CapacityScenario[]
+  }
   summary: CapacityPlanningSummary
   overview: {
     forecast: CapacityForecastPoint[]
@@ -255,6 +375,7 @@ export interface CapacityPlanningResponse {
     top_memory_consumers: CapacityConsumer[]
     top_storage_consumers: CapacityConsumer[]
     distribution: CapacityDistribution[]
+    top_risks?: CapacityTopRisk[]
   }
   optimization_insights: CapacityInsight[]
   scenario_planning: CapacityScenario[]

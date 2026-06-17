@@ -427,7 +427,14 @@ class ObserveController extends Controller
         $this->authorize('view', $project);
 
         $range = (string) $request->query('range', '30d');
-        $data = app(CapacityPlanningService::class)->build($project->id, $range);
+        $options = array_filter([
+            'scenario_template' => $request->query('scenario_template'),
+            'growth_pct' => $request->query('growth_pct'),
+            'horizon_days' => $request->query('horizon_days'),
+            'target_resource' => $request->query('target_resource'),
+            'hosts' => $request->query('hosts'),
+        ], fn ($v) => $v !== null && $v !== '');
+        $data = app(CapacityPlanningService::class)->build($project->id, $range, $options);
 
         return response()
             ->json(['success' => true, 'data' => $data])

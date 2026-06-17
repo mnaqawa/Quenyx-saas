@@ -17,18 +17,22 @@ import { PageHeader } from '../../components/observe/PageHeader'
 import { Tabs } from '../../components/observe/Tabs'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import { CapacitySummaryCard } from '../../components/observe/capacity/CapacitySummaryCard'
+import { CapacityHealthPanel } from '../../components/observe/capacity/CapacityHealthPanel'
 import { CapacityChartContainer } from '../../components/observe/capacity/CapacityChartContainer'
 import { ResourceConsumersTable } from '../../components/observe/capacity/ResourceConsumersTable'
+import { TopCapacityRisksTable } from '../../components/observe/capacity/TopCapacityRisksTable'
 import { InsightCard } from '../../components/observe/capacity/InsightCard'
-import { ScenarioCard } from '../../components/observe/capacity/ScenarioCard'
-import { BudgetPlanningPanel } from '../../components/observe/capacity/BudgetPlanningPanel'
-import { AICapacityAdvisor } from '../../components/observe/capacity/AICapacityAdvisor'
+import { ScenarioTemplateCard } from '../../components/observe/capacity/ScenarioTemplateCard'
+import { BudgetForecastPanel } from '../../components/observe/capacity/BudgetForecastPanel'
+import { AdvisorSection } from '../../components/observe/capacity/AdvisorSection'
 import { EmptyState } from '../../components/observe/capacity/EmptyState'
 import { useLanguage } from '../../i18n/LanguageContext'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import type {
   CapacityPlanningRange,
   CapacityPlanningResponse,
+  CapacityScenario,
+  CapacityScenarioParams,
   CapacityStatus,
   CapacityTab,
 } from '../../types/observe'
@@ -61,28 +65,41 @@ export default function CapacityPlanning() {
   const [configureOpen, setConfigureOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
+  const [scenarioOverrides, setScenarioOverrides] = useState<Record<string, CapacityScenario>>({})
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
 
-  const load = useCallback(() => {
-    if (!wsId) {
-      setData(null)
-      setError(null)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    observeService
-      .getCapacityPlanning(wsId, range)
-      .then((res) => setData(res))
-      .catch((err: unknown) => {
+  const load = useCallback(
+    (scenario?: CapacityScenarioParams) => {
+      if (!wsId) {
         setData(null)
-        setError(err instanceof Error ? err.message : t('common.errorGeneric'))
-      })
-      .finally(() => setLoading(false))
-  }, [range, t, wsId])
+        setError(null)
+        return
+      }
+      setLoading(true)
+      setError(null)
+      observeService
+        .getCapacityPlanning(wsId, range, scenario)
+        .then((res) => {
+          setData(res)
+          if (scenario?.scenario_template && res.scenarios?.calculated?.[0]) {
+            setScenarioOverrides((prev) => ({
+              ...prev,
+              [scenario.scenario_template!]: res.scenarios!.calculated[0],
+            }))
+          }
+        })
+        .catch((err: unknown) => {
+          setData(null)
+          setError(err instanceof Error ? err.message : t('common.errorGeneric'))
+        })
+        .finally(() => setLoading(false))
+    },
+    [range, t, wsId],
+  )
 
   useEffect(() => {
+    setScenarioOverrides({})
     load()
   }, [load])
 
@@ -120,29 +137,44 @@ export default function CapacityPlanning() {
     [t],
   )
 
+  const insightTypeLabel = useCallback(
+    (type?: string) => {
+      if (!type) return undefined
+      const key = `cap.insight.type.${type}` as const
+      const translated = t(key)
+      return translated === key ? type : translated
+    },
+    [t],
+  )
+
   const openAi = useCallback(() => {
-    if (!data) return
+    if (!data?.advisor?.available) return
     setAiSeed({
       id: Date.now(),
       agent: 'capacity_planner',
-      question: 'Review workspace capacity posture and recommend scaling actions based on the connected monitoring data.',
+      question: t('cap.advisorAiQuestion'),
       autoSend: true,
       quick: true,
       context: {
         source: 'qynsight_capacity',
         metrics: {
-          cpu_runway_months: data.summary.cpu_runway_months,
-          memory_runway_months: data.summary.memory_runway_months,
-          storage_runway_months: data.summary.storage_runway_months,
-          cost_optimization_potential: data.summary.cost_optimization_potential,
-          capacity_risk_score: data.summary.capacity_risk_score,
-          statuses: data.summary.statuses,
+          health: data.health,
+          risk_score: data.summary.capacity_risk_score,
+          runway: data.runway,
         },
         services: data.resource_analysis.distribution,
+        advisor: data.advisor,
       },
     })
     setAiOpen(true)
-  }, [data])
+  }, [data, t])
+
+  const handleScenarioCalculate = useCallback(
+    (params: CapacityScenarioParams) => {
+      load(params)
+    },
+    [load],
+  )
 
   const tabs = useMemo(
     () => [
@@ -162,10 +194,48 @@ export default function CapacityPlanning() {
   ]
 
   const summary = data?.summary
+  const health = data?.health
+
   const historicalForecast = (data?.overview.forecast ?? []).filter((p) => !p.projected)
   const projectedForecast = data?.overview.forecast ?? []
   const hasForecast = projectedForecast.some(
     (p) => p.cpu != null || p.memory != null || p.storage != null,
+  )
+
+  const topRisks = data?.top_risks ?? data?.resource_analysis.top_risks ?? []
+  const scenarioTemplates = data?.scenarios?.templates ?? []
+  const calculatedScenarios = data?.scenarios?.calculated ?? data?.scenario_planning ?? []
+
+  const getScenarioResult = (templateId: string): CapacityScenario | undefined =>
+    scenarioOverrides[templateId] ??
+    calculatedScenarios.find((s) => s.id === templateId || s.template === templateId)
+
+  const healthLabels = useMemo(
+    () => ({
+      title: t('cap.health.title'),
+      healthStatus: t('cap.health.status'),
+      riskScore: t('cap.kpi.riskScore'),
+      primaryRisk: t('cap.health.primaryRisk'),
+      shortestRunway: t('cap.health.shortestRunway'),
+      recommendedAction: t('cap.health.recommendedAction'),
+      dataConfidence: t('cap.health.dataConfidence'),
+      insufficient: t('cap.insufficientData'),
+      days: t('cap.days'),
+      status: {
+        healthy: t('cap.health.healthy'),
+        watch: t('cap.health.watch'),
+        risk: t('cap.health.risk'),
+        critical: t('cap.health.critical'),
+        no_data: t('cap.health.noData'),
+      },
+      confidence: {
+        no_data: t('cap.confidence.noData'),
+        low: t('cap.confidence.low'),
+        medium: t('cap.confidence.medium'),
+        high: t('cap.confidence.high'),
+      },
+    }),
+    [t],
   )
 
   const header = (
@@ -188,7 +258,7 @@ export default function CapacityPlanning() {
           </select>
           <button
             type="button"
-            disabled={!data?.meta.data_available}
+            disabled
             title={t('cap.exportDisabled')}
             className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40 disabled:opacity-60"
           >
@@ -238,7 +308,7 @@ export default function CapacityPlanning() {
           <span>{error}</span>
           <button
             type="button"
-            onClick={load}
+            onClick={() => load()}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1 text-xs font-semibold"
           >
             {t('cap.retry')}
@@ -267,11 +337,7 @@ export default function CapacityPlanning() {
         />
         <CapacitySummaryCard
           title={t('cap.kpi.costOptimization')}
-          value={
-            summary?.cost_optimization_potential != null
-              ? String(summary.cost_optimization_potential)
-              : t('cap.noData')
-          }
+          value={t('cap.costUnavailableShort')}
           status={summary?.statuses.cost ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.cost ?? 'insufficient_data')}
         />
@@ -287,6 +353,8 @@ export default function CapacityPlanning() {
 
       {activeTab === 'overview' && (
         <div className="space-y-4">
+          <CapacityHealthPanel health={health} labels={healthLabels} />
+
           <CapacityChartContainer
             title={t('cap.forecastTitle')}
             subtitle={t('cap.forecastDesc')}
@@ -344,23 +412,64 @@ export default function CapacityPlanning() {
             </ResponsiveContainer>
           </CapacityChartContainer>
 
-          <AICapacityAdvisor
-            advisor={data?.overview.advisor ?? null}
-            title={t('cap.advisorTitle')}
-            emptyTitle={t('cap.advisorEmpty')}
-            onAskAi={data?.meta.data_available ? openAi : undefined}
-            askAiLabel={t('cap.askAi')}
+          <AdvisorSection
+            advisor={data?.advisor}
+            labels={{
+              title: t('cap.advisorTitle'),
+              disabled: t('cap.advisorDisabled'),
+              findings: t('cap.advisor.findings'),
+              businessImpact: t('cap.advisor.businessImpact'),
+              recommendedAction: t('cap.advisor.recommendedAction'),
+              confidence: t('cap.advisor.confidence'),
+              dataUsed: t('cap.advisor.dataUsed'),
+              samplesLabel: t('cap.advisor.samples'),
+              askAi: t('cap.askAi'),
+              confidenceLevels: {
+                no_data: t('cap.confidence.noData'),
+                low: t('cap.confidence.low'),
+                medium: t('cap.confidence.medium'),
+                high: t('cap.confidence.high'),
+              },
+            }}
+            onAskAi={data?.advisor?.available ? openAi : undefined}
           />
         </div>
       )}
 
       {activeTab === 'resource-analysis' && (
         <div className="space-y-4">
+          <TopCapacityRisksTable
+            risks={topRisks}
+            labels={{
+              title: t('cap.risks.title'),
+              host: t('cap.risks.host'),
+              resource: t('cap.risks.resource'),
+              utilization: t('cap.utilization'),
+              trend: t('cap.risks.trend'),
+              runway: t('cap.risks.runway'),
+              riskLevel: t('cap.risks.riskLevel'),
+              lastSample: t('cap.risks.lastSample'),
+              empty: t('cap.risks.empty'),
+              insufficient: t('cap.insufficientData'),
+              days: t('cap.days'),
+              trendLabels: {
+                up: t('cap.trend.up'),
+                down: t('cap.trend.down'),
+                flat: t('cap.trend.flat'),
+                unknown: t('cap.trend.unknown'),
+              },
+              riskLabels: {
+                critical: t('cap.status.critical'),
+                warning: t('cap.status.warning'),
+                healthy: t('cap.status.healthy'),
+                insufficient_data: t('cap.insufficientData'),
+              },
+            }}
+          />
+
           {(data?.resource_analysis.top_cpu_consumers.length ?? 0) === 0 &&
           (data?.resource_analysis.top_memory_consumers.length ?? 0) === 0 &&
-          (data?.resource_analysis.top_storage_consumers.length ?? 0) === 0 ? (
-            <EmptyState title={t('cap.resourceAnalysisEmpty')} />
-          ) : (
+          (data?.resource_analysis.top_storage_consumers.length ?? 0) === 0 ? null : (
             <div className="grid gap-4 lg:grid-cols-3">
               <ResourceConsumersTable
                 title={t('cap.topCpu')}
@@ -395,11 +504,14 @@ export default function CapacityPlanning() {
                 key={insight.id}
                 insight={insight}
                 priorityLabel={priorityLabel(insight.priority)}
+                typeLabel={insightTypeLabel(insight.type)}
                 labels={{
-                  issue: t('cap.insight.issue'),
+                  severity: t('cap.insight.severity'),
+                  evidence: t('cap.insight.evidence'),
                   recommendation: t('cap.insight.recommendation'),
-                  impact: t('cap.insight.impact'),
-                  saving: t('cap.insight.saving'),
+                  operationalImpact: t('cap.insight.operationalImpact'),
+                  costImpact: t('cap.insight.costImpact'),
+                  costUnavailable: t('cap.costUnavailable'),
                   created: t('cap.insight.created'),
                 }}
               />
@@ -410,19 +522,43 @@ export default function CapacityPlanning() {
 
       {activeTab === 'scenarios' && (
         <div className="space-y-3">
-          {(data?.scenario_planning.length ?? 0) === 0 ? (
+          {scenarioTemplates.length === 0 ? (
             <EmptyState title={t('cap.scenariosEmpty')} />
           ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {data?.scenario_planning.map((scenario) => (
-                <ScenarioCard
-                  key={scenario.id}
-                  scenario={scenario}
-                  nameLabel={scenarioName(scenario.name)}
-                  limitingLabel={t('cap.scenario.limiting')}
-                  runwayLabel={t('cap.scenario.runway')}
-                  monthsLabel={t('cap.months')}
-                  insufficientLabel={t('cap.insufficientData')}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {scenarioTemplates.map((template) => (
+                <ScenarioTemplateCard
+                  key={template.id}
+                  template={template}
+                  calculated={getScenarioResult(template.id)}
+                  nameLabel={scenarioName(template.name)}
+                  labels={{
+                    growth: t('cap.scenario.growth'),
+                    horizon: t('cap.scenario.horizon'),
+                    targetResource: t('cap.scenario.targetResource'),
+                    calculate: t('cap.scenario.calculate'),
+                    currentRunway: t('cap.scenario.currentRunway'),
+                    projectedRunway: t('cap.scenario.projectedRunway'),
+                    riskChange: t('cap.scenario.riskChange'),
+                    impactSummary: t('cap.scenario.impactSummary'),
+                    insufficient: t('cap.insufficientData'),
+                    cannotCalculate: t('cap.scenario.cannotCalculate'),
+                    days: t('cap.days'),
+                    months: t('cap.months'),
+                    resources: {
+                      cpu: t('cap.cpu'),
+                      memory: t('cap.memory'),
+                      storage: t('cap.storage'),
+                    },
+                    riskChangeLabels: {
+                      increased: t('cap.scenario.riskIncreased'),
+                      elevated: t('cap.scenario.riskElevated'),
+                      stable: t('cap.scenario.riskStable'),
+                      unknown: t('cap.insufficientData'),
+                      baseline: t('cap.scenario.riskBaseline'),
+                    },
+                  }}
+                  onCalculate={handleScenarioCalculate}
                 />
               ))}
             </div>
@@ -431,24 +567,33 @@ export default function CapacityPlanning() {
       )}
 
       {activeTab === 'budget' && (
-        <BudgetPlanningPanel
-          budget={data?.budget_planning ?? {
-            current_monthly_cost: null,
-            forecasted_cost: [],
-            budget_variance: null,
-            saving_opportunities: [],
-            provider_breakdown: [],
+        <BudgetForecastPanel
+          budget={data?.budget ?? {
+            forecasted_requirements: data?.budget_planning?.forecasted_requirements ?? {
+              cpu: null,
+              memory: null,
+              storage: null,
+              timeline_days: null,
+            },
+            cost_estimate_available: data?.budget_planning?.cost_estimate_available ?? false,
+            billing_integration_status: data?.budget_planning?.billing_integration_status ?? 'not_connected',
           }}
           labels={{
-            currentCost: t('cap.budget.current'),
-            forecastedCost: t('cap.budget.forecast'),
-            variance: t('cap.budget.variance'),
-            savings: t('cap.budget.savings'),
-            providers: t('cap.budget.providers'),
-            empty: t('cap.budget.empty'),
-            noData: t('cap.budget.noData'),
+            title: t('cap.budget.forecastTitle'),
+            forecastCpu: t('cap.budget.forecastCpu'),
+            forecastMemory: t('cap.budget.forecastMemory'),
+            forecastStorage: t('cap.budget.forecastStorage'),
+            timeline: t('cap.budget.timeline'),
+            costStatus: t('cap.budget.costStatus'),
+            costUnavailable: t('cap.costUnavailable'),
+            connectBilling: t('cap.budget.connectBilling'),
             insufficient: t('cap.insufficientData'),
+            days: t('cap.days'),
+            pctGrowth: t('cap.budget.pctGrowth'),
+            empty: t('cap.budget.forecastEmpty'),
+            emptyDesc: t('cap.budget.forecastEmptyDesc'),
           }}
+          onConnectBilling={() => setConfigureOpen(true)}
         />
       )}
 
