@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::get('/workspaces/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
     Route::get('/workspaces/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
+    Route::get('/workspaces/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/workspaces/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
     Route::get('/workspaces/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
     Route::get('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
@@ -125,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::get('/projects/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
     Route::get('/projects/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
+    Route::get('/projects/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/projects/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
     Route::get('/projects/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
     Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);

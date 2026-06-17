@@ -442,6 +442,40 @@ class ObserveController extends Controller
     }
 
     /**
+     * JSON export for capacity planning report.
+     * GET /api/workspaces/{project}/observe/capacity-planning/export?range=30d&format=json
+     */
+    public function capacityPlanningExport(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $format = (string) $request->query('format', 'json');
+        if ($format !== 'json') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only JSON export is supported in this release.',
+            ], 400);
+        }
+
+        $range = (string) $request->query('range', '30d');
+        $options = array_filter([
+            'scenario_template' => $request->query('scenario_template'),
+            'growth_pct' => $request->query('growth_pct'),
+            'horizon_days' => $request->query('horizon_days'),
+            'target_resource' => $request->query('target_resource'),
+            'hosts' => $request->query('hosts'),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $report = app(CapacityPlanningService::class)->buildExport($project->id, $range, $options);
+        $filename = 'capacity-planning-ws' . $project->id . '-' . $range . '.json';
+
+        return response()
+            ->json($report)
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
+
+    /**
      * Legacy alias — returns summary KPIs from capacity planning payload.
      */
     public function capacityMetrics(Request $request, Project $project): JsonResponse

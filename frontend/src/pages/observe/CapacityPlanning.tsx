@@ -23,8 +23,10 @@ import { ResourceConsumersTable } from '../../components/observe/capacity/Resour
 import { TopCapacityRisksTable } from '../../components/observe/capacity/TopCapacityRisksTable'
 import { InsightCard } from '../../components/observe/capacity/InsightCard'
 import { ScenarioTemplateCard } from '../../components/observe/capacity/ScenarioTemplateCard'
+import { ScenarioHostImpactsTable } from '../../components/observe/capacity/ScenarioHostImpactsTable'
 import { BudgetForecastPanel } from '../../components/observe/capacity/BudgetForecastPanel'
 import { AdvisorSection } from '../../components/observe/capacity/AdvisorSection'
+import { CapacityDiagnosticsPanel } from '../../components/observe/capacity/CapacityDiagnosticsPanel'
 import { EmptyState } from '../../components/observe/capacity/EmptyState'
 import { useLanguage } from '../../i18n/LanguageContext'
 import type { AIAgentSeed } from '../../types/aiAgent'
@@ -55,17 +57,20 @@ function formatRisk(score: number | null, insufficient: string): string {
 
 export default function CapacityPlanning() {
   const { t } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
 
   const [range, setRange] = useState<CapacityPlanningRange>('30d')
   const [activeTab, setActiveTab] = useState<CapacityTab>('overview')
   const [data, setData] = useState<CapacityPlanningResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const [configureOpen, setConfigureOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [scenarioOverrides, setScenarioOverrides] = useState<Record<string, CapacityScenario>>({})
+  const [lastScenarioParams, setLastScenarioParams] = useState<CapacityScenarioParams | undefined>(undefined)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
 
@@ -170,11 +175,34 @@ export default function CapacityPlanning() {
   }, [data, t])
 
   const handleScenarioCalculate = useCallback(
-    (params: CapacityScenarioParams) => {
+    (params: CapacityScenarioParams & { scenario_template: string }) => {
+      setLastScenarioParams(params)
       load(params)
     },
     [load],
   )
+
+  const handleExport = useCallback(async () => {
+    if (!wsId) return
+    setExporting(true)
+    setExportError(null)
+    try {
+      const report = await observeService.exportCapacityPlanning(wsId, range, lastScenarioParams)
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `capacity-planning-ws${wsId}-${range}.json`
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } catch (err: unknown) {
+      setExportError(err instanceof Error ? err.message : t('cap.exportError'))
+    } finally {
+      setExporting(false)
+    }
+  }, [lastScenarioParams, range, t, wsId])
+
+  const showDiagnostics = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
 
   const tabs = useMemo(
     () => [
@@ -205,6 +233,14 @@ export default function CapacityPlanning() {
   const topRisks = data?.top_risks ?? data?.resource_analysis.top_risks ?? []
   const scenarioTemplates = data?.scenarios?.templates ?? []
   const calculatedScenarios = data?.scenarios?.calculated ?? data?.scenario_planning ?? []
+  const availableHosts = data?.scenarios?.available_hosts ?? []
+
+  const activeScenarioImpacts = useMemo(() => {
+    const withImpacts = Object.values(scenarioOverrides).find((s) => (s.host_impacts?.length ?? 0) > 0)
+    if (withImpacts?.host_impacts) return withImpacts.host_impacts
+    const fromData = calculatedScenarios.find((s) => (s.host_impacts?.length ?? 0) > 0)
+    return fromData?.host_impacts ?? []
+  }, [calculatedScenarios, scenarioOverrides])
 
   const getScenarioResult = (templateId: string): CapacityScenario | undefined =>
     scenarioOverrides[templateId] ??
@@ -258,11 +294,12 @@ export default function CapacityPlanning() {
           </select>
           <button
             type="button"
-            disabled
-            title={t('cap.exportDisabled')}
-            className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40 disabled:opacity-60"
+            disabled={!data?.meta.data_available || exporting}
+            onClick={handleExport}
+            title={!data?.meta.data_available ? t('cap.exportDisabled') : undefined}
+            className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {t('cap.export')}
+            {exporting ? t('cap.exporting') : t('cap.exportJson')}
           </button>
           <button
             type="button"
@@ -302,6 +339,12 @@ export default function CapacityPlanning() {
   return (
     <div className="space-y-6">
       {header}
+
+      {exportError ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {exportError}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -521,47 +564,86 @@ export default function CapacityPlanning() {
       )}
 
       {activeTab === 'scenarios' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {scenarioTemplates.length === 0 ? (
             <EmptyState title={t('cap.scenariosEmpty')} />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {scenarioTemplates.map((template) => (
-                <ScenarioTemplateCard
-                  key={template.id}
-                  template={template}
-                  calculated={getScenarioResult(template.id)}
-                  nameLabel={scenarioName(template.name)}
-                  labels={{
-                    growth: t('cap.scenario.growth'),
-                    horizon: t('cap.scenario.horizon'),
-                    targetResource: t('cap.scenario.targetResource'),
-                    calculate: t('cap.scenario.calculate'),
-                    currentRunway: t('cap.scenario.currentRunway'),
-                    projectedRunway: t('cap.scenario.projectedRunway'),
-                    riskChange: t('cap.scenario.riskChange'),
-                    impactSummary: t('cap.scenario.impactSummary'),
-                    insufficient: t('cap.insufficientData'),
-                    cannotCalculate: t('cap.scenario.cannotCalculate'),
-                    days: t('cap.days'),
-                    months: t('cap.months'),
-                    resources: {
-                      cpu: t('cap.cpu'),
-                      memory: t('cap.memory'),
-                      storage: t('cap.storage'),
-                    },
-                    riskChangeLabels: {
-                      increased: t('cap.scenario.riskIncreased'),
-                      elevated: t('cap.scenario.riskElevated'),
-                      stable: t('cap.scenario.riskStable'),
-                      unknown: t('cap.insufficientData'),
-                      baseline: t('cap.scenario.riskBaseline'),
-                    },
-                  }}
-                  onCalculate={handleScenarioCalculate}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {scenarioTemplates.map((template) => (
+                  <ScenarioTemplateCard
+                    key={template.id}
+                    template={template}
+                    calculated={getScenarioResult(template.id)}
+                    availableHosts={availableHosts}
+                    nameLabel={scenarioName(template.name)}
+                    labels={{
+                      growth: t('cap.scenario.growth'),
+                      horizon: t('cap.scenario.horizon'),
+                      targetResource: t('cap.scenario.targetResource'),
+                      hosts: t('cap.scenario.hosts'),
+                      hostsAll: t('cap.scenario.hostsAll'),
+                      calculate: t('cap.scenario.calculate'),
+                      currentRunway: t('cap.scenario.currentRunway'),
+                      projectedRunway: t('cap.scenario.projectedRunway'),
+                      riskChange: t('cap.scenario.riskChange'),
+                      impactSummary: t('cap.scenario.impactSummary'),
+                      confidence: t('cap.advisor.confidence'),
+                      insufficient: t('cap.insufficientData'),
+                      cannotCalculate: t('cap.scenario.cannotCalculate'),
+                      days: t('cap.days'),
+                      months: t('cap.months'),
+                      resources: {
+                        cpu: t('cap.cpu'),
+                        memory: t('cap.memory'),
+                        storage: t('cap.storage'),
+                        all: t('cap.scenario.resourceAll'),
+                      },
+                      riskChangeLabels: {
+                        increased: t('cap.scenario.riskIncreased'),
+                        elevated: t('cap.scenario.riskElevated'),
+                        stable: t('cap.scenario.riskStable'),
+                        unknown: t('cap.insufficientData'),
+                        baseline: t('cap.scenario.riskBaseline'),
+                      },
+                      confidenceLevels: {
+                        no_data: t('cap.confidence.noData'),
+                        low: t('cap.confidence.low'),
+                        medium: t('cap.confidence.medium'),
+                        high: t('cap.confidence.high'),
+                      },
+                    }}
+                    onCalculate={handleScenarioCalculate}
+                  />
+                ))}
+              </div>
+              <ScenarioHostImpactsTable
+                impacts={activeScenarioImpacts}
+                labels={{
+                  title: t('cap.scenario.hostImpacts'),
+                  host: t('cap.risks.host'),
+                  resource: t('cap.risks.resource'),
+                  currentUtil: t('cap.scenario.currentUtil'),
+                  currentRunway: t('cap.scenario.currentRunway'),
+                  projectedUtil: t('cap.scenario.projectedUtil'),
+                  projectedRunway: t('cap.scenario.projectedRunway'),
+                  riskBefore: t('cap.scenario.riskBefore'),
+                  riskAfter: t('cap.scenario.riskAfter'),
+                  impact: t('cap.scenario.impactSummary'),
+                  empty: t('cap.scenario.hostImpactsEmpty'),
+                  insufficient: t('cap.insufficientData'),
+                  days: t('cap.days'),
+                  statusCalculated: t('cap.scenario.statusCalculated'),
+                  statusInsufficient: t('cap.insufficientData'),
+                  riskLabels: {
+                    critical: t('cap.status.critical'),
+                    warning: t('cap.status.warning'),
+                    healthy: t('cap.status.healthy'),
+                    insufficient_data: t('cap.insufficientData'),
+                  },
+                }}
+              />
+            </>
           )}
         </div>
       )}
@@ -596,6 +678,24 @@ export default function CapacityPlanning() {
           onConnectBilling={() => setConfigureOpen(true)}
         />
       )}
+
+      {showDiagnostics && data?.diagnostics ? (
+        <CapacityDiagnosticsPanel
+          diagnostics={data.diagnostics}
+          labels={{
+            title: t('cap.diagnostics.title'),
+            historyAvailable: t('cap.diagnostics.historyAvailable'),
+            totalSamples: t('cap.diagnostics.totalSamples'),
+            hostsWithMetrics: t('cap.diagnostics.hostsWithMetrics'),
+            oldestSample: t('cap.diagnostics.oldestSample'),
+            newestSample: t('cap.diagnostics.newestSample'),
+            supportedMetrics: t('cap.diagnostics.supportedMetrics'),
+            insufficientReasons: t('cap.diagnostics.insufficientReasons'),
+            yes: t('cap.diagnostics.yes'),
+            no: t('cap.diagnostics.no'),
+          }}
+        />
+      ) : null}
 
       {configureOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

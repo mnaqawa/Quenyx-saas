@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import AppLayout from './layouts/AppLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
@@ -19,7 +19,7 @@ import ObserveLayout from './layouts/ObserveLayout'
 import RealTimeMonitoring from './pages/observe/RealTimeMonitoring'
 import InfrastructureMap from './pages/observe/InfrastructureMap'
 import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
-import CapacityPlanning from './pages/observe/CapacityPlanning'
+const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
 import AlertManagement from './pages/observe/AlertManagement'
 import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
@@ -75,7 +75,26 @@ function App() {
                 <Route path="performance-analytics" element={<PerformanceAnalytics />} />
               )}
               {observeRoutes.find((r) => r.key === 'capacity-planning') && (
-                <Route path="capacity-planning" element={<CapacityPlanning />} />
+                <Route
+                  path="capacity-planning"
+                  element={
+                    <Suspense
+                      fallback={
+                        <div className="space-y-6 p-6">
+                          <div className="h-10 w-64 animate-pulse rounded-lg bg-white/5" />
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <div key={i} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+                            ))}
+                          </div>
+                          <div className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+                        </div>
+                      }
+                    >
+                      <CapacityPlanning />
+                    </Suspense>
+                  }
+                />
               )}
               {observeRoutes.find((r) => r.key === 'alert-management') && (
                 <Route path="alert-management" element={<AlertManagement />} />

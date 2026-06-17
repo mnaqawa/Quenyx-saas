@@ -1,4 +1,5 @@
 import { gatewayClient } from './gatewayClient'
+import { getAuthToken } from './apiClient'
 import type {
   RealTimeMetrics,
   SystemInfo,
@@ -8,6 +9,7 @@ import type {
   CapacityPlanningRange,
   CapacityPlanningResponse,
   CapacityScenarioParams,
+  CapacityPlanningExportReport,
   NetworkNode,
   CapacityMetric,
   AlertRule,
@@ -141,6 +143,42 @@ export const observeService = {
       `workspaces/${workspaceId}/observe/capacity-planning?${params.toString()}`,
       { workspaceId, moduleKey: 'qynsight' },
     )
+  },
+
+  async exportCapacityPlanning(
+    workspaceId: number,
+    range: CapacityPlanningRange = '30d',
+    scenario?: CapacityScenarioParams,
+  ): Promise<CapacityPlanningExportReport> {
+    const params = new URLSearchParams({ range, format: 'json' })
+    if (scenario?.scenario_template) params.set('scenario_template', scenario.scenario_template)
+    if (scenario?.growth_pct != null) params.set('growth_pct', String(scenario.growth_pct))
+    if (scenario?.horizon_days != null) params.set('horizon_days', String(scenario.horizon_days))
+    if (scenario?.target_resource) params.set('target_resource', scenario.target_resource)
+    if (scenario?.hosts) params.set('hosts', scenario.hosts)
+
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    const url = `${baseUrl}/api/workspaces/${workspaceId}/observe/capacity-planning/export?${params.toString()}`
+    const token = getAuthToken()
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+
+    if (!response.ok) {
+      let message = 'Export failed'
+      try {
+        const body = (await response.json()) as { message?: string }
+        if (body.message) message = body.message
+      } catch {
+        // ignore parse errors
+      }
+      throw new Error(message)
+    }
+
+    return response.json() as Promise<CapacityPlanningExportReport>
   },
 
   async getCapacityMetrics(workspaceId: number, range?: string): Promise<CapacityMetric[]> {

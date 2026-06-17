@@ -28,6 +28,9 @@ class CapacityPlanningService
         $empty = $this->emptyPayload($range);
 
         if (! Schema::hasTable('observe_metrics_history')) {
+            $empty = $this->emptyPayload($range);
+            $empty['diagnostics'] = $this->buildDiagnostics(collect());
+
             return $empty;
         }
 
@@ -44,10 +47,15 @@ class CapacityPlanningService
             ->get(['host_name', 'service_name', 'metric', 'value', 'recorded_at']);
 
         if ($rows->isEmpty()) {
+            $empty = $this->emptyPayload($range);
+            $empty['diagnostics'] = $this->buildDiagnostics($rows);
+
             return $empty;
         }
 
         $historyPoints = $rows->count();
+        [$oldestSample, $newestSample] = $this->sampleTimeBounds($rows);
+        $dataConfidence = $this->dataConfidence($historyPoints, $oldestSample, $newestSample);
         $dailySeries = $this->buildDailySeries($rows, $bucketSeconds);
         $hostSeries = $this->buildHostMetricSeries($rows, $workspacePrefix);
         $latestByHost = $this->latestByHostMetric($rows, $workspacePrefix);
@@ -67,7 +75,6 @@ class CapacityPlanningService
 
         $riskScore = $this->capacityRiskScore($latestCpu, $latestMemory, $latestDisk, $cpuRunway, $memoryRunway, $storageRunway);
         $shortestRunwayDays = $this->shortestRunwayDays([$cpuRunwayDays, $memoryRunwayDays, $storageRunwayDays]);
-        $dataConfidence = $this->dataConfidence($historyPoints, $cpuRunway !== null || $memoryRunway !== null || $storageRunway !== null);
         $healthStatus = $this->healthStatus($riskScore, $shortestRunwayDays, true);
         $primaryRisk = $this->primaryRisk($latestCpu, $latestMemory, $latestDisk, $cpuRunwayDays, $memoryRunwayDays, $storageRunwayDays);
         $recommendedAction = $this->recommendedAction($healthStatus, $primaryRisk, $riskScore);
@@ -78,6 +85,7 @@ class CapacityPlanningService
         $insights = $this->buildOptimizationInsights($latestByHost, $hostSeries, $dailySeries, $workspaceId);
         $scenarioTemplates = $this->scenarioTemplates();
         $calculatedScenarios = $this->calculateScenarios(
+            $hostSeries,
             $dailySeries,
             $cpuRunway,
             $memoryRunway,
@@ -86,8 +94,10 @@ class CapacityPlanningService
             $memoryRunwayDays,
             $storageRunwayDays,
             $riskScore,
+            $dataConfidence,
             $options
         );
+        $diagnostics = $this->buildDiagnostics($rows);
         $advisor = $this->buildStructuredAdvisor(
             $riskScore,
             $healthStatus,
@@ -161,9 +171,11 @@ class CapacityPlanningService
             'scenarios' => [
                 'templates' => $scenarioTemplates,
                 'calculated' => $calculatedScenarios,
+                'available_hosts' => array_keys($hostSeries),
             ],
             'budget' => $budget,
             'advisor' => $advisor,
+            'diagnostics' => $diagnostics,
             'summary' => $legacySummary,
             'overview' => [
                 'forecast' => $forecast,
@@ -268,9 +280,10 @@ class CapacityPlanningService
                 'distribution' => [],
             ],
             'optimization_insights' => [],
-            'scenarios' => ['templates' => $this->scenarioTemplates(), 'calculated' => []],
+            'scenarios' => ['templates' => $this->scenarioTemplates(), 'calculated' => [], 'available_hosts' => []],
             'budget' => $budget,
             'advisor' => $advisor,
+            'diagnostics' => $this->emptyDiagnostics(),
             'summary' => $summary,
             'overview' => ['forecast' => [], 'growth_trends' => [], 'advisor' => null],
             'resource_analysis' => [
@@ -340,19 +353,26 @@ class CapacityPlanningService
         return 'healthy';
     }
 
-    private function dataConfidence(int $historyPoints, bool $hasRunway): string
+    private function dataConfidence(int $historyPoints, ?Carbon $oldestSample, ?Carbon $newestSample): string
     {
         if ($historyPoints === 0) {
             return 'no_data';
         }
-        if (! $hasRunway || $historyPoints < self::MIN_POINTS_FOR_RUNWAY) {
-            return 'low';
-        }
-        if ($historyPoints < 50) {
-            return 'medium';
+
+        $hoursSpan = 0;
+        if ($oldestSample !== null && $newestSample !== null) {
+            $hoursSpan = (int) $oldestSample->diffInHours($newestSample);
         }
 
-        return 'high';
+        if ($historyPoints < self::MIN_POINTS_FOR_RUNWAY || $hoursSpan < 24) {
+            return 'low';
+        }
+
+        if ($historyPoints >= 20 && $hoursSpan >= 168) {
+            return 'high';
+        }
+
+        return 'medium';
     }
 
     /**
@@ -1068,11 +1088,13 @@ class CapacityPlanningService
     }
 
     /**
+     * @param  array<string, array<string, list<array{timestamp: int, value: float, recorded_at: string}>>>  $hostSeries
      * @param  array<string, list<array{timestamp: int, value: float}>>  $dailySeries
      * @param  array<string, mixed>  $options
      * @return list<array<string, mixed>>
      */
     private function calculateScenarios(
+        array $hostSeries,
         array $dailySeries,
         ?float $cpuRunway,
         ?float $memoryRunway,
@@ -1081,14 +1103,17 @@ class CapacityPlanningService
         ?float $memoryRunwayDays,
         ?float $storageRunwayDays,
         ?float $riskScore,
+        string $dataConfidence,
         array $options
     ): array {
         $runways = ['cpu' => $cpuRunway, 'memory' => $memoryRunway, 'storage' => $storageRunway];
         $runwayDays = ['cpu' => $cpuRunwayDays, 'memory' => $memoryRunwayDays, 'storage' => $storageRunwayDays];
         $valid = array_filter($runways, fn ($v) => $v !== null);
-        if (empty($valid)) {
+        if (empty($valid) && empty($hostSeries)) {
             return [];
         }
+
+        $includeHostImpacts = ! empty($options['scenario_template']);
 
         if (empty($options['scenario_template'])) {
             $results = [];
@@ -1099,7 +1124,10 @@ class CapacityPlanningService
                     $runways,
                     $runwayDays,
                     $riskScore,
-                    null
+                    $dataConfidence,
+                    null,
+                    $hostSeries,
+                    $includeHostImpacts
                 );
             }
 
@@ -1111,7 +1139,17 @@ class CapacityPlanningService
         $template = $templates->get($templateId, $templates->get('traffic_growth'));
 
         return [
-            $this->buildOneScenario($templateId, $template, $runways, $runwayDays, $riskScore, $options),
+            $this->buildOneScenario(
+                $templateId,
+                $template,
+                $runways,
+                $runwayDays,
+                $riskScore,
+                $dataConfidence,
+                $options,
+                $hostSeries,
+                true
+            ),
         ];
     }
 
@@ -1119,7 +1157,8 @@ class CapacityPlanningService
      * @param  array<string, float|null>  $runways
      * @param  array<string, float|null>  $runwayDays
      * @param  array<string, mixed>|null  $template
-     * @param  array<string, mixed>  $options
+     * @param  array<string, mixed>|null  $options
+     * @param  array<string, array<string, list<array{timestamp: int, value: float, recorded_at: string}>>>  $hostSeries
      * @return array<string, mixed>
      */
     private function buildOneScenario(
@@ -1128,7 +1167,10 @@ class CapacityPlanningService
         array $runways,
         array $runwayDays,
         ?float $riskScore,
-        ?array $options
+        string $dataConfidence,
+        ?array $options,
+        array $hostSeries,
+        bool $includeHostImpacts
     ): array {
         $growthPct = isset($options['growth_pct'])
             ? (float) $options['growth_pct']
@@ -1138,8 +1180,37 @@ class CapacityPlanningService
             : (int) ($template['default_horizon_days'] ?? 90);
         $targetResource = (string) ($options['target_resource'] ?? $template['default_resource'] ?? 'cpu');
 
-        $baseRunway = $runways[$targetResource] ?? min(array_filter($runways, fn ($v) => $v !== null));
+        $resourceMap = $this->resolveTargetResources($targetResource);
+        $availableHosts = array_keys($hostSeries);
+        $selectedHosts = $this->parseHostsFilter(
+            isset($options['hosts']) ? (string) $options['hosts'] : null,
+            $availableHosts
+        );
+
+        $hostImpacts = [];
+        if ($includeHostImpacts && ! empty($selectedHosts)) {
+            foreach ($selectedHosts as $host) {
+                foreach ($resourceMap as $resourceLabel => $metricKey) {
+                    $points = $hostSeries[$host][$metricKey] ?? [];
+                    $hostImpacts[] = $this->computeHostScenarioImpact(
+                        $host,
+                        $resourceLabel,
+                        $points,
+                        $growthPct,
+                        $horizonDays
+                    );
+                }
+            }
+        }
+
+        $filteredRunways = array_filter($runways, fn ($v) => $v !== null);
+        $baseRunway = $runways[$targetResource] ?? (! empty($filteredRunways) ? min($filteredRunways) : null);
         $baseRunwayDays = $runwayDays[$targetResource] ?? null;
+        if ($targetResource === 'all' && $baseRunwayDays === null) {
+            $dayValues = array_filter($runwayDays, fn ($v) => $v !== null);
+            $baseRunwayDays = ! empty($dayValues) ? min($dayValues) : null;
+        }
+
         $growthMultiplier = 1 + ($growthPct / 100);
         $projectedRunwayDays = $baseRunwayDays !== null ? round($baseRunwayDays / $growthMultiplier, 1) : null;
         $projectedRunwayMonths = $projectedRunwayDays !== null ? round($projectedRunwayDays / 30.4375, 1) : null;
@@ -1147,25 +1218,272 @@ class CapacityPlanningService
             ? ($projectedRunwayDays < 30 ? 'increased' : ($projectedRunwayDays < 90 ? 'elevated' : 'stable'))
             : 'unknown';
 
+        $calculable = $projectedRunwayDays !== null || (
+            ! empty($hostImpacts) && collect($hostImpacts)->contains(fn ($h) => ($h['status'] ?? '') === 'calculated')
+        );
+
         return [
             'id' => $templateId,
             'name' => $templateId,
             'template' => $templateId,
             'description' => 'Scenario based on ' . $growthPct . '% growth over ' . $horizonDays . ' days on ' . $targetResource . '.',
-            'limiting_resource' => $targetResource,
+            'limiting_resource' => $targetResource === 'all' ? ($this->primaryRiskFromRunways($runwayDays) ?? 'cpu') : $targetResource,
             'growth_pct' => $growthPct,
             'horizon_days' => $horizonDays,
             'target_resource' => $targetResource,
+            'selected_hosts' => $selectedHosts,
             'current_runway_days' => $baseRunwayDays,
             'current_runway_months' => $baseRunway,
             'projected_runway_days' => $projectedRunwayDays,
             'projected_runway_months' => $projectedRunwayMonths,
             'risk_change' => $riskChange,
-            'impact_summary' => $projectedRunwayDays !== null
-                ? 'Projected runway decreases to ' . $projectedRunwayDays . ' days under this growth assumption.'
+            'confidence' => $dataConfidence,
+            'impact_summary' => $calculable
+                ? 'Growth scenario applied to ' . count($selectedHosts) . ' host(s) across ' . $targetResource . ' resource(s).'
                 : 'Scenario cannot be calculated due to insufficient historical data.',
-            'calculable' => $projectedRunwayDays !== null,
+            'calculable' => $calculable,
             'runway_months' => $projectedRunwayMonths,
+            'host_impacts' => $hostImpacts,
+        ];
+    }
+
+    /**
+     * @param  list<array{timestamp: int, value: float, recorded_at: string}>  $points
+     * @return array<string, mixed>
+     */
+    private function computeHostScenarioImpact(
+        string $host,
+        string $resourceLabel,
+        array $points,
+        float $growthPct,
+        int $horizonDays
+    ): array {
+        if (count($points) < self::MIN_POINTS_FOR_RUNWAY) {
+            $latest = ! empty($points) ? $points[count($points) - 1]['value'] : null;
+
+            return [
+                'host_name' => $host,
+                'resource' => $resourceLabel,
+                'status' => 'insufficient_data',
+                'current_utilization' => $latest,
+                'current_runway_days' => null,
+                'projected_utilization' => null,
+                'projected_runway_days' => null,
+                'risk_before' => 'insufficient_data',
+                'risk_after' => 'insufficient_data',
+                'impact_summary' => 'Insufficient metric history for this host and resource.',
+            ];
+        }
+
+        $series = array_map(fn ($p) => ['timestamp' => $p['timestamp'], 'value' => $p['value']], $points);
+        $currentUtil = $series[count($series) - 1]['value'];
+        $currentRunwayDays = $this->runwayDays($series);
+        $growthMultiplier = 1 + ($growthPct / 100);
+        $projectedUtil = min(100, round($currentUtil * $growthMultiplier, 2));
+        $projectedRunwayDays = $currentRunwayDays !== null
+            ? round($currentRunwayDays / $growthMultiplier, 1)
+            : null;
+        $riskBefore = $this->resourceRiskLevel($currentUtil, $currentRunwayDays);
+        $riskAfter = $this->resourceRiskLevel($projectedUtil, $projectedRunwayDays);
+
+        $summary = $projectedRunwayDays !== null
+            ? sprintf(
+                '%s %s: utilization %s%% → %s%%, runway %s → %s days over %d-day horizon at %s%% growth.',
+                $host,
+                $resourceLabel,
+                $currentUtil,
+                $projectedUtil,
+                $currentRunwayDays ?? 'n/a',
+                $projectedRunwayDays,
+                $horizonDays,
+                $growthPct
+            )
+            : sprintf(
+                '%s %s: utilization %s%% → %s%%; runway cannot be projected from current trend.',
+                $host,
+                $resourceLabel,
+                $currentUtil,
+                $projectedUtil
+            );
+
+        return [
+            'host_name' => $host,
+            'resource' => $resourceLabel,
+            'status' => 'calculated',
+            'current_utilization' => $currentUtil,
+            'current_runway_days' => $currentRunwayDays,
+            'projected_utilization' => $projectedUtil,
+            'projected_runway_days' => $projectedRunwayDays,
+            'risk_before' => $riskBefore,
+            'risk_after' => $riskAfter,
+            'impact_summary' => $summary,
+        ];
+    }
+
+    /**
+     * @param  array<string, float|null>  $runwayDays
+     */
+    private function primaryRiskFromRunways(array $runwayDays): ?string
+    {
+        $valid = array_filter($runwayDays, fn ($v) => $v !== null);
+        if (empty($valid)) {
+            return null;
+        }
+        asort($valid);
+
+        return array_key_first($valid);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function resolveTargetResources(string $targetResource): array
+    {
+        $map = ['cpu' => 'cpu', 'memory' => 'memory', 'storage' => 'disk'];
+        if ($targetResource === 'all') {
+            return ['cpu' => 'cpu', 'memory' => 'memory', 'storage' => 'disk'];
+        }
+
+        return isset($map[$targetResource])
+            ? [$targetResource => $map[$targetResource]]
+            : ['cpu' => 'cpu'];
+    }
+
+    /**
+     * @param  list<string>  $availableHosts
+     * @return list<string>
+     */
+    private function parseHostsFilter(?string $hostsParam, array $availableHosts): array
+    {
+        if ($hostsParam === null || trim($hostsParam) === '') {
+            return $availableHosts;
+        }
+
+        $requested = array_values(array_filter(array_map('trim', explode(',', $hostsParam))));
+
+        return array_values(array_intersect($availableHosts, $requested));
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, ObserveMetricHistory>  $rows
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function sampleTimeBounds($rows): array
+    {
+        if ($rows->isEmpty()) {
+            return [null, null];
+        }
+
+        $oldest = null;
+        $newest = null;
+        foreach ($rows as $row) {
+            $at = $row->recorded_at;
+            if ($at === null) {
+                continue;
+            }
+            if ($oldest === null || $at->lt($oldest)) {
+                $oldest = $at;
+            }
+            if ($newest === null || $at->gt($newest)) {
+                $newest = $at;
+            }
+        }
+
+        return [$oldest, $newest];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, ObserveMetricHistory>  $rows
+     * @return array<string, mixed>
+     */
+    private function buildDiagnostics($rows): array
+    {
+        if ($rows->isEmpty()) {
+            return $this->emptyDiagnostics();
+        }
+
+        $hosts = [];
+        $reasons = [];
+        foreach ($rows as $row) {
+            $hosts[(string) $row->host_name] = true;
+        }
+
+        [$oldest, $newest] = $this->sampleTimeBounds($rows);
+        $total = $rows->count();
+
+        if ($total < self::MIN_POINTS_FOR_RUNWAY) {
+            $reasons[] = 'Fewer than ' . self::MIN_POINTS_FOR_RUNWAY . ' metric samples collected.';
+        }
+        if ($oldest !== null && $newest !== null && $oldest->diffInHours($newest) < 24) {
+            $reasons[] = 'Less than 24 hours of metric history.';
+        }
+        if (count($hosts) === 0) {
+            $reasons[] = 'No hosts with recorded metrics.';
+        }
+
+        return [
+            'metrics_history_available' => true,
+            'total_samples' => $total,
+            'hosts_with_metrics' => count($hosts),
+            'oldest_sample_at' => $oldest?->toIso8601String(),
+            'newest_sample_at' => $newest?->toIso8601String(),
+            'supported_metrics' => ['cpu', 'memory', 'storage'],
+            'insufficient_data_reasons' => $reasons,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyDiagnostics(): array
+    {
+        return [
+            'metrics_history_available' => Schema::hasTable('observe_metrics_history'),
+            'total_samples' => 0,
+            'hosts_with_metrics' => 0,
+            'oldest_sample_at' => null,
+            'newest_sample_at' => null,
+            'supported_metrics' => ['cpu', 'memory', 'storage'],
+            'insufficient_data_reasons' => Schema::hasTable('observe_metrics_history')
+                ? ['No metric samples in the selected range.']
+                : ['observe_metrics_history table is not migrated.'],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public function buildExport(int $workspaceId, string $range = '30d', array $options = []): array
+    {
+        $payload = $this->build($workspaceId, $range, $options);
+        $generatedAt = now()->toIso8601String();
+
+        return [
+            'report_metadata' => [
+                'report_type' => 'capacity_planning',
+                'format' => 'json',
+                'range' => $range,
+                'workspace_id' => $workspaceId,
+                'data_available' => $payload['meta']['data_available'] ?? false,
+                'history_points' => $payload['meta']['history_points'] ?? 0,
+            ],
+            'executive_summary' => [
+                'health_status' => $payload['health']['health_status'] ?? 'no_data',
+                'risk_score' => $payload['health']['risk_score'] ?? null,
+                'primary_risk' => $payload['health']['primary_risk'] ?? null,
+                'recommended_action' => $payload['health']['recommended_action'] ?? null,
+                'data_confidence' => $payload['health']['data_confidence'] ?? 'no_data',
+            ],
+            'capacity_health' => $payload['health'] ?? null,
+            'top_capacity_risks' => $payload['top_risks'] ?? [],
+            'runway_summary' => $payload['runway'] ?? null,
+            'optimization_insights' => $payload['optimization_insights'] ?? [],
+            'scenario_results' => $payload['scenarios']['calculated'] ?? [],
+            'budget_forecast' => $payload['budget'] ?? null,
+            'diagnostics' => $payload['diagnostics'] ?? $this->emptyDiagnostics(),
+            'generated_at' => $generatedAt,
+            'workspace_id' => $workspaceId,
         ];
     }
 
@@ -1224,13 +1542,13 @@ class CapacityPlanningService
         ?float $storageRunway,
         int $historyPoints
     ): array {
-        if ($historyPoints < self::MIN_POINTS_FOR_RUNWAY || $dataConfidence === 'no_data') {
+        if ($dataConfidence === 'no_data' || $dataConfidence === 'low') {
             return [
                 'available' => false,
                 'findings' => [],
                 'business_impact' => [],
                 'recommended_actions' => [],
-                'confidence' => 'no_data',
+                'confidence' => $dataConfidence,
                 'data_used' => [],
             ];
         }

@@ -309,6 +309,19 @@ export interface CapacityInsight {
   created_at: string
 }
 
+export interface CapacityHostScenarioImpact {
+  host_name: string
+  resource: string
+  status: 'calculated' | 'insufficient_data'
+  current_utilization: number | null
+  current_runway_days: number | null
+  projected_utilization: number | null
+  projected_runway_days: number | null
+  risk_before: string
+  risk_after: string
+  impact_summary: string
+}
+
 export interface CapacityScenario {
   id: string
   name: string
@@ -319,6 +332,8 @@ export interface CapacityScenario {
   growth_pct?: number
   horizon_days?: number
   target_resource?: string
+  selected_hosts?: string[]
+  confidence?: CapacityDataConfidence
   current_runway_days?: number | null
   current_runway_months?: number | null
   projected_runway_days?: number | null
@@ -326,6 +341,31 @@ export interface CapacityScenario {
   risk_change?: string
   impact_summary?: string
   calculable?: boolean
+  host_impacts?: CapacityHostScenarioImpact[]
+}
+
+export interface CapacityDiagnostics {
+  metrics_history_available: boolean
+  total_samples: number
+  hosts_with_metrics: number
+  oldest_sample_at: string | null
+  newest_sample_at: string | null
+  supported_metrics: string[]
+  insufficient_data_reasons: string[]
+}
+
+export interface CapacityPlanningExportReport {
+  report_metadata: Record<string, unknown>
+  executive_summary: Record<string, unknown>
+  capacity_health: CapacityHealth | null
+  top_capacity_risks: CapacityTopRisk[]
+  runway_summary: CapacityRunway | null
+  optimization_insights: CapacityInsight[]
+  scenario_results: CapacityScenario[]
+  budget_forecast: CapacityBudget | null
+  diagnostics: CapacityDiagnostics
+  generated_at: string
+  workspace_id: number
 }
 
 export interface CapacityBudgetPlanning {
@@ -363,7 +403,9 @@ export interface CapacityPlanningResponse {
   scenarios?: {
     templates: CapacityScenarioTemplate[]
     calculated: CapacityScenario[]
+    available_hosts?: string[]
   }
+  diagnostics?: CapacityDiagnostics
   summary: CapacityPlanningSummary
   overview: {
     forecast: CapacityForecastPoint[]
