@@ -210,6 +210,9 @@ export const alertSummaryFixture: AlertSummary = {
     critical: 2,
     warning: 1,
   },
+  criticalAlerts: 2,
+  acknowledgedAlerts: 1,
+  resolvedToday: 4,
   alertRules: {
     total: 4,
     enabled: 3,
