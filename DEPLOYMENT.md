@@ -26,13 +26,23 @@ git clone <repository-url>
 cd quenyx-saas
 ```
 
+### 1b. MySQL (first-time or Quenyx rename)
+
+Fresh install:
+
+```bash
+mysql -u root -p < scripts/mysql-quenyx-setup.sql
+```
+
+Existing databases with pre-rebrand names: see `docs/QUENYX_DEPLOYMENT_AND_CHANGES.md` §4.2 and `scripts/migrate-mysql-to-quenyx-databases.sh`.
+
 ### 2. Backend
 
 ```bash
 cd backend
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
-# Edit .env: DB_*, APP_URL, etc.
+# Edit .env: DB_DATABASE=quenyx_dev, DB_USERNAME=quenyx, DB_PASSWORD=..., APP_URL, etc.
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
@@ -352,7 +362,7 @@ Before going live:
 
 | Item | Action |
 |------|--------|
-| **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_*` for production DB |
+| **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx`, `DB_PASSWORD` |
 | **CORS** | Set `SANCTUM_STATEFUL_DOMAINS` / frontend domain in backend; allow only your frontend origin |
 | **Frontend build** | `VITE_API_BASE_URL` set to your API base (e.g. `https://your-domain/api`) so requests go to gateway |
 | **Seeded credentials** | Set `SEED_ADMIN_PASSWORD` before seeding; rotate after first login if required |
