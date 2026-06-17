@@ -53,8 +53,6 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'alert-management', label: 'Alert Management', i18nKey: 'nav.qynsight.alertManagement', path: '/app/workspaces/:id/observe/alert-management', title: 'Alert Management' },
   { key: 'services', label: 'Services', i18nKey: 'nav.qynsight.services', path: '/app/workspaces/:id/observe/services', title: 'Services' },
   { key: 'targets', label: 'Targets', i18nKey: 'nav.qynsight.targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
-  { key: 'data-sources', label: 'Data Sources', i18nKey: 'nav.qynsight.dataSources', path: '/app/workspaces/:id/observe/data-sources', title: 'Data Sources' },
-  { key: 'reports', label: 'Reports', i18nKey: 'nav.qynsight.reports', path: '/app/workspaces/:id/observe/reports', title: 'Reports' },
   { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 

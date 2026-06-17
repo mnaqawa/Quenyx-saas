@@ -1,8 +1,14 @@
-import { useState, useMemo, useEffect, Fragment } from 'react'
+import { useState, useMemo, useEffect, Fragment, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
+import { ServiceDetailsDrawer } from '../../components/observe/ServiceDetailsDrawer'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { observeService } from '../../services/observeService'
+import type { ObserveServiceRow } from '../../types/observe'
 
 const statusOptions = ['ok', 'warning', 'critical', 'unknown', 'pending'] as const
 const limitOptions = [25, 50, 100, 200]
@@ -38,6 +44,7 @@ function formatDateTime(dateString: string | null | undefined): string {
 }
 
 export default function Services() {
+  const { t } = useLanguage()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -59,7 +66,9 @@ export default function Services() {
     const intervalParam = searchParams.get('interval')
     return intervalParam ? `${intervalParam} seconds` : '90 seconds'
   })
-  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null)
+  const [drawerService, setDrawerService] = useState<ObserveServiceRow | null>(null)
+  const [rechecking, setRechecking] = useState(false)
+  const [recheckError, setRecheckError] = useState<string | null>(null)
 
   // Sync state changes to URL query params
   useEffect(() => {
@@ -93,21 +102,39 @@ export default function Services() {
     statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
     limit,
     problemsOnly,
-    refreshKey, // Include refreshKey to trigger re-fetch on interval
+    refreshKey,
   })
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshKey((prev) => prev + 1)
+  }, [])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(triggerRefresh, !!selectedWorkspaceId && !isLocked)
+
   useEffect(() => {
+    if (!loading && data) markUpdated()
+  }, [loading, data, refreshKey, markUpdated])
+
+  const handleRecheck = async () => {
     if (!selectedWorkspaceId || isLocked) return
-    
-    const intervalSeconds = parseInt(refreshInterval.replace(' seconds', ''), 10)
-    if (isNaN(intervalSeconds) || intervalSeconds < 30) return
-    
-    const interval = setInterval(() => {
-      // Trigger refresh by updating key (this will cause useObserveServices to re-fetch)
-      setRefreshKey((prev) => prev + 1)
-    }, intervalSeconds * 1000)
-    
-    return () => clearInterval(interval)
-  }, [selectedWorkspaceId, refreshInterval, isLocked])
+    setRechecking(true)
+    setRecheckError(null)
+    try {
+      await observeService.runChecks(Number(selectedWorkspaceId))
+      triggerRefresh()
+      markUpdated()
+    } catch (e) {
+      setRecheckError(e instanceof Error ? e.message : t('services.recheckError'))
+    } finally {
+      setRechecking(false)
+    }
+  }
 
   const toggleStatus = (status: string) => {
     setSelectedStatuses((prev) =>
@@ -209,7 +236,7 @@ export default function Services() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span>QynSight is locked. Some features are disabled.</span>
+            <span>{t('services.locked')}</span>
           </div>
         </div>
       )}
@@ -234,40 +261,28 @@ export default function Services() {
       )}
 
       <PageHeader
-        title="Services"
-        subtitle="All monitored services across the workspace"
+        title={t('services.title')}
+        subtitle={t('services.subtitle')}
         actions={
-          <>
-            <select
-              value={refreshInterval}
-              onChange={(e) => setRefreshInterval(e.target.value)}
-              disabled={isLocked}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="30 seconds" className="bg-slate-900 text-white">30 seconds</option>
-              <option value="60 seconds" className="bg-slate-900 text-white">60 seconds</option>
-              <option value="90 seconds" className="bg-slate-900 text-white">90 seconds</option>
-            </select>
-            <button
-              onClick={() => {
-                // Force refresh by updating refreshKey
-                setRefreshKey((prev) => prev + 1)
-              }}
-              disabled={isLocked || loading}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <button
-              title="Coming soon"
-              disabled
-              className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/40"
-            >
-              Configure
-            </button>
-          </>
+          <ObservePageToolbar
+            interval={interval}
+            onIntervalChange={setInterval}
+            secondsAgo={secondsAgo}
+            onRefresh={() => {
+              triggerRefresh()
+              refreshNow()
+            }}
+            refreshing={loading}
+            disabled={isLocked}
+          />
         }
       />
+
+      {recheckError ? (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {recheckError}
+        </div>
+      ) : null}
 
       {/* Summary Totals */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -437,7 +452,7 @@ export default function Services() {
               {data.items.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-3 py-8 text-center text-sm text-white/60">
-                    No services found
+                    {t('services.empty')}
                   </td>
                 </tr>
               ) : (
@@ -451,8 +466,6 @@ export default function Services() {
                     </tr>
                     {items.map((item, index) => {
                       const rowKey = `${item.host}-${item.service}-${index}`
-                      const isExpanded = expandedRowKey === rowKey
-                      const hasDetails = !!(item.info || item.perfData || item.longPluginOutput)
                       const isFirstInGroup = index === 0
                       return (
                         <Fragment key={rowKey}>
@@ -496,66 +509,27 @@ export default function Services() {
                             </td>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center justify-end gap-2">
-                                {hasDetails && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setExpandedRowKey(isExpanded ? null : rowKey)}
-                                    title={isExpanded ? 'Hide full status' : 'Show full status information'}
-                                    className="rounded border border-white/10 bg-white/5 p-1.5 text-white/70 hover:bg-white/10"
-                                  >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotate-180' : ''}>
-                                      <path d="M6 9l6 6 6-6" />
-                                    </svg>
-                                  </button>
-                                )}
                                 <button
-                                  disabled
-                                  title="Acknowledge (Coming soon)"
-                                  className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                                  type="button"
+                                  onClick={() => setDrawerService(item)}
+                                  className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
                                 >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M20 6L9 17l-5-5" />
-                                  </svg>
+                                  {t('services.action.view')}
                                 </button>
                                 <button
-                                  disabled
-                                  title="Schedule Downtime (Coming soon)"
-                                  className="rounded border border-white/10 bg-white/5 p-1.5 text-white/30 opacity-50 cursor-not-allowed"
+                                  type="button"
+                                  onClick={() => {
+                                    setDrawerService(item)
+                                    void handleRecheck()
+                                  }}
+                                  disabled={isLocked || rechecking}
+                                  className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
                                 >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
-                                  </svg>
+                                  {t('services.action.recheck')}
                                 </button>
                               </div>
                             </td>
                           </tr>
-                          {isExpanded && hasDetails && (
-                            <tr key={`${rowKey}-exp`} className="border-b border-white/5 bg-white/[0.02]">
-                              <td colSpan={9} className="px-3 py-3 text-xs">
-                                <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                                  {item.info && (
-                                    <div>
-                                      <span className="block font-medium text-white/70 mb-1">Status information</span>
-                                      <div className="whitespace-pre-wrap break-words font-mono text-white/90">{item.info}</div>
-                                    </div>
-                                  )}
-                                  {item.perfData && (
-                                    <div>
-                                      <span className="block font-medium text-white/70 mb-1">Perf data</span>
-                                      <div className="font-mono text-white/80 break-all">{item.perfData}</div>
-                                    </div>
-                                  )}
-                                  {item.longPluginOutput && (
-                                    <div>
-                                      <span className="block font-medium text-white/70 mb-1">Long output</span>
-                                      <div className="whitespace-pre-wrap break-words text-white/80">{item.longPluginOutput}</div>
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
                         </Fragment>
                       )
                     })}
@@ -566,6 +540,17 @@ export default function Services() {
           </table>
         </div>
       </div>
+
+      {selectedWorkspaceId && drawerService ? (
+        <ServiceDetailsDrawer
+          open={!!drawerService}
+          onClose={() => setDrawerService(null)}
+          workspaceId={Number(selectedWorkspaceId)}
+          service={drawerService}
+          onRecheck={!isLocked ? handleRecheck : undefined}
+          rechecking={rechecking}
+        />
+      ) : null}
     </div>
   )
 }

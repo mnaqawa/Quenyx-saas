@@ -3,13 +3,15 @@
  * All dynamic data (hosts, services, connections, status) comes from Observe APIs only; no fixtures or hardcoded variables.
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import type { PortScanResult } from '../../types/observe'
 
 type HostRow = { name: string; address: string; status: string }
@@ -343,6 +345,7 @@ function LLDTopology({
 }
 
 export default function InfrastructureMap() {
+  const navigate = useNavigate()
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [activeTab, setActiveTab] = useState<'topology' | 'devices' | 'connections' | 'ports' | 'health'>('topology')
   const [viewType, setViewType] = useState<string>(VIEW_OPTIONS[0])
@@ -354,8 +357,7 @@ export default function InfrastructureMap() {
   const [customZoneInput, setCustomZoneInput] = useState('')
   const [draggingNode, setDraggingNode] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [autoRefresh, setAutoRefresh] = useState(false)
-  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(30)
+  const [refreshKey, setRefreshKey] = useState(0)
   const [scanModalOpen, setScanModalOpen] = useState(false)
   const [scanOptions, setScanOptions] = useState<{ ports: 'top100' | 'all' | 'range'; portsRange: string; protocol: 'tcp' | 'udp'; hostIds: number[] }>({
     ports: 'top100',
@@ -369,20 +371,35 @@ export default function InfrastructureMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const topologyRef = useRef<HTMLDivElement>(null)
 
-  const refetchIntervalMs = autoRefresh ? autoRefreshSeconds * 1000 : 0
+  const refreshAll = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
+
   // Observe module: real data only from QynSight microservice APIs (no fixtures / no hardcoded dynamic data)
-  const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId, refetchIntervalMs, true)
+  const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
   const { data: servicesData } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
-    refetchIntervalMs,
     realDataOnly: true,
+    refreshKey,
   })
   const { data: apiConnectionsData } = useObserveConnections(selectedWorkspaceId, {
-    refetchIntervalMs,
     includeIntegrations: true,
+    refreshKey,
   })
-  const { data: portScansData, refresh: refreshPortScans } = useObservePortScans(selectedWorkspaceId, { refetchIntervalMs })
+  const { data: portScansData, refresh: refreshPortScans } = useObservePortScans(selectedWorkspaceId, { refreshKey })
+
+  useEffect(() => {
+    if (!loading && hosts.length >= 0) markUpdated()
+  }, [loading, hosts, refreshKey, markUpdated])
   const portScansByHost = useMemo(() => {
     const map = new Map<string, NonNullable<typeof portScansData>[number]>()
     ;(portScansData ?? []).forEach((ps) => map.set(ps.host_name, ps))
@@ -872,38 +889,22 @@ export default function InfrastructureMap() {
               </svg>
               Full Screen
             </button>
-            <label className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-white/30 bg-white/10 text-sky-500 focus:ring-sky-500/50"
-              />
-              Auto-refresh
-            </label>
-            {autoRefresh && (
-              <select
-                value={autoRefreshSeconds}
-                onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none"
-                title="Refresh interval"
-              >
-                <option value={15} className="bg-slate-900">15s</option>
-                <option value={30} className="bg-slate-900">30s</option>
-                <option value={60} className="bg-slate-900">60s</option>
-              </select>
-            )}
-            <Link
-              to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
-              title="Configure hosts and services in Monitored Targets"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              Configure
-            </Link>
+            <ObservePageToolbar
+              interval={interval}
+              onIntervalChange={setInterval}
+              secondsAgo={secondsAgo}
+              onRefresh={() => {
+                refreshAll()
+                refreshPortScans()
+                refreshNow()
+              }}
+              refreshing={loading}
+              onSettings={
+                selectedWorkspaceId
+                  ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
+                  : undefined
+              }
+            />
           </div>
         }
       />

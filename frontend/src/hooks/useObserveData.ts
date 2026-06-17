@@ -511,11 +511,12 @@ export function useDataSourceSummary() {
 
 // Observe KPIs for Real-time Monitoring (host/service totals, problems, unreachable, stale, last poll)
 // Map: real target hosts with status from services (for Infrastructure Map). Use realDataOnly in Observe module.
-export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs = 0, realDataOnly = false) {
+export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs = 0, realDataOnly = false, refreshKey = 0) {
   const { data: servicesData, loading: servicesLoading } = useObserveServices({
     workspaceId,
     limit: 500,
     refetchIntervalMs,
+    refreshKey,
     realDataOnly,
   })
   const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
@@ -552,7 +553,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
       cancelled = true
       if (id) window.clearInterval(id)
     }
-  }, [workspaceId, refetchIntervalMs])
+  }, [workspaceId, refetchIntervalMs, refreshKey])
 
   const hostToStatus = useMemo(() => {
     const map = new Map<string, string>()
@@ -590,10 +591,11 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
 /** Infrastructure Map: connections + optional integration-sourced topology from Observe API */
 export function useObserveConnections(
   workspaceId: string | null,
-  options?: { refetchIntervalMs?: number; includeIntegrations?: boolean }
+  options?: { refetchIntervalMs?: number; includeIntegrations?: boolean; refreshKey?: number }
 ) {
   const refetchIntervalMs = options?.refetchIntervalMs ?? 0
   const includeIntegrations = options?.includeIntegrations ?? true
+  const refreshKey = options?.refreshKey ?? 0
   const [data, setData] = useState<import('../types/observe').InfrastructureConnectionsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -633,7 +635,7 @@ export function useObserveConnections(
       cancelled = true
       if (id) window.clearInterval(id)
     }
-  }, [workspaceId, includeIntegrations, refetchIntervalMs])
+  }, [workspaceId, includeIntegrations, refetchIntervalMs, refreshKey])
 
   return { data, loading, error }
 }
@@ -641,9 +643,10 @@ export function useObserveConnections(
 /** Infrastructure Map: nmap port scan results per host */
 export function useObservePortScans(
   workspaceId: string | null,
-  options?: { refetchIntervalMs?: number }
+  options?: { refetchIntervalMs?: number; refreshKey?: number }
 ) {
   const refetchIntervalMs = options?.refetchIntervalMs ?? 0
+  const externalRefreshKey = options?.refreshKey ?? 0
   const [data, setData] = useState<import('../types/observe').PortScanResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -690,7 +693,7 @@ export function useObservePortScans(
       cancelled = true
       if (id) window.clearInterval(id)
     }
-  }, [workspaceId, refetchIntervalMs, refreshKey, fetchScans])
+  }, [workspaceId, refetchIntervalMs, refreshKey, externalRefreshKey, fetchScans])
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1)

@@ -6,9 +6,11 @@ import type { MonitoringProfileCheck, MonitoringProfileCheckUpdate } from '../..
 interface MonitoringThresholdsPanelProps {
   workspaceId: string | number
   canEdit: boolean
+  /** When true, renders without outer card chrome (for settings modal). */
+  embedded?: boolean
 }
 
-export function MonitoringThresholdsPanel({ workspaceId, canEdit }: MonitoringThresholdsPanelProps) {
+export function MonitoringThresholdsPanel({ workspaceId, canEdit, embedded = false }: MonitoringThresholdsPanelProps) {
   const { t } = useLanguage()
   const [checks, setChecks] = useState<MonitoringProfileCheck[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,22 +68,8 @@ export function MonitoringThresholdsPanel({ workspaceId, canEdit }: MonitoringTh
     ['cpu', 'memory', 'disk', 'load', 'ping'].includes(c.service_key)
   )
 
-  return (
-    <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between text-left"
-      >
-        <div>
-          <h3 className="text-sm font-semibold">{t('thresholds.title')}</h3>
-          <p className="text-xs text-white/50">{t('thresholds.subtitle')}</p>
-        </div>
-        <span className="text-white/50">{expanded ? '▼' : '▶'}</span>
-      </button>
-
-      {expanded && (
-        <div className="mt-4 space-y-4">
+  const content = (
+    <div className={embedded ? 'space-y-4' : 'mt-4 space-y-4'}>
           {!canEdit && (
             <p className="text-xs text-amber-200/80">{t('thresholds.readOnly')}</p>
           )}
@@ -148,7 +136,27 @@ export function MonitoringThresholdsPanel({ workspaceId, canEdit }: MonitoringTh
             </div>
           )}
         </div>
-      )}
+  )
+
+  if (embedded) {
+    return <div className="text-white">{content}</div>
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div>
+          <h3 className="text-sm font-semibold">{t('thresholds.title')}</h3>
+          <p className="text-xs text-white/50">{t('thresholds.subtitle')}</p>
+        </div>
+        <span className="text-white/50">{expanded ? '▼' : '▶'}</span>
+      </button>
+
+      {expanded && content}
     </div>
   )
 }

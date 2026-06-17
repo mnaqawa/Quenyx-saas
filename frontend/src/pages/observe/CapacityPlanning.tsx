@@ -14,27 +14,21 @@ import {
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { Tabs } from '../../components/observe/Tabs'
-import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import { CapacitySummaryCard } from '../../components/observe/capacity/CapacitySummaryCard'
 import { CapacityHealthPanel } from '../../components/observe/capacity/CapacityHealthPanel'
 import { CapacityChartContainer } from '../../components/observe/capacity/CapacityChartContainer'
 import { ResourceConsumersTable } from '../../components/observe/capacity/ResourceConsumersTable'
 import { TopCapacityRisksTable } from '../../components/observe/capacity/TopCapacityRisksTable'
 import { InsightCard } from '../../components/observe/capacity/InsightCard'
-import { ScenarioTemplateCard } from '../../components/observe/capacity/ScenarioTemplateCard'
-import { ScenarioHostImpactsTable } from '../../components/observe/capacity/ScenarioHostImpactsTable'
-import { BudgetForecastPanel } from '../../components/observe/capacity/BudgetForecastPanel'
-import { AdvisorSection } from '../../components/observe/capacity/AdvisorSection'
 import { CapacityDiagnosticsPanel } from '../../components/observe/capacity/CapacityDiagnosticsPanel'
 import { EmptyState } from '../../components/observe/capacity/EmptyState'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
-import type { AIAgentSeed } from '../../types/aiAgent'
 import type {
   CapacityPlanningRange,
   CapacityPlanningResponse,
-  CapacityScenario,
-  CapacityScenarioParams,
   CapacityStatus,
   CapacityTab,
 } from '../../types/observe'
@@ -55,6 +49,13 @@ function formatRisk(score: number | null, insufficient: string): string {
   return `${Math.round(score)}/100`
 }
 
+function trendDirection(change: number | null | undefined, t: (key: string) => string): string {
+  if (change == null || Number.isNaN(change)) return t('cap.trend.unknown')
+  if (change > 0.5) return t('cap.trend.up')
+  if (change < -0.5) return t('cap.trend.down')
+  return t('cap.trend.flat')
+}
+
 export default function CapacityPlanning() {
   const { t } = useLanguage()
   const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
@@ -66,47 +67,40 @@ export default function CapacityPlanning() {
   const [error, setError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
-  const [configureOpen, setConfigureOpen] = useState(false)
-  const [aiOpen, setAiOpen] = useState(false)
-  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
-  const [scenarioOverrides, setScenarioOverrides] = useState<Record<string, CapacityScenario>>({})
-  const [lastScenarioParams, setLastScenarioParams] = useState<CapacityScenarioParams | undefined>(undefined)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
 
-  const load = useCallback(
-    (scenario?: CapacityScenarioParams) => {
-      if (!wsId) {
-        setData(null)
-        setError(null)
-        return
-      }
-      setLoading(true)
+  const load = useCallback(() => {
+    if (!wsId) {
+      setData(null)
       setError(null)
-      observeService
-        .getCapacityPlanning(wsId, range, scenario)
-        .then((res) => {
-          setData(res)
-          if (scenario?.scenario_template && res.scenarios?.calculated?.[0]) {
-            setScenarioOverrides((prev) => ({
-              ...prev,
-              [scenario.scenario_template!]: res.scenarios!.calculated[0],
-            }))
-          }
-        })
-        .catch((err: unknown) => {
-          setData(null)
-          setError(err instanceof Error ? err.message : t('common.errorGeneric'))
-        })
-        .finally(() => setLoading(false))
-    },
-    [range, t, wsId],
-  )
+      return Promise.resolve()
+    }
+    setLoading(true)
+    setError(null)
+    return observeService
+      .getCapacityPlanning(wsId, range)
+      .then((res) => setData(res))
+      .catch((err: unknown) => {
+        setData(null)
+        setError(err instanceof Error ? err.message : t('common.errorGeneric'))
+      })
+      .finally(() => setLoading(false))
+  }, [range, t, wsId])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(() => {
+    void load().then(() => markUpdated())
+  }, !!wsId)
 
   useEffect(() => {
-    setScenarioOverrides({})
-    load()
-  }, [load])
+    void load().then(() => markUpdated())
+  }, [load, markUpdated])
 
   const statusLabel = useCallback(
     (status: CapacityStatus): string => {
@@ -120,15 +114,6 @@ export default function CapacityPlanning() {
         default:
           return t('cap.insufficientData')
       }
-    },
-    [t],
-  )
-
-  const scenarioName = useCallback(
-    (name: string): string => {
-      const key = `cap.scenario.${name}` as const
-      const translated = t(key)
-      return translated === key ? name : translated
     },
     [t],
   )
@@ -152,42 +137,12 @@ export default function CapacityPlanning() {
     [t],
   )
 
-  const openAi = useCallback(() => {
-    if (!data?.advisor?.available) return
-    setAiSeed({
-      id: Date.now(),
-      agent: 'capacity_planner',
-      question: t('cap.advisorAiQuestion'),
-      autoSend: true,
-      quick: true,
-      context: {
-        source: 'qynsight_capacity',
-        metrics: {
-          health: data.health,
-          risk_score: data.summary.capacity_risk_score,
-          runway: data.runway,
-          advisor: data.advisor,
-        },
-        services: data.resource_analysis.distribution,
-      },
-    })
-    setAiOpen(true)
-  }, [data, t])
-
-  const handleScenarioCalculate = useCallback(
-    (params: CapacityScenarioParams & { scenario_template: string }) => {
-      setLastScenarioParams(params)
-      load(params)
-    },
-    [load],
-  )
-
   const handleExport = useCallback(async () => {
     if (!wsId) return
     setExporting(true)
     setExportError(null)
     try {
-      const report = await observeService.exportCapacityPlanning(wsId, range, lastScenarioParams)
+      const report = await observeService.exportCapacityPlanning(wsId, range)
       const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -200,17 +155,15 @@ export default function CapacityPlanning() {
     } finally {
       setExporting(false)
     }
-  }, [lastScenarioParams, range, t, wsId])
+  }, [range, t, wsId])
 
   const showDiagnostics = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
 
   const tabs = useMemo(
     () => [
       { id: 'overview', label: t('cap.tab.overview') },
-      { id: 'resource-analysis', label: t('cap.tab.resourceAnalysis') },
-      { id: 'optimization', label: t('cap.tab.optimization') },
-      { id: 'scenarios', label: t('cap.tab.scenarios') },
-      { id: 'budget', label: t('cap.tab.budget') },
+      { id: 'resource-analysis', label: t('cap.tab.forecastAnalysis') },
+      { id: 'optimization', label: t('cap.tab.recommendations') },
     ],
     [t],
   )
@@ -223,6 +176,7 @@ export default function CapacityPlanning() {
 
   const summary = data?.summary
   const health = data?.health
+  const hasCapacityData = data?.meta.data_available === true
 
   const historicalForecast = (data?.overview.forecast ?? []).filter((p) => !p.projected)
   const projectedForecast = data?.overview.forecast ?? []
@@ -231,23 +185,7 @@ export default function CapacityPlanning() {
   )
 
   const topRisks = data?.top_risks ?? data?.resource_analysis.top_risks ?? []
-  const scenarioTemplates = data?.scenarios?.templates ?? []
-  const calculatedScenarios = useMemo(
-    () => data?.scenarios?.calculated ?? data?.scenario_planning ?? [],
-    [data?.scenarios?.calculated, data?.scenario_planning],
-  )
-  const availableHosts = data?.scenarios?.available_hosts ?? []
-
-  const activeScenarioImpacts = useMemo(() => {
-    const withImpacts = Object.values(scenarioOverrides).find((s) => (s.host_impacts?.length ?? 0) > 0)
-    if (withImpacts?.host_impacts) return withImpacts.host_impacts
-    const fromData = calculatedScenarios.find((s) => (s.host_impacts?.length ?? 0) > 0)
-    return fromData?.host_impacts ?? []
-  }, [calculatedScenarios, scenarioOverrides])
-
-  const getScenarioResult = (templateId: string): CapacityScenario | undefined =>
-    scenarioOverrides[templateId] ??
-    calculatedScenarios.find((s) => s.id === templateId || s.template === templateId)
+  const growthTrends = data?.overview.growth_trends ?? []
 
   const healthLabels = useMemo(
     () => ({
@@ -297,20 +235,23 @@ export default function CapacityPlanning() {
           </select>
           <button
             type="button"
-            disabled={!data?.meta.data_available || exporting}
+            disabled={!hasCapacityData || exporting}
             onClick={handleExport}
-            title={!data?.meta.data_available ? t('cap.exportDisabled') : undefined}
+            title={!hasCapacityData ? t('cap.exportDisabled') : undefined}
             className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {exporting ? t('cap.exporting') : t('cap.exportJson')}
           </button>
-          <button
-            type="button"
-            onClick={() => setConfigureOpen(true)}
-            className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white transition hover:bg-white/10"
-          >
-            {t('cap.configure')}
-          </button>
+          <ObservePageToolbar
+            interval={interval}
+            onIntervalChange={setInterval}
+            secondsAgo={secondsAgo}
+            onRefresh={() => {
+              void load().then(() => markUpdated())
+              refreshNow()
+            }}
+            refreshing={loading}
+          />
         </>
       }
     />
@@ -329,12 +270,11 @@ export default function CapacityPlanning() {
     return (
       <div className="space-y-6">
         {header}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
           ))}
         </div>
-        <div className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
       </div>
     )
   }
@@ -354,7 +294,7 @@ export default function CapacityPlanning() {
           <span>{error}</span>
           <button
             type="button"
-            onClick={() => load()}
+            onClick={() => void load()}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1 text-xs font-semibold"
           >
             {t('cap.retry')}
@@ -362,7 +302,7 @@ export default function CapacityPlanning() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CapacitySummaryCard
           title={t('cap.kpi.cpuRunway')}
           value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.insufficientData'))}
@@ -382,12 +322,6 @@ export default function CapacityPlanning() {
           statusLabel={statusLabel(summary?.statuses.storage ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
-          title={t('cap.kpi.costOptimization')}
-          value={t('cap.costUnavailableShort')}
-          status={summary?.statuses.cost ?? 'insufficient_data'}
-          statusLabel={statusLabel(summary?.statuses.cost ?? 'insufficient_data')}
-        />
-        <CapacitySummaryCard
           title={t('cap.kpi.riskScore')}
           value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.insufficientData'))}
           status={summary?.statuses.risk ?? 'insufficient_data'}
@@ -399,146 +333,150 @@ export default function CapacityPlanning() {
 
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          <CapacityHealthPanel health={health} labels={healthLabels} />
-
-          <CapacityChartContainer
-            title={t('cap.forecastTitle')}
-            subtitle={t('cap.forecastDesc')}
-            badge={rangeOptions.find((o) => o.value === range)?.label}
-            hasData={hasForecast}
-            emptyTitle={t('cap.noHistory')}
-            emptyDescription={t('cap.forecastEmpty')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={projectedForecast} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <defs>
-                  {(['cpu', 'memory', 'storage'] as const).map((k) => (
-                    <linearGradient key={k} id={`cap-grad-${k}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={FORECAST_COLORS[k]} stopOpacity={0.3} />
-                      <stop offset="100%" stopColor={FORECAST_COLORS[k]} stopOpacity={0} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
-                <Tooltip contentStyle={{ background: '#0f151d', border: '1px solid rgba(255,255,255,0.1)' }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="cpu" name={t('cap.cpu')} stroke={FORECAST_COLORS.cpu} fill="url(#cap-grad-cpu)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
-                <Area type="monotone" dataKey="memory" name={t('cap.memory')} stroke={FORECAST_COLORS.memory} fill="url(#cap-grad-memory)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
-                <Area type="monotone" dataKey="storage" name={t('cap.storage')} stroke={FORECAST_COLORS.storage} fill="url(#cap-grad-storage)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CapacityChartContainer>
-
-          <CapacityChartContainer
-            title={t('cap.growthTitle')}
-            subtitle={t('cap.growthDesc')}
-            hasData={(data?.overview.growth_trends.length ?? 0) > 0}
-            emptyTitle={t('cap.noHistory')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={(data?.overview.growth_trends ?? []).map((g) => ({
-                  metric: g.metric,
-                  start: g.start_pct,
-                  end: g.end_pct,
-                  change: g.change_pct,
-                }))}
-                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="metric" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
-                <Tooltip contentStyle={{ background: '#0f151d', border: '1px solid rgba(255,255,255,0.1)' }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="start" name={t('cap.growth.start')} stroke="#64748b" strokeWidth={2} dot />
-                <Line type="monotone" dataKey="end" name={t('cap.growth.end')} stroke="#0ea5e9" strokeWidth={2} dot />
-              </LineChart>
-            </ResponsiveContainer>
-          </CapacityChartContainer>
-
-          <AdvisorSection
-            advisor={data?.advisor}
-            labels={{
-              title: t('cap.advisorTitle'),
-              disabled: t('cap.advisorDisabled'),
-              findings: t('cap.advisor.findings'),
-              businessImpact: t('cap.advisor.businessImpact'),
-              recommendedAction: t('cap.advisor.recommendedAction'),
-              confidence: t('cap.advisor.confidence'),
-              dataUsed: t('cap.advisor.dataUsed'),
-              samplesLabel: t('cap.advisor.samples'),
-              askAi: t('cap.askAi'),
-              confidenceLevels: {
-                no_data: t('cap.confidence.noData'),
-                low: t('cap.confidence.low'),
-                medium: t('cap.confidence.medium'),
-                high: t('cap.confidence.high'),
-              },
-            }}
-            onAskAi={data?.advisor?.available ? openAi : undefined}
-          />
+          {!hasCapacityData ? (
+            <EmptyState title={t('cap.noHistoryTitle')} description={t('cap.noHistoryDesc')} />
+          ) : (
+            <CapacityHealthPanel health={health} labels={healthLabels} />
+          )}
         </div>
       )}
 
       {activeTab === 'resource-analysis' && (
         <div className="space-y-4">
-          <TopCapacityRisksTable
-            risks={topRisks}
-            labels={{
-              title: t('cap.risks.title'),
-              host: t('cap.risks.host'),
-              resource: t('cap.risks.resource'),
-              utilization: t('cap.utilization'),
-              trend: t('cap.risks.trend'),
-              runway: t('cap.risks.runway'),
-              riskLevel: t('cap.risks.riskLevel'),
-              lastSample: t('cap.risks.lastSample'),
-              empty: t('cap.risks.empty'),
-              insufficient: t('cap.insufficientData'),
-              days: t('cap.days'),
-              trendLabels: {
-                up: t('cap.trend.up'),
-                down: t('cap.trend.down'),
-                flat: t('cap.trend.flat'),
-                unknown: t('cap.trend.unknown'),
-              },
-              riskLabels: {
-                critical: t('cap.status.critical'),
-                warning: t('cap.status.warning'),
-                healthy: t('cap.status.healthy'),
-                insufficient_data: t('cap.insufficientData'),
-              },
-            }}
-          />
+          {!hasCapacityData ? (
+            <EmptyState title={t('cap.noHistoryTitle')} description={t('cap.noHistoryDesc')} />
+          ) : (
+            <>
+              <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-4 text-sm text-white">
+                <div className="flex flex-wrap gap-6">
+                  <div>
+                    <span className="text-xs text-white/50">{t('cap.forecastHorizon')}</span>
+                    <p className="font-medium">{rangeOptions.find((o) => o.value === range)?.label}</p>
+                  </div>
+                  {growthTrends.map((g) => (
+                    <div key={g.metric}>
+                      <span className="text-xs text-white/50">{g.metric} {t('cap.growth.direction')}</span>
+                      <p className="font-medium">{trendDirection(g.change_pct, t)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          {(data?.resource_analysis.top_cpu_consumers.length ?? 0) === 0 &&
-          (data?.resource_analysis.top_memory_consumers.length ?? 0) === 0 &&
-          (data?.resource_analysis.top_storage_consumers.length ?? 0) === 0 ? null : (
-            <div className="grid gap-4 lg:grid-cols-3 min-w-0">
-              <ResourceConsumersTable
-                title={t('cap.topCpu')}
-                consumers={data?.resource_analysis.top_cpu_consumers ?? []}
-                emptyTitle={t('cap.noData')}
-                valueLabel={t('cap.utilization')}
-                hostLabel={t('cap.risks.host')}
+              <CapacityChartContainer
+                title={t('cap.forecastTitle')}
+                subtitle={t('cap.forecastDesc')}
+                badge={rangeOptions.find((o) => o.value === range)?.label}
+                hasData={hasForecast}
+                emptyTitle={t('cap.noHistoryTitle')}
+                emptyDescription={t('cap.noHistoryDesc')}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={projectedForecast} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      {(['cpu', 'memory', 'storage'] as const).map((k) => (
+                        <linearGradient key={k} id={`cap-grad-${k}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={FORECAST_COLORS[k]} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={FORECAST_COLORS[k]} stopOpacity={0} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
+                    <Tooltip contentStyle={{ background: '#0f151d', border: '1px solid rgba(255,255,255,0.1)' }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Area type="monotone" dataKey="cpu" name={t('cap.cpu')} stroke={FORECAST_COLORS.cpu} fill="url(#cap-grad-cpu)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
+                    <Area type="monotone" dataKey="memory" name={t('cap.memory')} stroke={FORECAST_COLORS.memory} fill="url(#cap-grad-memory)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
+                    <Area type="monotone" dataKey="storage" name={t('cap.storage')} stroke={FORECAST_COLORS.storage} fill="url(#cap-grad-storage)" strokeWidth={2} connectNulls dot={historicalForecast.length <= 3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CapacityChartContainer>
+
+              <CapacityChartContainer
+                title={t('cap.growthTitle')}
+                subtitle={t('cap.growthDesc')}
+                hasData={growthTrends.length > 0}
+                emptyTitle={t('cap.noHistoryTitle')}
+                emptyDescription={t('cap.noHistoryDesc')}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={growthTrends.map((g) => ({
+                      metric: g.metric,
+                      start: g.start_pct,
+                      end: g.end_pct,
+                      change: g.change_pct,
+                    }))}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="metric" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.5)" />
+                    <Tooltip contentStyle={{ background: '#0f151d', border: '1px solid rgba(255,255,255,0.1)' }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="start" name={t('cap.growth.start')} stroke="#64748b" strokeWidth={2} dot />
+                    <Line type="monotone" dataKey="end" name={t('cap.growth.end')} stroke="#0ea5e9" strokeWidth={2} dot />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CapacityChartContainer>
+
+              <TopCapacityRisksTable
+                risks={topRisks}
+                labels={{
+                  title: t('cap.risks.title'),
+                  host: t('cap.risks.host'),
+                  resource: t('cap.risks.resource'),
+                  utilization: t('cap.utilization'),
+                  trend: t('cap.risks.trend'),
+                  runway: t('cap.risks.runway'),
+                  riskLevel: t('cap.risks.riskLevel'),
+                  lastSample: t('cap.risks.lastSample'),
+                  empty: t('cap.risks.empty'),
+                  insufficient: t('cap.insufficientData'),
+                  days: t('cap.days'),
+                  trendLabels: {
+                    up: t('cap.trend.up'),
+                    down: t('cap.trend.down'),
+                    flat: t('cap.trend.flat'),
+                    unknown: t('cap.trend.unknown'),
+                  },
+                  riskLabels: {
+                    critical: t('cap.status.critical'),
+                    warning: t('cap.status.warning'),
+                    healthy: t('cap.status.healthy'),
+                    insufficient_data: t('cap.insufficientData'),
+                  },
+                }}
               />
-              <ResourceConsumersTable
-                title={t('cap.topMemory')}
-                consumers={data?.resource_analysis.top_memory_consumers ?? []}
-                emptyTitle={t('cap.noData')}
-                valueLabel={t('cap.utilization')}
-                hostLabel={t('cap.risks.host')}
-              />
-              <ResourceConsumersTable
-                title={t('cap.topStorage')}
-                consumers={data?.resource_analysis.top_storage_consumers ?? []}
-                emptyTitle={t('cap.noData')}
-                valueLabel={t('cap.utilization')}
-                hostLabel={t('cap.risks.host')}
-              />
-            </div>
+
+              {(data?.resource_analysis.top_cpu_consumers.length ?? 0) === 0 &&
+              (data?.resource_analysis.top_memory_consumers.length ?? 0) === 0 &&
+              (data?.resource_analysis.top_storage_consumers.length ?? 0) === 0 ? null : (
+                <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+                  <ResourceConsumersTable
+                    title={t('cap.topCpu')}
+                    consumers={data?.resource_analysis.top_cpu_consumers ?? []}
+                    emptyTitle={t('cap.noData')}
+                    valueLabel={t('cap.utilization')}
+                    hostLabel={t('cap.risks.host')}
+                  />
+                  <ResourceConsumersTable
+                    title={t('cap.topMemory')}
+                    consumers={data?.resource_analysis.top_memory_consumers ?? []}
+                    emptyTitle={t('cap.noData')}
+                    valueLabel={t('cap.utilization')}
+                    hostLabel={t('cap.risks.host')}
+                  />
+                  <ResourceConsumersTable
+                    title={t('cap.topStorage')}
+                    consumers={data?.resource_analysis.top_storage_consumers ?? []}
+                    emptyTitle={t('cap.noData')}
+                    valueLabel={t('cap.utilization')}
+                    hostLabel={t('cap.risks.host')}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -546,7 +484,10 @@ export default function CapacityPlanning() {
       {activeTab === 'optimization' && (
         <div className="space-y-3">
           {(data?.optimization_insights.length ?? 0) === 0 ? (
-            <EmptyState title={t('cap.optimizationEmpty')} />
+            <EmptyState
+              title={t('cap.optimizationEmpty')}
+              description={hasCapacityData ? undefined : t('cap.noHistoryDesc')}
+            />
           ) : (
             data?.optimization_insights.map((insight) => (
               <InsightCard
@@ -569,122 +510,6 @@ export default function CapacityPlanning() {
         </div>
       )}
 
-      {activeTab === 'scenarios' && (
-        <div className="space-y-4">
-          {scenarioTemplates.length === 0 ? (
-            <EmptyState title={t('cap.scenariosEmpty')} />
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {scenarioTemplates.map((template) => (
-                  <ScenarioTemplateCard
-                    key={template.id}
-                    template={template}
-                    calculated={getScenarioResult(template.id)}
-                    availableHosts={availableHosts}
-                    nameLabel={scenarioName(template.name)}
-                    labels={{
-                      growth: t('cap.scenario.growth'),
-                      horizon: t('cap.scenario.horizon'),
-                      targetResource: t('cap.scenario.targetResource'),
-                      hosts: t('cap.scenario.hosts'),
-                      hostsAll: t('cap.scenario.hostsAll'),
-                      calculate: t('cap.scenario.calculate'),
-                      currentRunway: t('cap.scenario.currentRunway'),
-                      projectedRunway: t('cap.scenario.projectedRunway'),
-                      riskChange: t('cap.scenario.riskChange'),
-                      impactSummary: t('cap.scenario.impactSummary'),
-                      confidence: t('cap.advisor.confidence'),
-                      insufficient: t('cap.insufficientData'),
-                      cannotCalculate: t('cap.scenario.cannotCalculate'),
-                      days: t('cap.days'),
-                      months: t('cap.months'),
-                      resources: {
-                        cpu: t('cap.cpu'),
-                        memory: t('cap.memory'),
-                        storage: t('cap.storage'),
-                        all: t('cap.scenario.resourceAll'),
-                      },
-                      riskChangeLabels: {
-                        increased: t('cap.scenario.riskIncreased'),
-                        elevated: t('cap.scenario.riskElevated'),
-                        stable: t('cap.scenario.riskStable'),
-                        unknown: t('cap.insufficientData'),
-                        baseline: t('cap.scenario.riskBaseline'),
-                      },
-                      confidenceLevels: {
-                        no_data: t('cap.confidence.noData'),
-                        low: t('cap.confidence.low'),
-                        medium: t('cap.confidence.medium'),
-                        high: t('cap.confidence.high'),
-                      },
-                    }}
-                    onCalculate={handleScenarioCalculate}
-                  />
-                ))}
-              </div>
-              <ScenarioHostImpactsTable
-                impacts={activeScenarioImpacts}
-                labels={{
-                  title: t('cap.scenario.hostImpacts'),
-                  host: t('cap.risks.host'),
-                  resource: t('cap.risks.resource'),
-                  currentUtil: t('cap.scenario.currentUtil'),
-                  currentRunway: t('cap.scenario.currentRunway'),
-                  projectedUtil: t('cap.scenario.projectedUtil'),
-                  projectedRunway: t('cap.scenario.projectedRunway'),
-                  riskBefore: t('cap.scenario.riskBefore'),
-                  riskAfter: t('cap.scenario.riskAfter'),
-                  impact: t('cap.scenario.impactSummary'),
-                  empty: t('cap.scenario.hostImpactsEmpty'),
-                  insufficient: t('cap.insufficientData'),
-                  days: t('cap.days'),
-                  statusCalculated: t('cap.scenario.statusCalculated'),
-                  statusInsufficient: t('cap.insufficientData'),
-                  riskLabels: {
-                    critical: t('cap.status.critical'),
-                    warning: t('cap.status.warning'),
-                    healthy: t('cap.status.healthy'),
-                    insufficient_data: t('cap.insufficientData'),
-                  },
-                }}
-              />
-            </>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'budget' && (
-        <BudgetForecastPanel
-          budget={data?.budget ?? {
-            forecasted_requirements: data?.budget_planning?.forecasted_requirements ?? {
-              cpu: null,
-              memory: null,
-              storage: null,
-              timeline_days: null,
-            },
-            cost_estimate_available: data?.budget_planning?.cost_estimate_available ?? false,
-            billing_integration_status: data?.budget_planning?.billing_integration_status ?? 'not_connected',
-          }}
-          labels={{
-            title: t('cap.budget.forecastTitle'),
-            forecastCpu: t('cap.budget.forecastCpu'),
-            forecastMemory: t('cap.budget.forecastMemory'),
-            forecastStorage: t('cap.budget.forecastStorage'),
-            timeline: t('cap.budget.timeline'),
-            costStatus: t('cap.budget.costStatus'),
-            costUnavailable: t('cap.costUnavailable'),
-            connectBilling: t('cap.budget.connectBilling'),
-            insufficient: t('cap.insufficientData'),
-            days: t('cap.days'),
-            pctGrowth: t('cap.budget.pctGrowth'),
-            empty: t('cap.budget.forecastEmpty'),
-            emptyDesc: t('cap.budget.forecastEmptyDesc'),
-          }}
-          onConnectBilling={() => setConfigureOpen(true)}
-        />
-      )}
-
       {showDiagnostics && data?.diagnostics ? (
         <CapacityDiagnosticsPanel
           diagnostics={data.diagnostics}
@@ -702,24 +527,6 @@ export default function CapacityPlanning() {
           }}
         />
       ) : null}
-
-      {configureOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0f151d] p-6 text-white shadow-xl">
-            <h3 className="text-base font-semibold">{t('cap.configure')}</h3>
-            <p className="mt-2 text-sm text-white/65">{t('cap.configureDesc')}</p>
-            <button
-              type="button"
-              onClick={() => setConfigureOpen(false)}
-              className="mt-5 rounded-lg bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400"
-            >
-              {t('cap.configureClose')}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <AIAgentDrawer open={aiOpen} workspaceId={wsId} seed={aiSeed} onClose={() => setAiOpen(false)} />
     </div>
   )
 }

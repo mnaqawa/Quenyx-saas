@@ -1,11 +1,14 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
-import { MonitoringThresholdsPanel } from '../../components/observe/MonitoringThresholdsPanel'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
+import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
-import type { ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
+import type { ObserveServiceRow, ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
 import { getRequestErrorFieldErrors } from '../../lib/requestError'
 
 interface TargetHost {
@@ -124,6 +127,7 @@ function mergeResponseWithCurrent(
 }
 
 export default function Targets() {
+  const { t } = useLanguage()
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [hosts, setHosts] = useState<TargetHost[]>([])
@@ -135,6 +139,10 @@ export default function Targets() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({})
   const [expandedHosts, setExpandedHosts] = useState<Set<number | string>>(new Set())
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [drawerHostIndex, setDrawerHostIndex] = useState<number | null>(null)
+  const [runtimeServices, setRuntimeServices] = useState<ObserveServiceRow[]>([])
+  const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
   const workspaceId = id || selectedWorkspaceId
 
@@ -150,50 +158,76 @@ export default function Targets() {
     return map
   }, [definitions])
 
-  useEffect(() => {
+  const reloadTargets = useCallback(async () => {
     if (!workspaceId) return
-
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const [targetsResponse, defsResponse] = await Promise.all([
-          gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(
-            `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
-            { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
-          ),
-          observeService.getServiceDefinitions(Number(workspaceId), { engine: 'native', status: 'active' }),
-        ])
-        // Handle both raw array and gateway-wrapped { data: hosts } so service types show after nav/signout
-        const hostsList: TargetHost[] = Array.isArray(targetsResponse)
-          ? targetsResponse
-          : typeof targetsResponse === 'object' &&
-              targetsResponse !== null &&
-              'data' in targetsResponse &&
-              Array.isArray((targetsResponse as { data: TargetHost[] }).data)
-            ? (targetsResponse as { data: TargetHost[] }).data
-            : []
-        if (hostsList.length >= 0) {
-          setHosts(normalizeHostsServiceKeys(hostsList))
-        }
-        if (Array.isArray(defsResponse)) {
-          setDefinitions(defsResponse)
-          const cacheKey = `observe_defs_${workspaceId}`
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify({ data: defsResponse, version: '1.0', timestamp: Date.now() }))
-          } catch {
-            void 0
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load targets')
-      } finally {
-        setLoading(false)
+    try {
+      setLoading(true)
+      setError(null)
+      const [targetsResponse, defsResponse, servicesResponse] = await Promise.all([
+        gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(
+          `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
+          { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
+        ),
+        observeService.getServiceDefinitions(Number(workspaceId), { engine: 'native', status: 'active' }),
+        observeService.getServices(Number(workspaceId), { limit: 500 }),
+      ])
+      const hostsList: TargetHost[] = Array.isArray(targetsResponse)
+        ? targetsResponse
+        : typeof targetsResponse === 'object' &&
+            targetsResponse !== null &&
+            'data' in targetsResponse &&
+            Array.isArray((targetsResponse as { data: TargetHost[] }).data)
+          ? (targetsResponse as { data: TargetHost[] }).data
+          : []
+      setHosts(normalizeHostsServiceKeys(hostsList))
+      setRuntimeServices(servicesResponse?.items ?? [])
+      if (Array.isArray(defsResponse)) {
+        setDefinitions(defsResponse)
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load targets')
+    } finally {
+      setLoading(false)
     }
-
-    fetchData()
   }, [workspaceId])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(() => {
+    setDataRefreshKey((k) => k + 1)
+  }, !!workspaceId && !isLocked)
+
+  useEffect(() => {
+    void reloadTargets().then(() => markUpdated())
+  }, [reloadTargets, dataRefreshKey, markUpdated])
+
+  const hostRuntime = useMemo(() => {
+    const map = new Map<string, { status: string; lastCheck: string; count: number }>()
+    const prefix = workspaceId ? `ws${workspaceId}-` : ''
+    for (const row of runtimeServices) {
+      const shortHost = row.host.startsWith(prefix) ? row.host.slice(prefix.length) : row.host
+      const existing = map.get(shortHost)
+      const severity = ['critical', 'warning', 'unknown', 'pending', 'ok'].indexOf(row.status)
+      const existingSeverity = existing
+        ? ['critical', 'warning', 'unknown', 'pending', 'ok'].indexOf(existing.status)
+        : 99
+      const worstStatus = !existing || severity < existingSeverity ? row.status : existing.status
+      const lastCheck =
+        !existing || (row.lastCheckAt && row.lastCheckAt > existing.lastCheck)
+          ? row.lastCheckAt
+          : existing.lastCheck
+      map.set(shortHost, {
+        status: worstStatus,
+        lastCheck: lastCheck || existing?.lastCheck || '',
+        count: (existing?.count ?? 0) + 1,
+      })
+    }
+    return map
+  }, [runtimeServices, workspaceId])
 
   const handleAddHost = () => {
     setHosts([
@@ -614,10 +648,23 @@ export default function Targets() {
       )}
 
       <PageHeader
-        title="Monitored Targets"
-        subtitle="Define hosts and services to monitor with QynSight. For agent-enrolled hosts, Private IP and Public IP are updated automatically when the agent reports (e.g. after DHCP change)."
+        title={t('targets.title')}
+        subtitle={t('targets.subtitle')}
         actions={
           <>
+            <ObservePageToolbar
+              interval={interval}
+              onIntervalChange={setInterval}
+              secondsAgo={secondsAgo}
+              onRefresh={() => {
+                setDataRefreshKey((k) => k + 1)
+                refreshNow()
+              }}
+              refreshing={loading}
+              disabled={isLocked}
+              settingsLabel={t('targets.monitoringSettings')}
+              onSettings={() => setSettingsOpen(true)}
+            />
             {canEdit && (
               <>
                 <button
@@ -625,14 +672,14 @@ export default function Targets() {
                   disabled={saving}
                   className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
                 >
-                  Add Host
+                  {t('targets.addHost')}
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || isLocked}
                   className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-4 py-1.5 text-xs font-medium text-sky-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sky-500/30"
                 >
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving ? t('targets.saving') : t('targets.save')}
                 </button>
               </>
             )}
@@ -641,7 +688,12 @@ export default function Targets() {
       />
 
       {workspaceId && (
-        <MonitoringThresholdsPanel workspaceId={workspaceId} canEdit={canEdit} />
+        <MonitoringSettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          workspaceId={workspaceId}
+          canEdit={canEdit}
+        />
       )}
 
       {error && (
@@ -663,15 +715,83 @@ export default function Targets() {
         </div>
       )}
 
+      <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-white/10 text-left text-xs text-white/60">
+                <th className="px-3 py-2">{t('targets.col.host')}</th>
+                <th className="px-3 py-2">{t('targets.col.ip')}</th>
+                <th className="px-3 py-2">{t('targets.col.status')}</th>
+                <th className="px-3 py-2">{t('targets.col.services')}</th>
+                <th className="px-3 py-2">{t('targets.col.lastCheck')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hosts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-8 text-center text-white/60">
+                    {t('targets.empty')}
+                  </td>
+                </tr>
+              ) : (
+                hosts.map((host, hostIndex) => {
+                  const runtime = hostRuntime.get(host.name)
+                  return (
+                    <tr
+                      key={host.id ?? host.name}
+                      onClick={() => {
+                        setDrawerHostIndex(hostIndex)
+                        setExpandedHosts(new Set([host.id ?? `new-${hostIndex}`]))
+                      }}
+                      className="cursor-pointer border-b border-white/5 hover:bg-white/5"
+                    >
+                      <td className="px-3 py-2.5 font-medium">{host.name || '—'}</td>
+                      <td className="px-3 py-2.5 text-white/70">{host.address || '—'}</td>
+                      <td className="px-3 py-2.5 uppercase text-xs">
+                        {runtime?.status ?? t('targets.status.unknown')}
+                      </td>
+                      <td className="px-3 py-2.5">{runtime?.count ?? host.services.length}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-white/70">
+                        {runtime?.lastCheck
+                          ? new Date(runtime.lastCheck).toLocaleString()
+                          : '—'}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {drawerHostIndex !== null && hosts[drawerHostIndex] ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
+          <button
+            type="button"
+            className="flex-1"
+            onClick={() => setDrawerHostIndex(null)}
+            aria-label={t('common.close')}
+          />
+          <div className="flex h-full w-full max-w-3xl flex-col overflow-hidden border-l border-white/10 bg-[#0f151d] text-white">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <h3 className="text-base font-semibold">{t('targets.configDrawer')}</h3>
+              <button
+                type="button"
+                onClick={() => setDrawerHostIndex(null)}
+                className="rounded border border-white/10 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
       <div className="space-y-4">
-        {hosts.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">
-            No targets defined. Click "Add Host" to get started.
-          </div>
-        ) : (
-          hosts.map((host, hostIndex) => {
-            const hostKey = host.id ?? `new-${hostIndex}`
-            return (
+        {(() => {
+          const hostIndex = drawerHostIndex
+          const host = hosts[hostIndex]
+          const hostKey = host.id ?? `new-${hostIndex}`
+          return (
               <div key={hostKey} className="rounded-lg border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
@@ -943,10 +1063,13 @@ export default function Targets() {
                   </div>
                 )}
               </div>
-            )
-          })
-        )}
+          )
+        })()}
       </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

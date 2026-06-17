@@ -14,6 +14,8 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { StatCard } from '../../components/observe/StatCard'
 import { Tabs } from '../../components/observe/Tabs'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
@@ -75,6 +77,7 @@ export default function PerformanceAnalytics() {
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
@@ -83,7 +86,24 @@ export default function PerformanceAnalytics() {
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
     realDataOnly: true,
+    refreshKey,
   })
+
+  const refreshAll = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
+
+  useEffect(() => {
+    if (!loading && data) markUpdated()
+  }, [loading, data, refreshKey, markUpdated])
 
   useEffect(() => {
     if (!wsId) {
@@ -111,7 +131,7 @@ export default function PerformanceAnalytics() {
     return () => {
       cancelled = true
     }
-  }, [range, t, wsId])
+  }, [range, t, wsId, refreshKey])
 
   const serviceHostMap = useMemo(() => {
     const items = data?.items ?? []
@@ -269,6 +289,21 @@ export default function PerformanceAnalytics() {
               </option>
             ))}
           </select>
+          <ObservePageToolbar
+            interval={interval}
+            onIntervalChange={setInterval}
+            secondsAgo={secondsAgo}
+            onRefresh={() => {
+              refreshAll()
+              refreshNow()
+            }}
+            refreshing={loading || historyLoading}
+            onSettings={
+              selectedWorkspaceId
+                ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
+                : undefined
+            }
+          />
         </>
       }
     />

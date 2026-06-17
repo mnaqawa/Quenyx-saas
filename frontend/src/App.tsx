@@ -24,8 +24,6 @@ const BillingPage = lazy(() => import('./pages/Billing'))
 import AlertManagement from './pages/observe/AlertManagement'
 import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
-import Reports from './pages/observe/Reports'
-import DataSources from './pages/observe/DataSources'
 import Targets from './pages/observe/Targets'
 import ComingSoon from './pages/ComingSoon'
 import { routesByModule } from './constants/platformRegistry'
@@ -113,12 +111,6 @@ function App() {
               )}
               {observeRoutes.find((r) => r.key === 'services') && (
                 <Route path="services" element={<Services />} />
-              )}
-              {observeRoutes.find((r) => r.key === 'reports') && (
-                <Route path="reports" element={<Reports />} />
-              )}
-              {observeRoutes.find((r) => r.key === 'data-sources') && (
-                <Route path="data-sources" element={<DataSources />} />
               )}
               {observeRoutes.find((r) => r.key === 'targets') && (
                 <Route path="targets" element={<Targets />} />

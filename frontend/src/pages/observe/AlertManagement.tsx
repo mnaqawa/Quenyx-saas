@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type ComponentProps, type Re
 import { useAlertRules, useAlertSummary } from '../../hooks/useObserveData'
 import { StatCard } from '../../components/observe/StatCard'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { Tabs } from '../../components/observe/Tabs'
 import { StatusBadge } from '../../components/observe/StatusBadge'
 import { AlertHistoryFilterBar } from '../../components/observe/AlertHistoryFilterBar'
@@ -9,11 +10,11 @@ import { toApiDateTime } from '../../components/observe/DateTimeField'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import type {
   AlertHistoryEvent,
   AlertHistoryFilters,
   CreateAlertRulePayload,
-  NotificationChannel,
   ObserveTargetHostOption,
 } from '../../types/observe'
 
@@ -69,7 +70,6 @@ export default function AlertManagement() {
   const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
   const [activeTab, setActiveTab] = useState('rules')
   const [history, setHistory] = useState<AlertHistoryEvent[]>([])
-  const [channels, setChannels] = useState<NotificationChannel[]>([])
   const [tabLoading, setTabLoading] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -97,20 +97,31 @@ export default function AlertManagement() {
         )
         setHistory(Array.isArray(events) ? events : [])
       }
-      if (activeTab === 'channels') {
-        const ch = await observeService.getNotificationChannels(Number(selectedWorkspaceId))
-        setChannels(Array.isArray(ch) ? ch : [])
-      }
     } catch {
       if (activeTab === 'history') setHistory([])
-      if (activeTab === 'channels') setChannels([])
     } finally {
       setTabLoading(false)
     }
   }, [activeTab, selectedWorkspaceId, appliedHistoryFilters])
 
+  const refreshAll = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
+
   useEffect(() => {
-    if (activeTab === 'history' || activeTab === 'channels') {
+    if (refreshKey > 0) markUpdated()
+  }, [refreshKey, markUpdated])
+
+  useEffect(() => {
+    if (activeTab === 'history') {
       loadTabData()
     }
   }, [activeTab, loadTabData, refreshKey])
@@ -143,8 +154,6 @@ export default function AlertManagement() {
   const tabs = [
     { id: 'rules', label: t('alerts.tab.rules') },
     { id: 'history', label: t('alerts.tab.history') },
-    { id: 'channels', label: t('alerts.tab.channels') },
-    { id: 'escalation', label: t('alerts.tab.escalation') },
   ]
 
   return (
@@ -153,15 +162,27 @@ export default function AlertManagement() {
         title={t('alerts.title')}
         subtitle={t('alerts.subtitle')}
         actions={
-          canEdit ? (
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="rounded-lg bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-sky-500"
-            >
-              {t('alerts.createRule')}
-            </button>
-          ) : null
+          <>
+            <ObservePageToolbar
+              interval={interval}
+              onIntervalChange={setInterval}
+              secondsAgo={secondsAgo}
+              onRefresh={() => {
+                refreshAll()
+                refreshNow()
+              }}
+              refreshing={rulesLoading || summaryLoading || tabLoading}
+            />
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="rounded-lg bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-sky-500"
+              >
+                {t('alerts.createRule')}
+              </button>
+            ) : null}
+          </>
         }
       />
 
@@ -312,37 +333,6 @@ export default function AlertManagement() {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === 'channels' && (
-        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          {tabLoading ? (
-            <p className="text-sm text-white/60">{t('agents.loading')}</p>
-          ) : channels.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-sm text-white/60">{t('alerts.channelsEmpty')}</p>
-              <p className="mt-2 text-xs text-white/40">{t('alerts.channelsEmptyHint')}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {channels.map((ch) => (
-                <div key={ch.id} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-4">
-                  <div>
-                    <h4 className="text-sm font-semibold">{ch.name}</h4>
-                    <p className="text-xs text-white/50">{ch.type}</p>
-                  </div>
-                  <StatusBadge status={ch.configured ? 'connected' : 'stopped'} label={ch.configured ? t('alerts.configured') : t('alerts.notConfigured')} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'escalation' && (
-        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
-          <p className="text-sm text-white/60">{t('alerts.escalationEmpty')}</p>
         </div>
       )}
 

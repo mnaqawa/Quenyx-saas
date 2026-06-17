@@ -15,6 +15,8 @@ import {
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
+import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
@@ -22,7 +24,6 @@ import type { ObserveServiceRow, RealTimeMetrics, SystemInfo } from '../../types
 import { pickHostMetric } from '../../utils/perfData'
 
 const MAX_POINTS = 120
-const LIVE_POLL_INTERVAL_SEC = 5
 
 const svcBadgeClass = (status: ObserveServiceRow['status']): string => {
   switch (status) {
@@ -254,14 +255,7 @@ export default function RealTimeMonitoring() {
         setHostList([])
         setTargetsLoaded(true)
       })
-  }, [wsId])
-
-  // Poll Observe data when Live is on (fixed interval)
-  useEffect(() => {
-    if (!isLive || !selectedWorkspaceId) return
-    const t = setInterval(() => setRefreshKey((k) => k + 1), LIVE_POLL_INTERVAL_SEC * 1000)
-    return () => clearInterval(t)
-  }, [isLive, selectedWorkspaceId])
+  }, [wsId, refreshKey])
 
   // Fetch thresholds once when workspace is set
   useEffect(() => {
@@ -308,13 +302,26 @@ export default function RealTimeMonitoring() {
     }
   }, [wsId])
 
-  // Poll system metrics when Live is on (fixed interval)
+  const refreshAll = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+    void fetchMetrics()
+  }, [fetchMetrics])
+
+  const {
+    interval,
+    setInterval,
+    markUpdated,
+    refreshNow,
+    secondsAgo,
+  } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId && isLive)
+
   useEffect(() => {
-    if (!isLive || !wsId) return
-    fetchMetrics()
-    const t = setInterval(fetchMetrics, LIVE_POLL_INTERVAL_SEC * 1000)
-    return () => clearInterval(t)
-  }, [isLive, wsId, fetchMetrics])
+    if (!kpisLoading && servicesData) markUpdated()
+  }, [kpisLoading, servicesData, refreshKey, markUpdated])
+
+  useEffect(() => {
+    if (wsId && isLive) void fetchMetrics()
+  }, [wsId, refreshKey, isLive, fetchMetrics])
 
   const totalServices =
     serviceTotals.ok +
@@ -470,25 +477,21 @@ export default function RealTimeMonitoring() {
               <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-rose-400 animate-pulse' : 'bg-white/50'}`} />
               {isLive ? 'Live' : 'Paused'}
             </button>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="cursor-pointer rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-              title="Reload page to refresh all data"
-            >
-              Refresh
-            </button>
-            <button
-              title="Configure thresholds and targets in Monitored Targets"
-              disabled
-              className="cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-white/40"
-              aria-label="Configure"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
+            <ObservePageToolbar
+              interval={interval}
+              onIntervalChange={setInterval}
+              secondsAgo={secondsAgo}
+              onRefresh={() => {
+                refreshAll()
+                refreshNow()
+              }}
+              refreshing={kpisLoading}
+              onSettings={
+                selectedWorkspaceId
+                  ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
+                  : undefined
+              }
+            />
           </div>
         }
       />

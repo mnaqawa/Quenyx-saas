@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Observe endpoints (workspace canonical)
     Route::get('/workspaces/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
+    Route::post('/workspaces/{project}/observe/run-checks', [\App\Http\Controllers\ObserveController::class, 'runChecks']);
     Route::get('/workspaces/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
     Route::get('/workspaces/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
     Route::get('/workspaces/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
@@ -138,6 +139,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Observe endpoints (project aliases)
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
+    Route::post('/projects/{project}/observe/run-checks', [\App\Http\Controllers\ObserveController::class, 'runChecks']);
     Route::get('/projects/{project}/observe/service-definitions', [\App\Http\Controllers\ObserveController::class, 'serviceDefinitions']);
     Route::get('/projects/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
     Route::get('/projects/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);

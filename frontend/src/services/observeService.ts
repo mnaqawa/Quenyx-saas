@@ -232,6 +232,14 @@ export const observeService = {
     )
   },
 
+  async runChecks(workspaceId: number): Promise<{ success: boolean; message: string }> {
+    return gatewayClient.post<{ success: boolean; message: string }>(
+      `workspaces/${workspaceId}/observe/run-checks`,
+      {},
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
   async getNotificationChannels(workspaceId: number): Promise<NotificationChannel[]> {
     return gatewayClient.get<NotificationChannel[]>(
       `workspaces/${workspaceId}/observe/alerts/channels`,

@@ -19,6 +19,7 @@ use App\Services\CapacityPlanningService;
 use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -250,6 +251,34 @@ class ObserveController extends Controller
                 ],
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
+
+    /**
+     * Trigger native monitoring checks for the workspace.
+     * POST /api/workspaces/{project}/observe/run-checks
+     */
+    public function runChecks(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        try {
+            Artisan::call('observe:run-checks', ['--workspace_id' => (string) $project->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Monitoring checks completed.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('observe run-checks API failed', [
+                'workspace_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to run monitoring checks.',
+            ], 500);
+        }
     }
 
     /**

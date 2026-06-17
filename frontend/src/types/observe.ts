@@ -163,7 +163,7 @@ export interface CapacityMetric {
 
 export type CapacityStatus = 'critical' | 'warning' | 'healthy' | 'insufficient_data'
 export type CapacityPlanningRange = '7d' | '30d' | '90d'
-export type CapacityTab = 'overview' | 'resource-analysis' | 'optimization' | 'scenarios' | 'budget'
+export type CapacityTab = 'overview' | 'resource-analysis' | 'optimization'
 
 export type CapacityHealthStatus = 'healthy' | 'watch' | 'risk' | 'critical' | 'no_data'
 export type CapacityDataConfidence = 'no_data' | 'low' | 'medium' | 'high'
