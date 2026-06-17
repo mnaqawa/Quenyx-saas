@@ -23,11 +23,66 @@ class AlertEvaluationService
     /** @var array<int, array<string, mixed>|null> */
     private array $capacityCache = [];
 
+    private bool $verbose = false;
+
+    /** @var list<array<string, mixed>> */
+    private array $debugEntries = [];
+
+    public function setVerbose(bool $verbose): void
+    {
+        $this->verbose = $verbose;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getDebugEntries(): array
+    {
+        return $this->debugEntries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logEvaluatorSkip(ObserveAlertRule $rule, string $reason, array $context = []): void
+    {
+        $payload = array_merge([
+            'rule_id' => $rule->id,
+            'workspace_id' => $rule->workspace_id,
+            'metric' => $rule->metric_condition,
+            'reason' => $reason,
+        ], $context);
+
+        logger()->info('Alert evaluator skipped rule', $payload);
+        $this->debugEntries[] = $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logEvaluatorDebug(ObserveAlertRule $rule, string $event, array $context = []): void
+    {
+        if (! $this->verbose) {
+            return;
+        }
+
+        $payload = array_merge([
+            'rule_id' => $rule->id,
+            'workspace_id' => $rule->workspace_id,
+            'metric' => $rule->metric_condition,
+            'event' => $event,
+        ], $context);
+
+        $this->debugEntries[] = $payload;
+    }
+
     /**
      * @return array{evaluated: int, opened: int, resolved: int, updated: int, skipped: int}
      */
     public function evaluate(?int $workspaceId = null): array
     {
+        $this->debugEntries = [];
+
         if (! Schema::hasTable('observe_alert_rules') || ! Schema::hasTable('observe_alert_events')) {
             return ['evaluated' => 0, 'opened' => 0, 'resolved' => 0, 'updated' => 0, 'skipped' => 0];
         }
@@ -49,6 +104,9 @@ class AlertEvaluationService
                     'workspace_id' => $rule->workspace_id,
                     'error' => $e->getMessage(),
                 ]);
+                $this->logEvaluatorSkip($rule, 'rule_evaluation_exception', [
+                    'error' => $e->getMessage(),
+                ]);
                 $stats['skipped']++;
             }
         }
@@ -63,10 +121,22 @@ class AlertEvaluationService
     {
         $condition = config('alerts.conditions.' . $rule->metric_condition);
         if (! $condition) {
+            $this->logEvaluatorSkip($rule, 'unknown_metric_condition', [
+                'configured_keys' => array_keys(config('alerts.conditions', [])),
+            ]);
             $stats['skipped']++;
 
             return;
         }
+
+        $this->logEvaluatorDebug($rule, 'rule_start', [
+            'target_scope' => $rule->target_scope,
+            'operator' => $rule->operator,
+            'threshold_value' => $rule->threshold_value,
+            'duration_seconds' => $rule->duration_seconds,
+            'condition_source' => $condition['source'] ?? null,
+            'condition_scope' => $condition['scope'] ?? null,
+        ]);
 
         $scope = $condition['scope'] ?? 'service';
 
@@ -78,10 +148,30 @@ class AlertEvaluationService
 
         $targets = $this->resolveTargets($rule, $condition);
         if (empty($targets)) {
+            $hostCount = ObserveTargetHost::query()
+                ->where('workspace_id', $rule->workspace_id)
+                ->where('enabled', true)
+                ->count();
+            $this->logEvaluatorSkip($rule, 'no_targets', [
+                'target_scope' => $rule->target_scope,
+                'target_host_id' => $rule->target_host_id,
+                'target_service_key' => $rule->target_service_key,
+                'condition_service_key' => $condition['service_key'] ?? null,
+                'enabled_hosts' => $hostCount,
+            ]);
             $stats['skipped']++;
 
             return;
         }
+
+        $this->logEvaluatorDebug($rule, 'targets_resolved', [
+            'target_count' => count($targets),
+            'targets' => array_map(fn ($t) => [
+                'host_name' => $t['host_name'],
+                'service_name' => $t['service_name'],
+                'prefixed_host' => $t['prefixed_host'],
+            ], $targets),
+        ]);
 
         foreach ($targets as $target) {
             $this->evaluateTarget($rule, $condition, $target, $stats);
@@ -94,8 +184,12 @@ class AlertEvaluationService
      */
     private function evaluateWorkspaceTarget(ObserveAlertRule $rule, array $condition, array &$stats): void
     {
-        $value = $this->resolveCapacityValue($rule->workspace_id, (string) ($condition['field'] ?? ''));
+        $value = $this->resolveCapacityValue($rule->workspace_id, (string) ($condition['field'] ?? ''), $rule, $condition);
         if ($value === null) {
+            $this->logEvaluatorSkip($rule, 'no_capacity_value', [
+                'field' => $condition['field'] ?? null,
+                'source_table' => 'CapacityPlanningService (observe_metrics_history)',
+            ]);
             $this->handleConditionCleared($rule, [
                 'target_host_id' => null,
                 'target_service_key' => null,
@@ -126,12 +220,27 @@ class AlertEvaluationService
      */
     private function evaluateTarget(ObserveAlertRule $rule, array $condition, array $target, array &$stats): void
     {
-        $value = $this->resolveValue($rule->workspace_id, $condition, $target);
+        $resolution = $this->resolveValue($rule->workspace_id, $condition, $target, $rule);
+        $value = $resolution['value'];
         if ($value === null) {
+            $this->logEvaluatorSkip($rule, $resolution['reason'] ?? 'no_metric_value', array_merge([
+                'host_name' => $target['host_name'],
+                'service_name' => $target['service_name'],
+                'prefixed_host' => $target['prefixed_host'],
+            ], $resolution['context'] ?? []));
             $this->handleConditionCleared($rule, $target, $stats);
 
             return;
         }
+
+        $this->logEvaluatorDebug($rule, 'metric_resolved', [
+            'host_name' => $target['host_name'],
+            'service_name' => $target['service_name'],
+            'metric_value' => $value,
+            'source_table' => $resolution['source_table'] ?? null,
+            'query_service_name' => $resolution['query_service_name'] ?? null,
+            'query_metric' => $resolution['query_metric'] ?? null,
+        ]);
 
         $this->processEvaluation($rule, $target, $value, $stats);
     }
@@ -146,6 +255,13 @@ class AlertEvaluationService
         $now = now();
 
         if (! $breached) {
+            $this->logEvaluatorSkip($rule, 'threshold_not_breached', [
+                'host_name' => $target['host_name'],
+                'service_name' => $target['service_name'],
+                'metric_value' => $value,
+                'operator' => $rule->operator,
+                'threshold_value' => $rule->threshold_value,
+            ]);
             $this->handleConditionCleared($rule, $target, $stats);
 
             return;
@@ -161,6 +277,12 @@ class AlertEvaluationService
                 'last_value' => $value,
             ]);
             if ($duration > 0) {
+                $this->logEvaluatorSkip($rule, 'duration_pending_first_observation', [
+                    'host_name' => $target['host_name'],
+                    'service_name' => $target['service_name'],
+                    'metric_value' => $value,
+                    'duration_seconds' => $duration,
+                ]);
                 $stats['skipped']++;
 
                 return;
@@ -169,6 +291,13 @@ class AlertEvaluationService
             $elapsed = $evalState->condition_met_since->diffInSeconds($now);
             if ($elapsed < $duration) {
                 $evalState->update(['last_evaluated_at' => $now, 'last_value' => $value]);
+                $this->logEvaluatorSkip($rule, 'duration_pending', [
+                    'host_name' => $target['host_name'],
+                    'service_name' => $target['service_name'],
+                    'metric_value' => $value,
+                    'duration_seconds' => $duration,
+                    'elapsed_seconds' => $elapsed,
+                ]);
                 $stats['skipped']++;
 
                 return;
@@ -190,6 +319,12 @@ class AlertEvaluationService
         $event = $this->openAlert($rule, $target, $value, $now);
         $evalState->update(['last_evaluated_at' => $now, 'last_value' => $value]);
         AlertOpened::dispatch($event);
+        $this->logEvaluatorDebug($rule, 'alert_opened', [
+            'host_name' => $target['host_name'],
+            'service_name' => $target['service_name'],
+            'metric_value' => $value,
+            'event_id' => $event->id,
+        ]);
         $stats['opened']++;
     }
 
@@ -418,42 +553,57 @@ class AlertEvaluationService
     /**
      * @param  array<string, mixed>  $condition
      * @param  array{prefixed_host: string, service_name: string|null, host_name: string}  $target
+     * @return array{value: ?float, reason?: string, source_table?: string, query_service_name?: string, query_metric?: string, context?: array<string, mixed>}
      */
-    private function resolveValue(int $workspaceId, array $condition, array $target): ?float
+    private function resolveValue(int $workspaceId, array $condition, array $target, ObserveAlertRule $rule): array
     {
         $source = $condition['source'] ?? '';
 
         return match ($source) {
-            'metric_history' => $this->latestMetricValue(
+            'metric_history' => $this->resolveMetricHistoryValue(
                 $workspaceId,
                 $target['prefixed_host'],
                 (string) ($condition['service_key'] ?? $target['service_name'] ?? ''),
                 (string) ($condition['metric'] ?? '')
             ),
-            'service_state' => $this->serviceStateValue(
+            'service_state' => $this->resolveServiceStateValue(
                 $workspaceId,
                 $target['prefixed_host'],
                 $target['service_name'] ?? '',
                 (string) ($condition['match_state'] ?? 'critical')
             ),
-            'service_state_numeric' => $this->serviceStateNumeric(
+            'service_state_numeric' => $this->resolveServiceStateNumericValue(
                 $workspaceId,
                 $target['prefixed_host'],
                 $target['service_name'] ?? ''
             ),
-            'host_state' => $this->hostStateValue(
+            'host_state' => $this->resolveHostStateValue(
                 $workspaceId,
                 $target['prefixed_host'],
                 $condition['match_states'] ?? ['unreachable']
             ),
-            default => null,
+            default => [
+                'value' => null,
+                'reason' => 'unknown_metric_source',
+                'source_table' => null,
+                'context' => ['source' => $source],
+            ],
         };
     }
 
-    private function latestMetricValue(int $workspaceId, string $hostName, string $serviceName, string $metric): ?float
+    /**
+     * @return array{value: ?float, reason?: string, source_table?: string, query_service_name?: string, query_metric?: string, context?: array<string, mixed>}
+     */
+    private function resolveMetricHistoryValue(int $workspaceId, string $hostName, string $serviceName, string $metric): array
     {
         if (! Schema::hasTable('observe_metrics_history')) {
-            return null;
+            return [
+                'value' => null,
+                'reason' => 'metrics_history_table_missing',
+                'source_table' => 'observe_metrics_history',
+                'query_service_name' => $serviceName,
+                'query_metric' => $metric,
+            ];
         }
 
         $value = ObserveMetricHistory::query()
@@ -464,25 +614,40 @@ class AlertEvaluationService
             ->orderByDesc('recorded_at')
             ->value('value');
 
-        return $value !== null ? (float) $value : null;
-    }
+        if ($value === null) {
+            $alternateServiceNames = ObserveMetricHistory::query()
+                ->where('workspace_id', $workspaceId)
+                ->where('host_name', $hostName)
+                ->where('metric', $metric)
+                ->distinct()
+                ->pluck('service_name')
+                ->all();
 
-    private function serviceStateValue(int $workspaceId, string $hostName, string $serviceName, string $matchState): ?float
-    {
-        $state = ObserveService::query()
-            ->where('workspace_id', $workspaceId)
-            ->where('host_name', $hostName)
-            ->where('service_name', $serviceName)
-            ->value('state');
-
-        if ($state === null) {
-            return null;
+            return [
+                'value' => null,
+                'reason' => 'no_metric_history_row',
+                'source_table' => 'observe_metrics_history',
+                'query_service_name' => $serviceName,
+                'query_metric' => $metric,
+                'context' => [
+                    'host_name_queried' => $hostName,
+                    'available_service_names_for_metric' => $alternateServiceNames,
+                ],
+            ];
         }
 
-        return strtolower((string) $state) === strtolower($matchState) ? 1.0 : 0.0;
+        return [
+            'value' => (float) $value,
+            'source_table' => 'observe_metrics_history',
+            'query_service_name' => $serviceName,
+            'query_metric' => $metric,
+        ];
     }
 
-    private function serviceStateNumeric(int $workspaceId, string $hostName, string $serviceName): ?float
+    /**
+     * @return array{value: ?float, reason?: string, source_table?: string, context?: array<string, mixed>}
+     */
+    private function resolveServiceStateValue(int $workspaceId, string $hostName, string $serviceName, string $matchState): array
     {
         $state = ObserveService::query()
             ->where('workspace_id', $workspaceId)
@@ -491,18 +656,65 @@ class AlertEvaluationService
             ->value('state');
 
         if ($state === null) {
-            return null;
+            $available = ObserveService::query()
+                ->where('workspace_id', $workspaceId)
+                ->where('host_name', $hostName)
+                ->pluck('service_name')
+                ->all();
+
+            return [
+                'value' => null,
+                'reason' => 'no_service_state_row',
+                'source_table' => 'observe_services',
+                'context' => [
+                    'query_service_name' => $serviceName,
+                    'match_state' => $matchState,
+                    'available_service_names' => $available,
+                ],
+            ];
+        }
+
+        return [
+            'value' => strtolower((string) $state) === strtolower($matchState) ? 1.0 : 0.0,
+            'source_table' => 'observe_services',
+            'context' => ['observed_state' => $state, 'match_state' => $matchState],
+        ];
+    }
+
+    /**
+     * @return array{value: ?float, reason?: string, source_table?: string, context?: array<string, mixed>}
+     */
+    private function resolveServiceStateNumericValue(int $workspaceId, string $hostName, string $serviceName): array
+    {
+        $state = ObserveService::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('host_name', $hostName)
+            ->where('service_name', $serviceName)
+            ->value('state');
+
+        if ($state === null) {
+            return [
+                'value' => null,
+                'reason' => 'no_service_state_row',
+                'source_table' => 'observe_services',
+                'context' => ['query_service_name' => $serviceName],
+            ];
         }
 
         $map = config('alerts.state_severity_map', []);
 
-        return (float) ($map[strtolower((string) $state)] ?? 0);
+        return [
+            'value' => (float) ($map[strtolower((string) $state)] ?? 0),
+            'source_table' => 'observe_services',
+            'context' => ['observed_state' => $state],
+        ];
     }
 
     /**
      * @param  array<int, string>  $matchStates
+     * @return array{value: ?float, reason?: string, source_table?: string, context?: array<string, mixed>}
      */
-    private function hostStateValue(int $workspaceId, string $hostName, array $matchStates): ?float
+    private function resolveHostStateValue(int $workspaceId, string $hostName, array $matchStates): array
     {
         $states = ObserveService::query()
             ->where('workspace_id', $workspaceId)
@@ -511,28 +723,55 @@ class AlertEvaluationService
             ->map(fn ($s) => strtolower((string) $s));
 
         if ($states->isEmpty()) {
-            return null;
+            return [
+                'value' => null,
+                'reason' => 'no_host_service_rows',
+                'source_table' => 'observe_services',
+                'context' => ['host_name' => $hostName, 'match_states' => $matchStates],
+            ];
         }
 
         $match = collect($matchStates)->map(fn ($s) => strtolower($s));
         $worst = $states->contains(fn ($s) => $match->contains($s));
 
-        return $worst ? 1.0 : 0.0;
+        return [
+            'value' => $worst ? 1.0 : 0.0,
+            'source_table' => 'observe_services',
+            'context' => ['observed_states' => $states->unique()->values()->all(), 'match_states' => $matchStates],
+        ];
     }
 
-    private function resolveCapacityValue(int $workspaceId, string $field): ?float
+    /**
+     * @param  array<string, mixed>  $condition
+     */
+    private function resolveCapacityValue(int $workspaceId, string $field, ObserveAlertRule $rule, array $condition): ?float
     {
         if ($field === '') {
+            $this->logEvaluatorSkip($rule, 'capacity_field_missing', [
+                'source_table' => 'CapacityPlanningService',
+            ]);
+
             return null;
         }
 
         $payload = $this->capacityPayload($workspaceId);
         if ($payload === null) {
+            $this->logEvaluatorDebug($rule, 'capacity_payload_unavailable', [
+                'field' => $field,
+                'source_table' => 'CapacityPlanningService (observe_metrics_history)',
+            ]);
+
             return null;
         }
 
         $summary = $payload['summary'] ?? [];
         if (array_key_exists($field, $summary) && $summary[$field] !== null) {
+            $this->logEvaluatorDebug($rule, 'capacity_value_resolved', [
+                'field' => $field,
+                'metric_value' => (float) $summary[$field],
+                'source_table' => 'CapacityPlanningService.summary',
+            ]);
+
             return (float) $summary[$field];
         }
 
@@ -543,6 +782,12 @@ class AlertEvaluationService
             'storage_runway_days' => $runway['storage']['days'] ?? null,
         ];
         if (isset($map[$field]) && $map[$field] !== null) {
+            $this->logEvaluatorDebug($rule, 'capacity_value_resolved', [
+                'field' => $field,
+                'metric_value' => (float) $map[$field],
+                'source_table' => 'CapacityPlanningService.runway',
+            ]);
+
             return (float) $map[$field];
         }
 
