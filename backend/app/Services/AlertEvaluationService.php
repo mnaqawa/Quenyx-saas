@@ -563,7 +563,7 @@ class AlertEvaluationService
             'metric_history' => $this->resolveMetricHistoryValue(
                 $workspaceId,
                 $target['prefixed_host'],
-                (string) ($condition['service_key'] ?? $target['service_name'] ?? ''),
+                $this->metricHistoryServiceNameCandidates($target, $condition),
                 (string) ($condition['metric'] ?? '')
             ),
             'service_state' => $this->resolveServiceStateValue(
@@ -592,55 +592,88 @@ class AlertEvaluationService
     }
 
     /**
+     * observe:run-checks stores metrics under the target service display name (e.g. "CPU usage"),
+     * not the config service_key (e.g. "cpu"). Try display name first, then service_key fallbacks.
+     *
+     * @param  array{service_name?: string|null, target_service_key?: string|null}  $target
+     * @param  array<string, mixed>  $condition
+     * @return list<string>
+     */
+    private function metricHistoryServiceNameCandidates(array $target, array $condition): array
+    {
+        $candidates = [];
+
+        foreach ([
+            $target['service_name'] ?? null,
+            $target['target_service_key'] ?? null,
+            $condition['service_key'] ?? null,
+        ] as $name) {
+            $name = trim((string) $name);
+            if ($name !== '' && ! in_array($name, $candidates, true)) {
+                $candidates[] = $name;
+            }
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * @param  list<string>  $serviceNameCandidates
      * @return array{value: ?float, reason?: string, source_table?: string, query_service_name?: string, query_metric?: string, context?: array<string, mixed>}
      */
-    private function resolveMetricHistoryValue(int $workspaceId, string $hostName, string $serviceName, string $metric): array
+    private function resolveMetricHistoryValue(int $workspaceId, string $hostName, array $serviceNameCandidates, string $metric): array
     {
         if (! Schema::hasTable('observe_metrics_history')) {
             return [
                 'value' => null,
                 'reason' => 'metrics_history_table_missing',
                 'source_table' => 'observe_metrics_history',
-                'query_service_name' => $serviceName,
+                'query_service_name' => $serviceNameCandidates[0] ?? '',
                 'query_metric' => $metric,
             ];
         }
 
-        $value = ObserveMetricHistory::query()
-            ->where('workspace_id', $workspaceId)
-            ->where('host_name', $hostName)
-            ->where('service_name', $serviceName)
-            ->where('metric', $metric)
-            ->orderByDesc('recorded_at')
-            ->value('value');
-
-        if ($value === null) {
-            $alternateServiceNames = ObserveMetricHistory::query()
+        $tried = [];
+        foreach ($serviceNameCandidates as $serviceName) {
+            $tried[] = $serviceName;
+            $value = ObserveMetricHistory::query()
                 ->where('workspace_id', $workspaceId)
                 ->where('host_name', $hostName)
+                ->where('service_name', $serviceName)
                 ->where('metric', $metric)
-                ->distinct()
-                ->pluck('service_name')
-                ->all();
+                ->orderByDesc('recorded_at')
+                ->value('value');
 
-            return [
-                'value' => null,
-                'reason' => 'no_metric_history_row',
-                'source_table' => 'observe_metrics_history',
-                'query_service_name' => $serviceName,
-                'query_metric' => $metric,
-                'context' => [
-                    'host_name_queried' => $hostName,
-                    'available_service_names_for_metric' => $alternateServiceNames,
-                ],
-            ];
+            if ($value !== null) {
+                return [
+                    'value' => (float) $value,
+                    'source_table' => 'observe_metrics_history',
+                    'query_service_name' => $serviceName,
+                    'query_metric' => $metric,
+                    'context' => ['service_name_candidates_tried' => $tried],
+                ];
+            }
         }
 
+        $alternateServiceNames = ObserveMetricHistory::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('host_name', $hostName)
+            ->where('metric', $metric)
+            ->distinct()
+            ->pluck('service_name')
+            ->all();
+
         return [
-            'value' => (float) $value,
+            'value' => null,
+            'reason' => 'no_metric_history_row',
             'source_table' => 'observe_metrics_history',
-            'query_service_name' => $serviceName,
+            'query_service_name' => $tried[0] ?? '',
             'query_metric' => $metric,
+            'context' => [
+                'host_name_queried' => $hostName,
+                'service_name_candidates_tried' => $tried,
+                'available_service_names_for_metric' => $alternateServiceNames,
+            ],
         ];
     }
 
