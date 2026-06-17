@@ -20,6 +20,7 @@ import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow, RealTimeMetrics, SystemInfo } from '../../types/observe'
 import { pickHostMetric } from '../../utils/perfData'
@@ -170,6 +171,7 @@ export default function RealTimeMonitoring() {
   })
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
 
   const { hostTotals, serviceTotals, problems, lastPollAt } = useMemo(() => {
@@ -444,14 +446,15 @@ export default function RealTimeMonitoring() {
         subtitle={t('rtm.subtitle')}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openAiAgent()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-            >
-              <span>AI Agent</span>
-              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] text-emerald-200">LIVE</span>
-            </button>
+            {aiAvailable ? (
+              <button
+                type="button"
+                onClick={() => openAiAgent()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+              >
+                {t('ai.action.analyzePerformance')}
+              </button>
+            ) : null}
             <select
               value={hostList.length === 0 ? '' : selectedHost}
               onChange={(e) => setSelectedHost(e.target.value)}
@@ -647,13 +650,15 @@ export default function RealTimeMonitoring() {
                 CPU, memory, disk and network for <strong>{selectedHost}</strong>, derived from its service checks.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => openAiAgent(selectedHost)}
-              className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/25"
-            >
-              Analyze with AI
-            </button>
+            {aiAvailable ? (
+              <button
+                type="button"
+                onClick={() => openAiAgent(selectedHost)}
+                className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/25"
+              >
+                {t('ai.action.analyzePerformance')}
+              </button>
+            ) : null}
           </div>
 
           {hasAnyHostMetric ? (

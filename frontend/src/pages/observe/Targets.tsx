@@ -4,7 +4,12 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
+import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
+import { buildHostRuntimeMap, operatingSystemFromTags } from '../../lib/observeHostUtils'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
@@ -21,6 +26,8 @@ interface TargetHost {
   tags: string[]
   enabled: boolean
   services: TargetService[]
+  created_at?: string
+  updated_at?: string
 }
 
 interface TargetService {
@@ -141,6 +148,9 @@ export default function Targets() {
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [drawerHostIndex, setDrawerHostIndex] = useState<number | null>(null)
+  const [detailHost, setDetailHost] = useState<HostDetailsHost | null>(null)
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [runtimeServices, setRuntimeServices] = useState<ObserveServiceRow[]>([])
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
@@ -151,6 +161,9 @@ export default function Targets() {
     : false
 
   const canEdit = !isLocked && (allowedByKey['qynsight'] ?? false)
+  const aiAvailable = useAiAgentAvailable(workspaceId)
+
+  const hostRuntime = useMemo(() => buildHostRuntimeMap(runtimeServices, workspaceId), [runtimeServices, workspaceId])
 
   const definitionsByKey = useMemo(() => {
     const map = new Map<string, ServiceDefinition>()
@@ -204,30 +217,6 @@ export default function Targets() {
   useEffect(() => {
     void reloadTargets().then(() => markUpdated())
   }, [reloadTargets, dataRefreshKey, markUpdated])
-
-  const hostRuntime = useMemo(() => {
-    const map = new Map<string, { status: string; lastCheck: string; count: number }>()
-    const prefix = workspaceId ? `ws${workspaceId}-` : ''
-    for (const row of runtimeServices) {
-      const shortHost = row.host.startsWith(prefix) ? row.host.slice(prefix.length) : row.host
-      const existing = map.get(shortHost)
-      const severity = ['critical', 'warning', 'unknown', 'pending', 'ok'].indexOf(row.status)
-      const existingSeverity = existing
-        ? ['critical', 'warning', 'unknown', 'pending', 'ok'].indexOf(existing.status)
-        : 99
-      const worstStatus = !existing || severity < existingSeverity ? row.status : existing.status
-      const lastCheck =
-        !existing || (row.lastCheckAt && row.lastCheckAt > existing.lastCheck)
-          ? row.lastCheckAt
-          : existing.lastCheck
-      map.set(shortHost, {
-        status: worstStatus,
-        lastCheck: lastCheck || existing?.lastCheck || '',
-        count: (existing?.count ?? 0) + 1,
-      })
-    }
-    return map
-  }, [runtimeServices, workspaceId])
 
   const handleAddHost = () => {
     setHosts([
@@ -722,40 +711,63 @@ export default function Targets() {
               <tr className="border-b border-white/10 text-left text-xs text-white/60">
                 <th className="px-3 py-2">{t('targets.col.host')}</th>
                 <th className="px-3 py-2">{t('targets.col.ip')}</th>
+                <th className="px-3 py-2">{t('hosts.col.os')}</th>
                 <th className="px-3 py-2">{t('targets.col.status')}</th>
                 <th className="px-3 py-2">{t('targets.col.services')}</th>
                 <th className="px-3 py-2">{t('targets.col.lastCheck')}</th>
+                <th className="px-3 py-2 text-end">{t('hosts.col.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {hosts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-white/60">
+                  <td colSpan={7} className="px-3 py-8 text-center text-white/60">
                     {t('targets.empty')}
                   </td>
                 </tr>
               ) : (
                 hosts.map((host, hostIndex) => {
                   const runtime = hostRuntime.get(host.name)
+                  const os = operatingSystemFromTags(host.tags)
                   return (
                     <tr
                       key={host.id ?? host.name}
-                      onClick={() => {
-                        setDrawerHostIndex(hostIndex)
-                        setExpandedHosts(new Set([host.id ?? `new-${hostIndex}`]))
-                      }}
-                      className="cursor-pointer border-b border-white/5 hover:bg-white/5"
+                      className="border-b border-white/5 hover:bg-white/5"
                     >
                       <td className="px-3 py-2.5 font-medium">{host.name || '—'}</td>
                       <td className="px-3 py-2.5 text-white/70">{host.address || '—'}</td>
-                      <td className="px-3 py-2.5 uppercase text-xs">
+                      <td className="px-3 py-2.5 text-white/70">{os ?? t('hosts.osUnknown')}</td>
+                      <td className={`px-3 py-2.5 uppercase text-xs ${runtime?.status === 'critical' ? 'text-rose-300' : runtime?.status === 'warning' ? 'text-amber-300' : runtime?.status === 'ok' ? 'text-emerald-300' : 'text-white/60'}`}>
                         {runtime?.status ?? t('targets.status.unknown')}
                       </td>
-                      <td className="px-3 py-2.5">{runtime?.count ?? host.services.length}</td>
+                      <td className="px-3 py-2.5">{runtime?.serviceCheckCount ?? host.services.length}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-white/70">
                         {runtime?.lastCheck
                           ? new Date(runtime.lastCheck).toLocaleString()
                           : '—'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setDetailHost(host)}
+                            className="text-xs text-sky-400 hover:text-sky-300"
+                          >
+                            {t('hosts.action.viewDetails')}
+                          </button>
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDrawerHostIndex(hostIndex)
+                                setExpandedHosts(new Set([host.id ?? `new-${hostIndex}`]))
+                              }}
+                              className="text-xs text-white/60 hover:text-white"
+                            >
+                              {t('hosts.drawer.configure')}
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -1071,6 +1083,51 @@ export default function Targets() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {workspaceId && detailHost ? (
+        <HostDetailsDrawer
+          open={!!detailHost}
+          onClose={() => setDetailHost(null)}
+          workspaceId={Number(workspaceId)}
+          host={detailHost}
+          serviceRows={runtimeServices}
+          showAiAnalyze={aiAvailable}
+          onAnalyzeHealth={() => {
+            setAiSeed({
+              id: Date.now(),
+              agent: 'anomaly_detector',
+              question: `Analyze health and risks for host ${detailHost.name} (${detailHost.address}).`,
+              context: { host: detailHost.name },
+              autoSend: true,
+            })
+            setAiDrawerOpen(true)
+          }}
+          onConfigure={
+            canEdit
+              ? () => {
+                  const idx = hosts.findIndex((h) => h.name === detailHost.name)
+                  if (idx >= 0) {
+                    setDetailHost(null)
+                    setDrawerHostIndex(idx)
+                    setExpandedHosts(new Set([hosts[idx].id ?? `new-${idx}`]))
+                  }
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {workspaceId ? (
+        <AIAgentDrawer
+          open={aiDrawerOpen}
+          workspaceId={Number(workspaceId)}
+          seed={aiSeed}
+          onClose={() => {
+            setAiDrawerOpen(false)
+            setAiSeed(null)
+          }}
+        />
       ) : null}
     </div>
   )

@@ -84,6 +84,13 @@ export const observeService = {
     )
   },
 
+  async getHostPortScan(workspaceId: number, hostId: number): Promise<PortScanResult> {
+    return gatewayClient.get<PortScanResult>(
+      `workspaces/${workspaceId}/observe/targets/${hostId}/port-scan`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
   async runPortScans(
     workspaceId: number,
     options: {

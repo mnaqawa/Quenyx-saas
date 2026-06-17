@@ -12,8 +12,11 @@ import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
 import { useLanguage } from '../../i18n/LanguageContext'
-import type { PortScanResult } from '../../types/observe'
 
 type HostRow = { name: string; address: string; status: string }
 
@@ -217,6 +220,7 @@ function LLDTopology({
   statusLabel,
   portScansByHost,
   t,
+  onHostClick,
 }: {
   networks: Array<{ id: string; name: string; hosts: HostRow[]; status: string }>
   diagram: DiagramState
@@ -225,6 +229,7 @@ function LLDTopology({
   statusLabel: (s: string) => string
   portScansByHost: Map<string, PortScanResult>
   t: (key: string) => string
+  onHostClick?: (hostName: string) => void
 }) {
   const nodeW = 130
   const nodeH = 58
@@ -315,11 +320,17 @@ function LLDTopology({
             {layout.network.hosts.map((h) => (
               <div
                 key={h.name}
-                className={`rounded-lg border-2 px-3 py-2.5 text-center cursor-move shrink-0 transition-shadow hover:shadow-lg ${
+                className={`rounded-lg border-2 px-3 py-2.5 text-center cursor-pointer shrink-0 transition-shadow hover:shadow-lg ${
                   draggingNode === h.name ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-[#0f151d] z-20' : ''
                 } ${h.status === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10' : h.status === 'warning' ? 'border-amber-500/40 bg-amber-500/10' : 'border-rose-500/40 bg-rose-500/10'}`}
                 style={{ width: nodeW, minHeight: nodeH }}
                 onMouseDown={(e) => handleNodeMouseDown(e, h.name)}
+                onClick={() => onHostClick?.(h.name)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') onHostClick?.(h.name)
+                }}
               >
                 <div className="flex items-center gap-1.5 justify-center mb-0.5">
                   <span className={`h-2 w-2 rounded-full shrink-0 ${h.status === 'ok' ? 'bg-emerald-400' : h.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`} />
@@ -360,10 +371,32 @@ export default function InfrastructureMap() {
   const [designLevel, setDesignLevel] = useState<'hld' | 'lld'>('lld')
   const [zoneFilter, setZoneFilter] = useState<string>('All Zones')
   const [diagram, setDiagram] = useState<DiagramState>(() => loadDiagram(selectedWorkspaceId))
-  const [customZoneInput, setCustomZoneInput] = useState('')
+  const [detailHost, setDetailHost] = useState<HostDetailsHost | null>(null)
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [draggingNode, setDraggingNode] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [refreshKey, setRefreshKey] = useState(0)
+  const [customZoneInput, setCustomZoneInput] = useState('')
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
+
+  const openHostDetails = useCallback(
+    async (hostName: string) => {
+      if (!selectedWorkspaceId) return
+      try {
+        const list = await observeService.getTargetHosts(Number(selectedWorkspaceId))
+        const match = list.find((h) => h.name === hostName)
+        setDetailHost(
+          match
+            ? { id: match.id, name: match.name, address: match.address, enabled: match.enabled }
+            : { name: hostName, address: '' },
+        )
+      } catch {
+        setDetailHost({ name: hostName, address: '' })
+      }
+    },
+    [selectedWorkspaceId],
+  )
   const [scanModalOpen, setScanModalOpen] = useState(false)
   const [scanOptions, setScanOptions] = useState<{ ports: 'top100' | 'all' | 'range'; portsRange: string; protocol: 'tcp' | 'udp'; hostIds: number[] }>({
     ports: 'top100',
@@ -852,6 +885,30 @@ export default function InfrastructureMap() {
         titleNoWrap
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {aiAvailable ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAiSeed({
+                    id: Date.now(),
+                    agent: 'anomaly_detector',
+                    question:
+                      'Analyze the current infrastructure topology: host health, critical connections, and capacity risks.',
+                    autoSend: true,
+                    quick: true,
+                    context: {
+                      source: 'qynsight_infrastructure_map',
+                      host_count: hosts.length,
+                      critical_hosts: hosts.filter((h) => h.status === 'critical').length,
+                    },
+                  })
+                  setAiDrawerOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/30"
+              >
+                {t('ai.action.analyzeTopology')}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={handleExportMap}
@@ -1062,6 +1119,7 @@ export default function InfrastructureMap() {
                   statusLabel={statusLabel}
                   portScansByHost={portScansByHost}
                   t={t}
+                  onHostClick={openHostDetails}
                 />
               )}
             </div>
@@ -1510,6 +1568,40 @@ export default function InfrastructureMap() {
           <div><dt className="font-medium text-white/80">Security Layer</dt><dd>Security zones and policies. Define in {hostsLabel} or link to security tools for live data.</dd></div>
         </dl>
       </details>
+
+      {selectedWorkspaceId && detailHost ? (
+        <HostDetailsDrawer
+          open={!!detailHost}
+          onClose={() => setDetailHost(null)}
+          workspaceId={Number(selectedWorkspaceId)}
+          host={detailHost}
+          serviceRows={servicesData?.items ?? []}
+          showAiAnalyze={aiAvailable}
+          onAnalyzeHealth={() => {
+            setAiSeed({
+              id: Date.now(),
+              agent: 'anomaly_detector',
+              question: `Analyze host health for ${detailHost.name} (${detailHost.address || 'no address'}). Summarize service check status and recent alerts.`,
+              context: { host: detailHost.name, address: detailHost.address },
+              autoSend: true,
+              quick: true,
+            })
+            setAiDrawerOpen(true)
+          }}
+        />
+      ) : null}
+
+      {selectedWorkspaceId ? (
+        <AIAgentDrawer
+          open={aiDrawerOpen}
+          onClose={() => {
+            setAiDrawerOpen(false)
+            setAiSeed(null)
+          }}
+          workspaceId={Number(selectedWorkspaceId)}
+          seed={aiSeed}
+        />
+      ) : null}
     </div>
   )
 }

@@ -20,6 +20,7 @@ import { StatCard } from '../../components/observe/StatCard'
 import { Tabs } from '../../components/observe/Tabs'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import type { ObserveServiceRow, PerformanceHistoryRange, PerformanceHistoryResponse } from '../../types/observe'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { type MetricKind, worstStatus } from '../../utils/perfData'
@@ -80,6 +81,7 @@ export default function PerformanceAnalytics() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
 
   const { data, loading, error } = useObserveServices({
@@ -269,14 +271,16 @@ export default function PerformanceAnalytics() {
       subtitle={t('perf.subtitle')}
       actions={
         <>
-          <button
-            type="button"
-            onClick={openAi}
-            disabled={hosts.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/30 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t('perf.aiAgent')}
-          </button>
+          {aiAvailable ? (
+            <button
+              type="button"
+              onClick={openAi}
+              disabled={hosts.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/20 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('ai.action.analyzeTrends')}
+            </button>
+          ) : null}
           <select
             value={range}
             onChange={(event) => setRange(event.target.value as PerformanceHistoryRange)}

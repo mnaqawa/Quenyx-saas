@@ -24,8 +24,12 @@ import { TopCapacityRisksTable } from '../../components/observe/capacity/TopCapa
 import { InsightCard } from '../../components/observe/capacity/InsightCard'
 import { CapacityDiagnosticsPanel } from '../../components/observe/capacity/CapacityDiagnosticsPanel'
 import { EmptyState } from '../../components/observe/capacity/EmptyState'
+import { buildCollectingPanelProps, CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
 import type {
   CapacityPlanningRange,
   CapacityPlanningResponse,
@@ -67,8 +71,11 @@ export default function CapacityPlanning() {
   const [error, setError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
 
   const load = useCallback(() => {
     if (!wsId) {
@@ -112,7 +119,7 @@ export default function CapacityPlanning() {
         case 'healthy':
           return t('cap.status.healthy')
         default:
-          return t('cap.learningPeriod')
+          return t('cap.insufficientHistory')
       }
     },
     [t],
@@ -196,7 +203,7 @@ export default function CapacityPlanning() {
       shortestRunway: t('cap.health.shortestRunway'),
       recommendedAction: t('cap.health.recommendedAction'),
       dataConfidence: t('cap.health.dataConfidence'),
-      insufficient: t('cap.learningPeriod'),
+      insufficient: t('cap.insufficientHistory'),
       days: t('cap.days'),
       status: {
         healthy: t('cap.health.healthy'),
@@ -221,6 +228,32 @@ export default function CapacityPlanning() {
       subtitle={t('cap.subtitle')}
       actions={
         <>
+          {aiAvailable ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAiSeed({
+                  id: Date.now(),
+                  agent: 'performance_analyst',
+                  question:
+                    'Analyze capacity risks across this workspace: runway, top consumers, and forecast confidence.',
+                  autoSend: true,
+                  quick: true,
+                  context: {
+                    source: 'qynsight_capacity',
+                    range,
+                    capacity_risk_score: data?.summary?.capacity_risk_score ?? null,
+                    has_capacity_data: hasCapacityData,
+                  },
+                })
+                setAiOpen(true)
+              }}
+              disabled={!data}
+              className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('ai.action.analyzeCapacity')}
+            </button>
+          ) : null}
           <select
             value={range}
             onChange={(e) => setRange(e.target.value as CapacityPlanningRange)}
@@ -305,25 +338,25 @@ export default function CapacityPlanning() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CapacitySummaryCard
           title={t('cap.kpi.cpuRunway')}
-          value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
+          value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
           status={summary?.statuses.cpu ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.cpu ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.memoryRunway')}
-          value={formatRunway(summary?.memory_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
+          value={formatRunway(summary?.memory_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
           status={summary?.statuses.memory ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.memory ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.storageRunway')}
-          value={formatRunway(summary?.storage_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
+          value={formatRunway(summary?.storage_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
           status={summary?.statuses.storage ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.storage ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.riskScore')}
-          value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.learningPeriod'))}
+          value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.insufficientHistory'))}
           status={summary?.statuses.risk ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.risk ?? 'insufficient_data')}
         />
@@ -334,7 +367,9 @@ export default function CapacityPlanning() {
       {activeTab === 'overview' && (
         <div className="space-y-4">
           {!hasCapacityData ? (
-            <EmptyState title={t('cap.noHistoryTitle')} description={t('cap.noHistoryDesc')} />
+            <CollectingHistoricalDataPanel
+              {...buildCollectingPanelProps(data?.diagnostics, data?.meta?.history_points, data?.health?.data_confidence, t)}
+            />
           ) : (
             <CapacityHealthPanel health={health} labels={healthLabels} />
           )}
@@ -344,7 +379,9 @@ export default function CapacityPlanning() {
       {activeTab === 'resource-analysis' && (
         <div className="space-y-4">
           {!hasCapacityData ? (
-            <EmptyState title={t('cap.noHistoryTitle')} description={t('cap.noHistoryDesc')} />
+            <CollectingHistoricalDataPanel
+              {...buildCollectingPanelProps(data?.diagnostics, data?.meta?.history_points, data?.health?.data_confidence, t)}
+            />
           ) : (
             <>
               <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-4 text-sm text-white">
@@ -432,7 +469,7 @@ export default function CapacityPlanning() {
                   riskLevel: t('cap.risks.riskLevel'),
                   lastSample: t('cap.risks.lastSample'),
                   empty: t('cap.risks.empty'),
-                  insufficient: t('cap.learningPeriod'),
+                  insufficient: t('cap.insufficientHistory'),
                   days: t('cap.days'),
                   trendLabels: {
                     up: t('cap.trend.up'),
@@ -444,7 +481,7 @@ export default function CapacityPlanning() {
                     critical: t('cap.status.critical'),
                     warning: t('cap.status.warning'),
                     healthy: t('cap.status.healthy'),
-                    insufficient_data: t('cap.learningPeriod'),
+                    insufficient_data: t('cap.insufficientHistory'),
                   },
                 }}
               />
@@ -524,6 +561,18 @@ export default function CapacityPlanning() {
             insufficientReasons: t('cap.diagnostics.insufficientReasons'),
             yes: t('cap.diagnostics.yes'),
             no: t('cap.diagnostics.no'),
+          }}
+        />
+      ) : null}
+
+      {wsId ? (
+        <AIAgentDrawer
+          open={aiOpen}
+          workspaceId={wsId}
+          seed={aiSeed}
+          onClose={() => {
+            setAiOpen(false)
+            setAiSeed(null)
           }}
         />
       ) : null}

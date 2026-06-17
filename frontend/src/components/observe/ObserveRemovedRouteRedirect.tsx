@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 
-/** Redirects removed QynSight pages to Real-time Monitoring. */
+/** Redirects removed QynSight pages to Overview. */
 export default function ObserveRemovedRouteRedirect() {
-  return <Navigate to="real-time-monitoring" replace />
+  return <Navigate to="overview" replace />
 }

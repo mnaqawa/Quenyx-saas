@@ -7,11 +7,30 @@ import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { ServiceDetailsDrawer } from '../../components/observe/ServiceDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow } from '../../types/observe'
 
 const statusOptions = ['ok', 'warning', 'critical', 'unknown', 'pending'] as const
 const limitOptions = [25, 50, 100, 200]
+
+function checkSortOrder(serviceName: string): number {
+  const n = serviceName.toLowerCase()
+  if (n.includes('cpu')) return 0
+  if (n.includes('memory') || n.includes('ram')) return 1
+  if (n.includes('disk') || n.includes('storage')) return 2
+  if (n.includes('network')) return 3
+  if (n.includes('load')) return 4
+  if (n.includes('ping') || n.includes('live')) return 5
+  return 50
+}
+
+function treeBranch(index: number, total: number): string {
+  if (total <= 1) return '└ '
+  return index === total - 1 ? '└ ' : '├ '
+}
 
 function formatDuration(seconds: number): string {
   const days = Math.floor(seconds / 86400)
@@ -28,11 +47,11 @@ function formatDuration(seconds: number): string {
   return parts.join(' ') || '0s'
 }
 
-function formatDateTime(dateString: string | null | undefined): string {
+function formatDateTime(dateString: string | null | undefined, locale: string): string {
   if (dateString == null || String(dateString).trim() === '') return '—'
   const date = new Date(dateString)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString(locale === 'ar' ? 'ar' : 'en-US', {
     month: '2-digit',
     day: '2-digit',
     year: 'numeric',
@@ -44,7 +63,7 @@ function formatDateTime(dateString: string | null | undefined): string {
 }
 
 export default function Services() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -65,6 +84,9 @@ export default function Services() {
   const [drawerService, setDrawerService] = useState<ObserveServiceRow | null>(null)
   const [rechecking, setRechecking] = useState(false)
   const [recheckError, setRecheckError] = useState<string | null>(null)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
 
   // Sync state changes to URL query params
   useEffect(() => {
@@ -170,23 +192,21 @@ export default function Services() {
     }
   }
 
-  // Group services by host (backend already sorts by host; this adds visual grouping)
+  // Group services by host with stable check ordering (platform metrics first)
   const groupedByHost = useMemo(() => {
     if (!data?.items?.length) return []
-    const groups: Array<{ host: string; items: typeof data.items }> = []
-    let currentHost = ''
-    let currentItems: typeof data.items = []
+    const byHost = new Map<string, ObserveServiceRow[]>()
     for (const item of data.items) {
-      if (item.host !== currentHost) {
-        if (currentItems.length) groups.push({ host: currentHost, items: currentItems })
-        currentHost = item.host
-        currentItems = [item]
-      } else {
-        currentItems.push(item)
-      }
+      const list = byHost.get(item.host) ?? []
+      list.push(item)
+      byHost.set(item.host, list)
     }
-    if (currentItems.length) groups.push({ host: currentHost, items: currentItems })
-    return groups
+    return Array.from(byHost.entries()).map(([host, items]) => ({
+      host,
+      items: [...items].sort(
+        (a, b) => checkSortOrder(a.service) - checkSortOrder(b.service) || a.service.localeCompare(b.service),
+      ),
+    }))
   }, [data])
 
   // Display host name without workspace prefix for section headers (e.g. ws84-Quenyx-DEV-Platform → Quenyx-DEV-Platform)
@@ -199,7 +219,7 @@ export default function Services() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-sm text-white/60">Loading services...</div>
+        <div className="text-sm text-white/60">{t('common.loading')}</div>
       </div>
     )
   }
@@ -207,7 +227,7 @@ export default function Services() {
   if (error) {
     return (
       <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-        Error loading services: {error}
+        {t('services.loadError')}: {error}
       </div>
     )
   }
@@ -215,7 +235,7 @@ export default function Services() {
   if (!data) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
-        No data available
+        {t('services.noData')}
       </div>
     )
   }
@@ -289,25 +309,25 @@ export default function Services() {
           <h3 className="mb-3 text-xs font-semibold text-white/70">{t('services.hostStatusTotals')}</h3>
           <div className="grid grid-cols-4 gap-2">
             <div>
-              <div className="mb-1 text-xs text-white/60">Up</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.up')}</div>
               <div className="rounded bg-emerald-500/20 px-2 py-1 text-center text-sm font-semibold text-emerald-200">
                 {data.hostTotals.up}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Down</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.down')}</div>
               <div className="rounded bg-gray-500/20 px-2 py-1 text-center text-sm font-semibold text-gray-200">
                 {data.hostTotals.down}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Unreachable</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.unreachable')}</div>
               <div className="rounded bg-gray-500/20 px-2 py-1 text-center text-sm font-semibold text-gray-200">
                 {data.hostTotals.unreachable}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Pending</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.pending')}</div>
               <div className="rounded bg-gray-500/20 px-2 py-1 text-center text-sm font-semibold text-gray-200">
                 {data.hostTotals.pending}
               </div>
@@ -319,37 +339,37 @@ export default function Services() {
           <h3 className="mb-3 text-xs font-semibold text-white/70">{t('services.serviceCheckStatusTotals')}</h3>
           <div className="grid grid-cols-6 gap-2">
             <div>
-              <div className="mb-1 text-xs text-white/60">OK</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.ok')}</div>
               <div className="rounded bg-emerald-500/20 px-2 py-1 text-center text-sm font-semibold text-emerald-200">
                 {data.serviceTotals.ok}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Warning</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.warning')}</div>
               <div className="rounded bg-yellow-500/20 px-2 py-1 text-center text-sm font-semibold text-yellow-200">
                 {data.serviceTotals.warning}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Unknown</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.unknown')}</div>
               <div className="rounded bg-purple-500/20 px-2 py-1 text-center text-sm font-semibold text-purple-200">
                 {data.serviceTotals.unknown}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Critical</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.critical')}</div>
               <div className="rounded bg-rose-500/20 px-2 py-1 text-center text-sm font-semibold text-rose-200">
                 {data.serviceTotals.critical}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Pending</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.pending')}</div>
               <div className="rounded bg-sky-500/20 px-2 py-1 text-center text-sm font-semibold text-sky-200">
                 {data.serviceTotals.pending}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-white/60">Unreachable</div>
+              <div className="mb-1 text-xs text-white/60">{t('services.totals.unreachable')}</div>
               <div className="rounded bg-rose-500/20 px-2 py-1 text-center text-sm font-semibold text-rose-200">
                 {data.serviceTotals.unreachable ?? 0}
               </div>
@@ -370,7 +390,7 @@ export default function Services() {
         />
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60">Status:</span>
+          <span className="text-xs text-white/60">{t('services.filter.status')}:</span>
           {statusOptions.map((status) => (
             <button
               key={status}
@@ -388,7 +408,7 @@ export default function Services() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60">Limit:</span>
+          <span className="text-xs text-white/60">{t('services.filter.limit')}:</span>
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
@@ -413,7 +433,7 @@ export default function Services() {
                 : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            All Types ({data.items.length})
+            {t('services.filter.allTypes')} ({data.items.length})
           </button>
           <button
             onClick={() => !isLocked && setProblemsOnly(true)}
@@ -424,7 +444,7 @@ export default function Services() {
                 : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
             }`}
           >
-            All Problems ({data.serviceTotals.warning + data.serviceTotals.critical + data.serviceTotals.unknown})
+            {t('services.filter.allProblems')} ({data.serviceTotals.warning + data.serviceTotals.critical + data.serviceTotals.unknown})
           </button>
         </div>
       </div>
@@ -436,21 +456,19 @@ export default function Services() {
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-[#0f151d]">
               <tr className="border-b border-white/10">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-32">Host</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.serviceCheck')}</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-28">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Last Check</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Next Check</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Duration</th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-white/70 w-20">Attempt</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Status Information</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-white/70 w-24">Actions</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.checkName')}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-28">{t('services.col.status')}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.lastCheck')}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.duration')}</th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-white/70 w-20">{t('services.col.attempts')}</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.output')}</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-white/70 w-28">{t('services.col.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {data.items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-8 text-center text-sm text-white/60">
+                  <td colSpan={7} className="px-3 py-8 text-center text-sm text-white/60">
                     {t('services.empty')}
                   </td>
                 </tr>
@@ -458,78 +476,67 @@ export default function Services() {
                 groupedByHost.map(({ host, items }) => (
                   <Fragment key={host}>
                     <tr className="border-b border-white/10 bg-white/5">
-                      <td colSpan={9} className="px-3 py-2 text-xs font-semibold text-white/90">
-                        Host: {hostDisplayName(host)}
-                        <span className="ml-2 font-normal text-white/50">({t('services.hostServiceCount').replace('{count}', String(items.length))})</span>
+                      <td colSpan={7} className="px-3 py-2.5 text-xs font-semibold text-white/90">
+                        <span className="text-white/50" aria-hidden>
+                          ▼{' '}
+                        </span>
+                        {hostDisplayName(host)}
+                        <span className="ms-2 font-normal text-white/50">
+                          ({t('services.hostServiceCount').replace('{count}', String(items.length))})
+                        </span>
                       </td>
                     </tr>
                     {items.map((item, index) => {
                       const rowKey = `${item.host}-${item.service}-${index}`
-                      const isFirstInGroup = index === 0
+                      const output = item.pluginOutput || item.info || item.longPluginOutput || '—'
                       return (
-                        <Fragment key={rowKey}>
-                          <tr
-                            className={`border-b border-white/5 ${getRowBgColor(item.status)} ${!isFirstInGroup ? 'bg-white/[0.02]' : ''}`}
-                          >
-                            <td className="px-3 py-2.5 text-[13px] align-top">
-                              {isFirstInGroup ? (
-                                <button
-                                  onClick={() => {
-                                    if (selectedWorkspaceId) {
-                                      navigate(`/app/workspaces/${selectedWorkspaceId}/observe/services?q=${encodeURIComponent(item.host)}`)
-                                    }
-                                  }}
-                                  className="hover:text-sky-200 transition font-medium"
-                                >
-                                  {hostDisplayName(item.host)}
-                                </button>
-                              ) : (
-                                <span className="text-white/30" aria-hidden>—</span>
-                              )}
-                            </td>
-                            <td className={`px-3 py-2.5 text-[13px] ${!isFirstInGroup ? 'pl-6' : ''}`}>
-                              {item.service}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
+                        <tr key={rowKey} className={`border-b border-white/5 ${getRowBgColor(item.status)}`}>
+                          <td className="px-3 py-2.5 text-[13px]">
+                            <span className="font-mono text-white/40" aria-hidden>
+                              {treeBranch(index, items.length)}
+                            </span>
+                            {item.service}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
+                            >
+                              {item.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">
+                            {formatDateTime(item.lastCheckAt, language)}
+                          </td>
+                          <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
+                          <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
+                          <td className="px-3 py-2.5 text-[13px] text-white/70">
+                            <div className="line-clamp-2" title={output}>
+                              {output}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setDrawerService(item)}
+                                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
                               >
-                                {item.status.toUpperCase()}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.lastCheckAt)}</td>
-                            <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">{formatDateTime(item.nextCheckAt)}</td>
-                            <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
-                            <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
-                            <td className="px-3 py-2.5 text-[13px] text-white/70">
-                              <div className="line-clamp-2" title={item.info}>
-                                {item.info || '—'}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setDrawerService(item)}
-                                  className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
-                                >
-                                  {t('services.action.view')}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setDrawerService(item)
-                                    void handleRecheck()
-                                  }}
-                                  disabled={isLocked || rechecking}
-                                  className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
-                                >
-                                  {t('services.action.recheck')}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        </Fragment>
+                                {t('services.action.view')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDrawerService(item)
+                                  void handleRecheck()
+                                }}
+                                disabled={isLocked || rechecking}
+                                className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
+                              >
+                                {t('services.action.recheck')}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       )
                     })}
                   </Fragment>
@@ -548,6 +555,39 @@ export default function Services() {
           service={drawerService}
           onRecheck={!isLocked ? handleRecheck : undefined}
           rechecking={rechecking}
+          showAiExplain={aiAvailable}
+          onExplainCheck={
+            aiAvailable
+              ? () => {
+                  setAiSeed({
+                    id: Date.now(),
+                    agent: 'anomaly_detector',
+                    question: `Explain the service check result for ${drawerService.service} on ${drawerService.host}. Status: ${drawerService.status}. Output: ${drawerService.pluginOutput || drawerService.info || 'none'}.`,
+                    autoSend: true,
+                    quick: true,
+                    context: {
+                      source: 'qynsight_services',
+                      host: drawerService.host,
+                      service: drawerService.service,
+                      status: drawerService.status,
+                    },
+                  })
+                  setAiOpen(true)
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {selectedWorkspaceId ? (
+        <AIAgentDrawer
+          open={aiOpen}
+          workspaceId={Number(selectedWorkspaceId)}
+          seed={aiSeed}
+          onClose={() => {
+            setAiOpen(false)
+            setAiSeed(null)
+          }}
         />
       ) : null}
     </div>

@@ -16,27 +16,33 @@ import InviteAcceptance from './pages/InviteAcceptance'
 import ProtectedRoute from './components/ProtectedRoute'
 import WorkspaceGuard from './components/WorkspaceGuard'
 import ObserveLayout from './layouts/ObserveLayout'
-import RealTimeMonitoring from './pages/observe/RealTimeMonitoring'
-import InfrastructureMap from './pages/observe/InfrastructureMap'
-import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
-const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
-const BillingPage = lazy(() => import('./pages/Billing'))
-import AlertManagement from './pages/observe/AlertManagement'
-import Services from './pages/observe/Services'
-import Targets from './pages/observe/Targets'
 import ObserveRemovedRouteRedirect from './components/observe/ObserveRemovedRouteRedirect'
+import { ObservePageSkeleton } from './components/observe/ObservePageSkeleton'
 import ComingSoon from './pages/ComingSoon'
 import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
 
+const BillingPage = lazy(() => import('./pages/Billing'))
+const Overview = lazy(() => import('./pages/observe/Overview'))
+const RealTimeMonitoring = lazy(() => import('./pages/observe/RealTimeMonitoring'))
+const InfrastructureMap = lazy(() => import('./pages/observe/InfrastructureMap'))
+const PerformanceAnalytics = lazy(() => import('./pages/observe/PerformanceAnalytics'))
+const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
+const AlertManagement = lazy(() => import('./pages/observe/AlertManagement'))
+const Services = lazy(() => import('./pages/observe/Services'))
+const Targets = lazy(() => import('./pages/observe/Targets'))
+
+function ObserveSuspense({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
+}
+
 function App() {
-  // Validate platform registry in development mode
   useEffect(() => {
     validateRegistryInDevelopment()
   }, [])
 
-  // Generate QynSight routes from platformRegistry
   const observeRoutes = routesByModule.qynsight || []
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -47,17 +53,15 @@ function App() {
           <Route path="/" element={<AppLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route index element={<Dashboard />} />
-            {/* Canonical workspace routes */}
             <Route path="app/workspaces" element={<WorkspacesPage />} />
             <Route path="app/workspaces/:id" element={<WorkspaceDetailsPage />} />
-            {/* Legacy project routes - redirect to workspaces */}
             <Route path="app/projects" element={<Navigate to="/app/workspaces" replace />} />
             <Route path="app/projects/:id" element={<WorkspaceDetailsPage />} />
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route
               path="app/workspaces/:id/qyncore/billing"
               element={
-                <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-white/10 bg-white/5 m-6" />}>
+                <Suspense fallback={<ObservePageSkeleton />}>
                   <BillingPage />
                 </Suspense>
               }
@@ -66,63 +70,96 @@ function App() {
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="getting-started" element={<GettingStarted />} />
-            {/* Legacy help path -> getting started */}
             <Route path="help" element={<Navigate to="/getting-started" replace />} />
             <Route path="profile" element={<Profile />} />
-            {/* QynSight routes - generated from platformRegistry */}
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
-              {/* Route mapping: route.key -> component */}
+              {observeRoutes.find((r) => r.key === 'overview') && (
+                <Route
+                  path="overview"
+                  element={
+                    <ObserveSuspense>
+                      <Overview />
+                    </ObserveSuspense>
+                  }
+                />
+              )}
               {observeRoutes.find((r) => r.key === 'real-time-monitoring') && (
-                <Route path="real-time-monitoring" element={<RealTimeMonitoring />} />
+                <Route
+                  path="real-time-monitoring"
+                  element={
+                    <ObserveSuspense>
+                      <RealTimeMonitoring />
+                    </ObserveSuspense>
+                  }
+                />
               )}
               {observeRoutes.find((r) => r.key === 'infrastructure-map') && (
-                <Route path="infrastructure-map" element={<InfrastructureMap />} />
+                <Route
+                  path="infrastructure-map"
+                  element={
+                    <ObserveSuspense>
+                      <InfrastructureMap />
+                    </ObserveSuspense>
+                  }
+                />
               )}
               {observeRoutes.find((r) => r.key === 'performance-analytics') && (
-                <Route path="performance-analytics" element={<PerformanceAnalytics />} />
+                <Route
+                  path="performance-analytics"
+                  element={
+                    <ObserveSuspense>
+                      <PerformanceAnalytics />
+                    </ObserveSuspense>
+                  }
+                />
               )}
               {observeRoutes.find((r) => r.key === 'capacity-planning') && (
                 <Route
                   path="capacity-planning"
                   element={
-                    <Suspense
-                      fallback={
-                        <div className="space-y-6 p-6">
-                          <div className="h-10 w-64 animate-pulse rounded-lg bg-white/5" />
-                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <div key={i} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
-                            ))}
-                          </div>
-                          <div className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
-                        </div>
-                      }
-                    >
+                    <ObserveSuspense>
                       <CapacityPlanning />
-                    </Suspense>
+                    </ObserveSuspense>
                   }
                 />
               )}
               {observeRoutes.find((r) => r.key === 'alert-management') && (
-                <Route path="alert-management" element={<AlertManagement />} />
+                <Route
+                  path="alert-management"
+                  element={
+                    <ObserveSuspense>
+                      <AlertManagement />
+                    </ObserveSuspense>
+                  }
+                />
               )}
               <Route path="data-sources" element={<ObserveRemovedRouteRedirect />} />
               <Route path="reports" element={<ObserveRemovedRouteRedirect />} />
               <Route path="instance-management" element={<ObserveRemovedRouteRedirect />} />
               <Route path="instances" element={<ObserveRemovedRouteRedirect />} />
               {observeRoutes.find((r) => r.key === 'services') && (
-                <Route path="services" element={<Services />} />
+                <Route
+                  path="services"
+                  element={
+                    <ObserveSuspense>
+                      <Services />
+                    </ObserveSuspense>
+                  }
+                />
               )}
               {observeRoutes.find((r) => r.key === 'targets') && (
-                <Route path="targets" element={<Targets />} />
+                <Route
+                  path="targets"
+                  element={
+                    <ObserveSuspense>
+                      <Targets />
+                    </ObserveSuspense>
+                  }
+                />
               )}
-              <Route index element={<RealTimeMonitoring />} />
+              <Route index element={<Navigate to="overview" replace />} />
             </Route>
-            {/* Module placeholder routes (Coming Soon) */}
-            <Route 
-              path="app/workspaces/:id/modules/:moduleKey" 
-              element={<ComingSoon />} 
-            />
+            <Route path="app/workspaces/:id/modules/:moduleKey" element={<ComingSoon />} />
           </Route>
         </Route>
       </Route>

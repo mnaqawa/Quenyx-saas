@@ -12,6 +12,9 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { formatReadableAlertCondition } from '../../lib/alertConditionLabels'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
+import type { AIAgentSeed } from '../../types/aiAgent'
 import type {
   AlertHistoryEvent,
   AlertHistoryFilters,
@@ -44,13 +47,22 @@ type BadgeStatus = ComponentProps<typeof StatusBadge>['status']
 function severityToBadgeStatus(severity: string): BadgeStatus {
   if (severity === 'critical') return 'critical'
   if (severity === 'warning') return 'warning'
+  if (severity === 'info') return 'connected'
   return 'degraded'
+}
+
+function alertSeverityBorderClass(severity: string, status?: string): string {
+  if (status === 'resolved') return 'border-s-emerald-500'
+  if (severity === 'critical') return 'border-s-rose-500'
+  if (severity === 'warning') return 'border-s-amber-500'
+  if (severity === 'info') return 'border-s-sky-500'
+  return 'border-s-white/20'
 }
 
 function alertStatusToBadgeStatus(status: string): BadgeStatus {
   if (status === 'open' || status === 'active') return 'critical'
   if (status === 'acknowledged') return 'warning'
-  if (status === 'resolved') return 'completed'
+  if (status === 'resolved') return 'healthy'
   return 'degraded'
 }
 
@@ -97,6 +109,9 @@ export default function AlertManagement() {
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [detailEvent, setDetailEvent] = useState<AlertHistoryEvent | null>(null)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
+  const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const [historyFilters, setHistoryFilters] = useState<AlertHistoryFilters>({})
   const [appliedHistoryFilters, setAppliedHistoryFilters] = useState<AlertHistoryFilters>({})
   const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
@@ -243,7 +258,7 @@ export default function AlertManagement() {
               {safeRules.map((rule) => (
                 <div
                   key={rule.id}
-                  className="flex flex-wrap items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4"
+                  className={`flex flex-wrap items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4 border-s-4 ${alertSeverityBorderClass(rule.severity)}`}
                 >
                   <button
                     type="button"
@@ -258,16 +273,25 @@ export default function AlertManagement() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-sm font-semibold">{rule.name}</h4>
-                      <span className="text-xs text-white/60">
-                        {t('alerts.ruleConditionSeparator')} {ruleConditionText(rule, t)}
+                      <StatusBadge status={severityToBadgeStatus(rule.severity)} label={rule.severity} />
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
+                          rule.enabled
+                            ? 'bg-emerald-500/20 text-emerald-200'
+                            : 'bg-white/10 text-white/50'
+                        }`}
+                      >
+                        {rule.enabled ? t('alerts.ruleEnabled') : t('alerts.ruleDisabled')}
                       </span>
                     </div>
+                    <p className="mt-1 text-xs text-white/70">
+                      {t('alerts.ruleConditionSeparator')} {ruleConditionText(rule, t)}
+                    </p>
                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-white/40">
                       <span>{t('alerts.lastTriggered')}: {rule.lastTriggered}</span>
                       <span>{t('alerts.triggers7d')}: {rule.triggerCount7d}</span>
                     </div>
                   </div>
-                  <StatusBadge status={rule.severity} label={rule.severity} />
                   {canEdit && (
                     <button
                       type="button"
@@ -315,7 +339,7 @@ export default function AlertManagement() {
                 const conditionText = historyConditionText(e, safeRules, t)
 
                 return (
-                  <div key={e.id} className="rounded-lg border border-white/5 bg-white/5 p-4">
+                  <div key={e.id} className={`rounded-lg border border-white/5 bg-white/5 p-4 border-s-4 ${alertSeverityBorderClass(e.severity, e.status)}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-sm font-semibold">{e.title}</h4>
                       <div className="flex flex-wrap items-center gap-2">
@@ -383,8 +407,42 @@ export default function AlertManagement() {
           canAcknowledge={canAcknowledge && detailEvent.status !== 'resolved' && detailEvent.status !== 'acknowledged'}
           onAcknowledge={() => handleAcknowledge(detailEvent.id)}
           onClose={() => setDetailEvent(null)}
+          onExplainAlert={
+            aiAvailable
+              ? () => {
+                  const condition = historyConditionText(detailEvent, safeRules, t)
+                  setAiSeed({
+                    id: Date.now(),
+                    agent: 'anomaly_detector',
+                    question: `Explain this alert: ${detailEvent.title}. ${detailEvent.message ?? ''}`,
+                    autoSend: true,
+                    quick: true,
+                    context: {
+                      source: 'qynsight_alerts',
+                      alert: detailEvent.title,
+                      severity: detailEvent.severity,
+                      host: detailEvent.host_name,
+                      condition,
+                    },
+                  })
+                  setAiOpen(true)
+                }
+              : undefined
+          }
         />
       )}
+
+      {selectedWorkspaceId ? (
+        <AIAgentDrawer
+          open={aiOpen}
+          workspaceId={Number(selectedWorkspaceId)}
+          seed={aiSeed}
+          onClose={() => {
+            setAiOpen(false)
+            setAiSeed(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -395,12 +453,14 @@ function AlertDetailModal({
   canAcknowledge,
   onAcknowledge,
   onClose,
+  onExplainAlert,
 }: {
   event: AlertHistoryEvent
   rules: AlertRule[]
   canAcknowledge: boolean
   onAcknowledge: () => void
   onClose: () => void
+  onExplainAlert?: () => void
 }) {
   const { t } = useLanguage()
   const isResolved = event.status === 'resolved'
@@ -436,7 +496,16 @@ function AlertDetailModal({
           )}
           {event.message && <p className="text-white/70">{event.message}</p>}
         </div>
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          {onExplainAlert ? (
+            <button
+              type="button"
+              onClick={onExplainAlert}
+              className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-4 py-2 text-sm text-orange-100 hover:bg-orange-500/25"
+            >
+              {t('ai.action.explainAlert')}
+            </button>
+          ) : null}
           {canAcknowledge && !isResolved && (
             <button
               type="button"

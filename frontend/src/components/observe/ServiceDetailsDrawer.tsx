@@ -10,6 +10,8 @@ interface ServiceDetailsDrawerProps {
   service: ObserveServiceRow | null
   onRecheck?: () => void
   rechecking?: boolean
+  showAiExplain?: boolean
+  onExplainCheck?: () => void
 }
 
 function formatDateTime(dateString: string | null | undefined, locale: string): string {
@@ -44,6 +46,8 @@ export function ServiceDetailsDrawer({
   service,
   onRecheck,
   rechecking = false,
+  showAiExplain = false,
+  onExplainCheck,
 }: ServiceDetailsDrawerProps) {
   const { t, language } = useLanguage()
   const [thresholds, setThresholds] = useState<MonitoringProfileCheck | null>(null)
@@ -129,6 +133,25 @@ export function ServiceDetailsDrawer({
               <span className="text-xs text-white/50">{t('services.drawer.lastCheck')}</span>
               <p className="font-mono tabular-nums">{formatDateTime(service.lastCheckAt, language)}</p>
             </div>
+            <div>
+              <span className="text-xs text-white/50">{t('services.drawer.nextCheck')}</span>
+              <p className="font-mono tabular-nums">{formatDateTime(service.nextCheckAt, language)}</p>
+            </div>
+            <div>
+              <span className="text-xs text-white/50">{t('services.drawer.attempts')}</span>
+              <p>{service.attempt ?? `${service.currentAttempt ?? '—'}/${service.maxAttempts ?? '—'}`}</p>
+            </div>
+            <div>
+              <span className="text-xs text-white/50">{t('services.drawer.duration')}</span>
+              <p>{service.durationSec != null ? `${service.durationSec}s` : '—'}</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-2 text-xs font-semibold uppercase text-white/60">{t('services.drawer.lastResult')}</h4>
+            <pre className="max-h-40 overflow-auto rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-white/80 whitespace-pre-wrap break-words">
+              {service.pluginOutput || service.info || service.longPluginOutput || t('services.drawer.noOutput')}
+            </pre>
           </div>
 
           <div>
@@ -184,13 +207,22 @@ export function ServiceDetailsDrawer({
             )}
           </div>
         </div>
-        <div className="flex gap-2 border-t border-white/10 p-4">
+        <div className="flex flex-wrap gap-2 border-t border-white/10 p-4">
+          {showAiExplain && onExplainCheck ? (
+            <button
+              type="button"
+              onClick={onExplainCheck}
+              className="rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-2 text-xs text-orange-100 hover:bg-orange-500/25"
+            >
+              {t('ai.action.explainCheck')}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onClose}
             className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10"
           >
-            {t('services.action.view')}
+            {t('common.close')}
           </button>
           {onRecheck ? (
             <button

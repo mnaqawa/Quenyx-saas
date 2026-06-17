@@ -46,6 +46,7 @@ export interface ModuleConfig {
 
 // QynSight production menu (Instance Management hidden until host operations ship)
 const qynSightRoutes: RouteConfig[] = [
+  { key: 'overview', label: 'Overview', i18nKey: 'nav.qynsight.overview', path: '/app/workspaces/:id/observe/overview', title: 'Overview' },
   { key: 'real-time-monitoring', label: 'Real-time Monitoring', i18nKey: 'nav.qynsight.realTimeMonitoring', path: '/app/workspaces/:id/observe/real-time-monitoring', title: 'Real-time Monitoring' },
   { key: 'infrastructure-map', label: 'Infrastructure Map', i18nKey: 'nav.qynsight.infrastructureMap', path: '/app/workspaces/:id/observe/infrastructure-map', title: 'Infrastructure Map' },
   { key: 'performance-analytics', label: 'Performance Analytics', i18nKey: 'nav.qynsight.performanceAnalytics', path: '/app/workspaces/:id/observe/performance-analytics', title: 'Performance Analytics' },
