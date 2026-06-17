@@ -11,11 +11,13 @@ import { useLanguage } from '../../i18n/LanguageContext'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { formatReadableAlertCondition } from '../../lib/alertConditionLabels'
 import type {
   AlertHistoryEvent,
   AlertHistoryFilters,
   CreateAlertRulePayload,
   ObserveTargetHostOption,
+  AlertRule,
 } from '../../types/observe'
 
 const ALERT_METRIC_OPTIONS = [
@@ -32,6 +34,8 @@ const ALERT_METRIC_OPTIONS = [
   'memory_runway_days',
   'storage_runway_days',
 ] as const
+
+const ALERT_OPERATORS = ['>', '>=', '<', '<=', '=', '!='] as const
 
 const inputClass = 'w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm text-white'
 
@@ -63,6 +67,25 @@ function filtersForApi(filters: AlertHistoryFilters): AlertHistoryFilters {
     date_from: toApiDateTime(filters.date_from),
     date_to: toApiDateTime(filters.date_to),
   }
+}
+
+function ruleConditionText(rule: AlertRule, t: (key: string) => string): string {
+  return formatReadableAlertCondition(rule, t)
+}
+
+function historyConditionText(
+  event: AlertHistoryEvent,
+  rules: AlertRule[],
+  t: (key: string) => string,
+): string | null {
+  const rule = event.rule_id ? rules.find((r) => r.id === event.rule_id) : undefined
+  if (rule) return ruleConditionText(rule, t)
+  const meta = event.metadata as { metric_condition?: string; operator?: string; threshold_value?: number; condition?: string } | null
+  if (meta?.metric_condition && meta?.operator) {
+    return formatReadableAlertCondition(meta, t)
+  }
+  if (meta?.condition) return formatReadableAlertCondition({ condition: meta.condition }, t)
+  return null
 }
 
 export default function AlertManagement() {
@@ -235,7 +258,9 @@ export default function AlertManagement() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-sm font-semibold">{rule.name}</h4>
-                      <span className="text-xs text-white/60">{rule.condition}</span>
+                      <span className="text-xs text-white/60">
+                        {t('alerts.ruleConditionSeparator')} {ruleConditionText(rule, t)}
+                      </span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-white/40">
                       <span>{t('alerts.lastTriggered')}: {rule.lastTriggered}</span>
@@ -287,6 +312,7 @@ export default function AlertManagement() {
               {history.map((e) => {
                 const isResolved = e.status === 'resolved'
                 const canAct = canAcknowledge && !isResolved && e.status !== 'acknowledged'
+                const conditionText = historyConditionText(e, safeRules, t)
 
                 return (
                   <div key={e.id} className="rounded-lg border border-white/5 bg-white/5 p-4">
@@ -300,6 +326,9 @@ export default function AlertManagement() {
                         <StatusBadge status={severityToBadgeStatus(e.severity)} label={e.severity} />
                       </div>
                     </div>
+                    {conditionText ? (
+                      <p className="mt-1 text-xs text-white/50">{conditionText}</p>
+                    ) : null}
                     <p className="mt-1 text-xs text-white/60">{e.message}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/40">
                       <span>{new Date(e.triggered_at).toLocaleString()}</span>
@@ -350,6 +379,7 @@ export default function AlertManagement() {
       {detailEvent && (
         <AlertDetailModal
           event={detailEvent}
+          rules={safeRules}
           canAcknowledge={canAcknowledge && detailEvent.status !== 'resolved' && detailEvent.status !== 'acknowledged'}
           onAcknowledge={() => handleAcknowledge(detailEvent.id)}
           onClose={() => setDetailEvent(null)}
@@ -361,17 +391,20 @@ export default function AlertManagement() {
 
 function AlertDetailModal({
   event,
+  rules,
   canAcknowledge,
   onAcknowledge,
   onClose,
 }: {
   event: AlertHistoryEvent
+  rules: AlertRule[]
   canAcknowledge: boolean
   onAcknowledge: () => void
   onClose: () => void
 }) {
   const { t } = useLanguage()
   const isResolved = event.status === 'resolved'
+  const conditionText = historyConditionText(event, rules, t)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -379,6 +412,9 @@ function AlertDetailModal({
         <h2 className="text-lg font-semibold">{t('alerts.details')}</h2>
         <div className="mt-4 space-y-2 text-sm">
           <p><span className="text-white/50">{t('alerts.rule')}:</span> {event.rule_name ?? event.rule_id ?? '—'}</p>
+          {conditionText ? (
+            <p><span className="text-white/50">{t('alerts.field.metric')}:</span> {conditionText}</p>
+          ) : null}
           <p><span className="text-white/50">{t('alerts.host')}:</span> {event.host_name ?? '—'}</p>
           <p><span className="text-white/50">{t('alerts.service')}:</span> {event.service_name ?? '—'}</p>
           <p>
@@ -682,12 +718,11 @@ function CreateAlertRuleModal({
                 onChange={(e) => setForm({ ...form, operator: e.target.value })}
                 className={inputClass}
               >
-                <option value=">">&gt;</option>
-                <option value=">=">&gt;=</option>
-                <option value="<">&lt;</option>
-                <option value="<=">&lt;=</option>
-                <option value="=">=</option>
-                <option value="!=">!=</option>
+                {ALERT_OPERATORS.map((op) => (
+                  <option key={op} value={op}>
+                    {t(`alerts.operator.${op}`)}
+                  </option>
+                ))}
               </select>
             </FormField>
             <FormField label={t('alerts.field.threshold')} hint={t('alerts.field.thresholdHint')} required>

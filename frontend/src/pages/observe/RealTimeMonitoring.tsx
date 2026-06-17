@@ -17,6 +17,7 @@ import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
@@ -135,6 +136,7 @@ const Icons = {
 
 export default function RealTimeMonitoring() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const { selectedWorkspaceId } = useWorkspaceContext()
 
   const [isLive, setIsLive] = useState(true)
@@ -383,8 +385,8 @@ export default function RealTimeMonitoring() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Real-time Monitoring"
-          subtitle="Live system metrics and performance for this workspace."
+        title={t('rtm.title')}
+        subtitle={t('rtm.subtitle')}
         />
         <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0f151d] py-20 px-6 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/50">
@@ -397,24 +399,24 @@ export default function RealTimeMonitoring() {
               <line x1="18" y1="18" x2="18.01" y2="18" />
             </svg>
           </div>
-          <h2 className="mt-6 text-lg font-semibold text-white">No hosts in this workspace</h2>
+          <h2 className="mt-6 text-lg font-semibold text-white">{t('rtm.noHostsTitle')}</h2>
           <p className="mt-2 max-w-sm text-sm text-white/60">
-            Add hosts and services in Monitored Targets to see real-time status, metrics, and alerts here.
+            {t('rtm.noHostsDesc')}
           </p>
           <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 text-left">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/70">Getting started</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/70">{t('rtm.gettingStarted')}</p>
             <ol className="space-y-2 text-sm text-white/80">
               <li className="flex items-center gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/30 text-xs font-bold text-sky-200">1</span>
-                Add hosts in Monitored Targets
+                {t('rtm.step1')}
               </li>
               <li className="flex items-center gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">2</span>
-                Add services for each host
+                {t('rtm.step2')}
               </li>
               <li className="flex items-center gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">3</span>
-                View Real-time Monitoring and Dashboard
+                {t('rtm.step3')}
               </li>
             </ol>
           </div>
@@ -425,7 +427,7 @@ export default function RealTimeMonitoring() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Add hosts
+            {t('rtm.goToHosts')}
           </Link>
           <p className="mt-4 text-[10px] text-white/40">
             Later: use <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map` : '#'} className="text-sky-400 hover:underline">Infrastructure Map</Link> for topology and <Link to="/integrations" className="text-sky-400 hover:underline">Integrations</Link> for external data.
@@ -438,8 +440,8 @@ export default function RealTimeMonitoring() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Real-time Monitoring"
-        subtitle="Monitoring server metrics and workspace hosts &amp; services (real data)."
+        title={t('rtm.title')}
+        subtitle={t('rtm.subtitle')}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -681,10 +683,10 @@ export default function RealTimeMonitoring() {
               No CPU / memory / disk / network checks found for <strong>{selectedHost}</strong>. Add service checks in{' '}
               {selectedWorkspaceId ? (
                 <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`} className="text-sky-300 hover:underline">
-                  Monitored Targets
+                  {t('rtm.hostsLink')}
                 </Link>
               ) : (
-                'Monitored Targets'
+                t('rtm.hostsLink')
               )}{' '}
               to see per-host metrics here.
             </div>
@@ -748,7 +750,7 @@ export default function RealTimeMonitoring() {
           {selectedWorkspaceId && (
             <>
               <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`} className="text-sky-300 hover:underline">
-                Monitored Targets
+                {t('rtm.hostsLink')}
               </Link>
               {' · '}
               <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/services`} className="text-sky-300 hover:underline">
@@ -796,7 +798,7 @@ export default function RealTimeMonitoring() {
 
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
           <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Performance thresholds</h3>
-          <p className="text-xs text-white/50 mb-3">Default dashboard thresholds. Per-service limits in Monitored Targets.</p>
+          <p className="text-xs text-white/50 mb-3">{t('rtm.thresholdsHint')}</p>
           <dl className="space-y-1.5 text-xs">
             {thresholds.length > 0
               ? thresholds.flatMap((t) => [
@@ -870,7 +872,7 @@ export default function RealTimeMonitoring() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
-              Monitored Targets
+              {t('rtm.hostsLink')}
             </button>
             <button
               type="button"

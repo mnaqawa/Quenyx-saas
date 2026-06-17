@@ -268,6 +268,11 @@ export default function Services() {
             }}
             refreshing={loading}
             disabled={isLocked}
+            onSettings={
+              selectedWorkspaceId
+                ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
+                : undefined
+            }
           />
         }
       />

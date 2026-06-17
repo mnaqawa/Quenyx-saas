@@ -51,8 +51,8 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'performance-analytics', label: 'Performance Analytics', i18nKey: 'nav.qynsight.performanceAnalytics', path: '/app/workspaces/:id/observe/performance-analytics', title: 'Performance Analytics' },
   { key: 'capacity-planning', label: 'Capacity Planning', i18nKey: 'nav.qynsight.capacityPlanning', path: '/app/workspaces/:id/observe/capacity-planning', title: 'Capacity Planning' },
   { key: 'alert-management', label: 'Alert Management', i18nKey: 'nav.qynsight.alertManagement', path: '/app/workspaces/:id/observe/alert-management', title: 'Alert Management' },
-  { key: 'services', label: 'Services', i18nKey: 'nav.qynsight.services', path: '/app/workspaces/:id/observe/services', title: 'Services' },
-  { key: 'targets', label: 'Targets', i18nKey: 'nav.qynsight.targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
+  { key: 'services', label: 'Service Checks', i18nKey: 'nav.qynsight.services', path: '/app/workspaces/:id/observe/services', title: 'Service Checks' },
+  { key: 'targets', label: 'Hosts', i18nKey: 'nav.qynsight.targets', path: '/app/workspaces/:id/observe/targets', title: 'Hosts' },
   { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 

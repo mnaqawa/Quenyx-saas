@@ -452,7 +452,7 @@ export default function Targets() {
       const merged = mergeResponseWithCurrent(hosts, hostsFromResponse)
       setHosts(normalizeHostsServiceKeys(merged))
 
-      setSuccess('Targets saved. Checks run by QynSight.')
+      setSuccess(t('targets.saveSuccess'))
       setError(null)
       setValidationErrors((prev) => {
         const next = { ...prev }
@@ -774,7 +774,7 @@ export default function Targets() {
             onClick={() => setDrawerHostIndex(null)}
             aria-label={t('common.close')}
           />
-          <div className="flex h-full w-full max-w-3xl flex-col overflow-hidden border-l border-white/10 bg-[#0f151d] text-white">
+          <div className="flex h-full w-full min-w-0 max-w-3xl flex-col overflow-hidden border-l border-white/10 bg-[#0f151d] text-white">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <h3 className="text-base font-semibold">{t('targets.configDrawer')}</h3>
               <button
@@ -785,19 +785,19 @@ export default function Targets() {
                 {t('common.close')}
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-      <div className="space-y-4">
+            <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4">
+      <div className="min-w-0 space-y-4">
         {(() => {
           const hostIndex = drawerHostIndex
           const host = hosts[hostIndex]
           const hostKey = host.id ?? `new-${hostIndex}`
           return (
-              <div key={hostKey} className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1">
+              <div key={hostKey} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => toggleHostExpanded(hostKey)}
-                      className="text-white/60 hover:text-white transition"
+                      className="shrink-0 text-white/60 hover:text-white transition"
                     >
                       <svg
                         width="16"
@@ -812,14 +812,14 @@ export default function Targets() {
                       </svg>
                     </button>
                     {canEdit ? (
-                      <>
+                      <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                         <input
                           type="text"
-                          placeholder="Host name"
+                          placeholder={t('targets.hostName')}
                           value={host.name}
                           onChange={(e) => handleUpdateHost(hostIndex, 'name', e.target.value)}
                           disabled={saving}
-                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                          className={`min-w-0 w-full rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
                             getFieldError(`hosts.${hostIndex}.name`)
                               ? 'border-rose-500/50 bg-rose-500/10'
                               : 'border-white/10 bg-white/5'
@@ -827,11 +827,11 @@ export default function Targets() {
                         />
                         <input
                           type="text"
-                          placeholder="Private IP / hostname"
+                          placeholder={t('targets.privateIp')}
                           value={host.address}
                           onChange={(e) => handleUpdateHost(hostIndex, 'address', e.target.value)}
                           disabled={saving}
-                          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                          className={`min-w-0 w-full rounded-lg border px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
                             getFieldError(`hosts.${hostIndex}.address`)
                               ? 'border-rose-500/50 bg-rose-500/10'
                               : 'border-white/10 bg-white/5'
@@ -839,29 +839,30 @@ export default function Targets() {
                         />
                         <input
                           type="text"
-                          placeholder="Public IP (optional)"
+                          placeholder={t('targets.publicIp')}
                           value={host.public_ip ?? ''}
                           onChange={(e) => handleUpdateHost(hostIndex, 'public_ip', e.target.value)}
                           disabled={saving}
-                          className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+                          className="min-w-0 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
                         />
                         <input
                           type="text"
-                          placeholder="Check command"
+                          placeholder={t('targets.checkCommand')}
                           value={host.check_command}
                           onChange={(e) => handleUpdateHost(hostIndex, 'check_command', e.target.value)}
                           disabled={saving}
-                          className="w-48 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+                          className="min-w-0 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 sm:col-span-2 xl:col-span-3"
                         />
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                         <span className="text-sm font-medium text-white">{host.name}</span>
                         <span className="text-xs text-white/60">{host.address}</span>
                         <span className="text-xs text-white/50">{host.public_ip ?? '—'}</span>
                         <span className="text-xs text-white/50">{host.check_command}</span>
-                      </>
+                      </div>
                     )}
+                    <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs text-white/70">
                       <input
                         type="checkbox"
@@ -870,7 +871,7 @@ export default function Targets() {
                         disabled={saving || !canEdit}
                         className="rounded border-white/20"
                       />
-                      Enabled
+                      {t('targets.enabled')}
                     </label>
                     {canEdit && (
                       <button
@@ -878,28 +879,29 @@ export default function Targets() {
                         disabled={saving}
                         className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
                       >
-                        Remove
+                        {t('targets.removeHost')}
                       </button>
                     )}
+                    </div>
                   </div>
                 </div>
 
                 {expandedHosts.has(hostKey) && (
                   <div className="mt-4 space-y-2 pl-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-white/70">Services</span>
+                      <span className="text-xs font-medium text-white/70">{t('targets.servicesSection')}</span>
                       {canEdit && (
                         <button
                           onClick={() => handleAddService(hostIndex)}
                           disabled={saving}
                           className="text-xs text-sky-400 hover:text-sky-300 disabled:opacity-50"
                         >
-                          + Add Service
+                          + {t('targets.addServiceCheck')}
                         </button>
                       )}
                     </div>
                     {host.services.length === 0 ? (
-                      <div className="text-xs text-white/50">No services defined</div>
+                      <div className="text-xs text-white/50">{t('targets.noServiceChecks')}</div>
                     ) : (
                       host.services.map((service, serviceIndex) => {
                         const serviceKey = `${hostIndex}-${serviceIndex}`
@@ -907,17 +909,17 @@ export default function Targets() {
                         const def = displayedServiceKey ? definitionsByKey.get(displayedServiceKey) : null
                         const groups = def ? groupFieldsByCapability(def) : {}
                         return (
-                          <div key={serviceIndex} className="rounded border border-white/5 bg-white/5 p-3 space-y-3">
-                            <div className="flex items-center gap-2">
+                          <div key={serviceIndex} className="min-w-0 rounded border border-white/5 bg-white/5 p-3 space-y-3">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                               {canEdit ? (
                                 <>
                                   <input
                                     type="text"
-                                    placeholder="Service name"
+                                    placeholder={t('targets.serviceCheckName')}
                                     value={service.name}
                                     onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'name', e.target.value)}
                                     disabled={saving}
-                                    className={`flex-1 rounded border px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50 ${
+                                    className={`min-w-0 w-full flex-1 rounded border px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50 sm:min-w-[10rem] ${
                                       getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.name`)
                                         ? 'border-rose-500/50 bg-rose-500/10'
                                         : 'border-white/10 bg-white/5'
@@ -927,14 +929,14 @@ export default function Targets() {
                                     value={displayedServiceKey || ''}
                                     onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'service_key', e.target.value)}
                                     disabled={saving}
-                                    className={`flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 ${
+                                    className={`min-w-0 w-full flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 sm:min-w-[12rem] ${
                                       getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.service_key`) ||
                                       getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.check_command`)
                                         ? 'border-rose-500/50 bg-rose-500/10'
                                         : 'border-white/10 bg-white/5'
                                     }`}
                                   >
-                                    <option value="">Select service type...</option>
+                                    <option value="">{t('targets.selectServiceCheckType')}</option>
                                     {definitions.map((d) => (
                                       <option key={d.service_key} value={d.service_key}>
                                         {d.display_name}
@@ -960,7 +962,7 @@ export default function Targets() {
                                   disabled={saving || !canEdit}
                                   className="rounded border-white/20"
                                 />
-                                Enabled
+                                {t('targets.enabled')}
                               </label>
                               {canEdit && (
                                 <button
@@ -968,7 +970,7 @@ export default function Targets() {
                                   disabled={saving}
                                   className="text-rose-400 hover:text-rose-300 text-xs disabled:opacity-50"
                                 >
-                                  Remove
+                                  {t('targets.removeServiceCheck')}
                                 </button>
                               )}
                             </div>
@@ -984,25 +986,25 @@ export default function Targets() {
                                   onClick={() => toggleServiceExpanded(serviceKey)}
                                   className="text-xs text-sky-400 hover:text-sky-300"
                                 >
-                                  {expandedServices.has(serviceKey) ? '▼' : '▶'} Configuration
+                                  {expandedServices.has(serviceKey) ? '▼' : '▶'} {t('targets.serviceConfiguration')}
                                 </button>
                                 {expandedServices.has(serviceKey) && (
-                                  <div className="space-y-4 pl-4 border-l border-white/10">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xs font-medium text-white/70">Service Configuration</span>
+                                  <div className="min-w-0 space-y-4 pl-4 border-l border-white/10">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <span className="text-xs font-medium text-white/70">{t('targets.serviceConfiguration')}</span>
                                       <button
                                         type="button"
                                         onClick={() => handleResetToDefaults(hostIndex, serviceIndex)}
                                         className="text-xs text-sky-400 hover:text-sky-300"
                                       >
-                                        Reset to defaults
+                                        {t('targets.resetDefaults')}
                                       </button>
                                     </div>
                                     <div className="space-y-2">
-                                      <div className="text-xs font-medium text-white/60">Polling (check interval)</div>
+                                      <div className="text-xs font-medium text-white/60">{t('targets.pollingTitle')}</div>
                                       <div className="flex flex-wrap items-center gap-3">
-                                        <label className="flex items-center gap-2 text-xs text-white/80">
-                                          Check interval (min):
+                                        <label className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+                                          {t('targets.checkIntervalMin')}:
                                           <input
                                             type="number"
                                             min={1}
@@ -1016,8 +1018,8 @@ export default function Targets() {
                                             placeholder="5"
                                           />
                                         </label>
-                                        <label className="flex items-center gap-2 text-xs text-white/80">
-                                          Retry interval (min):
+                                        <label className="flex flex-wrap items-center gap-2 text-xs text-white/80">
+                                          {t('targets.retryIntervalMin')}:
                                           <input
                                             type="number"
                                             min={1}
@@ -1032,7 +1034,7 @@ export default function Targets() {
                                           />
                                         </label>
                                       </div>
-                                      <p className="text-[10px] text-white/50">How often QynSight runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).</p>
+                                      <p className="text-[10px] text-white/50">{t('targets.pollingHint')}</p>
                                     </div>
                                     {Object.entries(groups).map(([sectionName, fields]) => (
                                       <div key={sectionName} className="space-y-2">

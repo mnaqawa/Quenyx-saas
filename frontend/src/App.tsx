@@ -22,9 +22,9 @@ import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
 const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
 const BillingPage = lazy(() => import('./pages/Billing'))
 import AlertManagement from './pages/observe/AlertManagement'
-import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
 import Targets from './pages/observe/Targets'
+import ObserveRemovedRouteRedirect from './components/observe/ObserveRemovedRouteRedirect'
 import ComingSoon from './pages/ComingSoon'
 import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
@@ -106,9 +106,10 @@ function App() {
               {observeRoutes.find((r) => r.key === 'alert-management') && (
                 <Route path="alert-management" element={<AlertManagement />} />
               )}
-              {observeRoutes.find((r) => r.key === 'instance-management') && (
-                <Route path="instance-management" element={<InstanceManagement />} />
-              )}
+              <Route path="data-sources" element={<ObserveRemovedRouteRedirect />} />
+              <Route path="reports" element={<ObserveRemovedRouteRedirect />} />
+              <Route path="instance-management" element={<ObserveRemovedRouteRedirect />} />
+              <Route path="instances" element={<ObserveRemovedRouteRedirect />} />
               {observeRoutes.find((r) => r.key === 'services') && (
                 <Route path="services" element={<Services />} />
               )}

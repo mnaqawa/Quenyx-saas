@@ -12,6 +12,7 @@ import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { useLanguage } from '../../i18n/LanguageContext'
 import type { PortScanResult } from '../../types/observe'
 
 type HostRow = { name: string; address: string; status: string }
@@ -79,9 +80,9 @@ function statusLabel(s: string): string {
 }
 
 /** Tooltip explaining Pending: first check not run yet */
-function statusTooltip(s: string): string | undefined {
+function statusTooltip(s: string, t: (key: string) => string): string | undefined {
   if (s?.toLowerCase() === 'pending') {
-    return 'Pending = first check not run yet. QynSight runs checks every minute. Add services in Monitored Targets for more checks.'
+    return t('map.pendingHint')
   }
   return undefined
 }
@@ -109,6 +110,7 @@ function ZoneBasedTopology({
   allZonesList,
   layerFiltered,
   portScansByHost,
+  t,
 }: {
   hostsByZone: Map<string, HostRow[]>
   zoneFilter: string
@@ -116,6 +118,7 @@ function ZoneBasedTopology({
   allZonesList: string[]
   layerFiltered: { hostsFiltered: HostRow[]; networksFiltered: Array<{ id: string; name: string; hosts: HostRow[]; status: string }> }
   portScansByHost: Map<string, PortScanResult>
+  t: (key: string) => string
 }) {
   const zonesToShow = zoneFilter === 'All Zones'
     ? allZonesList.filter((z) => (hostsByZone.get(z) ?? []).length > 0)
@@ -196,7 +199,7 @@ function ZoneBasedTopology({
       )}
       {zonesToShow.length === 0 && !hasNetworks && (
         <div className="py-12 text-center text-sm text-white/50">
-          No zones with hosts. Assign zones in Device List or add hosts in Monitored Targets.
+          {t('map.noZones')}
         </div>
       )}
     </div>
@@ -213,6 +216,7 @@ function LLDTopology({
   handleNodeMouseDown,
   statusLabel,
   portScansByHost,
+  t,
 }: {
   networks: Array<{ id: string; name: string; hosts: HostRow[]; status: string }>
   diagram: DiagramState
@@ -220,6 +224,7 @@ function LLDTopology({
   handleNodeMouseDown: (e: React.MouseEvent, name: string) => void
   statusLabel: (s: string) => string
   portScansByHost: Map<string, PortScanResult>
+  t: (key: string) => string
 }) {
   const nodeW = 130
   const nodeH = 58
@@ -323,7 +328,7 @@ function LLDTopology({
                 <p className="text-[10px] text-white/60 truncate max-w-[110px]" title={h.address}>{h.address || '—'}</p>
                 <p
                   className={`mt-1 text-[10px] font-medium ${h.status === 'ok' ? 'text-emerald-400' : h.status === 'warning' ? 'text-amber-400' : 'text-rose-400'}`}
-                  title={statusTooltip(h.status)}
+                  title={statusTooltip(h.status, t)}
                 >
                   {statusLabel(h.status)}
                 </p>
@@ -346,6 +351,8 @@ function LLDTopology({
 
 export default function InfrastructureMap() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
+  const hostsLabel = t('map.hostsLink')
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [activeTab, setActiveTab] = useState<'topology' | 'devices' | 'connections' | 'ports' | 'health'>('topology')
   const [viewType, setViewType] = useState<string>(VIEW_OPTIONS[0])
@@ -637,8 +644,8 @@ export default function InfrastructureMap() {
       definitions: {
         'Compute Layer': 'Hosts and servers monitored by QynSight',
         'Network Layer': 'Logical network segments (from host addressing)',
-        'Storage Layer': 'Storage resources (define in Monitored Targets)',
-        'Security Layer': 'Security zones and policies (define in Monitored Targets)',
+        'Storage Layer': t('map.storageLayer'),
+        'Security Layer': t('map.securityLayer'),
       },
       zone: selectedWorkspaceId ? { id: selectedWorkspaceId, name: 'Workspace' } : null,
       zones: [...ZONE_OPTIONS, ...diagram.customZones],
@@ -825,7 +832,7 @@ export default function InfrastructureMap() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-white/60">Loading infrastructure...</div>
+        <div className="text-sm text-white/60">{t('map.loading')}</div>
       </div>
     )
   }
@@ -841,8 +848,9 @@ export default function InfrastructureMap() {
   return (
     <div className="space-y-4" ref={mapContainerRef}>
       <PageHeader
-        title="Infrastructure Map"
-        subtitle="Visual network topology and infrastructure overview."
+        title={t('map.title')}
+        subtitle={t('map.subtitle')}
+        titleNoWrap
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -899,11 +907,6 @@ export default function InfrastructureMap() {
                 refreshNow()
               }}
               refreshing={loading}
-              onSettings={
-                selectedWorkspaceId
-                  ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
-                  : undefined
-              }
             />
           </div>
         }
@@ -988,7 +991,7 @@ export default function InfrastructureMap() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold">Network Topology Map</h3>
-                <p className="text-xs text-white/50">Layer: {layerFilter} — real data from Monitored Targets</p>
+                <p className="text-xs text-white/50">{t('map.realDataHint').replace('{layer}', layerFilter)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-white/50">Design:</span>
@@ -1021,11 +1024,12 @@ export default function InfrastructureMap() {
             >
               {layerFiltered.showStorage || layerFiltered.showSecurity ? (
                 <div className="py-12 text-center text-sm text-white/50">
-                  No {layerFilter === 'Storage Layer' ? 'storage' : 'security'} data. Define in Monitored Targets or integrate with external tools.
+                  {t('map.noLayerData').replace('{layer}', layerFilter === 'Storage Layer' ? 'storage' : 'security')}
                 </div>
               ) : !layerFiltered.hasData ? (
                 <div className="py-12 text-center text-sm text-white/50">
-                  No hosts. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link>.
+                  {t('map.noHosts')}{' '}
+                  <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">{hostsLabel}</Link>.
                 </div>
               ) : viewType === 'By Zone' || viewType === 'Security Zones' ? (
                 <ZoneBasedTopology
@@ -1035,6 +1039,7 @@ export default function InfrastructureMap() {
                   allZonesList={allZonesList}
                   layerFiltered={layerFiltered}
                   portScansByHost={portScansByHost}
+                  t={t}
                 />
               ) : designLevel === 'hld' ? (
                 <div className="flex flex-col items-center gap-4">
@@ -1057,6 +1062,7 @@ export default function InfrastructureMap() {
                   handleNodeMouseDown={handleNodeMouseDown}
                   statusLabel={statusLabel}
                   portScansByHost={portScansByHost}
+                  t={t}
                 />
               )}
             </div>
@@ -1085,9 +1091,9 @@ export default function InfrastructureMap() {
               </button>
             </div>
             {(layerFiltered.showStorage || layerFiltered.showSecurity) ? (
-              <div className="py-12 text-center text-sm text-white/50">No {layerFilter === 'Storage Layer' ? 'storage' : 'security'} devices. Define in Monitored Targets.</div>
+              <div className="py-12 text-center text-sm text-white/50">{t('map.noLayerData').replace('{layer}', layerFilter === 'Storage Layer' ? 'storage' : 'security')}</div>
             ) : !layerFiltered.hasData ? (
-              <div className="py-12 text-center text-sm text-white/50">No devices. Add hosts in Monitored Targets.</div>
+              <div className="py-12 text-center text-sm text-white/50">{t('map.noHosts')} <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">{hostsLabel}</Link>.</div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {layerFiltered.hostsFiltered.map((h) => (
@@ -1120,7 +1126,7 @@ export default function InfrastructureMap() {
                           h.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
                           'bg-rose-500/20 text-rose-200'
                         }`}
-                        title={statusTooltip(h.status)}
+                        title={statusTooltip(h.status, t)}
                       >
                         {statusLabel(h.status)}
                       </span>
@@ -1161,7 +1167,7 @@ export default function InfrastructureMap() {
             </p>
             {connectionsForTab.length === 0 ? (
               <div className="py-12 text-center text-sm text-white/50">
-                {layerFilter === 'Storage Layer' || layerFilter === 'Security Layer' ? `No ${layerFilter === 'Storage Layer' ? 'storage' : 'security'} connections.` : 'No connections. Add hosts in Monitored Targets or add external topology in Integrations.'}
+                {layerFilter === 'Storage Layer' || layerFilter === 'Security Layer' ? `No ${layerFilter === 'Storage Layer' ? 'storage' : 'security'} connections.` : `No connections. Add hosts in ${hostsLabel} or add external topology in Integrations.`}
               </div>
             ) : (
               <div className="space-y-3">
@@ -1176,7 +1182,7 @@ export default function InfrastructureMap() {
                         c.status === 'Warning' ? 'text-amber-400' :
                         c.status === 'Pending' ? 'text-white/70' : 'text-rose-400'
                       }`}
-                      title={statusTooltip(c.status)}
+                      title={statusTooltip(c.status, t)}
                     >
                       {c.status}
                     </span>
@@ -1205,7 +1211,7 @@ export default function InfrastructureMap() {
               <div>
                 <h3 className="mb-1 text-sm font-semibold">Nmap Port Scan</h3>
                 <p className="text-xs text-white/50">
-                  Port scan results from nmap. Scans run when hosts are saved in Monitored Targets, or use Perform Scan for custom options. Requires nmap on the server.
+                  Port scan results from nmap. Scans run when hosts are saved in {hostsLabel}, or use Perform Scan for custom options. Requires nmap on the server.
                 </p>
               </div>
               <button
@@ -1357,7 +1363,8 @@ export default function InfrastructureMap() {
             )}
             {(portScansData ?? []).length === 0 ? (
               <div className="py-12 text-center text-sm text-white/50">
-                No port scan data. Add hosts in <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">Monitored Targets</Link> and save to trigger nmap scans.
+                {t('map.noHosts')}{' '}
+                <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'} className="text-sky-300 hover:underline">{hostsLabel}</Link> and save to trigger nmap scans.
               </div>
             ) : (
               <div className="space-y-4">
@@ -1395,7 +1402,7 @@ export default function InfrastructureMap() {
                           <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">Pending</span>
                         )}
                         {!ps.scan && (
-                          <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title="Scan will run when host is saved in Monitored Targets">Queued</span>
+                          <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title={`Scan will run when host is saved in ${hostsLabel}`}>Queued</span>
                         )}
                         {ps.scan?.scanned_at && (
                           <span className="text-[10px] text-white/50">
@@ -1478,7 +1485,7 @@ export default function InfrastructureMap() {
                     <circle cx="12" cy="12" r="3" />
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
-                  Monitored Targets
+                  {hostsLabel}
                 </Link>
                 <button type="button" onClick={handleExportMap} className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1498,10 +1505,10 @@ export default function InfrastructureMap() {
       <details className="rounded-2xl border border-white/10 bg-[#0f151d] p-4 text-white">
         <summary className="cursor-pointer text-xs font-semibold text-white/70 uppercase tracking-wider">Layer definitions</summary>
         <dl className="mt-3 space-y-2 text-xs text-white/60">
-          <div><dt className="font-medium text-white/80">Compute Layer</dt><dd>Hosts and servers monitored by QynSight (real data from Monitored Targets).</dd></div>
-          <div><dt className="font-medium text-white/80">Network Layer</dt><dd>Logical network segments; derived from host addressing. Add network metadata in Monitored Targets for richer LLD.</dd></div>
-          <div><dt className="font-medium text-white/80">Storage Layer</dt><dd>Storage resources. Define in Monitored Targets or integrate with storage monitoring for live data.</dd></div>
-          <div><dt className="font-medium text-white/80">Security Layer</dt><dd>Security zones and policies. Define in Monitored Targets or link to security tools for live data.</dd></div>
+          <div><dt className="font-medium text-white/80">Compute Layer</dt><dd>Hosts and servers monitored by QynSight (real data from {hostsLabel}).</dd></div>
+          <div><dt className="font-medium text-white/80">Network Layer</dt><dd>Logical network segments; derived from host addressing. Add network metadata in {hostsLabel} for richer LLD.</dd></div>
+          <div><dt className="font-medium text-white/80">Storage Layer</dt><dd>Storage resources. Define in {hostsLabel} or integrate with storage monitoring for live data.</dd></div>
+          <div><dt className="font-medium text-white/80">Security Layer</dt><dd>Security zones and policies. Define in {hostsLabel} or link to security tools for live data.</dd></div>
         </dl>
       </details>
     </div>

@@ -439,6 +439,10 @@ export interface AlertRule {
   notificationChannels: string[]
   lastTriggered: string
   triggerCount7d: number
+  metric_condition?: string
+  operator?: string
+  threshold_value?: number
+  duration_seconds?: number
 }
 
 export interface AlertSummary {

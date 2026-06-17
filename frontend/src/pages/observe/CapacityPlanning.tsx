@@ -112,7 +112,7 @@ export default function CapacityPlanning() {
         case 'healthy':
           return t('cap.status.healthy')
         default:
-          return t('cap.insufficientData')
+          return t('cap.learningPeriod')
       }
     },
     [t],
@@ -196,7 +196,7 @@ export default function CapacityPlanning() {
       shortestRunway: t('cap.health.shortestRunway'),
       recommendedAction: t('cap.health.recommendedAction'),
       dataConfidence: t('cap.health.dataConfidence'),
-      insufficient: t('cap.insufficientData'),
+      insufficient: t('cap.learningPeriod'),
       days: t('cap.days'),
       status: {
         healthy: t('cap.health.healthy'),
@@ -305,25 +305,25 @@ export default function CapacityPlanning() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CapacitySummaryCard
           title={t('cap.kpi.cpuRunway')}
-          value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.insufficientData'))}
+          value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
           status={summary?.statuses.cpu ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.cpu ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.memoryRunway')}
-          value={formatRunway(summary?.memory_runway_months ?? null, t('cap.months'), t('cap.insufficientData'))}
+          value={formatRunway(summary?.memory_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
           status={summary?.statuses.memory ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.memory ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.storageRunway')}
-          value={formatRunway(summary?.storage_runway_months ?? null, t('cap.months'), t('cap.insufficientData'))}
+          value={formatRunway(summary?.storage_runway_months ?? null, t('cap.months'), t('cap.learningPeriod'))}
           status={summary?.statuses.storage ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.storage ?? 'insufficient_data')}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.riskScore')}
-          value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.insufficientData'))}
+          value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.learningPeriod'))}
           status={summary?.statuses.risk ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.risk ?? 'insufficient_data')}
         />
@@ -432,7 +432,7 @@ export default function CapacityPlanning() {
                   riskLevel: t('cap.risks.riskLevel'),
                   lastSample: t('cap.risks.lastSample'),
                   empty: t('cap.risks.empty'),
-                  insufficient: t('cap.insufficientData'),
+                  insufficient: t('cap.learningPeriod'),
                   days: t('cap.days'),
                   trendLabels: {
                     up: t('cap.trend.up'),
@@ -444,7 +444,7 @@ export default function CapacityPlanning() {
                     critical: t('cap.status.critical'),
                     warning: t('cap.status.warning'),
                     healthy: t('cap.status.healthy'),
-                    insufficient_data: t('cap.insufficientData'),
+                    insufficient_data: t('cap.learningPeriod'),
                   },
                 }}
               />
