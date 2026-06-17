@@ -294,9 +294,8 @@ export const observeService = {
   },
 
   // Monitored targets (for Infrastructure Map and others)
-  async getTargets(workspaceId: number): Promise<Array<{ name: string; address: string; [k: string]: unknown }>> {
-    const hosts = await this.getTargetHosts(workspaceId)
-    return hosts
+  async getTargets(workspaceId: number): Promise<ObserveTargetHostOption[]> {
+    return this.getTargetHosts(workspaceId)
   },
 
   async getTargetHosts(workspaceId: number): Promise<ObserveTargetHostOption[]> {
