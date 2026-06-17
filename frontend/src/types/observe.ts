@@ -161,6 +161,112 @@ export interface CapacityMetric {
   icon: string
 }
 
+export type CapacityStatus = 'critical' | 'warning' | 'healthy' | 'insufficient_data'
+export type CapacityPlanningRange = '7d' | '30d' | '90d'
+export type CapacityTab = 'overview' | 'resource-analysis' | 'optimization' | 'scenarios' | 'budget'
+
+export interface CapacityPlanningSummary {
+  cpu_runway_months: number | null
+  memory_runway_months: number | null
+  storage_runway_months: number | null
+  cost_optimization_potential: number | null
+  capacity_risk_score: number | null
+  statuses: {
+    cpu: CapacityStatus
+    memory: CapacityStatus
+    storage: CapacityStatus
+    cost: CapacityStatus
+    risk: CapacityStatus
+  }
+}
+
+export interface CapacityForecastPoint {
+  time: string
+  label: string
+  cpu: number | null
+  memory: number | null
+  storage: number | null
+  projected?: boolean
+}
+
+export interface CapacityGrowthTrend {
+  metric: string
+  start_pct: number
+  end_pct: number
+  change_pct: number
+  monthly_growth_pct: number | null
+}
+
+export interface CapacityAdvisor {
+  summary: string
+  bullets: string[]
+}
+
+export interface CapacityConsumer {
+  host: string
+  value_pct: number
+  metric: string
+}
+
+export interface CapacityDistribution {
+  host: string
+  environment: string
+  cpu_pct: number | null
+  memory_pct: number | null
+  storage_pct: number | null
+}
+
+export interface CapacityInsight {
+  id: string
+  priority: 'high' | 'medium' | 'low'
+  affected_resource: string
+  issue: string
+  recommendation: string
+  expected_impact: string
+  estimated_saving: number | null
+  created_at: string
+}
+
+export interface CapacityScenario {
+  id: string
+  name: string
+  description: string
+  limiting_resource: string
+  runway_months: number | null
+}
+
+export interface CapacityBudgetPlanning {
+  current_monthly_cost: number | null
+  forecasted_cost: Array<{ time: string; amount: number | null }>
+  budget_variance: number | null
+  saving_opportunities: Array<{ title: string; amount: number | null }>
+  provider_breakdown: Array<{ provider: string; amount: number | null }>
+}
+
+export interface CapacityPlanningResponse {
+  summary: CapacityPlanningSummary
+  overview: {
+    forecast: CapacityForecastPoint[]
+    growth_trends: CapacityGrowthTrend[]
+    advisor: CapacityAdvisor | null
+  }
+  resource_analysis: {
+    top_cpu_consumers: CapacityConsumer[]
+    top_memory_consumers: CapacityConsumer[]
+    top_storage_consumers: CapacityConsumer[]
+    distribution: CapacityDistribution[]
+  }
+  optimization_insights: CapacityInsight[]
+  scenario_planning: CapacityScenario[]
+  budget_planning: CapacityBudgetPlanning
+  meta: {
+    data_available: boolean
+    last_updated: string | null
+    range?: string
+    history_points?: number
+  }
+}
+
 export interface AlertRule {
   id: string
   name: string

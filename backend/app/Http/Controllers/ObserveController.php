@@ -11,6 +11,7 @@ use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\IntegrationConfiguration;
 use App\Models\Project;
+use App\Services\CapacityPlanningService;
 use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -418,12 +419,33 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: capacity metrics (no backend implementation yet). Returns empty array.
+     * Capacity planning payload derived from observe metrics history.
+     * GET /api/workspaces/{project}/observe/capacity-planning?range=30d
+     */
+    public function capacityPlanning(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $range = (string) $request->query('range', '30d');
+        $data = app(CapacityPlanningService::class)->build($project->id, $range);
+
+        return response()
+            ->json(['success' => true, 'data' => $data])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
+
+    /**
+     * Legacy alias — returns summary KPIs from capacity planning payload.
      */
     public function capacityMetrics(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+
+        $range = (string) $request->query('range', '30d');
+        $payload = app(CapacityPlanningService::class)->build($project->id, $range);
+        $summary = $payload['summary'] ?? [];
+
+        return response()->json(['success' => true, 'data' => $summary]);
     }
 
     /**

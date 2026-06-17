@@ -6,7 +6,6 @@ import {
   performanceThresholdsFixture,
   performanceMetricsFixture,
   networkTopologyFixture,
-  capacityMetricsFixture,
   alertRulesFixture,
   alertSummaryFixture,
   instancesFixture,
@@ -23,7 +22,8 @@ import type {
   SystemInfo,
   PerformanceMetric,
   NetworkNode,
-  CapacityMetric,
+  CapacityPlanningRange,
+  CapacityPlanningResponse,
   AlertRule,
   AlertSummary,
   Instance,
@@ -207,27 +207,42 @@ export function useNetworkTopology() {
 }
 
 // Capacity Planning hooks
-export function useCapacityMetrics(range?: string) {
+export function useCapacityPlanning(range: CapacityPlanningRange = '30d') {
   const { selectedWorkspaceId } = useWorkspaceContext()
-  const [metrics, setMetrics] = useState<CapacityMetric[]>([])
+  const [data, setData] = useState<CapacityPlanningResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     if (!selectedWorkspaceId) {
-      setMetrics([])
+      setData(null)
       setLoading(false)
+      setError(null)
       return
     }
+    setLoading(true)
+    setError(null)
+    observeService
+      .getCapacityPlanning(Number(selectedWorkspaceId), range)
+      .then((res) => setData(res))
+      .catch((err: unknown) => {
+        setData(null)
+        setError(err instanceof Error ? err.message : 'Failed to load capacity planning data')
+      })
+      .finally(() => setLoading(false))
+  }, [range, selectedWorkspaceId])
 
-    const timer = setTimeout(() => {
-      setMetrics(capacityMetricsFixture)
-      setLoading(false)
-    }, 300)
+  useEffect(() => {
+    reload()
+  }, [reload])
 
-    return () => clearTimeout(timer)
-  }, [selectedWorkspaceId, range])
+  return { data, loading, error, reload }
+}
 
-  return { metrics, loading }
+/** @deprecated Use useCapacityPlanning instead */
+export function useCapacityMetrics(range?: string) {
+  const { data, loading } = useCapacityPlanning((range as CapacityPlanningRange) || '30d')
+  return { metrics: [], loading, data }
 }
 
 // Alert Management hooks
