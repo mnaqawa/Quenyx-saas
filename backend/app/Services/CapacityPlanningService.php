@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BillingIntegration;
 use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use Illuminate\Support\Carbon;
@@ -116,7 +117,8 @@ class CapacityPlanningService
             $cpuRunwayDays,
             $memoryRunwayDays,
             $storageRunwayDays,
-            $growthTrends
+            $growthTrends,
+            $workspaceId
         );
 
         $dataAvailable = ! empty($forecast) || ! empty($topRisks) || $advisor['available'];
@@ -1497,7 +1499,8 @@ class CapacityPlanningService
         ?float $cpuRunwayDays,
         ?float $memoryRunwayDays,
         ?float $storageRunwayDays,
-        array $growthTrends
+        array $growthTrends,
+        int $workspaceId
     ): array {
         $additional = ['cpu' => null, 'memory' => null, 'storage' => null];
         foreach ($growthTrends as $trend) {
@@ -1510,6 +1513,8 @@ class CapacityPlanningService
 
         $timeline = $this->shortestRunwayDays([$cpuRunwayDays, $memoryRunwayDays, $storageRunwayDays]);
         $hasForecast = array_filter($additional, fn ($v) => $v !== null) !== [] || $timeline !== null;
+        $billingStatus = $this->resolveBillingIntegrationStatus($workspaceId);
+        $costAvailable = $billingStatus === 'connected';
 
         return [
             'forecasted_requirements' => [
@@ -1518,10 +1523,27 @@ class CapacityPlanningService
                 'storage' => $additional['storage'],
                 'timeline_days' => $timeline,
             ],
-            'cost_estimate_available' => false,
-            'billing_integration_status' => 'not_connected',
+            'cost_estimate_available' => $costAvailable,
+            'billing_integration_status' => $billingStatus,
             'has_forecast' => $hasForecast,
         ];
+    }
+
+    private function resolveBillingIntegrationStatus(int $workspaceId): string
+    {
+        if (! Schema::hasTable('billing_integrations')) {
+            return 'not_connected';
+        }
+
+        if (BillingIntegration::where('workspace_id', $workspaceId)->where('status', 'connected')->exists()) {
+            return 'connected';
+        }
+
+        if (BillingIntegration::where('workspace_id', $workspaceId)->where('status', 'configured')->exists()) {
+            return 'configured';
+        }
+
+        return 'not_connected';
     }
 
     /**

@@ -53,6 +53,8 @@ class AgentController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
             'expires_hours' => ['nullable', 'integer', 'min:0', 'max:720'],
+            'allowed_hostname' => ['nullable', 'string', 'max:255'],
+            'target_os' => ['nullable', 'string', Rule::in(['linux', 'windows', 'macos'])],
             'primary_protocol' => ['nullable', 'string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
             'enabled_protocols' => ['nullable', 'array'],
             'enabled_protocols.*' => ['string', Rule::in(array_keys(AgentConstants::PROTOCOLS))],
@@ -76,12 +78,16 @@ class AgentController extends Controller
 
         $enrollmentToken = AgentEnrollmentToken::create([
             'workspace_id' => $project->id,
+            'created_by' => $request->user()?->id,
             'name' => $validated['name'] ?? null,
             'token_hash' => $tokenHash,
+            'allowed_hostname' => $validated['allowed_hostname'] ?? null,
+            'target_os' => $validated['target_os'] ?? null,
             'expires_at' => $expiresAt,
             'primary_protocol' => $primaryProtocol,
             'enabled_protocols' => $enabledProtocols,
             'permissions' => $permissions,
+            'status' => 'active',
         ]);
 
         // Store plain token for response (we hashed for DB)

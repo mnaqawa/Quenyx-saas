@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { agentService } from '../../services/agentService'
 import type {
@@ -55,6 +56,7 @@ interface AgentsProps {
 }
 
 export default function Agents({ embedded = false }: AgentsProps) {
+  const { t } = useLanguage()
   const { id } = useParams<{ id: string }>()
   const { selectedWorkspaceId, allowedByKey } = useWorkspaceContext()
   const workspaceId = id || selectedWorkspaceId
@@ -117,6 +119,7 @@ export default function Agents({ embedded = false }: AgentsProps) {
     enabled_protocols?: string[]
     permissions?: string[]
     expires_hours?: number
+    target_os?: 'linux' | 'windows' | 'macos'
   }) => {
     if (!workspaceId) return
     try {
@@ -154,8 +157,8 @@ export default function Agents({ embedded = false }: AgentsProps) {
     <div className="space-y-6">
       {!embedded && (
         <PageHeader
-          title="Agents"
-          subtitle="Install agents on servers and workstations for cross-network monitoring and asset inventory."
+          title={t('agents.title')}
+          subtitle={t('agents.subtitle')}
         />
       )}
 
@@ -166,38 +169,33 @@ export default function Agents({ embedded = false }: AgentsProps) {
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-sm text-white/60">
-          Agents push metrics and inventory to the platform. Works across firewalls—only outbound HTTPS required.
-        </p>
+        <p className="text-sm text-white/60">{t('agents.description')}</p>
         {canEdit && (
           <button
             type="button"
             onClick={handleInstallClick}
             className="rounded-lg border border-sky-500/50 bg-sky-500/20 px-4 py-2 text-sm font-medium text-sky-200 hover:bg-sky-500/30"
           >
-            Install Agent
+            {t('agents.install')}
           </button>
         )}
       </div>
 
       {loading ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
-          Loading agents…
+          {t('agents.loading')}
         </div>
       ) : agents.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-12 text-center">
-          <p className="text-white/60">No agents enrolled yet.</p>
-          <p className="mt-2 text-sm text-white/40">
-            Click &quot;Install Agent&quot; to generate an enrollment token and get install instructions for Linux,
-            Windows, or macOS.
-          </p>
+          <p className="text-white/60">{t('agents.empty')}</p>
+          <p className="mt-2 text-sm text-white/40">{t('agents.emptyHint')}</p>
           {canEdit && (
             <button
               type="button"
               onClick={handleInstallClick}
               className="mt-4 rounded-lg border border-sky-500/50 bg-sky-500/20 px-4 py-2 text-sm text-sky-200 hover:bg-sky-500/30"
             >
-              Install Agent
+              {t('agents.install')}
             </button>
           )}
         </div>
@@ -276,6 +274,7 @@ interface InstallAgentModalProps {
     enabled_protocols?: string[]
     permissions?: string[]
     expires_hours?: number
+    target_os?: 'linux' | 'windows' | 'macos'
   }) => void
   onClose: () => void
 }
@@ -287,7 +286,9 @@ function InstallAgentModal({
   onGenerateToken,
   onClose,
 }: InstallAgentModalProps) {
+  const { t } = useLanguage()
   const [primaryProtocol, setPrimaryProtocol] = useState('psap')
+  const [targetOs, setTargetOs] = useState<'linux' | 'windows' | 'macos'>('linux')
   const [permissions, setPermissions] = useState<string[]>(['system_metrics', 'inventory', 'filesystem'])
   const [expiresHours, setExpiresHours] = useState<number | 'never'>(24)
 
@@ -303,6 +304,7 @@ function InstallAgentModal({
       enabled_protocols: [primaryProtocol],
       permissions: permissions.length ? permissions : ['system_metrics', 'inventory', 'filesystem'],
       expires_hours: expiresHours === 'never' ? 0 : expiresHours,
+      target_os: targetOs,
     })
   }
 
@@ -318,7 +320,7 @@ function InstallAgentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-white/10 bg-[#0f151d] shadow-xl">
         <div className="sticky top-0 flex items-center justify-between border-b border-white/10 bg-[#0f151d] px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">Install Agent</h2>
+          <h2 className="text-lg font-semibold text-white">{t('agents.installTitle')}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -332,7 +334,26 @@ function InstallAgentModal({
           {!enrollmentResult ? (
             <>
               <section>
-                <h3 className="mb-2 text-sm font-medium text-white/80">Protocol</h3>
+                <h3 className="mb-2 text-sm font-medium text-white/80">{t('agents.osLabel')}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {(['linux', 'windows', 'macos'] as const).map((os) => (
+                    <button
+                      key={os}
+                      type="button"
+                      onClick={() => setTargetOs(os)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs ${
+                        targetOs === os
+                          ? 'border-sky-500/50 bg-sky-500/20 text-sky-200'
+                          : 'border-white/10 bg-white/5 text-white/70'
+                      }`}
+                    >
+                      {t(`agents.os.${os}`)}
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h3 className="mb-2 text-sm font-medium text-white/80">{t('agents.protocolLabel')}</h3>
                 <p className="mb-3 text-xs text-white/50">
                   Choose how the agent communicates. Quenyx Agent Protocol (PSAP) or HTTP API (push).
                 </p>

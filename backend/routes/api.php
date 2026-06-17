@@ -19,11 +19,13 @@ use App\Http\Controllers\InviteController;
 Route::get('/health', [HealthController::class, 'index']);
 
 // Agent API (no user auth; uses enrollment token or agent secret)
-Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
-Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
-Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
-Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
-Route::post('/agents/{agent}/inventory', [\App\Http\Controllers\AgentApiController::class, 'inventory']);
+Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
+    Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
+    Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
+    Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
+    Route::post('/agents/{agent}/inventory', [\App\Http\Controllers\AgentApiController::class, 'inventory']);
+});
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -105,6 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/workspaces/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
     Route::get('/workspaces/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
+    Route::get('/workspaces/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
+    Route::get('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
+    Route::post('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
     Route::get('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
     Route::get('/workspaces/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
     Route::get('/workspaces/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);
@@ -129,6 +134,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/projects/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
     Route::get('/projects/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
+    Route::get('/projects/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
+    Route::get('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
+    Route::post('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
     Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
     Route::get('/projects/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
     Route::get('/projects/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);

@@ -20,6 +20,7 @@ import RealTimeMonitoring from './pages/observe/RealTimeMonitoring'
 import InfrastructureMap from './pages/observe/InfrastructureMap'
 import PerformanceAnalytics from './pages/observe/PerformanceAnalytics'
 const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
+const BillingPage = lazy(() => import('./pages/Billing'))
 import AlertManagement from './pages/observe/AlertManagement'
 import InstanceManagement from './pages/observe/InstanceManagement'
 import Services from './pages/observe/Services'
@@ -55,6 +56,14 @@ function App() {
             <Route path="app/projects" element={<Navigate to="/app/workspaces" replace />} />
             <Route path="app/projects/:id" element={<WorkspaceDetailsPage />} />
             <Route path="subscriptions" element={<Subscriptions />} />
+            <Route
+              path="app/workspaces/:id/qyncore/billing"
+              element={
+                <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-white/10 bg-white/5 m-6" />}>
+                  <BillingPage />
+                </Suspense>
+              }
+            />
             <Route path="settings/access" element={<WorkspaceAccessSettings />} />
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />

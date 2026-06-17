@@ -6,12 +6,25 @@ interface ResourceConsumersTableProps {
   consumers: CapacityConsumer[]
   emptyTitle: string
   valueLabel: string
+  hostLabel: string
 }
 
-export function ResourceConsumersTable({ title, consumers, emptyTitle, valueLabel }: ResourceConsumersTableProps) {
+function barColor(pct: number): string {
+  if (pct >= 90) return 'bg-rose-500'
+  if (pct >= 75) return 'bg-amber-500'
+  return 'bg-sky-500'
+}
+
+export function ResourceConsumersTable({
+  title,
+  consumers,
+  emptyTitle,
+  valueLabel,
+  hostLabel,
+}: ResourceConsumersTableProps) {
   if (consumers.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+      <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
         <h3 className="mb-4 text-sm font-semibold">{title}</h3>
         <EmptyState title={emptyTitle} />
       </div>
@@ -19,25 +32,37 @@ export function ResourceConsumersTable({ title, consumers, emptyTitle, valueLabe
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
       <h3 className="mb-4 text-sm font-semibold">{title}</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[320px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-white/50">
-              <th className="pb-2 pr-4 font-medium">Host</th>
-              <th className="pb-2 font-medium">{valueLabel}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {consumers.map((row) => (
-              <tr key={`${row.host}-${row.metric}`} className="border-b border-white/5">
-                <td className="py-2.5 pr-4 font-medium">{row.host}</td>
-                <td className="py-2.5 tabular-nums text-white/80">{Math.round(row.value_pct)}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="min-w-0 space-y-3">
+        {consumers.map((row) => {
+          const pct = Math.min(100, Math.max(0, Math.round(row.value_pct)))
+          return (
+            <div key={`${row.host}-${row.metric}`} className="min-w-0">
+              <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                <span className="min-w-0 truncate font-medium" title={row.host}>
+                  {row.host}
+                </span>
+                <span className="shrink-0 tabular-nums text-white/70">
+                  {pct}% <span className="sr-only">{valueLabel}</span>
+                </span>
+              </div>
+              <div
+                className="mt-1.5 h-2 w-full max-w-full overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-valuenow={pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${hostLabel} ${row.host} ${valueLabel}`}
+              >
+                <div
+                  className={`h-full max-w-full rounded-full transition-all ${barColor(pct)}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

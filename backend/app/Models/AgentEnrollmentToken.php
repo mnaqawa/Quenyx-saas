@@ -12,18 +12,26 @@ class AgentEnrollmentToken extends Model
 
     protected $fillable = [
         'workspace_id',
+        'created_by',
         'name',
         'token_hash',
+        'allowed_hostname',
+        'target_os',
         'expires_at',
         'primary_protocol',
         'enabled_protocols',
         'permissions',
         'used_at',
+        'revoked_at',
+        'last_used_at',
+        'status',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'used_at' => 'datetime',
+        'revoked_at' => 'datetime',
+        'last_used_at' => 'datetime',
         'enabled_protocols' => 'array',
         'permissions' => 'array',
     ];
@@ -45,6 +53,10 @@ class AgentEnrollmentToken extends Model
 
     public function isValid(): bool
     {
+        if ($this->revoked_at !== null || ($this->status ?? 'active') === 'revoked') {
+            return false;
+        }
+
         return ! $this->isExpired() && ! $this->isUsed();
     }
 

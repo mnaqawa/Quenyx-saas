@@ -67,6 +67,8 @@ export const agentService = {
     options?: {
       name?: string
       expires_hours?: number
+      target_os?: 'linux' | 'windows' | 'macos'
+      allowed_hostname?: string
       primary_protocol?: string
       enabled_protocols?: string[]
       permissions?: string[]

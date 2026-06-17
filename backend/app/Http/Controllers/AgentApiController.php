@@ -10,6 +10,7 @@ use App\Models\AgentEnrollmentToken;
 use App\Models\AgentInventory;
 use App\Models\AgentMetric;
 use App\Models\ObserveTargetHost;
+use App\Services\DefaultMonitoringProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -49,16 +50,33 @@ class AgentApiController extends Controller
         }
 
         $tokenHash = hash('sha256', $validated['token']);
-        $enrollmentToken = AgentEnrollmentToken::where('workspace_id', $validated['workspace_id'])
-            ->where('token_hash', $tokenHash)
-            ->first();
+        $enrollmentToken = AgentEnrollmentToken::where('token_hash', $tokenHash)->first();
 
         if (! $enrollmentToken) {
-            Log::warning('Agent registration failed: invalid token', ['workspace_id' => $validated['workspace_id']]);
+            Log::warning('Agent registration failed: invalid token');
 
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired enrollment token',
+            ], 401);
+        }
+
+        if ((int) $validated['workspace_id'] !== (int) $enrollmentToken->workspace_id) {
+            Log::warning('Agent registration failed: workspace mismatch', [
+                'token_workspace' => $enrollmentToken->workspace_id,
+                'requested_workspace' => $validated['workspace_id'],
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired enrollment token',
+            ], 401);
+        }
+
+        if ($enrollmentToken->revoked_at !== null || ($enrollmentToken->status ?? 'active') === 'revoked') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Enrollment token has been revoked',
             ], 401);
         }
 
@@ -68,6 +86,16 @@ class AgentApiController extends Controller
                 'message' => 'Enrollment token has expired or already been used',
             ], 401);
         }
+
+        if ($enrollmentToken->allowed_hostname
+            && strcasecmp($enrollmentToken->allowed_hostname, $validated['hostname']) !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hostname is not allowed for this enrollment token',
+            ], 403);
+        }
+
+        $enrollmentToken->update(['last_used_at' => now()]);
 
         try {
             $agentSecret = Agent::generateId();
@@ -106,7 +134,7 @@ class AgentApiController extends Controller
             for ($i = 0; $i < 3; $i++) {
                 $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
                 try {
-                    ObserveTargetHost::create([
+                    $targetHost = ObserveTargetHost::create([
                         'workspace_id' => $agent->workspace_id,
                         'name' => $name,
                         'address' => $hostAddress,
@@ -115,6 +143,7 @@ class AgentApiController extends Controller
                         'source' => 'agent',
                         'enabled' => true,
                     ]);
+                    app(DefaultMonitoringProfileService::class)->attachToHost($targetHost, (int) $agent->workspace_id);
                     break;
                 } catch (\Illuminate\Database\QueryException $e) {
                     $msg = $e->getMessage();

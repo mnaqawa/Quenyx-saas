@@ -516,24 +516,27 @@ export default function CapacityPlanning() {
           {(data?.resource_analysis.top_cpu_consumers.length ?? 0) === 0 &&
           (data?.resource_analysis.top_memory_consumers.length ?? 0) === 0 &&
           (data?.resource_analysis.top_storage_consumers.length ?? 0) === 0 ? null : (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-3 min-w-0">
               <ResourceConsumersTable
                 title={t('cap.topCpu')}
                 consumers={data?.resource_analysis.top_cpu_consumers ?? []}
                 emptyTitle={t('cap.noData')}
                 valueLabel={t('cap.utilization')}
+                hostLabel={t('cap.risks.host')}
               />
               <ResourceConsumersTable
                 title={t('cap.topMemory')}
                 consumers={data?.resource_analysis.top_memory_consumers ?? []}
                 emptyTitle={t('cap.noData')}
                 valueLabel={t('cap.utilization')}
+                hostLabel={t('cap.risks.host')}
               />
               <ResourceConsumersTable
                 title={t('cap.topStorage')}
                 consumers={data?.resource_analysis.top_storage_consumers ?? []}
                 emptyTitle={t('cap.noData')}
                 valueLabel={t('cap.utilization')}
+                hostLabel={t('cap.risks.host')}
               />
             </div>
           )}

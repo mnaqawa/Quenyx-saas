@@ -7,6 +7,7 @@ use App\Models\ObserveTargetService;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
+use App\Services\DefaultMonitoringProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -445,6 +446,8 @@ class ObserveTargetsController extends Controller
                     if (!empty($servicesToDelete)) {
                         ObserveTargetService::whereIn('id', $servicesToDelete)->delete();
                     }
+
+                    app(DefaultMonitoringProfileService::class)->attachToHost($host, $project->id);
                 }
 
                 // Delete hosts that were removed
