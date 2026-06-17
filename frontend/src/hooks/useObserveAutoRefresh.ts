@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type ObserveAutoRefreshInterval = '15' | '30' | '60' | '300' | 'off'
 
@@ -17,7 +17,7 @@ function readStoredInterval(): ObserveAutoRefreshInterval {
 export function useObserveAutoRefresh(onRefresh: () => void, enabled = true) {
   const [interval, setIntervalState] = useState<ObserveAutoRefreshInterval>(readStoredInterval)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
-  const [tick, setTick] = useState(0)
+  const [, setAgeTick] = useState(0)
 
   const setInterval = useCallback((value: ObserveAutoRefreshInterval) => {
     setIntervalState(value)
@@ -44,14 +44,14 @@ export function useObserveAutoRefresh(onRefresh: () => void, enabled = true) {
   }, [enabled, interval, onRefresh])
 
   useEffect(() => {
-    const id = window.setInterval(() => setTick((n) => n + 1), 1000)
+    const id = window.setInterval(() => setAgeTick((n) => n + 1), 1000)
     return () => window.clearInterval(id)
   }, [])
 
-  const secondsAgo = useMemo(() => {
-    if (!lastUpdatedAt) return null
-    return Math.max(0, Math.floor((Date.now() - lastUpdatedAt.getTime()) / 1000))
-  }, [lastUpdatedAt, tick])
+  const secondsAgo =
+    lastUpdatedAt == null
+      ? null
+      : Math.max(0, Math.floor((Date.now() - lastUpdatedAt.getTime()) / 1000))
 
   return {
     interval,

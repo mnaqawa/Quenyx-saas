@@ -265,10 +265,3 @@ export function DateTimeField({
     </div>
   )
 }
-
-export function toApiDateTime(value?: string): string | undefined {
-  if (!value) return undefined
-  const d = parseValue(value)
-  if (!d) return undefined
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
-}
