@@ -256,6 +256,53 @@ Expected: `quenyx` in `backend/.env` (`DB_DATABASE=quenyx_dev`, `DB_USERNAME=que
 
 **Agent binaries:** Rebuild after rebrand (§4.2 G) so download artifacts do not embed legacy build metadata.
 
+### 4.5 Clear last server-side grep hits (git logs + old agent binary)
+
+After `git remote set-url`, a full-tree search for the **pre-rebrand product slug** may still show:
+
+| Location | Cause | Fix |
+|----------|--------|-----|
+| `.git/logs/*` | Reflog from the original `git clone` URL | Remove logs (safe on deploy servers) — see below |
+| `.git/FETCH_HEAD` | Stale fetch metadata | `git fetch origin` |
+| `backend/storage/app/agents/*-amd64` | Pre-rebrand compiled agent | Delete and rebuild from current `agent/` source |
+
+**One-shot cleanup on the app server:**
+
+```bash
+cd /var/www/quenyx-saas
+
+# 1) Refresh fetch metadata
+git fetch origin
+
+# 2) Drop historical clone lines in reflog (git recreates logs on next command)
+rm -rf .git/logs
+
+# 3) Rebuild agent binaries (requires Go 1.21+)
+rm -rf backend/storage/app/agents/.gocache backend/storage/app/agents/.gomodcache
+rm -f backend/storage/app/agents/linux-amd64 backend/storage/app/agents/windows-amd64
+
+cd agent
+go mod tidy
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../backend/storage/app/agents/linux-amd64 .
+GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ../backend/storage/app/agents/windows-amd64 .
+cd ..
+
+# 4) Verify — replace LEGACY_SLUG with the old product name if auditing
+LEGACY_SLUG='your_old_slug'
+grep -R -i --exclude-dir=.git "$LEGACY_SLUG" . 2>/dev/null || echo "No matches outside .git (good)"
+```
+
+**Alternative for git history:** Fresh clone preserves no old URLs in logs:
+
+```bash
+cd /var/www
+cp quenyx-saas/backend/.env /tmp/quenyx-backend.env
+mv quenyx-saas quenyx-saas.old
+git clone https://github.com/mnaqawa/quenyx-saas.git quenyx-saas
+cp /tmp/quenyx-backend.env quenyx-saas/backend/.env
+# Copy any server-local storage/uploads from quenyx-saas.old if needed
+```
+
 ---
 
 ## 5. Deploy and run (step by step)
