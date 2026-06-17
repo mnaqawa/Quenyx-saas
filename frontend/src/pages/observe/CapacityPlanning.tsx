@@ -232,7 +232,10 @@ export default function CapacityPlanning() {
 
   const topRisks = data?.top_risks ?? data?.resource_analysis.top_risks ?? []
   const scenarioTemplates = data?.scenarios?.templates ?? []
-  const calculatedScenarios = data?.scenarios?.calculated ?? data?.scenario_planning ?? []
+  const calculatedScenarios = useMemo(
+    () => data?.scenarios?.calculated ?? data?.scenario_planning ?? [],
+    [data?.scenarios?.calculated, data?.scenario_planning],
+  )
   const availableHosts = data?.scenarios?.available_hosts ?? []
 
   const activeScenarioImpacts = useMemo(() => {
