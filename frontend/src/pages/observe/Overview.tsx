@@ -10,7 +10,8 @@ import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { observeService } from '../../services/observeService'
 import { buildHostRuntimeMap, classifyHostHealth } from '../../lib/observeHostUtils'
 import type { AlertHistoryEvent, CapacityPlanningResponse } from '../../types/observe'
-import { buildCollectingPanelProps, CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
+import { buildCollectingPanelProps } from '../../lib/collectingHistoricalDataUtils'
+import { CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
 
 export default function Overview() {
   const { t } = useLanguage()
