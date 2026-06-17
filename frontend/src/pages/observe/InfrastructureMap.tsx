@@ -16,6 +16,7 @@ import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observ
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
+import type { PortScanResult } from '../../types/observe'
 import { useLanguage } from '../../i18n/LanguageContext'
 
 type HostRow = { name: string; address: string; status: string }
@@ -898,8 +899,10 @@ export default function InfrastructureMap() {
                     quick: true,
                     context: {
                       source: 'qynsight_infrastructure_map',
-                      host_count: hosts.length,
-                      critical_hosts: hosts.filter((h) => h.status === 'critical').length,
+                      metrics: {
+                        host_count: hosts.length,
+                        critical_hosts: hosts.filter((h) => h.status === 'critical').length,
+                      },
                     },
                   })
                   setAiDrawerOpen(true)
@@ -1582,7 +1585,10 @@ export default function InfrastructureMap() {
               id: Date.now(),
               agent: 'anomaly_detector',
               question: `Analyze host health for ${detailHost.name} (${detailHost.address || 'no address'}). Summarize service check status and recent alerts.`,
-              context: { host: detailHost.name, address: detailHost.address },
+              context: {
+                host: detailHost.name,
+                metrics: { address: detailHost.address },
+              },
               autoSend: true,
               quick: true,
             })

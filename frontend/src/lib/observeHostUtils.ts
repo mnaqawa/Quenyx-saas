@@ -78,7 +78,7 @@ export function summarizeHostServices(
     statuses.push(row.status)
     if (row.status === 'ok') healthy += 1
     else if (row.status === 'warning') warning += 1
-    else if (row.status === 'critical' || row.status === 'unreachable') critical += 1
+    else if (row.status === 'critical') critical += 1
     else if (row.status === 'pending') pending += 1
     else unknown += 1
     if (row.lastCheckAt && (!lastCheck || row.lastCheckAt > lastCheck)) {

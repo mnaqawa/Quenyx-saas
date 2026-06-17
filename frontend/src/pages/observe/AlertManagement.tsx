@@ -419,10 +419,12 @@ export default function AlertManagement() {
                     quick: true,
                     context: {
                       source: 'qynsight_alerts',
-                      alert: detailEvent.title,
-                      severity: detailEvent.severity,
-                      host: detailEvent.host_name,
-                      condition,
+                      host: detailEvent.host_name ?? undefined,
+                      metrics: {
+                        alert: detailEvent.title,
+                        severity: detailEvent.severity,
+                        condition,
+                      },
                     },
                   })
                   setAiOpen(true)

@@ -241,9 +241,11 @@ export default function CapacityPlanning() {
                   quick: true,
                   context: {
                     source: 'qynsight_capacity',
-                    range,
-                    capacity_risk_score: data?.summary?.capacity_risk_score ?? null,
-                    has_capacity_data: hasCapacityData,
+                    metrics: {
+                      range,
+                      capacity_risk_score: data?.summary?.capacity_risk_score ?? null,
+                      has_capacity_data: hasCapacityData,
+                    },
                   },
                 })
                 setAiOpen(true)

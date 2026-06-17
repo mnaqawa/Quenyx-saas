@@ -568,8 +568,10 @@ export default function Services() {
                     context: {
                       source: 'qynsight_services',
                       host: drawerService.host,
-                      service: drawerService.service,
-                      status: drawerService.status,
+                      metrics: {
+                        service: drawerService.service,
+                        status: drawerService.status,
+                      },
                     },
                   })
                   setAiOpen(true)

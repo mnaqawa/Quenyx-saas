@@ -89,7 +89,7 @@ export default function Overview() {
     if (perfHosts.length > 0) {
       return perfHosts.slice(0, 5).map((h) => ({
         name: h.host,
-        value: h.utilization_pct,
+        value: h.value_pct,
         metric: t('cap.cpu'),
       }))
     }
