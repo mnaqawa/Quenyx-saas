@@ -117,6 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/workspaces/{project}/observe/alerts/rules/{rule}/toggle', [\App\Http\Controllers\ObserveAlertController::class, 'toggleRule']);
     Route::get('/workspaces/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
     Route::get('/workspaces/{project}/observe/alerts/history', [\App\Http\Controllers\ObserveAlertController::class, 'history']);
+    Route::post('/workspaces/{project}/observe/alerts/events/{event}/acknowledge', [\App\Http\Controllers\ObserveAlertController::class, 'acknowledgeEvent']);
     Route::get('/workspaces/{project}/observe/alerts/channels', [\App\Http\Controllers\ObserveAlertController::class, 'channels']);
     Route::get('/workspaces/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'monitoringProfile']);
     Route::put('/workspaces/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'updateMonitoringProfile']);
@@ -152,6 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/projects/{project}/observe/alerts/rules/{rule}/toggle', [\App\Http\Controllers\ObserveAlertController::class, 'toggleRule']);
     Route::get('/projects/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
     Route::get('/projects/{project}/observe/alerts/history', [\App\Http\Controllers\ObserveAlertController::class, 'history']);
+    Route::post('/projects/{project}/observe/alerts/events/{event}/acknowledge', [\App\Http\Controllers\ObserveAlertController::class, 'acknowledgeEvent']);
     Route::get('/projects/{project}/observe/alerts/channels', [\App\Http\Controllers\ObserveAlertController::class, 'channels']);
     Route::get('/projects/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'monitoringProfile']);
     Route::put('/projects/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'updateMonitoringProfile']);

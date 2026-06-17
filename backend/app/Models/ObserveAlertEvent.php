@@ -10,11 +10,18 @@ class ObserveAlertEvent extends Model
     protected $fillable = [
         'workspace_id',
         'alert_rule_id',
+        'target_host_id',
+        'target_service_key',
+        'host_name',
+        'service_name',
         'severity',
         'title',
         'message',
         'status',
         'triggered_at',
+        'opened_at',
+        'last_seen_at',
+        'occurrence_count',
         'resolved_at',
         'acknowledged_at',
         'metadata',
@@ -22,8 +29,11 @@ class ObserveAlertEvent extends Model
 
     protected $casts = [
         'triggered_at' => 'datetime',
+        'opened_at' => 'datetime',
+        'last_seen_at' => 'datetime',
         'resolved_at' => 'datetime',
         'acknowledged_at' => 'datetime',
+        'occurrence_count' => 'integer',
         'metadata' => 'array',
     ];
 

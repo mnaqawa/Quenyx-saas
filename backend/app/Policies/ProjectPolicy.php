@@ -48,4 +48,18 @@ class ProjectPolicy
     {
         return $user->id === $project->owner_id;
     }
+
+    /**
+     * Acknowledge alerts: owner, admin, and member roles. Viewers are read-only.
+     */
+    public function acknowledgeAlert(User $user, Project $project): bool
+    {
+        if ($user->id === $project->owner_id) {
+            return true;
+        }
+
+        $membership = $project->memberships()->where('user_id', $user->id)->first();
+
+        return $membership && in_array($membership->role, ['owner', 'admin', 'member']);
+    }
 }

@@ -447,6 +447,9 @@ export interface AlertSummary {
     critical: number
     warning: number
   }
+  criticalAlerts: number
+  acknowledgedAlerts: number
+  resolvedToday: number
   alertRules: {
     total: number
     enabled: number
@@ -461,12 +464,30 @@ export interface AlertSummary {
 export interface AlertHistoryEvent {
   id: string
   rule_id: string | null
+  rule_name?: string | null
   severity: string
   title: string
   message: string | null
   status: string
+  host_name?: string | null
+  service_name?: string | null
   triggered_at: string
+  opened_at?: string | null
+  acknowledged_at?: string | null
   resolved_at: string | null
+  last_seen_at?: string | null
+  occurrence_count?: number
+  metadata?: Record<string, unknown> | null
+}
+
+export interface AlertHistoryFilters {
+  status?: string
+  severity?: string
+  target?: string
+  rule?: string
+  date_from?: string
+  date_to?: string
+  limit?: number
 }
 
 export interface NotificationChannel {

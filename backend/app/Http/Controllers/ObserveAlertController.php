@@ -89,8 +89,10 @@ class ObserveAlertController extends Controller
     {
         $this->authorize('view', $project);
 
-        $activeCritical = 0;
-        $activeWarning = 0;
+        $activeAlerts = 0;
+        $criticalAlerts = 0;
+        $acknowledgedAlerts = 0;
+        $resolvedToday = 0;
         $rulesTotal = 0;
         $rulesEnabled = 0;
         $channelsActive = 0;
@@ -98,13 +100,24 @@ class ObserveAlertController extends Controller
         $avgResponse = '—';
 
         if (Schema::hasTable('observe_alert_events')) {
-            $activeCritical = ObserveAlertEvent::where('workspace_id', $project->id)
-                ->where('status', 'active')
+            $base = ObserveAlertEvent::where('workspace_id', $project->id);
+
+            $activeAlerts = (clone $base)
+                ->whereIn('status', ['open', 'active'])
+                ->count();
+
+            $criticalAlerts = (clone $base)
+                ->whereIn('status', ['open', 'active'])
                 ->where('severity', 'critical')
                 ->count();
-            $activeWarning = ObserveAlertEvent::where('workspace_id', $project->id)
-                ->where('status', 'active')
-                ->where('severity', 'warning')
+
+            $acknowledgedAlerts = (clone $base)
+                ->where('status', 'acknowledged')
+                ->count();
+
+            $resolvedToday = (clone $base)
+                ->where('status', 'resolved')
+                ->where('resolved_at', '>=', now()->startOfDay())
                 ->count();
 
             $resolved = ObserveAlertEvent::where('workspace_id', $project->id)
@@ -132,10 +145,13 @@ class ObserveAlertController extends Controller
             'success' => true,
             'data' => [
                 'activeAlerts' => [
-                    'total' => $activeCritical + $activeWarning,
-                    'critical' => $activeCritical,
-                    'warning' => $activeWarning,
+                    'total' => $activeAlerts,
+                    'critical' => $criticalAlerts,
+                    'warning' => max(0, $activeAlerts - $criticalAlerts),
                 ],
+                'criticalAlerts' => $criticalAlerts,
+                'acknowledgedAlerts' => $acknowledgedAlerts,
+                'resolvedToday' => $resolvedToday,
                 'alertRules' => [
                     'total' => $rulesTotal,
                     'enabled' => $rulesEnabled,
@@ -157,22 +173,79 @@ class ObserveAlertController extends Controller
             return response()->json(['success' => true, 'data' => []]);
         }
 
-        $events = ObserveAlertEvent::where('workspace_id', $project->id)
-            ->orderByDesc('triggered_at')
-            ->limit(100)
-            ->get()
-            ->map(fn (ObserveAlertEvent $e) => [
-                'id' => (string) $e->id,
-                'rule_id' => $e->alert_rule_id ? (string) $e->alert_rule_id : null,
-                'severity' => $e->severity,
-                'title' => $e->title,
-                'message' => $e->message,
-                'status' => $e->status,
-                'triggered_at' => $e->triggered_at->toIso8601String(),
-                'resolved_at' => $e->resolved_at?->toIso8601String(),
-            ]);
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', 'max:32'],
+            'severity' => ['nullable', Rule::in(['critical', 'warning'])],
+            'target' => ['nullable', 'string', 'max:255'],
+            'rule' => ['nullable', 'integer'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+
+        $query = ObserveAlertEvent::where('workspace_id', $project->id)
+            ->with('rule:id,name')
+            ->orderByDesc('triggered_at');
+
+        if (! empty($validated['status'])) {
+            $status = $validated['status'] === 'open'
+                ? ['open', 'active']
+                : [$validated['status']];
+            $query->whereIn('status', $status);
+        }
+
+        if (! empty($validated['severity'])) {
+            $query->where('severity', $validated['severity']);
+        }
+
+        if (! empty($validated['target'])) {
+            $target = $validated['target'];
+            $query->where(function ($q) use ($target) {
+                $q->where('host_name', 'like', '%' . $target . '%')
+                    ->orWhere('service_name', 'like', '%' . $target . '%');
+            });
+        }
+
+        if (! empty($validated['rule'])) {
+            $query->where('alert_rule_id', (int) $validated['rule']);
+        }
+
+        if (! empty($validated['date_from'])) {
+            $query->where('triggered_at', '>=', $validated['date_from']);
+        }
+
+        if (! empty($validated['date_to'])) {
+            $query->where('triggered_at', '<=', $validated['date_to'] . ' 23:59:59');
+        }
+
+        $limit = $validated['limit'] ?? 100;
+        $events = $query->limit($limit)->get()->map(fn (ObserveAlertEvent $e) => $this->formatEvent($e));
 
         return response()->json(['success' => true, 'data' => $events]);
+    }
+
+    public function acknowledgeEvent(Request $request, Project $project, ObserveAlertEvent $event): JsonResponse
+    {
+        $this->authorize('acknowledgeAlert', $project);
+
+        if ($event->workspace_id !== $project->id) {
+            return response()->json(['success' => false, 'message' => 'Alert not found'], 404);
+        }
+
+        if ($event->status === 'resolved') {
+            return response()->json(['success' => false, 'message' => 'Resolved alerts are read-only'], 422);
+        }
+
+        if ($event->status === 'acknowledged') {
+            return response()->json(['success' => true, 'data' => $this->formatEvent($event)]);
+        }
+
+        $event->update([
+            'status' => 'acknowledged',
+            'acknowledged_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->formatEvent($event->fresh())]);
     }
 
     public function channels(Request $request, Project $project): JsonResponse
@@ -294,7 +367,7 @@ class ObserveAlertController extends Controller
             'target_host_id' => ['nullable', 'integer'],
             'target_service_key' => ['nullable', 'string', 'max:64'],
             'metric_condition' => [$partial ? 'sometimes' : 'required', 'string', 'max:64'],
-            'operator' => [$partial ? 'sometimes' : 'required', Rule::in(['>', '>=', '<', '<=', '==', '!='])],
+            'operator' => [$partial ? 'sometimes' : 'required', Rule::in(['>', '>=', '<', '<=', '=', '==', '!='])],
             'threshold_value' => [$partial ? 'sometimes' : 'required', 'numeric'],
             'duration_seconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'notification_channel' => ['nullable', 'string', 'max:64'],
@@ -308,5 +381,32 @@ class ObserveAlertController extends Controller
         }
 
         return $validated;
+    }
+
+  /**
+     * @return array<string, mixed>
+     */
+    private function formatEvent(ObserveAlertEvent $event): array
+    {
+        $status = $event->status === 'active' ? 'open' : $event->status;
+
+        return [
+            'id' => (string) $event->id,
+            'rule_id' => $event->alert_rule_id ? (string) $event->alert_rule_id : null,
+            'rule_name' => $event->rule?->name,
+            'severity' => $event->severity,
+            'title' => $event->title,
+            'message' => $event->message,
+            'status' => $status,
+            'host_name' => $event->host_name,
+            'service_name' => $event->service_name,
+            'triggered_at' => $event->triggered_at->toIso8601String(),
+            'opened_at' => $event->opened_at?->toIso8601String(),
+            'acknowledged_at' => $event->acknowledged_at?->toIso8601String(),
+            'resolved_at' => $event->resolved_at?->toIso8601String(),
+            'last_seen_at' => $event->last_seen_at?->toIso8601String(),
+            'occurrence_count' => $event->occurrence_count ?? 1,
+            'metadata' => $event->metadata,
+        ];
     }
 }

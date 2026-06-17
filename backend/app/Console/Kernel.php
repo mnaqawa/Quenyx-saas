@@ -20,6 +20,14 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping(90)
             ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+        $schedule->command('observe:evaluate-alerts')
+            ->everyMinute()
+            ->withoutOverlapping(90)
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('observe:evaluate-alerts scheduler run failed');
+            })
+            ->appendOutputTo(storage_path('logs/scheduler.log'));
     }
 
     /**

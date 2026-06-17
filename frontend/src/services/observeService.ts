@@ -15,6 +15,7 @@ import type {
   AlertRule,
   AlertSummary,
   AlertHistoryEvent,
+  AlertHistoryFilters,
   NotificationChannel,
   CreateAlertRulePayload,
   MonitoringProfileResponse,
@@ -208,9 +209,24 @@ export const observeService = {
     )
   },
 
-  async getAlertHistory(workspaceId: number): Promise<AlertHistoryEvent[]> {
-    return gatewayClient.get<AlertHistoryEvent[]>(
-      `workspaces/${workspaceId}/observe/alerts/history`,
+  async getAlertHistory(workspaceId: number, filters?: AlertHistoryFilters): Promise<AlertHistoryEvent[]> {
+    const params = new URLSearchParams()
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== '') {
+          params.set(key, String(value))
+        }
+      }
+    }
+    const qs = params.toString()
+    const path = `workspaces/${workspaceId}/observe/alerts/history${qs ? `?${qs}` : ''}`
+    return gatewayClient.get<AlertHistoryEvent[]>(path, { workspaceId, moduleKey: 'qynsight' })
+  },
+
+  async acknowledgeAlertEvent(workspaceId: number, eventId: string): Promise<AlertHistoryEvent> {
+    return gatewayClient.post<AlertHistoryEvent>(
+      `workspaces/${workspaceId}/observe/alerts/events/${eventId}/acknowledge`,
+      {},
       { workspaceId, moduleKey: 'qynsight' }
     )
   },
