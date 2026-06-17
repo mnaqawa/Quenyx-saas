@@ -18,6 +18,7 @@ import type {
   AlertHistoryFilters,
   NotificationChannel,
   CreateAlertRulePayload,
+  ObserveTargetHostOption,
   MonitoringProfileResponse,
   MonitoringProfileCheckUpdate,
   Instance,
@@ -294,11 +295,20 @@ export const observeService = {
 
   // Monitored targets (for Infrastructure Map and others)
   async getTargets(workspaceId: number): Promise<Array<{ name: string; address: string; [k: string]: unknown }>> {
-    const res = await gatewayClient.get<Array<{ name: string; address: string }> | { targets?: Array<{ name: string; address: string }> }>(
+    const hosts = await this.getTargetHosts(workspaceId)
+    return hosts
+  },
+
+  async getTargetHosts(workspaceId: number): Promise<ObserveTargetHostOption[]> {
+    const res = await gatewayClient.get<
+      ObserveTargetHostOption[] | { data?: ObserveTargetHostOption[]; targets?: ObserveTargetHostOption[] }
+    >(
       `workspaces/${workspaceId}/observe/targets`,
       { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
     )
-    return Array.isArray(res) ? res : res?.targets ?? []
+    if (Array.isArray(res)) return res
+    if (Array.isArray(res?.data)) return res.data
+    return res?.targets ?? []
   },
 
   // Observe summary (backend /api/workspaces/:id/observe/summary)

@@ -511,6 +511,21 @@ export interface CreateAlertRulePayload {
   enabled?: boolean
 }
 
+export interface ObserveTargetHostOption {
+  id: number
+  name: string
+  address: string
+  enabled: boolean
+  services: ObserveTargetServiceOption[]
+}
+
+export interface ObserveTargetServiceOption {
+  id?: number
+  name: string
+  service_key?: string
+  enabled: boolean
+}
+
 export interface MonitoringProfileCheck {
   id: number
   service_key: string

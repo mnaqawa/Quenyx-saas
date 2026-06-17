@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, type ComponentProps } from 'react'
+import { useState, useEffect, useCallback, useMemo, type ComponentProps, type ReactNode } from 'react'
 import { useAlertRules, useAlertSummary } from '../../hooks/useObserveData'
 import { StatCard } from '../../components/observe/StatCard'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { Tabs } from '../../components/observe/Tabs'
 import { StatusBadge } from '../../components/observe/StatusBadge'
+import { AlertHistoryFilterBar } from '../../components/observe/AlertHistoryFilterBar'
+import { toApiDateTime } from '../../components/observe/DateTimeField'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
@@ -12,7 +14,25 @@ import type {
   AlertHistoryFilters,
   CreateAlertRulePayload,
   NotificationChannel,
+  ObserveTargetHostOption,
 } from '../../types/observe'
+
+const ALERT_METRIC_OPTIONS = [
+  'cpu',
+  'memory',
+  'disk',
+  'load',
+  'network',
+  'host_unreachable',
+  'service_critical',
+  'service_warning',
+  'capacity_risk_score',
+  'cpu_runway_days',
+  'memory_runway_days',
+  'storage_runway_days',
+] as const
+
+const inputClass = 'w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm text-white'
 
 type BadgeStatus = ComponentProps<typeof StatusBadge>['status']
 
@@ -36,6 +56,14 @@ function alertStatusLabel(status: string, t: (key: string) => string): string {
   return status
 }
 
+function filtersForApi(filters: AlertHistoryFilters): AlertHistoryFilters {
+  return {
+    ...filters,
+    date_from: toApiDateTime(filters.date_from),
+    date_to: toApiDateTime(filters.date_to),
+  }
+}
+
 export default function AlertManagement() {
   const { t } = useLanguage()
   const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
@@ -47,6 +75,7 @@ export default function AlertManagement() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [detailEvent, setDetailEvent] = useState<AlertHistoryEvent | null>(null)
   const [historyFilters, setHistoryFilters] = useState<AlertHistoryFilters>({})
+  const [appliedHistoryFilters, setAppliedHistoryFilters] = useState<AlertHistoryFilters>({})
   const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
   const { summary, loading: summaryLoading } = useAlertSummary(refreshKey)
 
@@ -62,7 +91,10 @@ export default function AlertManagement() {
     setTabLoading(true)
     try {
       if (activeTab === 'history') {
-        const events = await observeService.getAlertHistory(Number(selectedWorkspaceId), historyFilters)
+        const events = await observeService.getAlertHistory(
+          Number(selectedWorkspaceId),
+          filtersForApi(appliedHistoryFilters)
+        )
         setHistory(Array.isArray(events) ? events : [])
       }
       if (activeTab === 'channels') {
@@ -75,7 +107,7 @@ export default function AlertManagement() {
     } finally {
       setTabLoading(false)
     }
-  }, [activeTab, selectedWorkspaceId, historyFilters])
+  }, [activeTab, selectedWorkspaceId, appliedHistoryFilters])
 
   useEffect(() => {
     if (activeTab === 'history' || activeTab === 'channels') {
@@ -208,90 +240,22 @@ export default function AlertManagement() {
 
       {activeTab === 'history' && (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <div className="mb-4 flex flex-wrap items-end gap-3">
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.status')}
-              <select
-                value={historyFilters.status ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, status: e.target.value || undefined }))}
-                className="mt-1 block rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              >
-                <option value="">{t('alerts.filter.all')}</option>
-                <option value="open">{t('alerts.status.open')}</option>
-                <option value="acknowledged">{t('alerts.status.acknowledged')}</option>
-                <option value="resolved">{t('alerts.status.resolved')}</option>
-              </select>
-            </label>
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.severity')}
-              <select
-                value={historyFilters.severity ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, severity: e.target.value || undefined }))}
-                className="mt-1 block rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              >
-                <option value="">{t('alerts.filter.all')}</option>
-                <option value="critical">{t('alerts.critical')}</option>
-                <option value="warning">{t('alerts.warning')}</option>
-              </select>
-            </label>
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.target')}
-              <input
-                type="text"
-                value={historyFilters.target ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, target: e.target.value || undefined }))}
-                className="mt-1 block w-32 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              />
-            </label>
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.rule')}
-              <select
-                value={historyFilters.rule ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, rule: e.target.value || undefined }))}
-                className="mt-1 block rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              >
-                <option value="">{t('alerts.filter.all')}</option>
-                {safeRules.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.dateFrom')}
-              <input
-                type="date"
-                value={historyFilters.date_from ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, date_from: e.target.value || undefined }))}
-                className="mt-1 block rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              />
-            </label>
-            <label className="text-xs text-white/60">
-              {t('alerts.filter.dateTo')}
-              <input
-                type="date"
-                value={historyFilters.date_to ?? ''}
-                onChange={(e) => setHistoryFilters((f) => ({ ...f, date_to: e.target.value || undefined }))}
-                className="mt-1 block rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setRefreshKey((k) => k + 1)}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs text-white hover:bg-sky-500"
-            >
-              {t('alerts.applyFilters')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setHistoryFilters({})
-                setRefreshKey((k) => k + 1)
-              }}
-              className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/70"
-            >
-              {t('alerts.clearFilters')}
-            </button>
-          </div>
+          <AlertHistoryFilterBar
+            filters={historyFilters}
+            rules={safeRules}
+            onChange={setHistoryFilters}
+            onApply={(next) => {
+              const applied = next ?? historyFilters
+              if (next) setHistoryFilters(next)
+              setAppliedHistoryFilters(applied)
+              setRefreshKey((k) => k + 1)
+            }}
+            onClear={() => {
+              setHistoryFilters({})
+              setAppliedHistoryFilters({})
+              setRefreshKey((k) => k + 1)
+            }}
+          />
 
           {tabLoading ? (
             <p className="text-sm text-white/60">{t('agents.loading')}</p>
@@ -476,6 +440,8 @@ function CreateAlertRuleModal({
 }) {
   const { t } = useLanguage()
   const [saving, setSaving] = useState(false)
+  const [hostsLoading, setHostsLoading] = useState(true)
+  const [hosts, setHosts] = useState<ObserveTargetHostOption[]>([])
   const [form, setForm] = useState<CreateAlertRulePayload>({
     name: '',
     severity: 'warning',
@@ -487,78 +453,231 @@ function CreateAlertRuleModal({
     enabled: true,
   })
 
+  useEffect(() => {
+    let cancelled = false
+    setHostsLoading(true)
+    observeService
+      .getTargetHosts(workspaceId)
+      .then((list) => {
+        if (!cancelled) setHosts(Array.isArray(list) ? list.filter((h) => h.enabled !== false) : [])
+      })
+      .catch(() => {
+        if (!cancelled) setHosts([])
+      })
+      .finally(() => {
+        if (!cancelled) setHostsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [workspaceId])
+
+  const selectedHost = useMemo(
+    () => hosts.find((h) => h.id === form.target_host_id) ?? null,
+    [hosts, form.target_host_id]
+  )
+
+  const serviceOptions = useMemo(() => {
+    if (!selectedHost) return []
+    return (selectedHost.services ?? []).filter((s) => s.enabled !== false)
+  }, [selectedHost])
+
+  const scopeNeedsHost =
+    form.target_scope === 'selected_target' || form.target_scope === 'selected_service'
+
+  const formValid =
+    form.name.trim() !== '' &&
+    (!scopeNeedsHost || form.target_host_id != null) &&
+    (form.target_scope !== 'selected_service' || Boolean(form.target_service_key))
+
   const submit = async () => {
+    if (!formValid) return
     try {
       setSaving(true)
-      await observeService.createAlertRule(workspaceId, form)
+      const payload: CreateAlertRulePayload = {
+        ...form,
+        target_host_id:
+          form.target_scope === 'all' ? null : form.target_host_id ?? null,
+        target_service_key:
+          form.target_scope === 'selected_service' ? form.target_service_key ?? null : null,
+      }
+      await observeService.createAlertRule(workspaceId, payload)
       onCreated()
     } finally {
       setSaving(false)
     }
   }
 
+  const handleScopeChange = (target_scope: CreateAlertRulePayload['target_scope']) => {
+    setForm({
+      ...form,
+      target_scope,
+      target_host_id: null,
+      target_service_key: null,
+    })
+  }
+
+  const handleHostChange = (hostId: number | null) => {
+    setForm({
+      ...form,
+      target_host_id: hostId,
+      target_service_key: null,
+    })
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0f151d] p-6 text-white">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-white/10 bg-[#0f151d] p-6 text-white">
         <h2 className="text-lg font-semibold">{t('alerts.createRule')}</h2>
-        <div className="mt-4 space-y-3">
-          <input
-            placeholder={t('alerts.field.name')}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
-          />
-          <select
-            value={form.severity}
-            onChange={(e) => setForm({ ...form, severity: e.target.value as 'critical' | 'warning' })}
-            className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
-          >
-            <option value="warning">{t('alerts.warning')}</option>
-            <option value="critical">{t('alerts.critical')}</option>
-          </select>
-          <select
-            value={form.target_scope}
-            onChange={(e) => setForm({ ...form, target_scope: e.target.value as CreateAlertRulePayload['target_scope'] })}
-            className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
-          >
-            <option value="all">{t('alerts.scope.all')}</option>
-            <option value="selected_target">{t('alerts.scope.target')}</option>
-            <option value="selected_service">{t('alerts.scope.service')}</option>
-          </select>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="mt-4 space-y-4">
+          <FormField label={t('alerts.field.name')} hint={t('alerts.field.nameHint')} required>
             <input
-              placeholder={t('alerts.field.metric')}
-              value={form.metric_condition}
-              onChange={(e) => setForm({ ...form, metric_condition: e.target.value })}
-              className="rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className={inputClass}
             />
+          </FormField>
+
+          <FormField label={t('alerts.field.severity')} hint={t('alerts.field.severityHint')} required>
             <select
-              value={form.operator}
-              onChange={(e) => setForm({ ...form, operator: e.target.value })}
-              className="rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
+              value={form.severity}
+              onChange={(e) => setForm({ ...form, severity: e.target.value as 'critical' | 'warning' })}
+              className={inputClass}
             >
-              <option>&gt;</option>
-              <option>&gt;=</option>
-              <option>&lt;</option>
-              <option>&lt;=</option>
-              <option>=</option>
-              <option>!=</option>
+              <option value="warning">{t('alerts.warning')}</option>
+              <option value="critical">{t('alerts.critical')}</option>
             </select>
+          </FormField>
+
+          <FormField label={t('alerts.field.scope')} hint={t('alerts.field.scopeHint')} required>
+            <select
+              value={form.target_scope}
+              onChange={(e) => handleScopeChange(e.target.value as CreateAlertRulePayload['target_scope'])}
+              className={inputClass}
+            >
+              <option value="all">{t('alerts.scope.all')}</option>
+              <option value="selected_target">{t('alerts.scope.target')}</option>
+              <option value="selected_service">{t('alerts.scope.service')}</option>
+            </select>
+          </FormField>
+
+          {scopeNeedsHost && (
+            <FormField
+              label={t('alerts.field.selectHost')}
+              hint={t('alerts.field.selectHostHint')}
+              required
+            >
+              {hostsLoading ? (
+                <p className="text-xs text-white/50">{t('agents.loading')}</p>
+              ) : hosts.length === 0 ? (
+                <p className="text-xs text-amber-400/90">{t('alerts.noTargetsConfigured')}</p>
+              ) : (
+                <select
+                  value={form.target_host_id ?? ''}
+                  onChange={(e) =>
+                    handleHostChange(e.target.value ? Number(e.target.value) : null)
+                  }
+                  className={inputClass}
+                >
+                  <option value="">{t('alerts.field.selectHostPlaceholder')}</option>
+                  {hosts.map((host) => (
+                    <option key={host.id} value={host.id}>
+                      {host.name} ({host.address})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {scopeNeedsHost && !hostsLoading && !form.target_host_id && (
+                <p className="text-xs text-amber-400/90">{t('alerts.validation.selectHost')}</p>
+              )}
+            </FormField>
+          )}
+
+          {form.target_scope === 'selected_service' && form.target_host_id && (
+            <FormField
+              label={t('alerts.field.selectService')}
+              hint={t('alerts.field.selectServiceHint')}
+              required
+            >
+              {serviceOptions.length === 0 ? (
+                <p className="text-xs text-amber-400/90">{t('alerts.noTargetsConfigured')}</p>
+              ) : (
+                <select
+                  value={form.target_service_key ?? ''}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      target_service_key: e.target.value || null,
+                    })
+                  }
+                  className={inputClass}
+                >
+                  <option value="">{t('alerts.field.selectServicePlaceholder')}</option>
+                  {serviceOptions.map((svc) => {
+                    const key = svc.service_key || svc.name
+                    return (
+                      <option key={`${svc.id ?? key}`} value={key}>
+                        {svc.name}
+                        {svc.service_key && svc.service_key !== svc.name ? ` (${svc.service_key})` : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+              )}
+              {!form.target_service_key && (
+                <p className="text-xs text-amber-400/90">{t('alerts.validation.selectService')}</p>
+              )}
+            </FormField>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FormField label={t('alerts.field.metric')} hint={t('alerts.field.metricHint')} required>
+              <select
+                value={form.metric_condition}
+                onChange={(e) => setForm({ ...form, metric_condition: e.target.value })}
+                className={inputClass}
+              >
+                {ALERT_METRIC_OPTIONS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`alerts.metric.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label={t('alerts.field.operator')} hint={t('alerts.field.operatorHint')} required>
+              <select
+                value={form.operator}
+                onChange={(e) => setForm({ ...form, operator: e.target.value })}
+                className={inputClass}
+              >
+                <option value=">">&gt;</option>
+                <option value=">=">&gt;=</option>
+                <option value="<">&lt;</option>
+                <option value="<=">&lt;=</option>
+                <option value="=">=</option>
+                <option value="!=">!=</option>
+              </select>
+            </FormField>
+            <FormField label={t('alerts.field.threshold')} hint={t('alerts.field.thresholdHint')} required>
+              <input
+                type="number"
+                value={form.threshold_value}
+                onChange={(e) => setForm({ ...form, threshold_value: Number(e.target.value) })}
+                className={inputClass}
+              />
+            </FormField>
+          </div>
+
+          <FormField label={t('alerts.field.duration')} hint={t('alerts.field.durationHint')} required>
             <input
               type="number"
-              placeholder={t('alerts.field.threshold')}
-              value={form.threshold_value}
-              onChange={(e) => setForm({ ...form, threshold_value: Number(e.target.value) })}
-              className="rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
+              min={0}
+              step={1}
+              value={form.duration_seconds ?? 0}
+              onChange={(e) => setForm({ ...form, duration_seconds: Number(e.target.value) })}
+              className={inputClass}
             />
-          </div>
-          <input
-            type="number"
-            placeholder={t('alerts.field.duration')}
-            value={form.duration_seconds ?? 300}
-            onChange={(e) => setForm({ ...form, duration_seconds: Number(e.target.value) })}
-            className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm"
-          />
+          </FormField>
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white/70">
@@ -566,7 +685,7 @@ function CreateAlertRuleModal({
           </button>
           <button
             type="button"
-            disabled={saving || !form.name.trim()}
+            disabled={saving || !formValid}
             onClick={submit}
             className="rounded-lg bg-sky-600 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
@@ -574,6 +693,29 @@ function CreateAlertRuleModal({
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function FormField({
+  label,
+  hint,
+  required,
+  children,
+}: {
+  label: string
+  hint?: string
+  required?: boolean
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-1">
+      <span className="block text-xs font-medium text-white/70">
+        {label}
+        {required ? <span className="text-red-400"> *</span> : null}
+      </span>
+      {children}
+      {hint ? <p className="text-xs leading-relaxed text-white/40">{hint}</p> : null}
     </div>
   )
 }

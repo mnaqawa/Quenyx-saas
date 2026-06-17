@@ -211,11 +211,11 @@ class ObserveAlertController extends Controller
         }
 
         if (! empty($validated['date_from'])) {
-            $query->where('triggered_at', '>=', $validated['date_from']);
+            $query->where('triggered_at', '>=', $this->normalizeFilterDateTime($validated['date_from'], endOfDay: false));
         }
 
         if (! empty($validated['date_to'])) {
-            $query->where('triggered_at', '<=', $validated['date_to'] . ' 23:59:59');
+            $query->where('triggered_at', '<=', $this->normalizeFilterDateTime($validated['date_to'], endOfDay: true));
         }
 
         $limit = $validated['limit'] ?? 100;
@@ -381,6 +381,21 @@ class ObserveAlertController extends Controller
         }
 
         return $validated;
+    }
+
+    private function normalizeFilterDateTime(string $value, bool $endOfDay): string
+    {
+        $trimmed = trim(str_replace('T', ' ', $value));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trimmed)) {
+            return $endOfDay ? $trimmed . ' 23:59:59' : $trimmed . ' 00:00:00';
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $trimmed)) {
+            return $trimmed . ':00';
+        }
+
+        return $trimmed;
     }
 
   /**
