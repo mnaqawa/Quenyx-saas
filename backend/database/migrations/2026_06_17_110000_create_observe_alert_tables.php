@@ -37,7 +37,7 @@ return new class extends Migration
             $table->enum('severity', ['critical', 'warning', 'info'])->default('warning');
             $table->string('title', 200);
             $table->text('message')->nullable();
-            $table->enum('status', ['active', 'acknowledged', 'resolved'])->default('active');
+            $table->enum('status', ['open', 'acknowledged', 'resolved'])->default('open');
             $table->timestamp('triggered_at');
             $table->timestamp('resolved_at')->nullable();
             $table->timestamp('acknowledged_at')->nullable();

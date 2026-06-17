@@ -34,7 +34,20 @@ return new class extends Migration
                 }
             });
 
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement(
+                    "ALTER TABLE observe_alert_events MODIFY COLUMN status ENUM('open', 'active', 'acknowledged', 'resolved') NOT NULL DEFAULT 'open'"
+                );
+            }
+
             DB::table('observe_alert_events')->where('status', 'active')->update(['status' => 'open']);
+
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                DB::statement(
+                    "ALTER TABLE observe_alert_events MODIFY COLUMN status ENUM('open', 'acknowledged', 'resolved') NOT NULL DEFAULT 'open'"
+                );
+            }
+
             DB::table('observe_alert_events')
                 ->whereNull('opened_at')
                 ->update(['opened_at' => DB::raw('triggered_at')]);
