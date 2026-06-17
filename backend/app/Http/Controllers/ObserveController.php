@@ -259,7 +259,7 @@ class ObserveController extends Controller
      */
     public function runChecks(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('runObserveOperations', $project);
 
         try {
             Artisan::call('observe:run-checks', ['--workspace_id' => (string) $project->id]);
@@ -850,7 +850,7 @@ class ObserveController extends Controller
      */
     public function runPortScans(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
+        $this->authorize('runObserveOperations', $project);
 
         $validated = $request->validate([
             'host_ids' => 'nullable|array',

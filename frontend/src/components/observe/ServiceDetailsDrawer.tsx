@@ -229,6 +229,7 @@ export function ServiceDetailsDrawer({
               type="button"
               onClick={onRecheck}
               disabled={rechecking}
+              title={t('services.action.runAllChecksHint')}
               className="flex-1 rounded-lg border border-sky-500/30 bg-sky-500/20 px-3 py-2 text-xs text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
             >
               {rechecking ? t('services.rechecking') : t('services.action.recheck')}

@@ -14,6 +14,7 @@ import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { useObserveAccess } from '../../hooks/useObserveAccess'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import type { PortScanResult } from '../../types/observe'
@@ -66,20 +67,20 @@ function getAllZones(customZones: string[]): string[] {
   return [...ZONE_OPTIONS.filter((z) => z !== 'Unassigned'), ...customZones]
 }
 
-function statusLabel(s: string): string {
+function statusLabel(s: string, t: (key: string) => string): string {
   switch (s) {
     case 'ok':
-      return 'Online'
+      return t('map.status.online')
     case 'warning':
-      return 'Warning'
+      return t('map.status.warning')
     case 'critical':
     case 'unreachable':
-      return 'Critical'
+      return t('map.status.critical')
     case 'unknown':
-      return 'Degraded'
+      return t('map.status.degraded')
     case 'pending':
     default:
-      return 'Pending'
+      return t('map.status.pending')
   }
 }
 
@@ -380,6 +381,8 @@ export default function InfrastructureMap() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [customZoneInput, setCustomZoneInput] = useState('')
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
+  const { canRunOperations } = useObserveAccess()
+  const localizedStatusLabel = useCallback((s: string) => statusLabel(s, t), [t])
 
   const openHostDetails = useCallback(
     async (hostName: string) => {
@@ -837,11 +840,11 @@ export default function InfrastructureMap() {
 
     const rectsAndLabels: string[] = []
     rectsAndLabels.push(rect(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, strokeNet))
-    rectsAndLabels.push(label(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, ['Monitoring', 'QynSight']))
+    rectsAndLabels.push(label(MONITORING.x, MONITORING.y, MONITORING.w, MONITORING.h, [t('map.monitoring'), 'QynSight']))
     hostPositions.forEach((h) => {
       const stroke = h.status === 'ok' ? strokeOk : h.status === 'warning' ? strokeWarn : strokeCrit
       rectsAndLabels.push(rect(h.x, h.y, nodeW, nodeH, stroke))
-      rectsAndLabels.push(label(h.x, h.y, nodeW, nodeH, [h.name, statusLabel(h.status)]))
+      rectsAndLabels.push(label(h.x, h.y, nodeW, nodeH, [h.name, statusLabel(h.status, t)]))
     })
     networkPositions.forEach((n) => {
       rectsAndLabels.push(rect(n.x, n.y, nodeW, nodeH, strokeNet))
@@ -860,7 +863,7 @@ export default function InfrastructureMap() {
     a.download = `infrastructure-map-${designLevel}-${new Date().toISOString().slice(0, 10)}.svg`
     a.click()
     URL.revokeObjectURL(url)
-  }, [diagram.nodePositions, layerFiltered.hostsFiltered, layerFiltered.networksFiltered, hostsFilteredByZone, zoneFilter, designLevel, getNodePosition])
+  }, [diagram.nodePositions, layerFiltered.hostsFiltered, layerFiltered.networksFiltered, hostsFilteredByZone, zoneFilter, designLevel, getNodePosition, t])
 
   if (loading) {
     return (
@@ -871,11 +874,11 @@ export default function InfrastructureMap() {
   }
 
   const tabs = [
-    { id: 'topology' as const, label: 'Network Topology' },
-    { id: 'devices' as const, label: 'Device List' },
-    { id: 'connections' as const, label: 'Connections' },
-    { id: 'ports' as const, label: 'Port Scan' },
-    { id: 'health' as const, label: 'Health Overview' },
+    { id: 'topology' as const, label: t('map.tab.topology') },
+    { id: 'devices' as const, label: t('map.tab.devices') },
+    { id: 'connections' as const, label: t('map.tab.connections') },
+    { id: 'ports' as const, label: t('map.tab.ports') },
+    { id: 'health' as const, label: t('map.tab.health') },
   ]
 
   return (
@@ -922,29 +925,29 @@ export default function InfrastructureMap() {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export JSON
+              {t('map.export.json')}
             </button>
             <button
               type="button"
               onClick={handleExportPng}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
             >
-              Export PNG
+              {t('map.export.png')}
             </button>
             <button
               type="button"
               onClick={handleExportSvg}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
-              title="Vector diagram (HLD/LLD) from current topology"
+              title={t('map.export.svgTitle')}
             >
-              Export SVG
+              {t('map.export.svg')}
             </button>
             <button
               type="button"
               onClick={handleExportPdf}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/80 hover:bg-white/10"
             >
-              Export PDF
+              {t('map.export.pdf')}
             </button>
             <button
               type="button"
@@ -954,7 +957,7 @@ export default function InfrastructureMap() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
               </svg>
-              Full Screen
+              {t('map.fullScreen')}
             </button>
             <ObservePageToolbar
               interval={interval}
@@ -1094,7 +1097,7 @@ export default function InfrastructureMap() {
                 <ZoneBasedTopology
                   hostsByZone={hostsByZone}
                   zoneFilter={zoneFilter}
-                  statusLabel={statusLabel}
+                  statusLabel={localizedStatusLabel}
                   allZonesList={allZonesList}
                   layerFiltered={layerFiltered}
                   portScansByHost={portScansByHost}
@@ -1119,7 +1122,7 @@ export default function InfrastructureMap() {
                   diagram={diagram}
                   draggingNode={draggingNode}
                   handleNodeMouseDown={handleNodeMouseDown}
-                  statusLabel={statusLabel}
+                  statusLabel={localizedStatusLabel}
                   portScansByHost={portScansByHost}
                   t={t}
                   onHostClick={openHostDetails}
@@ -1274,6 +1277,7 @@ export default function InfrastructureMap() {
                   Port scan results from nmap. Scans run when hosts are saved in {hostsLabel}, or use Perform Scan for custom options. Requires nmap on the server.
                 </p>
               </div>
+              {canRunOperations ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1290,8 +1294,9 @@ export default function InfrastructureMap() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
-                Perform Scan
+                {t('map.portScan.perform')}
               </button>
+              ) : null}
             </div>
 
             {scanModalOpen && (

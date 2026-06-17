@@ -11,7 +11,7 @@ import { observeService } from '../../services/observeService'
 import { buildHostRuntimeMap, classifyHostHealth } from '../../lib/observeHostUtils'
 import type { AlertHistoryEvent, CapacityPlanningResponse } from '../../types/observe'
 import { buildCollectingPanelProps } from '../../lib/collectingHistoricalDataUtils'
-import { CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 
 export default function Overview() {
   const { t } = useLanguage()
@@ -21,6 +21,8 @@ export default function Overview() {
   const [recentAlerts, setRecentAlerts] = useState<AlertHistoryEvent[]>([])
   const [capacity, setCapacity] = useState<CapacityPlanningResponse | null>(null)
   const [alertsLoading, setAlertsLoading] = useState(false)
+  const [alertsError, setAlertsError] = useState(false)
+  const [capacityError, setCapacityError] = useState(false)
 
   const { data, loading, error } = useObserveServices({
     workspaceId: selectedWorkspaceId,
@@ -45,18 +47,29 @@ export default function Overview() {
   useEffect(() => {
     if (!wsId) return
     setAlertsLoading(true)
-    Promise.all([
+    setAlertsError(false)
+    setCapacityError(false)
+    Promise.allSettled([
       observeService.getAlertHistory(wsId, { limit: 15, status: 'open' }),
       observeService.getCapacityPlanning(wsId, '30d'),
     ])
-      .then(([history, cap]) => {
-        setRecentAlerts(Array.isArray(history) ? history.slice(0, 10) : [])
-        setCapacity(cap)
+      .then(([historyResult, capResult]) => {
+        if (historyResult.status === 'fulfilled') {
+          const history = historyResult.value
+          setRecentAlerts(Array.isArray(history) ? history.slice(0, 10) : [])
+          setAlertsError(false)
+        } else {
+          setRecentAlerts([])
+          setAlertsError(true)
+        }
+        if (capResult.status === 'fulfilled') {
+          setCapacity(capResult.value)
+          setCapacityError(false)
+        } else {
+          setCapacity(null)
+          setCapacityError(true)
+        }
         markUpdated()
-      })
-      .catch(() => {
-        setRecentAlerts([])
-        setCapacity(null)
       })
       .finally(() => setAlertsLoading(false))
   }, [wsId, refreshKey, markUpdated])
@@ -146,9 +159,14 @@ export default function Overview() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
+        <ObserveLoadError
+          message={t('observe.error.services')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={() => {
+            refreshAll()
+            refreshNow()
+          }}
+        />
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -216,6 +234,12 @@ export default function Overview() {
           </div>
           {alertsLoading ? (
             <p className="text-sm text-white/50">{t('common.loading')}</p>
+          ) : alertsError ? (
+            <ObserveLoadError
+              message={t('observe.error.alerts')}
+              retryLabel={t('observe.loadError.retry')}
+              onRetry={refreshAll}
+            />
           ) : recentAlerts.length === 0 ? (
             <p className="text-sm text-white/60">{t('alerts.historyEmpty')}</p>
           ) : (
@@ -233,7 +257,13 @@ export default function Overview() {
         </div>
       </div>
 
-      {capacityPanel ? (
+      {capacityError && !capacityPanel && !capacity?.meta?.data_available ? (
+        <ObserveLoadError
+          message={t('observe.error.capacity')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={refreshAll}
+        />
+      ) : capacityPanel ? (
         <CollectingHistoricalDataPanel {...capacityPanel} />
       ) : capacity?.meta?.data_available ? (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">

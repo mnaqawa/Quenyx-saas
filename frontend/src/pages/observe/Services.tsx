@@ -8,6 +8,8 @@ import { ServiceDetailsDrawer } from '../../components/observe/ServiceDetailsDra
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { useObserveAccess } from '../../hooks/useObserveAccess'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
@@ -64,7 +66,7 @@ function formatDateTime(dateString: string | null | undefined, locale: string): 
 
 export default function Services() {
   const { t, language } = useLanguage()
-  const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
+  const { selectedWorkspaceId } = useWorkspaceContext()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   
@@ -87,6 +89,7 @@ export default function Services() {
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
+  const { canRunOperations } = useObserveAccess()
 
   // Sync state changes to URL query params
   useEffect(() => {
@@ -104,12 +107,6 @@ export default function Services() {
     }
   }, [searchQuery, selectedStatuses, limit, problemsOnly, setSearchParams, searchParams])
 
-  const isLocked = useMemo(() => {
-    const observeModule = modulesWithAccess?.find((m) => m.key === 'qynsight')
-    return observeModule ? !allowedByKey['qynsight'] : false
-  }, [modulesWithAccess, allowedByKey])
-
-  // Auto-refresh based on interval - trigger re-fetch by updating a dependency
   const [refreshKey, setRefreshKey] = useState(0)
   
   const { data, loading, error } = useObserveServices({
@@ -131,14 +128,14 @@ export default function Services() {
     markUpdated,
     refreshNow,
     secondsAgo,
-  } = useObserveAutoRefresh(triggerRefresh, !!selectedWorkspaceId && !isLocked)
+  } = useObserveAutoRefresh(triggerRefresh, !!selectedWorkspaceId)
 
   useEffect(() => {
     if (!loading && data) markUpdated()
   }, [loading, data, refreshKey, markUpdated])
 
   const handleRecheck = async () => {
-    if (!selectedWorkspaceId || isLocked) return
+    if (!selectedWorkspaceId || !canRunOperations) return
     setRechecking(true)
     setRecheckError(null)
     try {
@@ -226,8 +223,16 @@ export default function Services() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-        {t('services.loadError')}: {error}
+      <div className="space-y-6">
+        <PageHeader title={t('services.title')} subtitle={t('services.subtitle')} />
+        <ObserveLoadError
+          message={t('observe.error.services')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={() => {
+            triggerRefresh()
+            refreshNow()
+          }}
+        />
       </div>
     )
   }
@@ -242,19 +247,6 @@ export default function Services() {
 
   return (
     <div className="space-y-6">
-      {/* Locked module banner - consistent with ObserveLayout */}
-      {isLocked && (
-        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-200">
-          <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <span>{t('services.locked')}</span>
-          </div>
-        </div>
-      )}
-
       {(data.engine_unreachable || data.stale) && (
         <div className={`rounded-lg border px-4 py-3 text-sm ${
           data.engine_unreachable
@@ -263,13 +255,19 @@ export default function Services() {
         }`}>
           {data.engine_unreachable ? (
             <span>
-              Monitoring engine is unreachable. Status may be outdated.
+              {t('services.engineUnreachable')}
               <span className="block mt-1 opacity-90">
-                Reason: {data.engine_unreachable_reason || 'Check gateway and observe:poll logs.'}
+                {t('services.engineUnreachableReason')}{' '}
+                {data.engine_unreachable_reason || t('services.engineUnreachableHint')}
               </span>
             </span>
           ) : (
-            <span>Data may be stale (last poll: {data.last_poll_at ? new Date(data.last_poll_at).toLocaleString() : 'never'}).</span>
+            <span>
+              {t('services.dataStale').replace(
+                '{time}',
+                data.last_poll_at ? new Date(data.last_poll_at).toLocaleString() : t('rtm.never'),
+              )}
+            </span>
           )}
         </div>
       )}
@@ -287,7 +285,7 @@ export default function Services() {
               refreshNow()
             }}
             refreshing={loading}
-            disabled={isLocked}
+            disabled={false}
             onSettings={
               selectedWorkspaceId
                 ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
@@ -394,15 +392,15 @@ export default function Services() {
           {statusOptions.map((status) => (
             <button
               key={status}
-              onClick={() => !isLocked && toggleStatus(status)}
-              disabled={isLocked}
+              onClick={() => toggleStatus(status)}
+              disabled={false}
               className={`rounded-full border px-2 py-1 text-[10px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
                 selectedStatuses.includes(status)
                   ? 'border-sky-500 bg-sky-500/20 text-sky-200'
                   : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
               }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {t(`status.service.${status}` as 'status.service.ok')}
             </button>
           ))}
         </div>
@@ -412,7 +410,7 @@ export default function Services() {
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            disabled={isLocked}
+            disabled={false}
             className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {limitOptions.map((opt) => (
@@ -425,8 +423,8 @@ export default function Services() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => !isLocked && setProblemsOnly(false)}
-            disabled={isLocked}
+            onClick={() => setProblemsOnly(false)}
+            disabled={false}
             className={`rounded px-2 py-1 text-[10px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
               !problemsOnly
                 ? 'bg-sky-500/20 text-sky-200 border border-sky-500/30'
@@ -436,8 +434,8 @@ export default function Services() {
             {t('services.filter.allTypes')} ({data.items.length})
           </button>
           <button
-            onClick={() => !isLocked && setProblemsOnly(true)}
-            disabled={isLocked}
+            onClick={() => setProblemsOnly(true)}
+            disabled={false}
             className={`rounded px-2 py-1 text-[10px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
               problemsOnly
                 ? 'bg-sky-500/20 text-sky-200 border border-sky-500/30'
@@ -529,7 +527,8 @@ export default function Services() {
                                   setDrawerService(item)
                                   void handleRecheck()
                                 }}
-                                disabled={isLocked || rechecking}
+                                disabled={!canRunOperations || rechecking}
+                                title={t('services.action.runAllChecksHint')}
                                 className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
                               >
                                 {t('services.action.recheck')}
@@ -553,7 +552,7 @@ export default function Services() {
           onClose={() => setDrawerService(null)}
           workspaceId={Number(selectedWorkspaceId)}
           service={drawerService}
-          onRecheck={!isLocked ? handleRecheck : undefined}
+          onRecheck={canRunOperations ? handleRecheck : undefined}
           rechecking={rechecking}
           showAiExplain={aiAvailable}
           onExplainCheck={

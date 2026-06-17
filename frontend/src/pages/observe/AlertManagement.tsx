@@ -13,6 +13,8 @@ import { observeService } from '../../services/observeService'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { formatReadableAlertCondition } from '../../lib/alertConditionLabels'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { useObserveAccess } from '../../hooks/useObserveAccess'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import type {
@@ -102,9 +104,10 @@ function historyConditionText(
 
 export default function AlertManagement() {
   const { t } = useLanguage()
-  const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
+  const { selectedWorkspaceId } = useWorkspaceContext()
   const [activeTab, setActiveTab] = useState('rules')
   const [history, setHistory] = useState<AlertHistoryEvent[]>([])
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [tabLoading, setTabLoading] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -117,16 +120,13 @@ export default function AlertManagement() {
   const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
   const { summary, loading: summaryLoading } = useAlertSummary(refreshKey)
 
-  const canEdit = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
-  const canAcknowledge =
-    selectedWorkspaceRole === 'owner' ||
-    selectedWorkspaceRole === 'admin' ||
-    selectedWorkspaceRole === 'member'
+  const { canManageAlerts: canEdit, canAcknowledge } = useObserveAccess()
   const safeRules = Array.isArray(rules) ? rules : []
 
   const loadTabData = useCallback(async () => {
     if (!selectedWorkspaceId) return
     setTabLoading(true)
+    setHistoryError(null)
     try {
       if (activeTab === 'history') {
         const events = await observeService.getAlertHistory(
@@ -136,7 +136,10 @@ export default function AlertManagement() {
         setHistory(Array.isArray(events) ? events : [])
       }
     } catch {
-      if (activeTab === 'history') setHistory([])
+      if (activeTab === 'history') {
+        setHistory([])
+        setHistoryError(t('observe.error.history'))
+      }
     } finally {
       setTabLoading(false)
     }
@@ -329,6 +332,12 @@ export default function AlertManagement() {
 
           {tabLoading ? (
             <p className="text-sm text-white/60">{t('agents.loading')}</p>
+          ) : historyError ? (
+            <ObserveLoadError
+              message={historyError}
+              retryLabel={t('observe.loadError.retry')}
+              onRetry={() => setRefreshKey((k) => k + 1)}
+            />
           ) : history.length === 0 ? (
             <div className="py-10 text-center text-sm text-white/60">{t('alerts.historyEmpty')}</div>
           ) : (

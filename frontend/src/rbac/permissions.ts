@@ -25,3 +25,23 @@ export function canManageIntegrations(role: Role | null): boolean {
 export function canPromoteToOwner(role: Role | null): boolean {
   return role === 'owner'
 }
+
+/** Edit hosts, monitoring profile, alert rules (owner/admin). */
+export function canEditObserveConfig(role: Role | null): boolean {
+  return role === 'owner' || role === 'admin'
+}
+
+/** Run checks, port scans, and other operational workflows (not viewers). */
+export function canRunObserveOperations(role: Role | null): boolean {
+  return role === 'owner' || role === 'admin' || role === 'member'
+}
+
+/** Acknowledge alert events (owner/admin/member). */
+export function canAcknowledgeAlerts(role: Role | null): boolean {
+  return role === 'owner' || role === 'admin' || role === 'member'
+}
+
+/** Create, edit, delete, toggle alert rules (owner/admin). */
+export function canManageAlertRules(role: Role | null): boolean {
+  return role === 'owner' || role === 'admin'
+}

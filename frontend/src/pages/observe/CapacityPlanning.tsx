@@ -407,7 +407,7 @@ export default function CapacityPlanning() {
                 subtitle={t('cap.forecastDesc')}
                 badge={rangeOptions.find((o) => o.value === range)?.label}
                 hasData={hasForecast}
-                emptyTitle={t('cap.noHistoryTitle')}
+                emptyTitle={t('cap.collecting.title')}
                 emptyDescription={t('cap.noHistoryDesc')}
               >
                 <ResponsiveContainer width="100%" height="100%">
@@ -436,7 +436,7 @@ export default function CapacityPlanning() {
                 title={t('cap.growthTitle')}
                 subtitle={t('cap.growthDesc')}
                 hasData={growthTrends.length > 0}
-                emptyTitle={t('cap.noHistoryTitle')}
+                emptyTitle={t('cap.collecting.title')}
                 emptyDescription={t('cap.noHistoryDesc')}
               >
                 <ResponsiveContainer width="100%" height="100%">

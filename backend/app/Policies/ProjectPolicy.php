@@ -62,4 +62,18 @@ class ProjectPolicy
 
         return $membership && in_array($membership->role, ['owner', 'admin', 'member']);
     }
+
+    /**
+     * Run operational observe actions (recheck all, port scans). Owner, admin, member only.
+     */
+    public function runObserveOperations(User $user, Project $project): bool
+    {
+        if ($user->id === $project->owner_id) {
+            return true;
+        }
+
+        $membership = $project->memberships()->where('user_id', $user->id)->first();
+
+        return $membership && in_array($membership->role, ['owner', 'admin', 'member']);
+    }
 }

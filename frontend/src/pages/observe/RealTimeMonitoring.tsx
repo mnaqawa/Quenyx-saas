@@ -377,7 +377,7 @@ export default function RealTimeMonitoring() {
   if (kpisLoading && !hostTotals.up && !serviceTotals.ok && totalServices === 0 && !targetsLoaded) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-white/60">Loading real-time data...</div>
+        <div className="text-sm text-white/60">{t('rtm.loading')}</div>
       </div>
     )
   }
@@ -459,7 +459,7 @@ export default function RealTimeMonitoring() {
               value={hostList.length === 0 ? '' : selectedHost}
               onChange={(e) => setSelectedHost(e.target.value)}
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 min-w-[140px]"
-              title="Select host"
+              title={t('rtm.selectHost')}
               disabled={hostList.length === 0}
             >
               {hostList.map((h) => (
@@ -477,10 +477,10 @@ export default function RealTimeMonitoring() {
                   : 'bg-white/10 text-white/70 border border-white/10 hover:bg-white/20'
               }`}
               aria-pressed={isLive}
-              title={isLive ? 'Click to pause updates' : 'Click to resume live updates'}
+              title={isLive ? t('rtm.liveToggleTitle') : t('rtm.pausedToggleTitle')}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-rose-400 animate-pulse' : 'bg-white/50'}`} />
-              {isLive ? 'Live' : 'Paused'}
+              {isLive ? t('rtm.live') : t('rtm.paused')}
             </button>
             <ObservePageToolbar
               interval={interval}
@@ -529,37 +529,37 @@ export default function RealTimeMonitoring() {
       </div>
       <div className="grid gap-4 md:grid-cols-5">
         <MetricCard
-          title="CPU Usage"
+          title={t('rtm.metric.cpu')}
           value={m ? `${cpuVal}%` : '—'}
-          detail={m?.cpu ? `${m.cpu.cores} • ${m.cpu.frequency}` : 'Enable Live for server metrics'}
+          detail={m?.cpu ? `${m.cpu.cores} • ${m.cpu.frequency}` : t('rtm.enableLiveMetrics')}
           percentage={cpuVal}
           icon={Icons.cpu}
         />
         <MetricCard
-          title="Memory"
+          title={t('rtm.metric.memory')}
           value={m ? `${memVal}%` : '—'}
           detail={m?.memory ? `${m.memory.used} / ${m.memory.total}` : '—'}
           percentage={memVal}
           icon={Icons.memory}
         />
         <MetricCard
-          title="Disk"
+          title={t('rtm.metric.disk')}
           value={m ? `${diskVal}%` : '—'}
           detail={m?.diskIO ? `${m.diskIO.type} • used` : '—'}
           percentage={diskVal}
           icon={Icons.disk}
         />
         <MetricCard
-          title="Network"
+          title={t('rtm.metric.network')}
           value={m ? `${netVal}%` : '—'}
           detail={m?.network ? `${m.network.speed} • ${m.network.type}` : '—'}
           percentage={netVal}
           icon={Icons.network}
         />
         <MetricCard
-          title="Load (1m)"
+          title={t('rtm.metric.load')}
           value={load1m != null && !Number.isNaN(load1m) ? load1m.toFixed(2) : '—'}
-          detail={loadStr ? `1m, 5m, 15m: ${loadStr}` : 'Enable Live for server metrics'}
+          detail={loadStr ? `1m, 5m, 15m: ${loadStr}` : t('rtm.enableLiveMetrics')}
           icon={Icons.load}
         />
       </div>
@@ -568,10 +568,10 @@ export default function RealTimeMonitoring() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
           <div className="mb-3 flex items-center gap-2">
-            <h3 className="text-sm font-semibold">System Performance</h3>
+            <h3 className="text-sm font-semibold">{t('rtm.systemPerformance')}</h3>
             {isLive && (
               <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-200">
-                Live
+                {t('rtm.live')}
               </span>
             )}
           </div>
@@ -595,7 +595,7 @@ export default function RealTimeMonitoring() {
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-white/40">
-                {isLive ? 'Collecting samples…' : 'Enable Live to see history'}
+                {isLive ? t('rtm.collectingSamples') : t('rtm.enableLiveHistory')}
               </div>
             )}
           </div>
@@ -633,7 +633,7 @@ export default function RealTimeMonitoring() {
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-white/40">
-                {isLive ? 'Collecting samples…' : 'Enable Live to see history'}
+                {isLive ? t('rtm.collectingSamples') : t('rtm.enableLiveHistory')}
               </div>
             )}
           </div>
@@ -645,7 +645,7 @@ export default function RealTimeMonitoring() {
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold">Per-host metrics</h3>
+              <h3 className="text-sm font-semibold">{t('rtm.perHostMetrics')}</h3>
               <p className="mt-1 text-xs text-white/60">
                 CPU, memory, disk and network for <strong>{selectedHost}</strong>, derived from its service checks.
               </p>
@@ -856,7 +856,7 @@ export default function RealTimeMonitoring() {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Quick actions</h3>
+          <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">{t('rtm.quickActions')}</h3>
           <div className="flex flex-col gap-2">
             <button
               type="button"
@@ -888,7 +888,7 @@ export default function RealTimeMonitoring() {
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
-              Alert configuration
+              {t('rtm.alertConfiguration')}
             </button>
           </div>
         </div>

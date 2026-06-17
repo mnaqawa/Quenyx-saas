@@ -6,7 +6,8 @@ import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
-import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
+import { useObserveAccess } from '../../hooks/useObserveAccess'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { buildHostRuntimeMap, operatingSystemFromTags } from '../../lib/observeHostUtils'
@@ -136,7 +137,7 @@ function mergeResponseWithCurrent(
 export default function Targets() {
   const { t } = useLanguage()
   const { id } = useParams<{ id: string }>()
-  const { selectedWorkspaceId, modulesWithAccess, allowedByKey } = useWorkspaceContext()
+  const { selectedWorkspaceId } = useWorkspaceContext()
   const [hosts, setHosts] = useState<TargetHost[]>([])
   const [definitions, setDefinitions] = useState<ServiceDefinition[]>([])
   const [loading, setLoading] = useState(true)
@@ -156,11 +157,7 @@ export default function Targets() {
 
   const workspaceId = id || selectedWorkspaceId
 
-  const isLocked = modulesWithAccess?.find((m) => m.key === 'qynsight')
-    ? !allowedByKey['qynsight']
-    : false
-
-  const canEdit = !isLocked && (allowedByKey['qynsight'] ?? false)
+  const { canEditConfig: canEdit } = useObserveAccess()
   const aiAvailable = useAiAgentAvailable(workspaceId)
 
   const hostRuntime = useMemo(() => buildHostRuntimeMap(runtimeServices, workspaceId), [runtimeServices, workspaceId])
@@ -212,7 +209,7 @@ export default function Targets() {
     secondsAgo,
   } = useObserveAutoRefresh(() => {
     setDataRefreshKey((k) => k + 1)
-  }, !!workspaceId && !isLocked)
+  }, !!workspaceId)
 
   useEffect(() => {
     void reloadTargets().then(() => markUpdated())
@@ -617,25 +614,29 @@ export default function Targets() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-sm text-white/60">Loading targets...</div>
+        <div className="text-sm text-white/60">{t('targets.loading')}</div>
+      </div>
+    )
+  }
+
+  if (error && hosts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t('targets.title')} subtitle={t('targets.subtitle')} />
+        <ObserveLoadError
+          message={t('observe.error.hosts')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={() => {
+            setDataRefreshKey((k) => k + 1)
+            void reloadTargets()
+          }}
+        />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {isLocked && (
-        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-200">
-          <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <span>QynSight is locked. Some features are disabled.</span>
-          </div>
-        </div>
-      )}
-
       <PageHeader
         title={t('targets.title')}
         subtitle={t('targets.subtitle')}
@@ -650,9 +651,8 @@ export default function Targets() {
                 refreshNow()
               }}
               refreshing={loading}
-              disabled={isLocked}
-              settingsLabel={t('targets.monitoringSettings')}
-              onSettings={() => setSettingsOpen(true)}
+              settingsLabel={canEdit ? t('targets.monitoringSettings') : undefined}
+              onSettings={canEdit ? () => setSettingsOpen(true) : undefined}
             />
             {canEdit && (
               <>
@@ -665,7 +665,7 @@ export default function Targets() {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={saving || isLocked}
+                  disabled={saving}
                   className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-4 py-1.5 text-xs font-medium text-sky-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sky-500/30"
                 >
                   {saving ? t('targets.saving') : t('targets.save')}
@@ -676,7 +676,7 @@ export default function Targets() {
         }
       />
 
-      {workspaceId && (
+      {workspaceId && canEdit && (
         <MonitoringSettingsModal
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
