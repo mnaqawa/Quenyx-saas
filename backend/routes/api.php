@@ -111,7 +111,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
     Route::post('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
     Route::get('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
+    Route::post('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveAlertController::class, 'storeRule']);
+    Route::put('/workspaces/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'updateRule']);
+    Route::delete('/workspaces/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'destroyRule']);
+    Route::patch('/workspaces/{project}/observe/alerts/rules/{rule}/toggle', [\App\Http\Controllers\ObserveAlertController::class, 'toggleRule']);
     Route::get('/workspaces/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
+    Route::get('/workspaces/{project}/observe/alerts/history', [\App\Http\Controllers\ObserveAlertController::class, 'history']);
+    Route::get('/workspaces/{project}/observe/alerts/channels', [\App\Http\Controllers\ObserveAlertController::class, 'channels']);
+    Route::get('/workspaces/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'monitoringProfile']);
+    Route::put('/workspaces/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'updateMonitoringProfile']);
     Route::get('/workspaces/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);
     Route::get('/workspaces/{project}/observe/instances/summary', [\App\Http\Controllers\ObserveController::class, 'instanceSummary']);
     Route::get('/workspaces/{project}/observe/reports', [\App\Http\Controllers\ObserveController::class, 'reports']);
@@ -138,7 +146,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
     Route::post('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
     Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
+    Route::post('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveAlertController::class, 'storeRule']);
+    Route::put('/projects/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'updateRule']);
+    Route::delete('/projects/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'destroyRule']);
+    Route::patch('/projects/{project}/observe/alerts/rules/{rule}/toggle', [\App\Http\Controllers\ObserveAlertController::class, 'toggleRule']);
     Route::get('/projects/{project}/observe/alerts/summary', [\App\Http\Controllers\ObserveController::class, 'alertSummary']);
+    Route::get('/projects/{project}/observe/alerts/history', [\App\Http\Controllers\ObserveAlertController::class, 'history']);
+    Route::get('/projects/{project}/observe/alerts/channels', [\App\Http\Controllers\ObserveAlertController::class, 'channels']);
+    Route::get('/projects/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'monitoringProfile']);
+    Route::put('/projects/{project}/observe/monitoring-profile', [\App\Http\Controllers\ObserveAlertController::class, 'updateMonitoringProfile']);
     Route::get('/projects/{project}/observe/instances', [\App\Http\Controllers\ObserveController::class, 'instances']);
     Route::get('/projects/{project}/observe/instances/summary', [\App\Http\Controllers\ObserveController::class, 'instanceSummary']);
     Route::get('/projects/{project}/observe/reports', [\App\Http\Controllers\ObserveController::class, 'reports']);
@@ -169,10 +185,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/agents', [\App\Http\Controllers\AgentController::class, 'index']);
     Route::post('/workspaces/{project}/agents/enrollment-token', [\App\Http\Controllers\AgentController::class, 'createEnrollmentToken']);
     Route::get('/workspaces/{project}/agents/metadata', [\App\Http\Controllers\AgentController::class, 'metadata']);
+    Route::get('/workspaces/{project}/agents/enrollment-tokens', [\App\Http\Controllers\AgentController::class, 'listEnrollmentTokens']);
+    Route::post('/workspaces/{project}/agents/enrollment-tokens/{token}/revoke', [\App\Http\Controllers\AgentController::class, 'revokeEnrollmentToken']);
     Route::delete('/workspaces/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
     Route::get('/projects/{project}/agents', [\App\Http\Controllers\AgentController::class, 'index']);
     Route::post('/projects/{project}/agents/enrollment-token', [\App\Http\Controllers\AgentController::class, 'createEnrollmentToken']);
     Route::get('/projects/{project}/agents/metadata', [\App\Http\Controllers\AgentController::class, 'metadata']);
+    Route::get('/projects/{project}/agents/enrollment-tokens', [\App\Http\Controllers\AgentController::class, 'listEnrollmentTokens']);
+    Route::post('/projects/{project}/agents/enrollment-tokens/{token}/revoke', [\App\Http\Controllers\AgentController::class, 'revokeEnrollmentToken']);
     Route::delete('/projects/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
 
     // LEGACY AI routes. Superseded by /api/ai-agent/query and components/ai/AIAgentDrawer.tsx.

@@ -2,7 +2,10 @@ import { apiClient } from './apiClient'
 
 export interface Agent {
   id: string
+  name?: string
   hostname: string
+  workspace_id?: number
+  workspace_name?: string | null
   os: string | null
   arch: string | null
   agent_version: string | null

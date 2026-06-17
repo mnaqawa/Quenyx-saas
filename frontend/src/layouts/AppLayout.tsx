@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService, type AuthUser } from '../services/authService'
-import { routesByModule, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleTemporarilyVisible } from '../constants/platformRegistry'
+import { routesByModule, getVisibleModuleRoutes, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleTemporarilyVisible } from '../constants/platformRegistry'
 import { AIAgentDrawer } from '../components/ai/AIAgentDrawer'
 import { ProductTourProvider, useProductTour } from '../tour/ProductTour'
 import { useOnboarding } from '../onboarding/OnboardingContext'
@@ -268,7 +268,7 @@ function AppLayoutInner() {
                 </button>
                 {isObserveExpanded && (
                   <div className="ml-4 mt-1 space-y-0.5 border-l border-white/5 pl-10">
-                    {(routesByModule.qynsight || []).map((route) => {
+                    {(getVisibleModuleRoutes('qynsight') || []).map((route) => {
                       const routePath = selectedWorkspaceId
                         ? route.path.replace(':id', String(selectedWorkspaceId))
                         : '#'
@@ -292,7 +292,7 @@ function AppLayoutInner() {
                               : 'text-white/60 hover:bg-white/5 hover:text-white'
                           }`}
                         >
-                          {route.label}
+                          {route.i18nKey ? t(route.i18nKey) : route.label}
                         </Link>
                       )
                     })}

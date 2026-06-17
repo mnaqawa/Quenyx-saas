@@ -14,6 +14,11 @@ import type {
   CapacityMetric,
   AlertRule,
   AlertSummary,
+  AlertHistoryEvent,
+  NotificationChannel,
+  CreateAlertRulePayload,
+  MonitoringProfileResponse,
+  MonitoringProfileCheckUpdate,
   Instance,
   InstanceSummary,
   Report,
@@ -199,6 +204,66 @@ export const observeService = {
   async getAlertSummary(workspaceId: number): Promise<AlertSummary> {
     return gatewayClient.get<AlertSummary>(
       `workspaces/${workspaceId}/observe/alerts/summary`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async getAlertHistory(workspaceId: number): Promise<AlertHistoryEvent[]> {
+    return gatewayClient.get<AlertHistoryEvent[]>(
+      `workspaces/${workspaceId}/observe/alerts/history`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async getNotificationChannels(workspaceId: number): Promise<NotificationChannel[]> {
+    return gatewayClient.get<NotificationChannel[]>(
+      `workspaces/${workspaceId}/observe/alerts/channels`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async createAlertRule(workspaceId: number, payload: CreateAlertRulePayload): Promise<AlertRule> {
+    return gatewayClient.post<AlertRule>(
+      `workspaces/${workspaceId}/observe/alerts/rules`,
+      payload,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async updateAlertRule(workspaceId: number, ruleId: string, payload: Partial<CreateAlertRulePayload>): Promise<AlertRule> {
+    return gatewayClient.put<AlertRule>(
+      `workspaces/${workspaceId}/observe/alerts/rules/${ruleId}`,
+      payload,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async deleteAlertRule(workspaceId: number, ruleId: string): Promise<void> {
+    await gatewayClient.delete(
+      `workspaces/${workspaceId}/observe/alerts/rules/${ruleId}`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async toggleAlertRule(workspaceId: number, ruleId: string): Promise<AlertRule> {
+    return gatewayClient.patch<AlertRule>(
+      `workspaces/${workspaceId}/observe/alerts/rules/${ruleId}/toggle`,
+      {},
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async getMonitoringProfile(workspaceId: number): Promise<MonitoringProfileResponse> {
+    return gatewayClient.get<MonitoringProfileResponse>(
+      `workspaces/${workspaceId}/observe/monitoring-profile`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async updateMonitoringProfile(workspaceId: number, checks: MonitoringProfileCheckUpdate[]): Promise<MonitoringProfileResponse> {
+    return gatewayClient.put<MonitoringProfileResponse>(
+      `workspaces/${workspaceId}/observe/monitoring-profile`,
+      { checks },
       { workspaceId, moduleKey: 'qynsight' }
     )
   },

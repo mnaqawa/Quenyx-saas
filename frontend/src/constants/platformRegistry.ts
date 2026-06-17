@@ -24,6 +24,8 @@ export interface RouteConfig {
   path: string
   title: string
   readyOnly?: boolean
+  hidden?: boolean
+  i18nKey?: string
 }
 
 export interface ModuleSidebarConfig {
@@ -42,18 +44,18 @@ export interface ModuleConfig {
   sidebar: ModuleSidebarConfig
 }
 
-// QynSight (monitoring) routes configuration
+// QynSight production menu (Instance Management hidden until host operations ship)
 const qynSightRoutes: RouteConfig[] = [
-  { key: 'real-time-monitoring', label: 'Real-time Monitoring', path: '/app/workspaces/:id/observe/real-time-monitoring', title: 'Real-time Monitoring' },
-  { key: 'infrastructure-map', label: 'Infrastructure Map', path: '/app/workspaces/:id/observe/infrastructure-map', title: 'Infrastructure Map' },
-  { key: 'performance-analytics', label: 'Performance Analytics', path: '/app/workspaces/:id/observe/performance-analytics', title: 'Performance Analytics' },
-  { key: 'capacity-planning', label: 'Capacity Planning', path: '/app/workspaces/:id/observe/capacity-planning', title: 'Capacity Planning' },
-  { key: 'alert-management', label: 'Alert Management', path: '/app/workspaces/:id/observe/alert-management', title: 'Alert Management' },
-  { key: 'instance-management', label: 'Instance Management', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management' },
-  { key: 'services', label: 'Services', path: '/app/workspaces/:id/observe/services', title: 'Services' },
-  { key: 'reports', label: 'Reports', path: '/app/workspaces/:id/observe/reports', title: 'Reports' },
-  { key: 'data-sources', label: 'Data Sources', path: '/app/workspaces/:id/observe/data-sources', title: 'Data Sources' },
-  { key: 'targets', label: 'Targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
+  { key: 'real-time-monitoring', label: 'Real-time Monitoring', i18nKey: 'nav.qynsight.realTimeMonitoring', path: '/app/workspaces/:id/observe/real-time-monitoring', title: 'Real-time Monitoring' },
+  { key: 'infrastructure-map', label: 'Infrastructure Map', i18nKey: 'nav.qynsight.infrastructureMap', path: '/app/workspaces/:id/observe/infrastructure-map', title: 'Infrastructure Map' },
+  { key: 'performance-analytics', label: 'Performance Analytics', i18nKey: 'nav.qynsight.performanceAnalytics', path: '/app/workspaces/:id/observe/performance-analytics', title: 'Performance Analytics' },
+  { key: 'capacity-planning', label: 'Capacity Planning', i18nKey: 'nav.qynsight.capacityPlanning', path: '/app/workspaces/:id/observe/capacity-planning', title: 'Capacity Planning' },
+  { key: 'alert-management', label: 'Alert Management', i18nKey: 'nav.qynsight.alertManagement', path: '/app/workspaces/:id/observe/alert-management', title: 'Alert Management' },
+  { key: 'services', label: 'Services', i18nKey: 'nav.qynsight.services', path: '/app/workspaces/:id/observe/services', title: 'Services' },
+  { key: 'targets', label: 'Targets', i18nKey: 'nav.qynsight.targets', path: '/app/workspaces/:id/observe/targets', title: 'Monitored Targets' },
+  { key: 'data-sources', label: 'Data Sources', i18nKey: 'nav.qynsight.dataSources', path: '/app/workspaces/:id/observe/data-sources', title: 'Data Sources' },
+  { key: 'reports', label: 'Reports', i18nKey: 'nav.qynsight.reports', path: '/app/workspaces/:id/observe/reports', title: 'Reports' },
+  { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 
 // TEMPORARY: while QynSight is the only module under active development, hide every
@@ -225,6 +227,10 @@ export function isModuleLocked(key: string, allowedByKey: Record<string, boolean
 
 export function getModuleRoutes(key: string): RouteConfig[] {
   return routesByModule[key] || []
+}
+
+export function getVisibleModuleRoutes(key: string): RouteConfig[] {
+  return (routesByModule[key] || []).filter((r) => !r.hidden)
 }
 
 export const moduleRegistry = modules

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { MonitoringThresholdsPanel } from '../../components/observe/MonitoringThresholdsPanel'
 import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
 import type { ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
@@ -638,6 +639,10 @@ export default function Targets() {
           </>
         }
       />
+
+      {workspaceId && (
+        <MonitoringThresholdsPanel workspaceId={workspaceId} canEdit={canEdit} />
+      )}
 
       {error && (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 space-y-2">

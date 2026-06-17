@@ -246,7 +246,7 @@ export function useCapacityMetrics(range?: string) {
 }
 
 // Alert Management hooks
-export function useAlertRules() {
+export function useAlertRules(refreshKey = 0) {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [rules, setRules] = useState<AlertRule[]>([])
   const [loading, setLoading] = useState(true)
@@ -273,12 +273,12 @@ export function useAlertRules() {
       .catch(() => { if (!cancelled) setRules([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [selectedWorkspaceId])
+  }, [selectedWorkspaceId, refreshKey])
 
   return { rules, loading }
 }
 
-export function useAlertSummary() {
+export function useAlertSummary(refreshKey = 0) {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -305,7 +305,7 @@ export function useAlertSummary() {
       .catch(() => { if (!cancelled) setSummary(null) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [selectedWorkspaceId])
+  }, [selectedWorkspaceId, refreshKey])
 
   return { summary, loading }
 }
@@ -392,12 +392,21 @@ export function useReports() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setReports(reportsFixture)
-      setLoading(false)
-    }, 300)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setReports(reportsFixture)
+        setLoading(false)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getReports(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setReports(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setReports([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { reports, loading }
@@ -415,12 +424,21 @@ export function useReportSummary() {
       return
     }
 
-    const timer = setTimeout(() => {
-      setSummary(reportSummaryFixture)
-      setLoading(false)
-    }, 200)
+    if (USE_FIXTURES) {
+      const timer = setTimeout(() => {
+        setSummary(reportSummaryFixture)
+        setLoading(false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
 
-    return () => clearTimeout(timer)
+    let cancelled = false
+    observeService
+      .getReportSummary(Number(selectedWorkspaceId))
+      .then((data) => { if (!cancelled) setSummary(data ?? null) })
+      .catch(() => { if (!cancelled) setSummary(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspaceId])
 
   return { summary, loading }

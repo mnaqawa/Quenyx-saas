@@ -458,6 +458,58 @@ export interface AlertSummary {
   }
 }
 
+export interface AlertHistoryEvent {
+  id: string
+  rule_id: string | null
+  severity: string
+  title: string
+  message: string | null
+  status: string
+  triggered_at: string
+  resolved_at: string | null
+}
+
+export interface NotificationChannel {
+  id: string
+  type: string
+  name: string
+  configured: boolean
+}
+
+export interface CreateAlertRulePayload {
+  name: string
+  severity: 'critical' | 'warning'
+  target_scope: 'all' | 'selected_target' | 'selected_service'
+  target_host_id?: number | null
+  target_service_key?: string | null
+  metric_condition: string
+  operator: string
+  threshold_value: number
+  duration_seconds?: number
+  notification_channel?: string | null
+  enabled?: boolean
+}
+
+export interface MonitoringProfileCheck {
+  id: number
+  service_key: string
+  service_name: string
+  check_args: Record<string, unknown>
+  enabled: boolean
+  sort_order: number
+}
+
+export interface MonitoringProfileResponse {
+  profile: Record<string, unknown>
+  checks: MonitoringProfileCheck[]
+}
+
+export interface MonitoringProfileCheckUpdate {
+  service_key: string
+  check_args?: Record<string, unknown>
+  enabled?: boolean
+}
+
 export interface Instance {
   id: string
   name: string
@@ -500,6 +552,7 @@ export interface ReportSummary {
   downloads: number
   scheduled: number
   avgSize: string
+  backend_available?: boolean
 }
 
 export interface DataSource {

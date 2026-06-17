@@ -102,6 +102,15 @@ export const gatewayClient = {
   },
 
   /**
+   * PATCH request through gateway
+   */
+  async patch<T>(endpoint: string, body?: unknown, options?: GatewayRequestOptions): Promise<T> {
+    const url = buildGatewayUrl(endpoint, options)
+    const headers = buildGatewayHeaders(options)
+    return apiClient.patch<T>(url, body, headers)
+  },
+
+  /**
    * DELETE request through gateway
    */
   async delete<T>(endpoint: string, options?: GatewayRequestOptions): Promise<T> {

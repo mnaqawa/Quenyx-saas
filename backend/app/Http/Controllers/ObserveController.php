@@ -10,6 +10,10 @@ use App\Models\ObserveMetricHistory;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\IntegrationConfiguration;
+use App\Models\Agent;
+use App\Models\AgentMetric;
+use App\Models\BillingIntegration;
+use App\Models\ObserveReportExport;
 use App\Models\Project;
 use App\Services\CapacityPlanningService;
 use App\Services\SystemMetricsService;
@@ -468,6 +472,20 @@ class ObserveController extends Controller
 
         $report = app(CapacityPlanningService::class)->buildExport($project->id, $range, $options);
         $filename = 'capacity-planning-ws' . $project->id . '-' . $range . '.json';
+        $json = json_encode($report);
+        $size = $json !== false ? strlen($json) : null;
+
+        if (Schema::hasTable('observe_report_exports')) {
+            ObserveReportExport::create([
+                'workspace_id' => $project->id,
+                'export_type' => 'capacity_planning',
+                'format' => 'json',
+                'title' => 'Capacity Planning (' . $range . ')',
+                'file_size_bytes' => $size,
+                'exported_by' => $request->user()?->id,
+                'created_at' => now(),
+            ]);
+        }
 
         return response()
             ->json($report)
@@ -490,28 +508,16 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: alert rules (no backend implementation yet). Returns empty array.
+     * Alert rules — delegated to ObserveAlertController (kept for route compatibility).
      */
     public function alertRules(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+        return app(ObserveAlertController::class)->rules($request, $project);
     }
 
-    /**
-     * Stub: alert summary (no backend implementation yet). Returns empty summary.
-     */
     public function alertSummary(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total' => 0,
-                'by_severity' => [],
-                'by_status' => [],
-            ],
-        ]);
+        return app(ObserveAlertController::class)->summary($request, $project);
     }
 
     /**
@@ -541,53 +547,170 @@ class ObserveController extends Controller
     }
 
     /**
-     * Stub: reports list (no backend implementation yet). Returns empty array.
+     * JSON export history for this workspace.
      */
     public function reports(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+
+        if (! Schema::hasTable('observe_report_exports')) {
+            return response()->json(['success' => true, 'data' => [], 'meta' => ['backend_available' => false]]);
+        }
+
+        $items = ObserveReportExport::where('workspace_id', $project->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get()
+            ->map(fn (ObserveReportExport $r) => [
+                'id' => (string) $r->id,
+                'name' => $r->title,
+                'category' => $r->export_type,
+                'date' => $r->created_at?->toIso8601String() ?? '',
+                'size' => $r->file_size_bytes ? $this->formatBytes($r->file_size_bytes) : '—',
+                'status' => 'completed',
+                'format' => $r->format,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'meta' => ['backend_available' => true],
+        ]);
     }
 
-    /**
-     * Stub: reports summary (no backend implementation yet). Returns empty summary.
-     */
     public function reportSummary(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
+
+        $backendAvailable = Schema::hasTable('observe_report_exports');
+        $total = $backendAvailable
+            ? ObserveReportExport::where('workspace_id', $project->id)->count()
+            : 0;
+
         return response()->json([
             'success' => true,
             'data' => [
-                'total' => 0,
-                'by_type' => [],
+                'total' => $total,
+                'downloads' => 0,
+                'scheduled' => 0,
+                'avgSize' => '—',
+                'backend_available' => $backendAvailable,
             ],
         ]);
     }
 
     /**
-     * Stub: data sources list (no backend implementation yet). Returns empty array.
+     * Connected data sources derived from real integrations (agents, billing, native observe).
      */
     public function dataSources(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        return response()->json(['success' => true, 'data' => []]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->buildDataSourcesList($project),
+        ]);
     }
 
-    /**
-     * Stub: data sources summary (no backend implementation yet). Returns empty summary.
-     */
     public function dataSourceSummary(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
+
+        $sources = $this->buildDataSourcesList($project);
+        $connected = count(array_filter($sources, fn ($s) => $s['status'] === 'connected'));
+        $totalRecords = array_sum(array_column($sources, 'recordCount'));
+        $lastSyncAt = collect($sources)->pluck('lastSyncAt')->filter()->max();
+        $total = count($sources);
+        $syncStatus = $total > 0 ? (int) round(($connected / $total) * 100) : 0;
+
         return response()->json([
             'success' => true,
             'data' => [
-                'connected' => 0,
-                'totalRecords' => '0',
-                'syncStatus' => 0,
-                'lastUpdate' => '',
+                'connected' => $connected,
+                'totalRecords' => (string) $totalRecords,
+                'syncStatus' => $syncStatus,
+                'lastUpdate' => $lastSyncAt ? \Carbon\Carbon::parse($lastSyncAt)->diffForHumans() : '—',
             ],
         ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildDataSourcesList(Project $project): array
+    {
+        $sources = [];
+
+        if (Schema::hasTable('agents')) {
+            $agents = Agent::where('workspace_id', $project->id)->orderBy('hostname')->get();
+            foreach ($agents as $agent) {
+                $metricCount = Schema::hasTable('agent_metrics')
+                    ? AgentMetric::where('agent_id', $agent->id)->count()
+                    : 0;
+                $status = match ($agent->status) {
+                    'online' => 'connected',
+                    'error' => 'error',
+                    default => 'syncing',
+                };
+                $sources[] = [
+                    'id' => 'agent-' . $agent->id,
+                    'name' => $agent->hostname,
+                    'type' => 'agent_metrics',
+                    'recordCount' => $metricCount,
+                    'lastSync' => $agent->last_seen_at?->diffForHumans() ?? '—',
+                    'lastSyncAt' => $agent->last_seen_at?->toIso8601String(),
+                    'status' => $status,
+                ];
+            }
+        }
+
+        if (Schema::hasTable('billing_integrations')) {
+            $billing = BillingIntegration::where('workspace_id', $project->id)->get();
+            foreach ($billing as $b) {
+                $connected = in_array($b->status, ['connected', 'active'], true);
+                $sources[] = [
+                    'id' => 'billing-' . $b->id,
+                    'name' => ucfirst(str_replace('_', ' ', $b->provider_type)) . ' Billing',
+                    'type' => 'billing_feed',
+                    'recordCount' => 0,
+                    'lastSync' => $b->connected_at?->diffForHumans() ?? '—',
+                    'lastSyncAt' => $b->connected_at?->toIso8601String(),
+                    'status' => $connected ? 'connected' : 'error',
+                ];
+            }
+        }
+
+        $meta = ObserveMeta::where('workspace_id', $project->id)
+            ->where('engine_key', 'native')
+            ->orderByDesc('last_poll_at')
+            ->first();
+
+        if ($meta?->last_poll_at) {
+            $hostCount = ObserveTargetHost::where('workspace_id', $project->id)->count();
+            $sources[] = [
+                'id' => 'native-observe',
+                'name' => 'QynSight Native Checks',
+                'type' => 'topology_feed',
+                'recordCount' => $hostCount,
+                'lastSync' => $meta->last_poll_at->diffForHumans(),
+                'lastSyncAt' => $meta->last_poll_at->toIso8601String(),
+                'status' => 'connected',
+            ];
+        }
+
+        return $sources;
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes < 1024) {
+            return $bytes . ' B';
+        }
+        if ($bytes < 1048576) {
+            return round($bytes / 1024, 1) . ' KB';
+        }
+
+        return round($bytes / 1048576, 1) . ' MB';
     }
 
     /**

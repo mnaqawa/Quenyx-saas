@@ -22,18 +22,22 @@ class AgentController extends Controller
         $this->authorize('view', $project);
 
         $agents = Agent::where('workspace_id', $project->id)
+            ->with(['workspace:id,name', 'enrollmentToken:id,name'])
             ->orderByDesc('last_seen_at')
             ->get()
             ->map(fn (Agent $a) => [
                 'id' => $a->id,
+                'name' => $a->enrollmentToken?->name ?? $a->hostname,
                 'hostname' => $a->hostname,
+                'workspace_id' => $a->workspace_id,
+                'workspace_name' => $a->workspace?->name,
                 'os' => $a->os,
                 'arch' => $a->arch,
                 'agent_version' => $a->agent_version,
                 'primary_protocol' => $a->primary_protocol,
                 'enabled_protocols' => $a->enabled_protocols ?? [$a->primary_protocol],
                 'permissions' => $a->permissions ?? [],
-                'status' => $a->status,
+                'status' => $this->normalizeAgentStatus($a),
                 'last_seen_at' => $a->last_seen_at?->toIso8601String(),
                 'enrolled_at' => $a->enrolled_at->toIso8601String(),
             ]);
@@ -144,6 +148,81 @@ class AgentController extends Controller
         $agent->delete();
 
         return response()->json(['success' => true, 'data' => ['deleted' => true]]);
+    }
+
+    /**
+     * List enrollment tokens (hashed at rest; no plain token).
+     * GET /api/workspaces/{project}/agents/enrollment-tokens
+     */
+    public function listEnrollmentTokens(Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        $tokens = AgentEnrollmentToken::where('workspace_id', $project->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (AgentEnrollmentToken $t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'target_os' => $t->target_os,
+                'expires_at' => $t->expires_at?->toIso8601String(),
+                'last_used_at' => $t->last_used_at?->toIso8601String(),
+                'revoked_at' => $t->revoked_at?->toIso8601String(),
+                'status' => $this->tokenStatus($t),
+                'created_at' => $t->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['success' => true, 'data' => $tokens]);
+    }
+
+    /**
+     * Revoke an enrollment token.
+     * POST /api/workspaces/{project}/agents/enrollment-tokens/{token}/revoke
+     */
+    public function revokeEnrollmentToken(Project $project, AgentEnrollmentToken $token): JsonResponse
+    {
+        $this->authorize('update', $project);
+
+        if ($token->workspace_id !== $project->id) {
+            return response()->json(['success' => false, 'message' => 'Token not found'], 404);
+        }
+
+        $token->update([
+            'revoked_at' => now(),
+            'status' => 'revoked',
+        ]);
+
+        return response()->json(['success' => true, 'data' => ['revoked' => true]]);
+    }
+
+    private function normalizeAgentStatus(Agent $agent): string
+    {
+        if ($agent->status === 'revoked') {
+            return 'revoked';
+        }
+
+        if (! $agent->last_seen_at) {
+            return 'pending';
+        }
+
+        if ($agent->last_seen_at->lt(now()->subMinutes(10))) {
+            return 'offline';
+        }
+
+        return $agent->status === 'online' ? 'online' : 'offline';
+    }
+
+    private function tokenStatus(AgentEnrollmentToken $token): string
+    {
+        if ($token->revoked_at || ($token->status ?? '') === 'revoked') {
+            return 'revoked';
+        }
+
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            return 'expired';
+        }
+
+        return 'active';
     }
 
     private function buildInstallInstructions(

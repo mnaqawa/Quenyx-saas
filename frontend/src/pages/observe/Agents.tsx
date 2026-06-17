@@ -14,19 +14,23 @@ import type {
   EnrollmentTokenResponse,
 } from '../../services/agentService'
 
-function statusBadge(status: string) {
+function statusBadge(status: string, t: (key: string) => string) {
   const styles: Record<string, string> = {
     online: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
     offline: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    pending: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+    revoked: 'bg-red-500/20 text-red-300 border-red-500/40',
     stale: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
     error: 'bg-red-500/20 text-red-300 border-red-500/40',
   }
   const s = status?.toLowerCase() ?? 'unknown'
+  const labelKey = `agents.status.${s}` as const
+  const label = ['pending', 'online', 'offline', 'revoked'].includes(s) ? t(labelKey) : s
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${styles[s] ?? 'bg-white/10 text-white/70 border-white/20'}`}
     >
-      {s}
+      {label}
     </span>
   )
 }
@@ -58,7 +62,7 @@ interface AgentsProps {
 export default function Agents({ embedded = false }: AgentsProps) {
   const { t } = useLanguage()
   const { id } = useParams<{ id: string }>()
-  const { selectedWorkspaceId, allowedByKey } = useWorkspaceContext()
+  const { selectedWorkspaceId, allowedByKey, selectedWorkspaceRole, workspaces } = useWorkspaceContext()
   const workspaceId = id || selectedWorkspaceId
 
   const [agents, setAgents] = useState<Agent[]>([])
@@ -72,10 +76,9 @@ export default function Agents({ embedded = false }: AgentsProps) {
     permissions: Record<string, PermissionInfo>
   }>({ protocols: {}, permissions: {} })
 
-  // When embedded in Integrations, agents are platform-wide (QynSight, QynAsset, VA, etc.)
-  const canEdit = embedded
-    ? !!selectedWorkspaceId
-    : !!(allowedByKey['qynsight'] ?? false)
+  const canEdit =
+    (selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin') &&
+    (embedded ? !!selectedWorkspaceId : !!(allowedByKey['qynsight'] ?? false))
 
   const fetchAgents = useCallback(async () => {
     if (!workspaceId) return
@@ -114,17 +117,21 @@ export default function Agents({ embedded = false }: AgentsProps) {
     setInstallModalOpen(true)
   }
 
-  const handleGenerateToken = async (opts: {
-    primary_protocol?: string
-    enabled_protocols?: string[]
-    permissions?: string[]
-    expires_hours?: number
-    target_os?: 'linux' | 'windows' | 'macos'
-  }) => {
-    if (!workspaceId) return
+  const handleGenerateToken = async (
+    opts: {
+      primary_protocol?: string
+      enabled_protocols?: string[]
+      permissions?: string[]
+      expires_hours?: number
+      target_os?: 'linux' | 'windows' | 'macos'
+    },
+    wsOverride?: string | number
+  ) => {
+    const ws = wsOverride ?? workspaceId
+    if (!ws) return
     try {
       setCreating(true)
-      const result = await agentService.createEnrollmentToken(workspaceId, opts)
+      const result = await agentService.createEnrollmentToken(ws, opts)
       setEnrollmentResult(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create enrollment token')
@@ -204,31 +211,27 @@ export default function Agents({ embedded = false }: AgentsProps) {
           <table className="min-w-full divide-y divide-white/10">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">Hostname</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">OS / Arch</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">Protocol</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">Last seen</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-white/50">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.name')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.hostname')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.workspace')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.os')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.version')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.status')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-white/50">{t('agents.col.lastSeen')}</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase text-white/50">{t('agents.col.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {agents.map((a) => (
                 <tr key={a.id} className="hover:bg-white/5">
-                  <td className="px-4 py-3 text-sm text-white">{a.hostname}</td>
+                  <td className="px-4 py-3 text-sm text-white">{a.name ?? a.hostname}</td>
+                  <td className="px-4 py-3 text-sm text-white/80">{a.hostname}</td>
+                  <td className="px-4 py-3 text-sm text-white/70">{a.workspace_name ?? '—'}</td>
                   <td className="px-4 py-3 text-sm text-white/70">
                     {[a.os, a.arch].filter(Boolean).join(' / ') || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white/70">
-                    {a.primary_protocol === 'psap'
-                      ? 'Quenyx Agent Protocol (PSAP)'
-                      : a.primary_protocol === 'http_api'
-                        ? 'HTTP API (Push)'
-                        : a.primary_protocol === 'snmp'
-                          ? 'SNMP'
-                          : a.primary_protocol ?? '—'}
-                  </td>
-                  <td className="px-4 py-3">{statusBadge(a.status)}</td>
+                  <td className="px-4 py-3 text-sm text-white/70">{a.agent_version ?? '—'}</td>
+                  <td className="px-4 py-3">{statusBadge(a.status, t)}</td>
                   <td className="px-4 py-3 text-sm text-white/60">{formatDate(a.last_seen_at)}</td>
                   <td className="px-4 py-3 text-right">
                     {canEdit && (
@@ -237,7 +240,7 @@ export default function Agents({ embedded = false }: AgentsProps) {
                         onClick={() => handleDeleteAgent(a.id)}
                         className="text-xs text-red-400 hover:text-red-300"
                       >
-                        Remove
+                        {t('agents.remove')}
                       </button>
                     )}
                   </td>
@@ -248,12 +251,15 @@ export default function Agents({ embedded = false }: AgentsProps) {
         </div>
       )}
 
-      {installModalOpen && (
+      {installModalOpen && workspaceId && (
         <InstallAgentModal
+          workspaceId={workspaceId}
+          workspaces={workspaces}
           metadata={metadata}
           enrollmentResult={enrollmentResult}
           creating={creating}
           onGenerateToken={handleGenerateToken}
+          onVerify={fetchAgents}
           onClose={() => {
             setInstallModalOpen(false)
             setEnrollmentResult(null)
@@ -266,6 +272,8 @@ export default function Agents({ embedded = false }: AgentsProps) {
 }
 
 interface InstallAgentModalProps {
+  workspaceId: string | number
+  workspaces: Array<{ id: number; name: string }>
   metadata: { protocols: Record<string, ProtocolInfo>; permissions: Record<string, PermissionInfo> }
   enrollmentResult: EnrollmentTokenResponse | null
   creating: boolean
@@ -275,22 +283,52 @@ interface InstallAgentModalProps {
     permissions?: string[]
     expires_hours?: number
     target_os?: 'linux' | 'windows' | 'macos'
-  }) => void
+  }, wsId?: string | number) => void
+  onVerify: () => Promise<void>
   onClose: () => void
 }
 
 function InstallAgentModal({
+  workspaceId,
+  workspaces,
   metadata,
   enrollmentResult,
   creating,
   onGenerateToken,
+  onVerify,
   onClose,
 }: InstallAgentModalProps) {
   const { t } = useLanguage()
+  const [step, setStep] = useState(1)
+  const [selectedWs, setSelectedWs] = useState(String(workspaceId))
   const [primaryProtocol, setPrimaryProtocol] = useState('psap')
   const [targetOs, setTargetOs] = useState<'linux' | 'windows' | 'macos'>('linux')
   const [permissions, setPermissions] = useState<string[]>(['system_metrics', 'inventory', 'filesystem'])
   const [expiresHours, setExpiresHours] = useState<number | 'never'>(24)
+  const [verifyStatus, setVerifyStatus] = useState<'idle' | 'waiting' | 'success' | 'timeout'>('idle')
+
+  useEffect(() => {
+    if (!enrollmentResult) return
+    setStep(4)
+    setVerifyStatus('waiting')
+    const started = Date.now()
+    const interval = window.setInterval(async () => {
+      await onVerify()
+      if (Date.now() - started > 120000) {
+        setVerifyStatus('timeout')
+        window.clearInterval(interval)
+      }
+    }, 5000)
+    return () => window.clearInterval(interval)
+  }, [enrollmentResult, onVerify])
+
+  useEffect(() => {
+    if (verifyStatus !== 'waiting') return
+    const check = async () => {
+      await onVerify()
+    }
+    check()
+  }, [verifyStatus, onVerify])
 
   const togglePermission = (key: string) => {
     setPermissions((prev) =>
@@ -299,13 +337,14 @@ function InstallAgentModal({
   }
 
   const handleGenerate = () => {
+    setStep(3)
     onGenerateToken({
       primary_protocol: primaryProtocol,
       enabled_protocols: [primaryProtocol],
       permissions: permissions.length ? permissions : ['system_metrics', 'inventory', 'filesystem'],
       expires_hours: expiresHours === 'never' ? 0 : expiresHours,
       target_os: targetOs,
-    })
+    }, selectedWs)
   }
 
   const protocols = metadata.protocols ?? {}
@@ -331,8 +370,26 @@ function InstallAgentModal({
         </div>
 
         <div className="space-y-6 p-6">
+          <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-white/40">
+            {[t('agents.wizard.stepWorkspace'), t('agents.wizard.stepOs'), t('agents.wizard.stepToken'), t('agents.wizard.stepInstall'), t('agents.wizard.stepVerify')].map((label, i) => (
+              <span key={label} className={step >= i + 1 ? 'text-sky-300' : ''}>{i + 1}. {label}</span>
+            ))}
+          </div>
           {!enrollmentResult ? (
             <>
+              <section>
+                <h3 className="mb-2 text-sm font-medium text-white/80">{t('agents.wizard.stepWorkspace')}</h3>
+                <p className="mb-2 text-xs text-white/50">{t('agents.wizard.selectWorkspace')}</p>
+                <select
+                  value={selectedWs}
+                  onChange={(e) => setSelectedWs(e.target.value)}
+                  className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                >
+                  {workspaces.map((w) => (
+                    <option key={w.id} value={String(w.id)}>{w.name}</option>
+                  ))}
+                </select>
+              </section>
               <section>
                 <h3 className="mb-2 text-sm font-medium text-white/80">{t('agents.osLabel')}</h3>
                 <div className="flex flex-wrap gap-2">
@@ -448,7 +505,17 @@ function InstallAgentModal({
               </div>
             </>
           ) : (
-            <EnrollmentResultView result={enrollmentResult} onClose={onClose} />
+            <>
+              <EnrollmentResultView result={enrollmentResult} onClose={onClose} />
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm">
+                <h4 className="font-medium text-white/90">{t('agents.wizard.stepVerify')}</h4>
+                <p className="mt-2 text-xs text-white/60">
+                  {verifyStatus === 'waiting' && t('agents.wizard.verifyWaiting')}
+                  {verifyStatus === 'timeout' && t('agents.wizard.verifyTimeout')}
+                  {verifyStatus === 'success' && t('agents.wizard.verifySuccess')}
+                </p>
+              </div>
+            </>
           )}
         </div>
       </div>
