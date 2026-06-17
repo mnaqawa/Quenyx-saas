@@ -286,7 +286,7 @@ export default function Services() {
       {/* Summary Totals */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <h3 className="mb-3 text-xs font-semibold text-white/70">Host Status Totals</h3>
+          <h3 className="mb-3 text-xs font-semibold text-white/70">{t('services.hostStatusTotals')}</h3>
           <div className="grid grid-cols-4 gap-2">
             <div>
               <div className="mb-1 text-xs text-white/60">Up</div>
@@ -316,7 +316,7 @@ export default function Services() {
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <h3 className="mb-3 text-xs font-semibold text-white/70">Service Status Totals</h3>
+          <h3 className="mb-3 text-xs font-semibold text-white/70">{t('services.serviceCheckStatusTotals')}</h3>
           <div className="grid grid-cols-6 gap-2">
             <div>
               <div className="mb-1 text-xs text-white/60">OK</div>
@@ -362,7 +362,7 @@ export default function Services() {
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4">
         <input
           type="text"
-          placeholder="Search hosts, services, or info..."
+          placeholder={t('services.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           disabled={isLocked}
@@ -431,13 +431,13 @@ export default function Services() {
 
       {/* Main Table */}
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-        <h3 className="mb-4 text-sm font-semibold">Service Status Details For All Hosts</h3>
+        <h3 className="mb-4 text-sm font-semibold">{t('services.detailsTitle')}</h3>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-[#0f151d]">
               <tr className="border-b border-white/10">
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-32">Host</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Service</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">{t('services.col.serviceCheck')}</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70 w-28">Status</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Last Check</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-white/70">Next Check</th>
@@ -460,7 +460,7 @@ export default function Services() {
                     <tr className="border-b border-white/10 bg-white/5">
                       <td colSpan={9} className="px-3 py-2 text-xs font-semibold text-white/90">
                         Host: {hostDisplayName(host)}
-                        <span className="ml-2 font-normal text-white/50">({items.length} service{items.length !== 1 ? 's' : ''})</span>
+                        <span className="ml-2 font-normal text-white/50">({t('services.hostServiceCount').replace('{count}', String(items.length))})</span>
                       </td>
                     </tr>
                     {items.map((item, index) => {

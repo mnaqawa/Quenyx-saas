@@ -754,7 +754,7 @@ export default function RealTimeMonitoring() {
               </Link>
               {' · '}
               <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/services`} className="text-sky-300 hover:underline">
-                Services
+                {t('rtm.serviceChecksLink')}
               </Link>
             </>
           )}

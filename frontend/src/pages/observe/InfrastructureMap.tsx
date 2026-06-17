@@ -3,7 +3,7 @@
  * All dynamic data (hosts, services, connections, status) comes from Observe APIs only; no fixtures or hardcoded variables.
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
@@ -350,7 +350,6 @@ function LLDTopology({
 }
 
 export default function InfrastructureMap() {
-  const navigate = useNavigate()
   const { t } = useLanguage()
   const hostsLabel = t('map.hostsLink')
   const { selectedWorkspaceId } = useWorkspaceContext()
