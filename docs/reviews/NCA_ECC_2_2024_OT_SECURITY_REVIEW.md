@@ -9,7 +9,10 @@ Batch status: `draft`
 ## Pending manual review
 
 - ECC-2:2024 does not include Main Domain 5 (OT Security). Removed in 2024 edition; refer to OTCC framework.
-- Confirm manifest slug `ot-security` should remain as placeholder batch or be retired before production import.
+
+## Manifest status
+
+Excluded from `manifest.json` (`excluded_domains`). Not loaded during corpus import.
 
 ## Summary
 

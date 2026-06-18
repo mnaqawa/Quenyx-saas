@@ -13,7 +13,13 @@
     { "slug": "cybersecurity-defense", "file": "cybersecurity-defense/domain.json" },
     { "slug": "cybersecurity-resilience", "file": "cybersecurity-resilience/domain.json" },
     { "slug": "third-party", "file": "third-party/domain.json" },
-    { "slug": "cloud-security", "file": "cloud-security/domain.json" },
-    { "slug": "ot-security", "file": "ot-security/domain.json" }
+    { "slug": "cloud-security", "file": "cloud-security/domain.json" }
+  ],
+  "excluded_domains": [
+    {
+      "slug": "ot-security",
+      "file": "ot-security/domain.json",
+      "reason": "Not part of ECC-2:2024. Main Domain 5 (OT Security) was removed in the 2024 edition; OT controls are published separately as OTCC (Appendix C). Placeholder batch retained for documentation only — excluded from import."
+    }
   ]
 }
