@@ -73,6 +73,18 @@ function flattenValidationErrors(errors: Record<string, string[] | string>): str
     .join(' ')
 }
 
+/** Hide internal server paths and logging failures from end users. */
+function sanitizeAiAgentErrorMessage(message: string): string {
+  if (
+    /\/var\/www|laravel\.log|Permission denied|stream or file|could not be opened in append mode/i.test(
+      message
+    )
+  ) {
+    return 'The AI agent is temporarily unavailable. Please try again or contact your administrator.'
+  }
+  return message
+}
+
 /**
  * Ask the knowledge base a question as a specific agent.
  *
@@ -116,13 +128,16 @@ export async function queryAiAgent(
 
   if (!response.ok) {
     const errorBody = (json ?? {}) as AiAgentErrorBody
-    let message = errorBody.message || `AI agent request failed (${response.status}).`
+    let message = sanitizeAiAgentErrorMessage(
+      errorBody.message || `AI agent request failed (${response.status}).`
+    )
     if (response.status === 422 && errorBody.errors) {
       message = flattenValidationErrors(errorBody.errors) || message
     }
     if (response.status === 401) {
       message = 'Your session has expired. Please sign in again.'
     }
+    message = sanitizeAiAgentErrorMessage(message)
     throw new AiAgentError(message, errorBody.code || 'request_failed', response.status)
   }
 
@@ -201,7 +216,7 @@ export const aiAgentService = {
       let message = `AI agent failed (${response.status})`
       try {
         const json = (await response.json()) as { message?: string }
-        if (json.message) message = json.message
+        if (json.message) message = sanitizeAiAgentErrorMessage(json.message)
       } catch {
         // Keep the HTTP status message if the server did not return JSON.
       }

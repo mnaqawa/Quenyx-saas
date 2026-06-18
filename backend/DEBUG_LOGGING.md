@@ -1,14 +1,22 @@
 # Debug Logging Instructions
 
-If the Laravel log file (`storage/logs/laravel.log`) is empty but you're seeing 500 errors, try these steps:
+If the Laravel log file (`storage/logs/laravel.log`) is empty but you're seeing 500 errors, or the **AI Agent** shows repeated "Permission denied" / `laravel.log` messages, fix storage permissions first.
 
 ## 1. Check Log File Permissions
 
 ```bash
-cd /var/www/quenyx/quenyx-saas/backend
+cd /var/www/quenyx-saas/backend   # or /var/www/quenyx/quenyx-saas/backend
+sudo mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
 ls -la storage/logs/
-chmod -R 775 storage/logs/
-chown -R www-data:www-data storage/logs/
+```
+
+Restart the backend after fixing permissions:
+
+```bash
+sudo systemctl restart quenyx-backend
+php artisan config:clear
 ```
 
 ## 2. Check PHP Error Log

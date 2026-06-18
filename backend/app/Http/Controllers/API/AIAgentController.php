@@ -9,6 +9,7 @@ use App\Http\Resources\AIAgentAnswerResource;
 use App\Models\Project;
 use App\Services\OpenAI\OpenAIService;
 use App\Services\ProjectAccessService;
+use App\Support\SafeLog;
 use Illuminate\Http\JsonResponse;
 
 class AIAgentController extends Controller
@@ -69,6 +70,17 @@ class AIAgentController extends Controller
                 'code' => $e->errorCode,
                 'message' => $e->getMessage(),
             ], $e->status);
+        } catch (\Throwable $e) {
+            SafeLog::error('ai-agent.query.unhandled', [
+                'message' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'server_error',
+                'message' => 'The AI agent is temporarily unavailable. Please try again.',
+            ], 500);
         }
 
         return AIAgentAnswerResource::make($answer)

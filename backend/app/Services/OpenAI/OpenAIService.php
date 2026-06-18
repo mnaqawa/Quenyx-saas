@@ -4,7 +4,7 @@ namespace App\Services\OpenAI;
 
 use App\DTOs\KnowledgeBaseAnswer;
 use App\Exceptions\OpenAIServiceException;
-use Illuminate\Support\Facades\Log;
+use App\Support\SafeLog;
 use OpenAI\Contracts\ClientContract;
 use OpenAI\Exceptions\ErrorException;
 use OpenAI\Exceptions\TransporterException;
@@ -141,7 +141,7 @@ TXT;
         $this->applyModelSpecificOptions($payload, $model);
 
         $startedAt = microtime(true);
-        Log::info('ai-agent.request.start', [
+        SafeLog::info('ai-agent.request.start', [
             'agent' => $agentType,
             'model' => $model,
             'quick' => $quick,
@@ -177,7 +177,7 @@ TXT;
         $this->logFinish($agentType, $model, $quick, $startedAt, $totalTokens, 'ok');
 
         if ($answer === '') {
-            Log::warning('ai-agent.empty_response', [
+            SafeLog::warning('ai-agent.empty_response', [
                 'agent' => $agentType,
                 'model' => $model,
                 'quick' => $quick,
@@ -264,7 +264,7 @@ TXT;
     ): void {
         $finishedAt = microtime(true);
 
-        Log::info('ai-agent.request.finish', [
+        SafeLog::info('ai-agent.request.finish', [
             'agent' => $agentType,
             'model' => $model,
             'quick' => $quick,

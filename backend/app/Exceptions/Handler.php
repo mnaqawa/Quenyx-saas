@@ -8,7 +8,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Log;
+use App\Support\SafeLog;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -39,27 +39,22 @@ class Handler extends ExceptionHandler
      */
     public function report(Throwable $e): void
     {
-        // Skip explicit logging for exceptions we handle gracefully (e.g. ModelNotFoundException → 404)
-        if ($e instanceof ModelNotFoundException) {
-            parent::report($e);
+        if ($this->shouldntReport($e)) {
             return;
         }
 
-        // Explicitly log all other exceptions before parent handles it
-        try {
-            Log::error('Exception reported', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'class' => get_class($e),
-            ]);
-        } catch (\Exception $logException) {
-            error_log('Failed to log exception: ' . $logException->getMessage());
-            error_log('Original exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-        }
+        SafeLog::error('Exception reported', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'class' => get_class($e),
+        ]);
 
-        parent::report($e);
+        try {
+            parent::report($e);
+        } catch (Throwable) {
+            // Prevent recursive failures when storage/logs is not writable.
+        }
     }
 
     /**
@@ -67,20 +62,7 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
-        $this->reportable(function (Throwable $e) {
-            if ($e instanceof ModelNotFoundException) {
-                return;
-            }
-            try {
-                Log::error('Exception in reportable callback', [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ]);
-            } catch (\Exception $logException) {
-                error_log('Failed to log in reportable: ' . $logException->getMessage());
-            }
-        });
+        //
     }
 
     /**
@@ -134,27 +116,20 @@ class Handler extends ExceptionHandler
             ], $e->getStatusCode());
         }
 
-        // Handle all other exceptions
-        // Log the exception before rendering (in case report wasn't called)
-        try {
-            Log::error('Unhandled exception in Handler::render', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'class' => get_class($e),
-                'request_url' => $request->fullUrl(),
-                'request_method' => $request->method(),
-            ]);
-        } catch (\Exception $logException) {
-            error_log('Failed to log in render: ' . $logException->getMessage());
-            error_log('Original exception: ' . $e->getMessage());
-        }
+        // Handle all other exceptions — never leak internal paths/messages in production.
+        SafeLog::error('Unhandled exception in Handler::render', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'class' => get_class($e),
+            'request_url' => $request->fullUrl(),
+            'request_method' => $request->method(),
+        ]);
 
         $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-        // For API/JSON requests, always return real error message so clients can diagnose
-        $isApi = $request->expectsJson() || $request->is('api/*');
-        $message = (config('app.debug') || $isApi) ? ($e->getMessage() ?: 'An unexpected error occurred') : 'An unexpected error occurred';
+        $message = config('app.debug')
+            ? ($e->getMessage() ?: 'An unexpected error occurred')
+            : 'An unexpected error occurred';
 
         return response()->json([
             'success' => false,
@@ -162,7 +137,6 @@ class Handler extends ExceptionHandler
             'errors' => config('app.debug') ? [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
             ] : null,
         ], $statusCode);
     }
