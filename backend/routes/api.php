@@ -219,4 +219,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Knowledge base agent (OpenAI Responses API + File Search over Vector Store)
     Route::post('/ai-agent/query', [\App\Http\Controllers\API\AIAgentController::class, 'query']);
+
+    // QCIF Compliance Intelligence Layer (Sprint 5) — read-only global corpus API
+    // Auth: Sanctum only. Module entitlement (qynshield) is workspace-scoped; not applied here — see docs/QCIF_SPRINT5_COMPLIANCE_INTELLIGENCE_LAYER.md
+    Route::prefix('compliance/corpus')->group(function () {
+        Route::get('/frameworks', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'frameworks']);
+        Route::get('/frameworks/{frameworkKey}/releases', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'releases'])
+            ->where('frameworkKey', '[A-Za-z0-9\-]+');
+        Route::get('/frameworks/{frameworkKey}/releases/{releaseCode}/summary', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'summary'])
+            ->where(['frameworkKey' => '[A-Za-z0-9\-]+', 'releaseCode' => '[A-Za-z0-9:\-]+']);
+        Route::get('/frameworks/{frameworkKey}/releases/{releaseCode}/domains', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'domains'])
+            ->where(['frameworkKey' => '[A-Za-z0-9\-]+', 'releaseCode' => '[A-Za-z0-9:\-]+']);
+        Route::get('/frameworks/{frameworkKey}/releases/{releaseCode}/search', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'search'])
+            ->where(['frameworkKey' => '[A-Za-z0-9\-]+', 'releaseCode' => '[A-Za-z0-9:\-]+']);
+        Route::get('/frameworks/{frameworkKey}/releases/{releaseCode}/domains/{domainCode}', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'domain'])
+            ->where(['frameworkKey' => '[A-Za-z0-9\-]+', 'releaseCode' => '[A-Za-z0-9:\-]+', 'domainCode' => '[A-Za-z0-9\-]+']);
+        Route::get('/frameworks/{frameworkKey}/releases/{releaseCode}/controls/{controlCode}', [\App\Http\Controllers\Compliance\ComplianceCorpusController::class, 'control'])
+            ->where(['frameworkKey' => '[A-Za-z0-9\-]+', 'releaseCode' => '[A-Za-z0-9:\-]+', 'controlCode' => '[A-Za-z0-9\-]+']);
+    });
 });
