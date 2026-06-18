@@ -1,0 +1,12 @@
+{
+  "$schema": "quenyx/qcif/corpus-import/v1",
+  "framework": {
+    "key": "nca-ecc",
+    "version_code": "2:2024",
+    "description_en": "Optional metadata sync — framework row must exist via ComplianceCorpusSeeder.",
+    "description_ar": "مزامنة بيانات اختيارية — يجب أن يكون صف الإطار موجودًا عبر ComplianceCorpusSeeder."
+  },
+  "control_objectives": [],
+  "domains": [],
+  "objective_mappings": []
+}

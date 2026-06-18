@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             ProjectIntegrationConfigurationSeeder::class,
             ObserveServiceDefinitionSeeder::class,
             ObserveServiceDefinitionReadyPluginsSeeder::class,
+            ComplianceCorpusSeeder::class,
         ]);
     }
 }
