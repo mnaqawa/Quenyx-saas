@@ -6,6 +6,11 @@ use InvalidArgumentException;
 
 class ComplianceCorpusPayloadLoader
 {
+    public function __construct(
+        private readonly ComplianceCorpusManifestLoader $manifestLoader = new ComplianceCorpusManifestLoader(),
+    ) {
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -35,6 +40,10 @@ class ComplianceCorpusPayloadLoader
         $decoded = json_decode($raw, true);
         if (! is_array($decoded)) {
             throw new InvalidArgumentException('Invalid JSON corpus payload.');
+        }
+
+        if ($this->manifestLoader->isManifest($decoded)) {
+            return $this->manifestLoader->resolve($path, $decoded);
         }
 
         return $decoded;

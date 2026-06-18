@@ -1,0 +1,19 @@
+{
+  "$schema": "quenyx/qcif/corpus-manifest/v1.0",
+  "framework": "nca-ecc",
+  "release": "2:2024",
+  "source_document_keys": [
+    "nca-ecc-2-2024-en",
+    "nca-ecc-2-2024-ar"
+  ],
+  "control_objectives": [],
+  "objective_mappings": [],
+  "domains": [
+    { "slug": "governance", "file": "governance/domain.json" },
+    { "slug": "cybersecurity-defense", "file": "cybersecurity-defense/domain.json" },
+    { "slug": "cybersecurity-resilience", "file": "cybersecurity-resilience/domain.json" },
+    { "slug": "third-party", "file": "third-party/domain.json" },
+    { "slug": "cloud-security", "file": "cloud-security/domain.json" },
+    { "slug": "ot-security", "file": "ot-security/domain.json" }
+  ]
+}

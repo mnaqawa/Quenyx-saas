@@ -10,11 +10,12 @@ use App\Services\Compliance\Corpus\ComplianceCorpusImporter;
 use App\Services\Compliance\Corpus\ComplianceCorpusPayloadLoader;
 use App\Services\Compliance\Corpus\ComplianceFrameworkReleaseResolver;
 use Illuminate\Console\Command;
+use InvalidArgumentException;
 
 class ImportComplianceCorpusCommand extends Command
 {
     protected $signature = 'compliance:import-corpus
-        {file : Path to JSON or CSV corpus file}
+        {file : Path to JSON/CSV corpus file or manifest.json with domain batches}
         {--framework=nca-ecc : Framework family key}
         {--release=2:2024 : Framework release version code}
         {--release-version= : Deprecated alias for --release (do not use --version; reserved by Artisan)}
@@ -22,7 +23,7 @@ class ImportComplianceCorpusCommand extends Command
         {--dry-run : Validate and simulate without persisting}
         {--rollback= : UUID of a completed import run to roll back}';
 
-    protected $description = 'Import human-curated NCA ECC corpus data (QCIF)';
+    protected $description = 'Import human-curated NCA ECC corpus data (single JSON/CSV or manifest.json with domain batches)';
 
     public function handle(
         ComplianceCorpusPayloadLoader $loader,
@@ -71,7 +72,7 @@ class ImportComplianceCorpusCommand extends Command
         try {
             $payload = $loader->load($file, $format);
             $importer->importFromArray($payload, $release, $run, $dryRun);
-        } catch (ComplianceCorpusImportException $e) {
+        } catch (ComplianceCorpusImportException|InvalidArgumentException $e) {
             $this->error($e->getMessage());
 
             return Command::FAILURE;

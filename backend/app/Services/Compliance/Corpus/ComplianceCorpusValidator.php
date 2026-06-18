@@ -3,6 +3,7 @@
 namespace App\Services\Compliance\Corpus;
 
 use App\Enums\Compliance\ControlType;
+use App\Enums\Compliance\DomainBatchStatus;
 use App\Enums\Compliance\GuidanceType;
 use App\Enums\Compliance\ObjectiveMappingType;
 use App\Enums\Compliance\PublicationStatus;
@@ -50,7 +51,7 @@ class ComplianceCorpusValidator
      * @param array<string, mixed> $payload
      * @return array{valid: bool, errors: list<string>, warnings: list<string>}
      */
-    public function validate(array $payload, ?ComplianceFrameworkRelease $targetRelease = null): array
+    public function validate(array $payload, ?ComplianceFrameworkRelease $targetRelease = null, bool $dryRun = false): array
     {
         $this->errors = [];
         $this->warnings = [];
@@ -58,6 +59,10 @@ class ComplianceCorpusValidator
 
         if ($targetRelease !== null) {
             $this->registeredSourceDocumentKeys = $this->sourceDocumentRegistrar->keyMapForRelease($targetRelease);
+        }
+
+        if (isset($payload['_domain_batches']) && is_array($payload['_domain_batches'])) {
+            $this->validateDomainBatches($payload['_domain_batches'], $dryRun);
         }
 
         if (! isset($payload['framework']) || ! is_array($payload['framework'])) {
@@ -91,6 +96,60 @@ class ComplianceCorpusValidator
             'errors' => $this->errors,
             'warnings' => $this->warnings,
         ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $batches
+     */
+    private function validateDomainBatches(array $batches, bool $dryRun): void
+    {
+        foreach ($batches as $index => $batch) {
+            if (! is_array($batch)) {
+                $this->errors[] = "_domain_batches[{$index}] must be an object.";
+
+                continue;
+            }
+
+            $slug = (string) ($batch['slug'] ?? "index-{$index}");
+            $prefix = "domain batch '{$slug}'";
+            $hasEntities = (bool) ($batch['has_entities'] ?? false);
+
+            if (! $hasEntities) {
+                continue;
+            }
+
+            $status = DomainBatchStatus::tryFrom((string) ($batch['status'] ?? 'draft'));
+            if ($status === null) {
+                $this->errors[] = "{$prefix}: invalid status '".($batch['status'] ?? '')."'.";
+
+                continue;
+            }
+
+            if ($status === DomainBatchStatus::Draft) {
+                $this->errors[] = "{$prefix}: draft batches with corpus entities cannot be imported.";
+            } elseif ($status === DomainBatchStatus::Curated) {
+                $this->errors[] = "{$prefix}: curated batches must be validated before dry-run or approved before import.";
+            } elseif ($status === DomainBatchStatus::Validated && ! $dryRun) {
+                $this->errors[] = "{$prefix}: validated batches require approval before non-dry-run import.";
+            } elseif ($status === DomainBatchStatus::Imported && ! $dryRun) {
+                $this->errors[] = "{$prefix}: already marked imported; update status to approved to re-import.";
+            } elseif ($status === DomainBatchStatus::Imported && $dryRun) {
+                $this->warnings[] = "{$prefix}: already marked imported; dry-run will not persist changes.";
+            }
+        }
+    }
+
+    /**
+     * Remove manifest loader metadata before persistence or hashing.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public static function stripInternalMetadata(array $payload): array
+    {
+        unset($payload['_domain_batches']);
+
+        return $payload;
     }
 
     /**
@@ -604,6 +663,6 @@ class ComplianceCorpusValidator
      */
     public static function contentHash(array $payload): string
     {
-        return hash('sha256', json_encode(Arr::sortRecursive($payload), JSON_THROW_ON_ERROR));
+        return hash('sha256', json_encode(Arr::sortRecursive(self::stripInternalMetadata($payload)), JSON_THROW_ON_ERROR));
     }
 }

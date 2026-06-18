@@ -42,7 +42,7 @@ class ComplianceCorpusImporter
         ComplianceCorpusImportRun $run,
         bool $dryRun = false,
     ): ComplianceCorpusImportRun {
-        $validation = $this->validator->validate($payload, $release);
+        $validation = $this->validator->validate($payload, $release, $dryRun);
         foreach ($validation['warnings'] as $warning) {
             $this->log($run, ImportLogLevel::Warning, null, null, $warning);
         }
@@ -58,6 +58,8 @@ class ComplianceCorpusImporter
             ]);
             throw ComplianceCorpusImportException::validationFailed($validation['errors']);
         }
+
+        $payload = ComplianceCorpusValidator::stripInternalMetadata($payload);
 
         $release->loadMissing('framework');
 

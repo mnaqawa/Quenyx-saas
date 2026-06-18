@@ -1,0 +1,8 @@
+{
+  "$schema": "quenyx/qcif/domain-batch/v1.0",
+  "status": "draft",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "notes": "",
+  "metadata": {}
+}

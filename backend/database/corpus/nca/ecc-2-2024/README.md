@@ -19,8 +19,12 @@ Quenyx stores **metadata only**. PDFs are not uploaded or hosted by the platform
 
 | File | Purpose |
 |------|---------|
+| `manifest.json` | Domain batch registry — import via manifest (Sprint 3A) |
 | `source-documents.json` | Official EN/AR PDF metadata — seed via Artisan |
-| `curated-corpus.json` | Working import file — add domains/controls manually |
+| `curated-corpus.json` | Legacy single-file import — still supported |
+| `{domain-slug}/domain.json` | Per-domain curation batch with review metadata |
+
+See `docs/QCIF_SPRINT3_DOMAIN_WORKFLOW.md` for the domain-by-domain workflow.
 
 ## Setup (once per environment)
 
@@ -43,8 +47,9 @@ php artisan compliance:seed-source-documents \
    - Set `source_document_key` to `nca-ecc-2-2024-en` or `nca-ecc-2-2024-ar` as appropriate.
    - Set `source_page` (e.g. `"42"` or `"C-12"`).
    - Set `source_reference` and/or `official_reference` citing the official section.
-4. Save incrementally to `curated-corpus.json`.
-5. Run **dry-run** import and fix all validator errors.
+4. Save incrementally to the relevant `{domain-slug}/domain.json` batch file (or `curated-corpus.json` for legacy single-file import).
+5. Set batch `status` to `validated` before dry-run, `approved` before production import.
+6. Run **dry-run** import against `manifest.json` and fix all validator errors.
 6. Review DB diff / import run summary.
 7. Import only after human approval — never import placeholder or sample text.
 
@@ -64,12 +69,16 @@ The importer rejects:
 ## QA commands
 
 ```bash
-# Dry-run (no DB writes)
+# Dry-run empty manifest (preparation — no DB writes)
+php artisan compliance:import-corpus database/corpus/nca/ecc-2-2024/manifest.json \
+  --dry-run --framework=nca-ecc --release=2:2024
+
+# Dry-run legacy single file (no DB writes)
 php artisan compliance:import-corpus database/corpus/nca/ecc-2-2024/curated-corpus.json \
   --dry-run --framework=nca-ecc --release=2:2024
 
-# Production import (after approval only)
-php artisan compliance:import-corpus database/corpus/nca/ecc-2-2024/curated-corpus.json \
+# Production import (after batch approval only)
+php artisan compliance:import-corpus database/corpus/nca/ecc-2-2024/manifest.json \
   --framework=nca-ecc --release=2:2024
 
 # Rollback a completed import
