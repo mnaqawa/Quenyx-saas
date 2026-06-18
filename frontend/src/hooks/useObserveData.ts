@@ -250,11 +250,13 @@ export function useAlertRules(refreshKey = 0) {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [rules, setRules] = useState<AlertRule[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!selectedWorkspaceId) {
       setRules([])
       setLoading(false)
+      setError(false)
       return
     }
 
@@ -262,31 +264,45 @@ export function useAlertRules(refreshKey = 0) {
       const timer = setTimeout(() => {
         setRules(alertRulesFixture)
         setLoading(false)
+        setError(false)
       }, 300)
       return () => clearTimeout(timer)
     }
 
     let cancelled = false
+    setLoading(true)
+    setError(false)
     observeService
       .getAlertRules(Number(selectedWorkspaceId))
-      .then((data) => { if (!cancelled) setRules(Array.isArray(data) ? data : []) })
-      .catch(() => { if (!cancelled) setRules([]) })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .then((data) => {
+        if (!cancelled) {
+          setRules(Array.isArray(data) ? data : [])
+          setError(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [selectedWorkspaceId, refreshKey])
 
-  return { rules, loading }
+  return { rules, loading, error }
 }
 
 export function useAlertSummary(refreshKey = 0) {
   const { selectedWorkspaceId } = useWorkspaceContext()
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!selectedWorkspaceId) {
       setSummary(null)
       setLoading(false)
+      setError(false)
       return
     }
 
@@ -294,20 +310,32 @@ export function useAlertSummary(refreshKey = 0) {
       const timer = setTimeout(() => {
         setSummary(alertSummaryFixture)
         setLoading(false)
+        setError(false)
       }, 200)
       return () => clearTimeout(timer)
     }
 
     let cancelled = false
+    setLoading(true)
+    setError(false)
     observeService
       .getAlertSummary(Number(selectedWorkspaceId))
-      .then((data) => { if (!cancelled) setSummary(data ?? null) })
-      .catch(() => { if (!cancelled) setSummary(null) })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .then((data) => {
+        if (!cancelled) {
+          setSummary(data ?? null)
+          setError(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [selectedWorkspaceId, refreshKey])
 
-  return { summary, loading }
+  return { summary, loading, error }
 }
 
 // Instance Management hooks
@@ -512,7 +540,7 @@ export function useDataSourceSummary() {
 // Observe KPIs for Real-time Monitoring (host/service totals, problems, unreachable, stale, last poll)
 // Map: real target hosts with status from services (for Infrastructure Map). Use realDataOnly in Observe module.
 export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs = 0, realDataOnly = false, refreshKey = 0) {
-  const { data: servicesData, loading: servicesLoading } = useObserveServices({
+  const { data: servicesData, loading: servicesLoading, error: servicesError } = useObserveServices({
     workspaceId,
     limit: 500,
     refetchIntervalMs,
@@ -521,23 +549,28 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
   })
   const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoading, setTargetsLoading] = useState(true)
+  const [targetsError, setTargetsError] = useState(false)
 
   useEffect(() => {
     if (!workspaceId) {
       setTargets([])
       setTargetsLoading(false)
+      setTargetsError(false)
       return
     }
-    setTargets([])
     setTargetsLoading(true)
+    setTargetsError(false)
     let cancelled = false
     observeService
       .getTargets(Number(workspaceId))
       .then((list) => {
-        if (!cancelled) setTargets(extractTargetsList(list))
+        if (!cancelled) {
+          setTargets(extractTargetsList(list))
+          setTargetsError(false)
+        }
       })
       .catch(() => {
-        if (!cancelled) setTargets([])
+        if (!cancelled) setTargetsError(true)
       })
       .finally(() => {
         if (!cancelled) setTargetsLoading(false)
@@ -546,8 +579,11 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     const id = intervalMs ? window.setInterval(() => {
       if (cancelled) return
       observeService.getTargets(Number(workspaceId)).then((list) => {
-        if (!cancelled) setTargets(extractTargetsList(list))
-      }).catch(() => { if (!cancelled) setTargets([]) })
+        if (!cancelled) {
+          setTargets(extractTargetsList(list))
+          setTargetsError(false)
+        }
+      }).catch(() => { if (!cancelled) setTargetsError(true) })
     }, intervalMs) : 0
     return () => {
       cancelled = true
@@ -585,7 +621,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     })
   }, [targets, hostToStatus])
 
-  return { hosts, loading: targetsLoading || servicesLoading }
+  return { hosts, loading: targetsLoading || servicesLoading, error: !!servicesError || targetsError }
 }
 
 /** Infrastructure Map: connections + optional integration-sourced topology from Observe API */

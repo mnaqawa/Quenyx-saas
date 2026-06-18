@@ -117,8 +117,8 @@ export default function AlertManagement() {
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const [historyFilters, setHistoryFilters] = useState<AlertHistoryFilters>({})
   const [appliedHistoryFilters, setAppliedHistoryFilters] = useState<AlertHistoryFilters>({})
-  const { rules, loading: rulesLoading } = useAlertRules(refreshKey)
-  const { summary, loading: summaryLoading } = useAlertSummary(refreshKey)
+  const { rules, loading: rulesLoading, error: rulesError } = useAlertRules(refreshKey)
+  const { summary, loading: summaryLoading, error: summaryError } = useAlertSummary(refreshKey)
 
   const { canManageAlerts: canEdit, canAcknowledge } = useObserveAccess()
   const safeRules = Array.isArray(rules) ? rules : []
@@ -188,7 +188,7 @@ export default function AlertManagement() {
     }
   }
 
-  if (rulesLoading || summaryLoading) {
+  if ((rulesLoading || summaryLoading) && !rulesError && !summaryError) {
     return <div className="text-sm text-white/60">{t('agents.loading')}</div>
   }
 
@@ -227,6 +227,16 @@ export default function AlertManagement() {
         }
       />
 
+      {summaryError ? (
+        <ObserveLoadError
+          message={t('observe.error.alertSummary')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={() => {
+            refreshAll()
+            refreshNow()
+          }}
+        />
+      ) : (
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title={t('alerts.card.active')}
@@ -249,12 +259,22 @@ export default function AlertManagement() {
           detail={t('alerts.status.resolved')}
         />
       </div>
+      )}
 
       <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === 'rules' && (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          {safeRules.length === 0 ? (
+          {rulesError ? (
+            <ObserveLoadError
+              message={t('observe.error.alertRules')}
+              retryLabel={t('observe.loadError.retry')}
+              onRetry={() => {
+                refreshAll()
+                refreshNow()
+              }}
+            />
+          ) : safeRules.length === 0 ? (
             <div className="py-10 text-center text-sm text-white/60">{t('alerts.rulesEmpty')}</div>
           ) : (
             <div className="space-y-3">

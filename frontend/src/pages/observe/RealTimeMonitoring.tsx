@@ -432,7 +432,14 @@ export default function RealTimeMonitoring() {
             {t('rtm.goToHosts')}
           </Link>
           <p className="mt-4 text-[10px] text-white/40">
-            Later: use <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map` : '#'} className="text-sky-400 hover:underline">Infrastructure Map</Link> for topology and <Link to="/integrations" className="text-sky-400 hover:underline">Integrations</Link> for external data.
+            {t('rtm.emptyStateFootnote')
+              .replace(
+                '{mapLink}',
+                selectedWorkspaceId
+                  ? t('nav.qynsight.infrastructureMap')
+                  : t('nav.qynsight.infrastructureMap'),
+              )
+              .replace('{integrationsLink}', t('nav.integrations'))}
           </p>
         </div>
       </div>
@@ -506,9 +513,7 @@ export default function RealTimeMonitoring() {
           {kpisError}
           {kpisError === 'Unauthorized' && (
             <p className="mt-2 text-xs text-rose-100/80">
-              The Observe API returned 401. Confirm you are still logged in, the app and API share cookies or tokens (CORS
-              / Sanctum stateful domains), and if you use the gateway, it forwards <code className="text-rose-50/90">Cookie</code>{' '}
-              and <code className="text-rose-50/90">Authorization</code> to the backend.
+              {t('rtm.unauthorizedHelp')}
             </p>
           )}
         </div>
@@ -516,15 +521,14 @@ export default function RealTimeMonitoring() {
 
       {metricsError && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-          System metrics: {metricsError}. Showing last known values. Enable Live for server metrics (Linux).
+          {t('rtm.systemMetricsStale').replace('{error}', metricsError)}
         </div>
       )}
 
-      {/* System metrics: monitoring server (same machine for all workspaces; workspace hosts are in Observe status below) */}
       <div className="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-        <span className="text-xs font-medium text-sky-200">Monitoring server</span>
-        <span className="text-[10px] text-white/50" title="CPU, memory, disk, and network of the server running QynSight (not your monitored hosts)">
-          Server metrics · workspace hosts in Observe status below
+        <span className="text-xs font-medium text-sky-200">{t('rtm.monitoringServer')}</span>
+        <span className="text-[10px] text-white/50" title={t('rtm.systemInfoDesc')}>
+          {t('rtm.monitoringServerHint')}
         </span>
       </div>
       <div className="grid gap-4 md:grid-cols-5">
@@ -647,7 +651,7 @@ export default function RealTimeMonitoring() {
             <div>
               <h3 className="text-sm font-semibold">{t('rtm.perHostMetrics')}</h3>
               <p className="mt-1 text-xs text-white/60">
-                CPU, memory, disk and network for <strong>{selectedHost}</strong>, derived from its service checks.
+                {t('rtm.perHostMetricsDesc').replace('{host}', selectedHost)}
               </p>
             </div>
             {aiAvailable ? (
@@ -664,10 +668,10 @@ export default function RealTimeMonitoring() {
           {hasAnyHostMetric ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {([
-                { kind: 'cpu', title: 'CPU', metric: perHost.cpu, icon: Icons.cpu },
-                { kind: 'memory', title: 'Memory', metric: perHost.memory, icon: Icons.memory },
-                { kind: 'disk', title: 'Disk', metric: perHost.disk, icon: Icons.disk },
-                { kind: 'network', title: 'Network', metric: perHost.network, icon: Icons.network },
+                { kind: 'cpu', title: t('rtm.metric.cpu'), metric: perHost.cpu, icon: Icons.cpu },
+                { kind: 'memory', title: t('rtm.metric.memory'), metric: perHost.memory, icon: Icons.memory },
+                { kind: 'disk', title: t('rtm.metric.disk'), metric: perHost.disk, icon: Icons.disk },
+                { kind: 'network', title: t('rtm.metric.network'), metric: perHost.network, icon: Icons.network },
               ] as const).map(({ kind, title, metric, icon }) => (
                 <MetricCard
                   key={kind}
@@ -676,7 +680,7 @@ export default function RealTimeMonitoring() {
                   detail={
                     metric
                       ? `${metric.service} • ${metric.status.toUpperCase()}`
-                      : 'Not monitored — add a check'
+                      : t('rtm.notMonitored')
                   }
                   percentage={metric?.percent ?? undefined}
                   icon={icon}
@@ -685,22 +689,23 @@ export default function RealTimeMonitoring() {
             </div>
           ) : (
             <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-4 py-6 text-center text-xs text-white/60">
-              No CPU / memory / disk / network checks found for <strong>{selectedHost}</strong>. Add service checks in{' '}
+              {t('rtm.noHostMetrics')
+                .replace('{host}', selectedHost)
+                .replace('{hostsLink}', '')}
               {selectedWorkspaceId ? (
                 <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`} className="text-sky-300 hover:underline">
                   {t('rtm.hostsLink')}
                 </Link>
               ) : (
                 t('rtm.hostsLink')
-              )}{' '}
-              to see per-host metrics here.
+              )}
             </div>
           )}
 
           {hostServices.length > 0 && (
             <div className="mt-4">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
-                Service checks for {selectedHost}
+                {t('rtm.serviceChecksFor').replace('{host}', selectedHost)}
               </p>
               <div className="overflow-hidden rounded-lg border border-white/10">
                 {hostServices.map((svc, index) => {
@@ -740,18 +745,19 @@ export default function RealTimeMonitoring() {
 
       {/* Observe status + KPIs (filtered by selected host when set) */}
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-        <h3 className="mb-2 text-sm font-semibold">Observe status</h3>
+        <h3 className="mb-2 text-sm font-semibold">{t('rtm.observeStatus')}</h3>
         {selectedHost && (
           <p className="mb-2 text-xs text-sky-300">
-            Showing data for host: <strong>{selectedHost}</strong>
+            {t('rtm.showingDataFor')} <strong>{selectedHost}</strong>
           </p>
         )}
         <p className="text-xs text-white/60">
-          Host and service totals: <span className="font-semibold text-emerald-400">{hostTotals.up} up</span>,{' '}
-          <span className="font-semibold text-emerald-400">{serviceTotals.ok} OK</span>,{' '}
-          <span className="font-semibold text-rose-400">{problems} problems</span>,{' '}
-          <span className="font-semibold text-amber-400">{serviceTotals.pending} pending</span>. Last poll:{' '}
-          {lastPollAt ? new Date(lastPollAt).toLocaleString() : '—'}.{' '}
+          {t('rtm.observeStatusSummary')
+            .replace('{up}', String(hostTotals.up))
+            .replace('{ok}', String(serviceTotals.ok))
+            .replace('{problems}', String(problems))
+            .replace('{pending}', String(serviceTotals.pending))
+            .replace('{lastPoll}', lastPollAt ? new Date(lastPollAt).toLocaleString() : '—')}{' '}
           {selectedWorkspaceId && (
             <>
               <Link to={`/app/workspaces/${selectedWorkspaceId}/observe/targets`} className="text-sky-300 hover:underline">
@@ -769,85 +775,85 @@ export default function RealTimeMonitoring() {
       {/* Bottom row: System Information (monitoring server), Performance Thresholds, Quick Actions */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <h3 className="mb-1 text-xs font-semibold text-white/70 uppercase tracking-wider">System Information</h3>
-          <p className="mb-3 text-[10px] text-white/50">Monitoring server (hostname, OS, kernel, uptime)</p>
+          <h3 className="mb-1 text-xs font-semibold text-white/70 uppercase tracking-wider">{t('rtm.systemInfo')}</h3>
+          <p className="mb-3 text-[10px] text-white/50">{t('rtm.systemInfoDesc')}</p>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-2">
-              <dt className="text-white/60 shrink-0">Hostname</dt>
+              <dt className="text-white/60 shrink-0">{t('rtm.field.hostname')}</dt>
               <dd className="font-mono text-right text-xs truncate" title={systemInfo?.hostname ?? '—'}>
                 {systemInfo?.hostname ?? '—'}
               </dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-white/60 shrink-0">OS</dt>
+              <dt className="text-white/60 shrink-0">{t('rtm.field.os')}</dt>
               <dd className="font-mono text-right text-xs truncate" title={systemInfo?.os ?? '—'}>
                 {systemInfo?.os ?? '—'}
               </dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-white/60 shrink-0">Kernel</dt>
+              <dt className="text-white/60 shrink-0">{t('rtm.field.kernel')}</dt>
               <dd className="font-mono text-right text-xs truncate" title={systemInfo?.kernel ?? '—'}>
                 {systemInfo?.kernel ?? '—'}
               </dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-white/60 shrink-0">Uptime</dt>
+              <dt className="text-white/60 shrink-0">{t('rtm.field.uptime')}</dt>
               <dd className="font-mono text-right text-xs">{systemInfo?.uptime ?? '—'}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-white/60 shrink-0">Load Average</dt>
+              <dt className="text-white/60 shrink-0">{t('rtm.field.loadAverage')}</dt>
               <dd className="font-mono text-right text-xs">{systemInfo?.loadAverage ?? '—'}</dd>
             </div>
           </dl>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-          <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Performance thresholds</h3>
+          <h3 className="mb-3 text-xs font-semibold text-white/70 uppercase tracking-wider">{t('rtm.performanceThresholds')}</h3>
           <p className="text-xs text-white/50 mb-3">{t('rtm.thresholdsHint')}</p>
           <dl className="space-y-1.5 text-xs">
             {thresholds.length > 0
-              ? thresholds.flatMap((t) => [
-                  <div key={`${t.metric}-w`} className="flex justify-between">
-                    <dt className="text-white/60">{t.metric} Warning</dt>
-                    <dd className="text-amber-400">{t.warning}</dd>
+              ? thresholds.flatMap((th) => [
+                  <div key={`${th.metric}-w`} className="flex justify-between">
+                    <dt className="text-white/60">{t('rtm.thresholdWarning').replace('{metric}', th.metric)}</dt>
+                    <dd className="text-amber-400">{th.warning}</dd>
                   </div>,
-                  <div key={`${t.metric}-c`} className="flex justify-between">
-                    <dt className="text-white/60">{t.metric} Critical</dt>
-                    <dd className="text-rose-400">{t.critical}</dd>
+                  <div key={`${th.metric}-c`} className="flex justify-between">
+                    <dt className="text-white/60">{t('rtm.thresholdCritical').replace('{metric}', th.metric)}</dt>
+                    <dd className="text-rose-400">{th.critical}</dd>
                   </div>,
                 ])
               : (
                 <>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">CPU Warning</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdWarning').replace('{metric}', t('rtm.metric.cpu'))}</dt>
                     <dd className="text-amber-400">70%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">CPU Critical</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdCritical').replace('{metric}', t('rtm.metric.cpu'))}</dt>
                     <dd className="text-rose-400">90%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Memory Warning</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdWarning').replace('{metric}', t('rtm.metric.memory'))}</dt>
                     <dd className="text-amber-400">80%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Memory Critical</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdCritical').replace('{metric}', t('rtm.metric.memory'))}</dt>
                     <dd className="text-rose-400">95%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Disk Warning</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdWarning').replace('{metric}', t('rtm.metric.disk'))}</dt>
                     <dd className="text-amber-400">85%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Disk Critical</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdCritical').replace('{metric}', t('rtm.metric.disk'))}</dt>
                     <dd className="text-rose-400">95%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Network Warning</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdWarning').replace('{metric}', t('rtm.metric.network'))}</dt>
                     <dd className="text-amber-400">70%</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-white/60">Network Critical</dt>
+                    <dt className="text-white/60">{t('rtm.thresholdCritical').replace('{metric}', t('rtm.metric.network'))}</dt>
                     <dd className="text-rose-400">90%</dd>
                   </div>
                 </>
@@ -867,7 +873,7 @@ export default function RealTimeMonitoring() {
                 <polyline points="23 4 23 10 17 10" />
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
-              Service status list
+              {t('rtm.serviceStatusList')}
             </button>
             <button
               type="button"

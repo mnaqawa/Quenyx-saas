@@ -99,7 +99,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Workspace audit logs alias
     Route::get('/workspaces/{project}/audit-logs', [AuditLogController::class, 'index']);
     
-    // Observe endpoints (workspace canonical)
+    // Observe endpoints (workspace canonical) — requires QynSight module entitlement
+    Route::middleware('project.module:qynsight')->group(function () {
     Route::get('/workspaces/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/workspaces/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::post('/workspaces/{project}/observe/run-checks', [\App\Http\Controllers\ObserveController::class, 'runChecks']);
@@ -108,9 +109,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/workspaces/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
     Route::get('/workspaces/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
-    Route::get('/workspaces/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
-    Route::get('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
-    Route::post('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
     Route::get('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
     Route::post('/workspaces/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveAlertController::class, 'storeRule']);
     Route::put('/workspaces/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'updateRule']);
@@ -136,7 +134,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
     Route::post('/workspaces/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
 
-    // Observe endpoints (project aliases)
+    // Observe targets endpoints (workspace canonical)
+    Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
+    Route::put('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
+    Route::post('/workspaces/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
+    Route::get('/workspaces/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
+    });
+
+    Route::get('/workspaces/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
+    Route::get('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
+    Route::post('/workspaces/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
+
+    // Observe endpoints (project aliases) — requires QynSight module entitlement
+    Route::middleware('project.module:qynsight')->group(function () {
     Route::get('/projects/{project}/observe/summary', [\App\Http\Controllers\ObserveController::class, 'summary']);
     Route::get('/projects/{project}/observe/services', [\App\Http\Controllers\ObserveController::class, 'services']);
     Route::post('/projects/{project}/observe/run-checks', [\App\Http\Controllers\ObserveController::class, 'runChecks']);
@@ -144,11 +154,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/performance/metrics', [\App\Http\Controllers\ObserveController::class, 'performanceMetrics']);
     Route::get('/projects/{project}/observe/capacity-planning/export', [\App\Http\Controllers\ObserveController::class, 'capacityPlanningExport']);
     Route::get('/projects/{project}/observe/capacity-planning', [\App\Http\Controllers\ObserveController::class, 'capacityPlanning']);
-    Route::get('/projects/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
-    Route::get('/projects/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
-    Route::get('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
-    Route::post('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
-    Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
+        Route::get('/projects/{project}/observe/capacity/metrics', [\App\Http\Controllers\ObserveController::class, 'capacityMetrics']);
+        Route::get('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveController::class, 'alertRules']);
     Route::post('/projects/{project}/observe/alerts/rules', [\App\Http\Controllers\ObserveAlertController::class, 'storeRule']);
     Route::put('/projects/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'updateRule']);
     Route::delete('/projects/{project}/observe/alerts/rules/{rule}', [\App\Http\Controllers\ObserveAlertController::class, 'destroyRule']);
@@ -171,19 +178,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/projects/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     Route::get('/projects/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
-    Route::post('/projects/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
-    
-    // Observe targets endpoints (workspace canonical)
-    Route::get('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
-    Route::put('/workspaces/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
-    Route::post('/workspaces/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
-    Route::get('/workspaces/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
-    
-    // Observe targets endpoints (project aliases)
-    Route::get('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
-    Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
-    Route::post('/projects/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
-    Route::get('/projects/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
+        Route::post('/projects/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
+        Route::get('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
+        Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);
+        Route::post('/projects/{project}/observe/targets/validate', [\App\Http\Controllers\ObserveTargetsController::class, 'validateTargetsPayload']);
+        Route::get('/projects/{project}/observe/targets/{hostId}/port-scan', [\App\Http\Controllers\ObserveTargetsController::class, 'portScan']);
+    });
+
+    Route::get('/projects/{project}/billing/summary', [\App\Http\Controllers\BillingController::class, 'summary']);
+    Route::get('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'integrations']);
+    Route::post('/projects/{project}/billing/integrations', [\App\Http\Controllers\BillingController::class, 'storeIntegration']);
 
     // Agents (workspace-scoped)
     Route::get('/workspaces/{project}/agents', [\App\Http\Controllers\AgentController::class, 'index']);

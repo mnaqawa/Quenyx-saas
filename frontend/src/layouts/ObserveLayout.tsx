@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import { getPageTitleFromPath } from '../constants/platformRegistry'
+import { getRouteConfigFromPath } from '../constants/platformRegistry'
 import { ObserveModuleUnavailable } from '../components/observe/ObserveModuleUnavailable'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useObserveAccess } from '../hooks/useObserveAccess'
@@ -28,7 +28,10 @@ export default function ObserveLayout() {
     )
   }
 
-  const currentPageTitle = getPageTitleFromPath(location.pathname)
+  const routeConfig = getRouteConfigFromPath(location.pathname)
+  const currentPageTitle = routeConfig?.i18nKey
+    ? t(routeConfig.i18nKey)
+    : routeConfig?.title ?? null
 
   return (
     <div className="mx-auto max-w-7xl space-y-6" data-tour="tour-observe-content">

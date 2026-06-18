@@ -215,6 +215,20 @@ export function getPageTitleFromPath(pathname: string): string {
   return 'Quenyx vOPS HUB'
 }
 
+/** Resolve route config (incl. i18nKey) for breadcrumb labels. */
+export function getRouteConfigFromPath(pathname: string): RouteConfig | null {
+  for (const module of modules) {
+    if (module.sidebar.children) {
+      for (const route of module.sidebar.children) {
+        const routePattern = route.path.replace(':id', '[^/]+')
+        const regex = new RegExp(`^${routePattern}$`)
+        if (regex.test(pathname)) return route
+      }
+    }
+  }
+  return null
+}
+
 export function isModuleReady(key: string): boolean {
   const module = getModule(key)
   return module?.status === 'ready' || false

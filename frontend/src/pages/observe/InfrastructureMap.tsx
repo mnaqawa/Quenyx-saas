@@ -19,6 +19,13 @@ import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import type { PortScanResult } from '../../types/observe'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
+import {
+  mapLayerLabel,
+  mapViewLabel,
+  mapZoneLabel,
+  mapZoomLabel,
+} from '../../lib/observeMapLabels'
 
 type HostRow = { name: string; address: string; status: string }
 
@@ -172,7 +179,7 @@ function ZoneBasedTopology({
                     </p>
                     {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
                       <p className="mt-1 text-[9px] text-sky-400">
-                        {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
+                        {t('map.openPorts').replace('{count}', String(portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0))}
                       </p>
                     )}
                   </div>
@@ -350,7 +357,7 @@ function LLDTopology({
                 )}
                 {portScansByHost.get(h.name)?.scan?.status === 'completed' && (
                   <p className="mt-0.5 text-[9px] text-sky-400">
-                    {portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0} open ports
+                    {t('map.openPorts').replace('{count}', String(portScansByHost.get(h.name)!.scan!.open_ports_count ?? 0))}
                   </p>
                 )}
               </div>
@@ -427,7 +434,7 @@ export default function InfrastructureMap() {
   } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
 
   // Observe module: real data only from QynSight microservice APIs (no fixtures / no hardcoded dynamic data)
-  const { hosts, loading } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
+  const { hosts, loading, error: topologyError } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
   const { data: servicesData } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
@@ -873,6 +880,22 @@ export default function InfrastructureMap() {
     )
   }
 
+  if (topologyError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t('map.title')} subtitle={t('map.subtitle')} titleNoWrap />
+        <ObserveLoadError
+          message={t('observe.error.topology')}
+          retryLabel={t('observe.loadError.retry')}
+          onRetry={() => {
+            refreshAll()
+            refreshNow()
+          }}
+        />
+      </div>
+    )
+  }
+
   const tabs = [
     { id: 'topology' as const, label: t('map.tab.topology') },
     { id: 'devices' as const, label: t('map.tab.devices') },
@@ -983,7 +1006,7 @@ export default function InfrastructureMap() {
         >
           {VIEW_OPTIONS.map((o) => (
             <option key={o} value={o} className="bg-slate-900 text-white">
-              {o}
+              {mapViewLabel(o, t)}
             </option>
           ))}
         </select>
@@ -994,7 +1017,7 @@ export default function InfrastructureMap() {
         >
           {LAYER_OPTIONS.map((o) => (
             <option key={o} value={o} className="bg-slate-900 text-white">
-              {o}
+              {mapLayerLabel(o, t)}
             </option>
           ))}
         </select>
@@ -1005,7 +1028,7 @@ export default function InfrastructureMap() {
         >
           {ZOOM_OPTIONS.map((o) => (
             <option key={o} value={o} className="bg-slate-900 text-white">
-              {o}
+              {mapZoomLabel(o, t)}
             </option>
           ))}
         </select>
@@ -1013,16 +1036,16 @@ export default function InfrastructureMap() {
           value={zoneFilter}
           onChange={(e) => setZoneFilter(e.target.value)}
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
-          title="Filter by zone"
+          title={t('map.filter.zone')}
         >
-          <option value="All Zones" className="bg-slate-900 text-white">All Zones</option>
+          <option value="All Zones" className="bg-slate-900 text-white">{mapZoneLabel('All Zones', t)}</option>
           {ZONE_OPTIONS.filter((z) => z !== 'Unassigned').map((z) => (
             <option key={z} value={z} className="bg-slate-900 text-white">{z}</option>
           ))}
           {diagram.customZones.map((z) => (
             <option key={z} value={z} className="bg-slate-900 text-white">{z}</option>
           ))}
-          <option value="Unassigned" className="bg-slate-900 text-white">Unassigned</option>
+          <option value="Unassigned" className="bg-slate-900 text-white">{mapZoneLabel('Unassigned', t)}</option>
         </select>
       </div>
 
@@ -1272,9 +1295,9 @@ export default function InfrastructureMap() {
           <>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="mb-1 text-sm font-semibold">Nmap Port Scan</h3>
+                <h3 className="mb-1 text-sm font-semibold">{t('map.portScan.title')}</h3>
                 <p className="text-xs text-white/50">
-                  Port scan results from nmap. Scans run when hosts are saved in {hostsLabel}, or use Perform Scan for custom options. Requires nmap on the server.
+                  {t('map.portScan.desc').replace('{hosts}', hostsLabel)}
                 </p>
               </div>
               {canRunOperations ? (
@@ -1302,10 +1325,10 @@ export default function InfrastructureMap() {
             {scanModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !scanning && setScanModalOpen(false)}>
                 <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                  <h4 className="mb-4 text-base font-semibold">Port Scan Options</h4>
+                  <h4 className="mb-4 text-base font-semibold">{t('map.portScan.modalTitle')}</h4>
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-white/80">Port range</label>
+                      <label className="mb-1 block text-xs font-medium text-white/80">{t('map.portScan.portRange')}</label>
                       <div className="flex flex-wrap gap-2">
                         {(['top100', 'all', 'range'] as const).map((p) => (
                           <label key={p} className="flex cursor-pointer items-center gap-2">
@@ -1317,7 +1340,7 @@ export default function InfrastructureMap() {
                               className="rounded border-white/20"
                             />
                             <span className="text-sm">
-                              {p === 'top100' ? 'Top 100' : p === 'all' ? 'All ports (1-65535)' : 'Custom range'}
+                              {p === 'top100' ? t('map.portScan.top100') : p === 'all' ? t('map.portScan.allPorts') : t('map.portScan.customRange')}
                             </span>
                           </label>
                         ))}
@@ -1327,13 +1350,13 @@ export default function InfrastructureMap() {
                           type="text"
                           value={scanOptions.portsRange}
                           onChange={(e) => setScanOptions((prev) => ({ ...prev, portsRange: e.target.value }))}
-                          placeholder="e.g. 1-1024 or 80,443,8080"
+                          placeholder={t('map.portScan.rangePlaceholder')}
                           className="mt-2 w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-sky-500/50 focus:outline-none"
                         />
                       )}
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-white/80">Protocol</label>
+                      <label className="mb-1 block text-xs font-medium text-white/80">{t('map.portScan.protocol')}</label>
                       <div className="flex gap-4">
                         {(['tcp', 'udp'] as const).map((prot) => (
                           <label key={prot} className="flex cursor-pointer items-center gap-2">
@@ -1369,7 +1392,7 @@ export default function InfrastructureMap() {
                     </div>
                     {scanOptions.ports === 'all' && (
                       <p className="rounded bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-200">
-                        All ports (1–65535) can take several minutes per host. Scan runs in background—you can close this and continue working; results will appear when ready.
+                        {t('map.portScan.allPortsWarning')}
                       </p>
                     )}
                   </div>
@@ -1401,7 +1424,7 @@ export default function InfrastructureMap() {
                             setScanError(res.errors.join('; '))
                           } else {
                             setScanModalOpen(false)
-                            setScanStartedMessage(`Scan started for ${res.scanned} host(s). Results will appear when ready—refresh or wait for auto-refresh.`)
+                            setScanStartedMessage(t('map.portScan.scanStarted').replace('{count}', String(res.scanned)))
                             setTimeout(() => setScanStartedMessage(null), 8000)
                             refreshPortScans()
                           }
@@ -1414,7 +1437,7 @@ export default function InfrastructureMap() {
                       disabled={scanning}
                       className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
                     >
-                      {scanning ? 'Starting…' : 'Start Scan'}
+                      {scanning ? t('map.portScan.starting') : t('map.portScan.startScan')}
                     </button>
                   </div>
                 </div>
@@ -1441,6 +1464,7 @@ export default function InfrastructureMap() {
                         <p className="text-xs text-white/60">{ps.address}</p>
                       </div>
                       <div className="flex items-center gap-2">
+                        {canRunOperations ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -1450,24 +1474,25 @@ export default function InfrastructureMap() {
                           }}
                           className="rounded border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-medium text-sky-200 hover:bg-sky-500/20"
                         >
-                          Scan
+                          {t('map.portScan.scanButton')}
                         </button>
+                        ) : null}
                         {ps.scan?.status === 'completed' && (
                           <span className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-medium text-emerald-200">
-                            {ps.scan.open_ports_count ?? 0} open
+                            {t('map.openPortsShort').replace('{count}', String(ps.scan.open_ports_count ?? 0))}
                           </span>
                         )}
                         {ps.scan?.status === 'running' && (
-                          <span className="rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-200 animate-pulse">Scanning…</span>
+                          <span className="rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-200 animate-pulse">{t('map.portScan.scanning')}</span>
                         )}
                         {ps.scan?.status === 'failed' && (
-                          <span className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-medium text-rose-200" title={ps.scan.error_message ?? ''}>Failed</span>
+                          <span className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-medium text-rose-200" title={ps.scan.error_message ?? ''}>{t('map.portScan.failed')}</span>
                         )}
                         {ps.scan?.status === 'pending' && (
-                          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">Pending</span>
+                          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">{t('map.status.pending')}</span>
                         )}
                         {!ps.scan && (
-                          <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title={`Scan will run when host is saved in ${hostsLabel}`}>Queued</span>
+                          <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title={t('map.portScan.queuedOnSave').replace('{hosts}', hostsLabel)}>{t('map.portScan.queued')}</span>
                         )}
                         {ps.scan?.scanned_at && (
                           <span className="text-[10px] text-white/50">
@@ -1493,7 +1518,7 @@ export default function InfrastructureMap() {
                       <p className="text-xs text-white/50">No open ports found in scan range.</p>
                     ) : ps.scan?.status === 'running' || !ps.scan ? (
                       <p className="text-xs text-white/50 italic">
-                        {ps.scan?.status === 'running' ? 'Scanning…' : 'Scan queued. Results will appear when the scan completes.'}
+                        {ps.scan?.status === 'running' ? t('map.portScan.scanning') : t('map.portScan.scanQueuedHint')}
                       </p>
                     ) : null}
                   </div>
@@ -1506,7 +1531,7 @@ export default function InfrastructureMap() {
         {activeTab === 'health' && (
           <div className="grid gap-6 md:grid-cols-3">
             <div>
-              <h3 className="mb-3 text-sm font-semibold">Infrastructure Health</h3>
+              <h3 className="mb-3 text-sm font-semibold">{t('map.health.title')}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/70">Hosts</span>
@@ -1540,7 +1565,7 @@ export default function InfrastructureMap() {
               )}
             </div>
             <div>
-              <h3 className="mb-3 text-sm font-semibold">Quick Actions</h3>
+              <h3 className="mb-3 text-sm font-semibold">{t('map.quickActions')}</h3>
               <div className="flex flex-col gap-2">
                 <Link
                   to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'}

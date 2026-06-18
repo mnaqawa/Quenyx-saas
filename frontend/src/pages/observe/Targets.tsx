@@ -196,11 +196,11 @@ export default function Targets() {
         setDefinitions(defsResponse)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load targets')
+      setError(err instanceof Error ? err.message : t('targets.error.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [workspaceId])
+  }, [workspaceId, t])
 
   const {
     interval,
@@ -327,16 +327,16 @@ export default function Targets() {
     for (let hi = 0; hi < hosts.length; hi++) {
       const host = hosts[hi]
       if (!host.name.trim() || !host.address.trim()) {
-        errors[`hosts.${hi}.name`] = ['Host name and address are required']
+        errors[`hosts.${hi}.name`] = [t('targets.error.hostNameRequired')]
       }
       for (let si = 0; si < host.services.length; si++) {
         const service = host.services[si]
         if (!service.name.trim()) {
-          errors[`hosts.${hi}.services.${si}.name`] = ['Service name is required']
+          errors[`hosts.${hi}.services.${si}.name`] = [t('targets.error.serviceNameRequired')]
         }
         const effectiveKey = effectiveServiceKey(service)
         if (!effectiveKey) {
-          errors[`hosts.${hi}.services.${si}.service_key`] = ['Service type is required']
+          errors[`hosts.${hi}.services.${si}.service_key`] = [t('targets.error.serviceTypeRequired')]
         } else {
           const def = definitionsByKey.get(effectiveKey)
           if (def) {
@@ -450,9 +450,9 @@ export default function Targets() {
       const fromApi = getRequestErrorFieldErrors(err)
       if (fromApi) {
         setValidationErrors(fromApi as Record<string, string[]>)
-        setError('Validation failed. Please fix the highlighted fields.')
+        setError(t('targets.error.validationFailed'))
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to save targets')
+        setError(err instanceof Error ? err.message : t('targets.error.saveFailed'))
       }
     } finally {
       setSaving(false)
