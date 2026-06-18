@@ -12,6 +12,7 @@ import { buildHostRuntimeMap, classifyHostHealth } from '../../lib/observeHostUt
 import type { AlertHistoryEvent, CapacityPlanningResponse } from '../../types/observe'
 import { buildCollectingPanelProps } from '../../lib/collectingHistoricalDataUtils'
 import { CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
+import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 
 export default function Overview() {
   const { t } = useLanguage()
