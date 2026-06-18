@@ -383,8 +383,7 @@ export default function Services() {
           placeholder={t('services.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          disabled={isLocked}
-          className="flex-1 min-w-[200px] rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[200px] rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white placeholder:text-white/40"
         />
 
         <div className="flex items-center gap-2">

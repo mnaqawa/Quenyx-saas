@@ -1191,7 +1191,7 @@ export default function InfrastructureMap() {
                         }`}
                         title={statusTooltip(h.status, t)}
                       >
-                        {statusLabel(h.status)}
+                        {statusLabel(h.status, t)}
                       </span>
                     </div>
                   </div>
@@ -1209,7 +1209,7 @@ export default function InfrastructureMap() {
                         n.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
                         'bg-rose-500/20 text-rose-200'
                       }`}>
-                        {statusLabel(n.status)}
+                        {statusLabel(n.status, t)}
                       </span>
                     </div>
                   </div>

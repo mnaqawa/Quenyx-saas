@@ -7,6 +7,7 @@ import { MonitoringSettingsModal } from '../../components/observe/MonitoringSett
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useObserveAccess } from '../../hooks/useObserveAccess'
+import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
