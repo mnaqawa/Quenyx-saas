@@ -167,6 +167,8 @@ function WorkspaceMembers() {
     }
   }
 
+  const awaitingInitialData = Boolean(selectedWorkspaceId) && (currentUserId === null || loading)
+  const roleResolved = currentUserRole !== null
   const canManage = canManageMembers(currentUserRole)
   const isOwner = canPromoteToOwner(currentUserRole)
   const owners = memberships.filter((m) => m.role === 'owner')
@@ -233,7 +235,7 @@ function WorkspaceMembers() {
     )
   }
 
-  if (loading) {
+  if (awaitingInitialData) {
     return <div className="text-sm text-white/60">Loading members...</div>
   }
 
@@ -270,7 +272,7 @@ function WorkspaceMembers() {
         </div>
       )}
 
-      {!canManage && (
+      {roleResolved && !canManage && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           Only workspace owners and admins can manage members
         </div>
