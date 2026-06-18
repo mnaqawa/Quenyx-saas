@@ -17,6 +17,7 @@ class ComplianceDomain extends Model
     protected $fillable = [
         'uuid',
         'framework_id',
+        'framework_release_id',
         'parent_domain_id',
         'code',
         'slug',
@@ -45,6 +46,11 @@ class ComplianceDomain extends Model
     public function framework(): BelongsTo
     {
         return $this->belongsTo(ComplianceFramework::class, 'framework_id');
+    }
+
+    public function frameworkRelease(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceFrameworkRelease::class, 'framework_release_id');
     }
 
     public function parent(): BelongsTo

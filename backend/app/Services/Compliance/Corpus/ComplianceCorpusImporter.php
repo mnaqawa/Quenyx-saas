@@ -2,6 +2,7 @@
 
 namespace App\Services\Compliance\Corpus;
 
+use App\Enums\Compliance\ImportType;
 use App\Enums\Compliance\ImportLogLevel;
 use App\Enums\Compliance\ImportRunStatus;
 use App\Enums\Compliance\PublicationStatus;
@@ -13,7 +14,7 @@ use App\Models\Compliance\ComplianceCorpusImportRun;
 use App\Models\Compliance\ComplianceDomain;
 use App\Models\Compliance\ComplianceEvidenceExpectation;
 use App\Models\Compliance\ComplianceEvidenceType;
-use App\Models\Compliance\ComplianceFramework;
+use App\Models\Compliance\ComplianceFrameworkRelease;
 use App\Models\Compliance\ComplianceGuidanceItem;
 use App\Models\Compliance\ComplianceRequirement;
 use Illuminate\Support\Arr;
@@ -35,11 +36,11 @@ class ComplianceCorpusImporter
      */
     public function importFromArray(
         array $payload,
-        ComplianceFramework $framework,
+        ComplianceFrameworkRelease $release,
         ComplianceCorpusImportRun $run,
         bool $dryRun = false,
     ): ComplianceCorpusImportRun {
-        $validation = $this->validator->validate($payload, $framework);
+        $validation = $this->validator->validate($payload, $release);
         foreach ($validation['warnings'] as $warning) {
             $this->log($run, ImportLogLevel::Warning, null, null, $warning);
         }
@@ -50,16 +51,21 @@ class ComplianceCorpusImporter
             $run->update([
                 'status' => ImportRunStatus::Failed,
                 'failure_message' => 'Validation failed',
+                'failed_at' => now(),
                 'completed_at' => now(),
             ]);
             throw ComplianceCorpusImportException::validationFailed($validation['errors']);
         }
 
+        $release->loadMissing('framework');
+
         $run->update([
-            'status' => ImportRunStatus::Running,
+            'status' => ImportRunStatus::Importing,
             'started_at' => now(),
-            'framework_id' => $framework->id,
+            'framework_id' => $release->framework_id,
+            'framework_release_id' => $release->id,
             'content_hash' => ComplianceCorpusValidator::contentHash($payload),
+            'import_type' => $dryRun ? ImportType::DryRun : ImportType::Import,
             'dry_run' => $dryRun,
         ]);
 
@@ -74,9 +80,9 @@ class ComplianceCorpusImporter
         ];
 
         try {
-            DB::transaction(function () use ($payload, $framework, $run, $dryRun, &$stats, &$rollback): void {
+            DB::transaction(function () use ($payload, $release, $run, $dryRun, &$stats, &$rollback): void {
                 if (isset($payload['framework']) && is_array($payload['framework'])) {
-                    $this->syncFrameworkMetadata($framework, $payload['framework'], $stats, $rollback, $dryRun);
+                    $this->syncReleaseMetadata($release, $payload['framework'], $stats, $rollback, $dryRun);
                 }
 
                 $objectiveMap = [];
@@ -87,7 +93,7 @@ class ComplianceCorpusImporter
                 $controlMap = [];
                 if (isset($payload['domains']) && is_array($payload['domains'])) {
                     $controlMap = $this->importDomainsAndControls(
-                        $framework,
+                        $release,
                         $payload['domains'],
                         $objectiveMap,
                         $stats,
@@ -109,6 +115,7 @@ class ComplianceCorpusImporter
             $run->update([
                 'status' => ImportRunStatus::Completed,
                 'completed_at' => now(),
+                'summary' => array_merge($stats, ['dry_run' => true]),
                 'stats' => array_merge($stats, ['dry_run' => true]),
             ]);
             $this->log($run, ImportLogLevel::Info, null, null, 'Dry run completed; no changes persisted.');
@@ -118,6 +125,7 @@ class ComplianceCorpusImporter
             $run->update([
                 'status' => ImportRunStatus::Failed,
                 'failure_message' => $e->getMessage(),
+                'failed_at' => now(),
                 'completed_at' => now(),
             ]);
             $this->log($run, ImportLogLevel::Error, null, null, $e->getMessage());
@@ -127,6 +135,7 @@ class ComplianceCorpusImporter
         $run->update([
             'status' => ImportRunStatus::Completed,
             'completed_at' => now(),
+            'summary' => $stats,
             'stats' => $stats,
             'rollback_data' => $rollback,
         ]);
@@ -140,19 +149,18 @@ class ComplianceCorpusImporter
      * @param array<string, int> $stats
      * @param array<string, mixed> $rollback
      */
-    private function syncFrameworkMetadata(
-        ComplianceFramework $framework,
+    private function syncReleaseMetadata(
+        ComplianceFrameworkRelease $release,
         array $data,
         array &$stats,
         array &$rollback,
         bool $dryRun,
     ): void {
-        $before = $framework->only(array_keys($data));
+        $before = $release->only(array_keys($data));
         $attributes = $this->filterAttributes($data, [
             'title_en', 'title_ar', 'description_en', 'description_ar',
-            'authority', 'authority_en', 'authority_ar',
-            'effective_from', 'effective_to', 'status', 'published_at', 'deprecated_at',
-            'sort_order', 'source_reference', 'tags', 'migration_reference',
+            'effective_date', 'status', 'published_at', 'deprecated_at', 'retired_at',
+            'source_reference', 'migration_reference', 'metadata',
         ]);
 
         if ($attributes === []) {
@@ -160,11 +168,11 @@ class ComplianceCorpusImporter
         }
 
         if (! $dryRun) {
-            $framework->fill($attributes);
-            $framework->save();
-            $this->trackUpdated('compliance_frameworks', $framework->id, $before, $rollback);
+            $release->fill($attributes);
+            $release->save();
+            $this->trackUpdated('compliance_framework_releases', $release->id, $before, $rollback);
         }
-        $stats['updated']['compliance_frameworks'] = ($stats['updated']['compliance_frameworks'] ?? 0) + 1;
+        $stats['updated']['compliance_framework_releases'] = ($stats['updated']['compliance_framework_releases'] ?? 0) + 1;
     }
 
     /**
@@ -210,7 +218,7 @@ class ComplianceCorpusImporter
      * @return array<string, int> control_code => id
      */
     private function importDomainsAndControls(
-        ComplianceFramework $framework,
+        ComplianceFrameworkRelease $release,
         array $domains,
         array $objectiveMap,
         array &$stats,
@@ -220,6 +228,7 @@ class ComplianceCorpusImporter
     ): array {
         $domainIdByCode = [];
         $controlMap = [];
+        $frameworkId = $release->framework_id;
 
         foreach ($domains as $domainRow) {
             $domainCode = (string) $domainRow['code'];
@@ -234,12 +243,12 @@ class ComplianceCorpusImporter
             }
 
             $domain = ComplianceDomain::query()->firstOrNew([
-                'framework_id' => $framework->id,
+                'framework_release_id' => $release->id,
                 'code' => $domainCode,
             ]);
 
             $isNewDomain = ! $domain->exists;
-            $domainAttributes = $this->buildDomainAttributes($domainRow, $framework->id, $parentId);
+            $domainAttributes = $this->buildDomainAttributes($domainRow, $frameworkId, $release->id, $parentId);
             if (! $dryRun) {
                 if ($domain->exists) {
                     $before = $domain->getAttributes();
@@ -261,7 +270,7 @@ class ComplianceCorpusImporter
             foreach ($domainRow['controls'] ?? [] as $controlRow) {
                 $controlCode = (string) $controlRow['code'];
                 $control = ComplianceControl::query()->firstOrNew([
-                    'framework_id' => $framework->id,
+                    'framework_release_id' => $release->id,
                     'code' => $controlCode,
                 ]);
 
@@ -272,7 +281,8 @@ class ComplianceCorpusImporter
 
                 $controlAttributes = $this->buildControlAttributes(
                     $controlRow,
-                    $framework->id,
+                    $frameworkId,
+                    $release->id,
                     $domainIdByCode[$domainCode],
                     $objectiveId,
                 );
@@ -317,7 +327,7 @@ class ComplianceCorpusImporter
                 'code' => (string) $reqRow['code'],
             ]);
 
-            $attributes = $this->buildRequirementAttributes($reqRow, $control->id);
+            $attributes = $this->buildRequirementAttributes($reqRow, $control->id, $control->framework_release_id);
             if ($requirement->exists) {
                 $before = $requirement->getAttributes();
                 $requirement->fill($attributes);
@@ -484,10 +494,11 @@ class ComplianceCorpusImporter
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildDomainAttributes(array $row, int $frameworkId, ?int $parentId): array
+    private function buildDomainAttributes(array $row, int $frameworkId, int $releaseId, ?int $parentId): array
     {
         return [
             'framework_id' => $frameworkId,
+            'framework_release_id' => $releaseId,
             'parent_domain_id' => $parentId,
             'code' => (string) $row['code'],
             'slug' => $row['slug'] ?? Str::slug((string) $row['code']),
@@ -509,10 +520,11 @@ class ComplianceCorpusImporter
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildControlAttributes(array $row, int $frameworkId, int $domainId, ?int $objectiveId): array
+    private function buildControlAttributes(array $row, int $frameworkId, int $releaseId, int $domainId, ?int $objectiveId): array
     {
         return [
             'framework_id' => $frameworkId,
+            'framework_release_id' => $releaseId,
             'domain_id' => $domainId,
             'control_objective_id' => $objectiveId,
             'code' => (string) $row['code'],
@@ -536,10 +548,11 @@ class ComplianceCorpusImporter
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildRequirementAttributes(array $row, int $controlId): array
+    private function buildRequirementAttributes(array $row, int $controlId, ?int $releaseId): array
     {
         return [
             'control_id' => $controlId,
+            'framework_release_id' => $releaseId,
             'code' => (string) $row['code'],
             'slug' => $row['slug'] ?? Str::slug((string) $row['code']),
             'title_en' => (string) $row['title_en'],
@@ -630,7 +643,7 @@ class ComplianceCorpusImporter
 
     public function rollback(ComplianceCorpusImportRun $run): void
     {
-        if ($run->status !== ImportRunStatus::Completed || $run->dry_run) {
+        if ($run->status !== ImportRunStatus::Completed || $run->import_type === ImportType::DryRun) {
             throw new ComplianceCorpusImportException('Only completed non-dry-run imports can be rolled back.');
         }
 
@@ -658,7 +671,10 @@ class ComplianceCorpusImporter
                 }
             }
 
-            $run->update(['status' => ImportRunStatus::RolledBack]);
+            $run->update([
+                'status' => ImportRunStatus::RolledBack,
+                'import_type' => ImportType::Rollback,
+            ]);
         });
     }
 

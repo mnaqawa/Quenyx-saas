@@ -3,11 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Enums\Compliance\ImportRunStatus;
+use App\Enums\Compliance\ImportType;
 use App\Models\Compliance\ComplianceCorpusImportRun;
-use App\Models\Compliance\ComplianceFramework;
 use App\Services\Compliance\Corpus\ComplianceCorpusImportException;
 use App\Services\Compliance\Corpus\ComplianceCorpusImporter;
 use App\Services\Compliance\Corpus\ComplianceCorpusPayloadLoader;
+use App\Services\Compliance\Corpus\ComplianceFrameworkReleaseResolver;
 use Illuminate\Console\Command;
 
 class ImportComplianceCorpusCommand extends Command
@@ -15,16 +16,18 @@ class ImportComplianceCorpusCommand extends Command
     protected $signature = 'compliance:import-corpus
         {file : Path to JSON or CSV corpus file}
         {--framework=nca-ecc : Framework family key}
-        {--version=2:2024 : Framework version code}
+        {--release=2:2024 : Framework release version code}
+        {--version= : Deprecated alias for --release}
         {--format= : json or csv (inferred from extension when omitted)}
         {--dry-run : Validate and simulate without persisting}
         {--rollback= : UUID of a completed import run to roll back}';
 
-    protected $description = 'Import human-curated NCA ECC corpus data (QCIF Sprint 1)';
+    protected $description = 'Import human-curated NCA ECC corpus data (QCIF)';
 
     public function handle(
         ComplianceCorpusPayloadLoader $loader,
         ComplianceCorpusImporter $importer,
+        ComplianceFrameworkReleaseResolver $resolver,
     ): int {
         $rollbackUuid = $this->option('rollback');
         if (is_string($rollbackUuid) && $rollbackUuid !== '') {
@@ -39,28 +42,35 @@ class ImportComplianceCorpusCommand extends Command
             return Command::FAILURE;
         }
 
-        $framework = ComplianceFramework::query()
-            ->where('key', (string) $this->option('framework'))
-            ->where('version_code', (string) $this->option('version'))
-            ->first();
+        $releaseCode = (string) ($this->option('release') ?: $this->option('version') ?: '2:2024');
+        if ($this->option('version') && ! $this->option('release')) {
+            $this->warn('--version is deprecated; use --release instead.');
+        }
 
-        if ($framework === null) {
-            $this->error('Target framework not found. Run ComplianceCorpusSeeder first.');
+        try {
+            $release = $resolver->resolveOrFail((string) $this->option('framework'), $releaseCode);
+        } catch (ComplianceCorpusImportException $e) {
+            $this->error($e->getMessage());
 
             return Command::FAILURE;
         }
+
+        $dryRun = (bool) $this->option('dry-run');
 
         $run = ComplianceCorpusImportRun::query()->create([
             'format' => strtolower($format),
             'source_path' => $file,
             'status' => ImportRunStatus::Pending,
-            'dry_run' => (bool) $this->option('dry-run'),
+            'import_type' => $dryRun ? ImportType::DryRun : ImportType::Import,
+            'dry_run' => $dryRun,
+            'framework_id' => $release->framework_id,
+            'framework_release_id' => $release->id,
             'initiated_by' => null,
         ]);
 
         try {
             $payload = $loader->load($file, $format);
-            $importer->importFromArray($payload, $framework, $run, (bool) $this->option('dry-run'));
+            $importer->importFromArray($payload, $release, $run, $dryRun);
         } catch (ComplianceCorpusImportException $e) {
             $this->error($e->getMessage());
 
@@ -69,8 +79,9 @@ class ImportComplianceCorpusCommand extends Command
 
         $run->refresh();
         $this->info("Import run {$run->uuid} completed with status: {$run->status->value}");
-        if (is_array($run->stats)) {
-            $this->line(json_encode($run->stats, JSON_PRETTY_PRINT));
+        $summary = $run->summary ?? $run->stats;
+        if (is_array($summary)) {
+            $this->line(json_encode($summary, JSON_PRETTY_PRINT));
         }
 
         return Command::SUCCESS;

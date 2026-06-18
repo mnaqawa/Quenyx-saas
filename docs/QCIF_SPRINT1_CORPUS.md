@@ -425,4 +425,102 @@ Evidence expectations reference these by `evidence_type_key` at import time.
 4. Production import + QA review  
 5. Set control statuses to `published` after sign-off  
 6. Add read API for framework tree (optional)  
-7. Begin ISO 27001 framework row (schema already supports it)  
+7. Begin ISO 27001 framework family + release (schema supports it)
+
+---
+
+## Sprint 1.1 — Architecture Hardening
+
+**Migration:** `2026_06_18_110000_harden_compliance_corpus_schema.php`
+
+### Updated ERD
+
+```mermaid
+erDiagram
+    compliance_authorities ||--o{ compliance_frameworks : publishes
+    compliance_frameworks ||--o{ compliance_framework_releases : versions
+    compliance_framework_releases ||--o{ compliance_domains : scopes
+    compliance_framework_releases ||--o{ compliance_controls : scopes
+    compliance_framework_releases ||--o{ compliance_requirements : scopes
+    compliance_framework_releases ||--o{ compliance_source_documents : documents
+    compliance_framework_releases ||--o{ compliance_corpus_import_runs : imports
+    compliance_domains ||--o{ compliance_controls : groups
+    compliance_controls ||--o{ compliance_requirements : decomposes
+```
+
+### Authority model
+
+`compliance_authorities` — regulatory issuers (NCA, SAMA, ISO, etc.)
+
+| Field | Purpose |
+|-------|---------|
+| `key` | Stable slug (`nca`) |
+| `name_en` / `name_ar` | Display names |
+| `country_code` | Jurisdiction (SA) |
+| `status` | active / inactive |
+
+### Framework family vs release
+
+| Layer | Table | Example |
+|-------|-------|---------|
+| **Family** | `compliance_frameworks` | `nca-ecc` — NCA Essential Cybersecurity Controls |
+| **Release** | `compliance_framework_releases` | `2:2024` / `ECC-2:2024` |
+
+Version-specific fields moved to **releases**: `effective_date`, `published_at`, `deprecated_at`, `retired_at`, `source_reference`, `migration_reference`, `superseded_by_release_id`.
+
+Families link to authorities via `authority_id`.
+
+### Source document model
+
+`compliance_source_documents` — metadata-only tracking of official PDFs/regulations per release. No file storage in this sprint.
+
+### Corpus scoping
+
+Domains, controls, and requirements now carry **`framework_release_id`** (source of truth). `framework_id` retained as denormalized family reference.
+
+Unique constraints:
+
+- `unique(framework_release_id, code)` — domains, controls  
+- `unique(framework_release_id, control_id, code)` — requirements  
+
+### Import command changes
+
+```bash
+php artisan compliance:import-corpus corpus.json \
+  --dry-run \
+  --framework=nca-ecc \
+  --release=2:2024
+```
+
+`--version` remains as deprecated alias for `--release`.
+
+Import runs now store: `framework_release_id`, `source_document_id`, `import_type`, `summary`, `failed_at`, `rollback_of_import_run_id`.
+
+Status `running` renamed to **`importing`**.
+
+### Migration notes
+
+1. Run Sprint 1 migration first (if not already applied)  
+2. Run `2026_06_18_110000_harden_compliance_corpus_schema.php`  
+3. Existing Sprint 1 NCA ECC-2:2024 row auto-migrates to family + release  
+4. Re-run seeder to align authority/family/release metadata  
+
+### Seeder notes (Sprint 1.1)
+
+`ComplianceCorpusSeeder` seeds:
+
+1. NCA authority  
+2. `nca-ecc` framework family  
+3. `2:2024` release  
+4. 11 evidence types  
+
+### Backward compatibility
+
+| Item | Notes |
+|------|-------|
+| `framework_id` on corpus entities | Kept; populated from release |
+| `dry_run` column on import runs | Kept; mirrored by `import_type` |
+| `stats` column | Kept; duplicated into `summary` |
+| `--version` CLI flag | Deprecated alias for `--release` |
+| JSON payload `framework.version_code` | Still required; matched against release |
+| Sprint 1 unique `(key, version_code)` on frameworks | Removed; replaced by `unique(key)` + release table |

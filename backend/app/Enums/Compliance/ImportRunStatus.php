@@ -6,7 +6,7 @@ enum ImportRunStatus: string
 {
     case Pending = 'pending';
     case Validating = 'validating';
-    case Running = 'running';
+    case Importing = 'importing';
     case Completed = 'completed';
     case Failed = 'failed';
     case RolledBack = 'rolled_back';

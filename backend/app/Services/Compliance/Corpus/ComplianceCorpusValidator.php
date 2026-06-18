@@ -7,7 +7,7 @@ use App\Enums\Compliance\GuidanceType;
 use App\Enums\Compliance\ObjectiveMappingType;
 use App\Enums\Compliance\PublicationStatus;
 use App\Models\Compliance\ComplianceEvidenceType;
-use App\Models\Compliance\ComplianceFramework;
+use App\Models\Compliance\ComplianceFrameworkRelease;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -26,7 +26,7 @@ class ComplianceCorpusValidator
      * @param array<string, mixed> $payload
      * @return array{valid: bool, errors: list<string>, warnings: list<string>}
      */
-    public function validate(array $payload, ?ComplianceFramework $targetFramework = null): array
+    public function validate(array $payload, ?ComplianceFrameworkRelease $targetRelease = null): array
     {
         $this->errors = [];
         $this->warnings = [];
@@ -34,7 +34,7 @@ class ComplianceCorpusValidator
         if (! isset($payload['framework']) || ! is_array($payload['framework'])) {
             $this->errors[] = 'Missing required top-level "framework" object.';
         } else {
-            $this->validateFramework($payload['framework'], $targetFramework);
+            $this->validateFramework($payload['framework'], $targetRelease);
         }
 
         if (isset($payload['control_objectives']) && is_array($payload['control_objectives'])) {
@@ -63,20 +63,22 @@ class ComplianceCorpusValidator
     /**
      * @param array<string, mixed> $framework
      */
-    private function validateFramework(array $framework, ?ComplianceFramework $targetFramework): void
+    private function validateFramework(array $framework, ?ComplianceFrameworkRelease $targetRelease): void
     {
-        foreach (['key', 'version_code', 'code', 'title_en', 'title_ar', 'authority'] as $field) {
+        foreach (['key', 'version_code'] as $field) {
             if (! filled($framework[$field] ?? null)) {
                 $this->errors[] = "framework.{$field} is required.";
             }
         }
 
-        if ($targetFramework !== null) {
-            if (($framework['key'] ?? null) !== $targetFramework->key) {
-                $this->errors[] = 'framework.key does not match target framework.';
+        if ($targetRelease !== null) {
+            $targetRelease->loadMissing('framework');
+            if (($framework['key'] ?? null) !== $targetRelease->framework?->key) {
+                $this->errors[] = 'framework.key does not match target framework family.';
             }
-            if (($framework['version_code'] ?? null) !== $targetFramework->version_code) {
-                $this->errors[] = 'framework.version_code does not match target framework.';
+            $releaseCode = (string) ($framework['version_code'] ?? '');
+            if ($releaseCode !== $targetRelease->version_code && $releaseCode !== $targetRelease->release_code) {
+                $this->errors[] = 'framework.version_code does not match target framework release.';
             }
         }
 

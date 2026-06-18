@@ -2,47 +2,84 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Compliance\AuthorityStatus;
 use App\Enums\Compliance\PublicationStatus;
+use App\Models\Compliance\ComplianceAuthority;
 use App\Models\Compliance\ComplianceEvidenceType;
 use App\Models\Compliance\ComplianceFramework;
+use App\Models\Compliance\ComplianceFrameworkRelease;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Minimal QCIF Sprint 1 seed: NCA ECC-2:2024 framework shell + evidence type catalog.
- * Does NOT seed controls — those are imported via human-curated corpus files.
+ * QCIF Sprint 1.1 seed: NCA authority, ECC framework family, ECC-2:2024 release, evidence types.
  */
 class ComplianceCorpusSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedFramework();
+        $authority = $this->seedAuthority();
+        $framework = $this->seedFrameworkFamily($authority);
+        $this->seedFrameworkRelease($framework);
         $this->seedEvidenceTypes();
     }
 
-    private function seedFramework(): void
+    private function seedAuthority(): ComplianceAuthority
     {
-        ComplianceFramework::query()->updateOrCreate(
+        return ComplianceAuthority::query()->updateOrCreate(
+            ['key' => 'nca'],
             [
-                'key' => 'nca-ecc',
+                'name_en' => 'National Cybersecurity Authority',
+                'name_ar' => 'الهيئة الوطنية للأمن السيبراني',
+                'short_name' => 'NCA',
+                'country_code' => 'SA',
+                'website_url' => 'https://nca.gov.sa',
+                'description_en' => 'Saudi Arabia national regulator for cybersecurity.',
+                'description_ar' => 'الجهة الوطنية المنظمة للأمن السيبراني في المملكة العربية السعودية.',
+                'status' => AuthorityStatus::Active,
+                'sort_order' => 1,
+            ],
+        );
+    }
+
+    private function seedFrameworkFamily(ComplianceAuthority $authority): ComplianceFramework
+    {
+        return ComplianceFramework::query()->updateOrCreate(
+            ['key' => 'nca-ecc'],
+            [
+                'authority_id' => $authority->id,
+                'code' => 'NCA-ECC',
+                'slug' => 'nca-ecc',
+                'title_en' => 'NCA Essential Cybersecurity Controls',
+                'title_ar' => 'الضوابط الأساسية للأمن السيبراني',
+                'description_en' => 'National Cybersecurity Authority Essential Cybersecurity Controls (ECC) framework family.',
+                'description_ar' => 'إطار الضوابط الأساسية للأمن السيبراني الصادر عن الهيئة الوطنية للأمن السيبراني.',
+                'status' => PublicationStatus::Published,
+                'sort_order' => 1,
+                'tags' => ['saudi', 'nca', 'ecc', 'cybersecurity'],
+                'metadata' => ['family' => true],
+            ],
+        );
+    }
+
+    private function seedFrameworkRelease(ComplianceFramework $framework): ComplianceFrameworkRelease
+    {
+        return ComplianceFrameworkRelease::query()->updateOrCreate(
+            [
+                'framework_id' => $framework->id,
                 'version_code' => '2:2024',
             ],
             [
-                'code' => 'NCA-ECC',
-                'slug' => 'nca-ecc-2-2024',
-                'title_en' => 'NCA Essential Cybersecurity Controls',
-                'title_ar' => 'الضوابط الأساسية للأمن السيبراني',
-                'description_en' => 'National Cybersecurity Authority Essential Cybersecurity Controls (ECC) version 2:2024.',
-                'description_ar' => 'الضوابط الأساسية للأمن السيبراني الصادرة عن الهيئة الوطنية للأمن السيبراني — الإصدار 2:2024.',
-                'authority' => 'National Cybersecurity Authority',
-                'authority_en' => 'National Cybersecurity Authority',
-                'authority_ar' => 'الهيئة الوطنية للأمن السيبراني',
-                'effective_from' => '2024-01-01',
+                'release_code' => 'ECC-2:2024',
+                'title_en' => 'NCA ECC Version 2:2024',
+                'title_ar' => 'الضوابط الأساسية للأمن السيبراني — الإصدار 2:2024',
+                'description_en' => 'NCA Essential Cybersecurity Controls release 2:2024.',
+                'description_ar' => 'إصدار الضوابط الأساسية للأمن السيبراني 2:2024.',
+                'effective_date' => '2024-01-01',
                 'status' => PublicationStatus::Published,
                 'published_at' => now(),
-                'sort_order' => 1,
                 'source_reference' => 'NCA ECC-2:2024 official publication (human curation required for control-level import)',
-                'tags' => ['saudi', 'nca', 'ecc', 'cybersecurity'],
+                'metadata' => ['seed' => 'sprint-1.1'],
             ],
         );
     }

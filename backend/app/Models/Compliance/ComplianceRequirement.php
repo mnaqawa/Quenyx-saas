@@ -17,6 +17,7 @@ class ComplianceRequirement extends Model
     protected $fillable = [
         'uuid',
         'control_id',
+        'framework_release_id',
         'code',
         'slug',
         'title_en',
@@ -46,6 +47,11 @@ class ComplianceRequirement extends Model
     public function control(): BelongsTo
     {
         return $this->belongsTo(ComplianceControl::class, 'control_id');
+    }
+
+    public function frameworkRelease(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceFrameworkRelease::class, 'framework_release_id');
     }
 
     public function guidanceItems(): HasMany

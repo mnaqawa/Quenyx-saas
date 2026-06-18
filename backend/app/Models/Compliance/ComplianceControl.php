@@ -18,6 +18,7 @@ class ComplianceControl extends Model
     protected $fillable = [
         'uuid',
         'framework_id',
+        'framework_release_id',
         'domain_id',
         'control_objective_id',
         'code',
@@ -51,6 +52,11 @@ class ComplianceControl extends Model
         return $this->belongsTo(ComplianceFramework::class, 'framework_id');
     }
 
+    public function frameworkRelease(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceFrameworkRelease::class, 'framework_release_id');
+    }
+
     public function domain(): BelongsTo
     {
         return $this->belongsTo(ComplianceDomain::class, 'domain_id');
@@ -78,6 +84,9 @@ class ComplianceControl extends Model
 
     public function stableRef(): string
     {
-        return "{$this->framework?->key}:{$this->framework?->version_code}:{$this->code}";
+        $key = $this->frameworkRelease?->framework?->key ?? $this->framework?->key ?? 'unknown';
+        $version = $this->frameworkRelease?->version_code ?? 'unknown';
+
+        return "{$key}:{$version}:{$this->code}";
     }
 }
