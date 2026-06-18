@@ -207,6 +207,34 @@ php -l app/Services/Compliance/Corpus/ComplianceCorpusValidator.php
 
 ---
 
+## Sprint 3B — Governance domain population
+
+First curated domain batch: `governance/domain.json`
+
+| Metric | Value |
+|--------|-------|
+| Status | `validated` (not `approved`) |
+| Main domain | ECC-1 Cybersecurity Governance |
+| Controls | 35 (subdomains 1-1 through 1-10) |
+| Requirements | 35 (one per control — official clause as atomic requirement) |
+| Sources | `nca-ecc-2-2024-en`, `nca-ecc-2-2024-ar` |
+
+Regenerate from builder (optional):
+
+```bash
+php database/corpus/nca/ecc-2-2024/governance/build-domain.php
+```
+
+Dry-run after seeding source documents:
+
+```bash
+php artisan compliance:import-corpus \
+  database/corpus/nca/ecc-2-2024/manifest.json \
+  --dry-run --framework=nca-ecc --release=2:2024
+```
+
+---
+
 ## Related docs
 
 - [QCIF Sprint 2A Versioning](./QCIF_SPRINT2A_VERSIONING.md)
@@ -214,4 +242,4 @@ php -l app/Services/Compliance/Corpus/ComplianceCorpusValidator.php
 
 ---
 
-**Verdict:** QCIF Sprint 3A complete. Domain-by-domain workflow ready. Architecture unchanged. Ready for manual NCA ECC domain population (Sprint 3B+).
+**Verdict:** QCIF Sprint 3A complete. Sprint 3B Governance domain curated (`validated`). Remaining domains pending manual population.
