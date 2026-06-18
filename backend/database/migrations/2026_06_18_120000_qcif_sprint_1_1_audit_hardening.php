@@ -140,11 +140,12 @@ return new class extends Migration
         );
 
         foreach ($rows as $row) {
-            if ($excludeIndex !== null && $row->index_name === $excludeIndex) {
+            $rowIndexName = $this->rowValue($row, 'index_name');
+            if ($excludeIndex !== null && $rowIndexName === $excludeIndex) {
                 continue;
             }
 
-            if ((int) $row->seq_in_index === 1) {
+            if ((int) $this->rowValue($row, 'seq_in_index') === 1) {
                 return true;
             }
         }
@@ -220,6 +221,22 @@ return new class extends Migration
             [$database, $table, $column]
         );
 
-        return isset($result[0]) && $result[0]->IS_NULLABLE === 'NO';
+        return isset($result[0]) && $this->rowValue($result[0], 'IS_NULLABLE') === 'NO';
+    }
+
+    /**
+     * information_schema column names vary in case across MySQL/MariaDB drivers.
+     */
+    private function rowValue(object $row, string $key): mixed
+    {
+        $needle = strtolower($key);
+
+        foreach ((array) $row as $column => $value) {
+            if (strtolower((string) $column) === $needle) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 };
