@@ -1,9 +1,9 @@
 {
     "$schema": "quenyx\/qcif\/domain-batch\/v1.0",
-    "status": "validated",
+    "status": "approved",
     "reviewed_by": null,
     "reviewed_at": null,
-    "notes": "Sprint 3C - curated from official NCA ECC-2:2024 EN\/AR publications. Pending human approval before production import.",
+    "notes": "Sprint 3C - curated from official NCA ECC-2:2024 EN\/AR publications. Approved for Sprint 4 production import (Revision v1).",
     "metadata": {
         "curation_sprint": "3C",
         "domain_slug": "cybersecurity-resilience",
