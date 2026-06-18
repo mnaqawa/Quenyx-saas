@@ -1,8 +1,2250 @@
 {
-  "$schema": "quenyx/qcif/domain-batch/v1.0",
-  "status": "draft",
-  "reviewed_by": null,
-  "reviewed_at": null,
-  "notes": "",
-  "metadata": {}
+    "$schema": "quenyx\/qcif\/domain-batch\/v1.0",
+    "status": "validated",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "notes": "Sprint 3C - curated from official NCA ECC-2:2024 EN\/AR publications. Pending human approval before production import.",
+    "metadata": {
+        "curation_sprint": "3C",
+        "domain_slug": "cybersecurity-defense",
+        "source_publication": "ECC-2:2024",
+        "control_count": 61,
+        "requirement_count": 61,
+        "pending_manual_review": [
+            "2-6-4: Arabic requirement text preserves istitlaa typo \"متكلبات\" (expected \"متطلبات\") — verify against AR PDF.",
+            "2-14-1: Arabic sourced from istitlaa row code 1-14-12 (display typo); mapped to official control 2-14-1."
+        ]
+    },
+    "domain": {
+        "code": "2",
+        "display_code": "ECC-2",
+        "normalized_code": "ecc_2",
+        "title_en": "Cybersecurity Defense",
+        "title_ar": "الدفاع السيبراني",
+        "description_en": "Main Domain 2 of NCA Essential Cybersecurity Controls (ECC-2:2024).",
+        "description_ar": "المجال الرئيسي الثاني من الضوابط الأساسية للأمن السيبراني (ECC-2:2024).",
+        "source_document_key": "nca-ecc-2-2024-en",
+        "source_reference": "NCA ECC-2:2024 EN - Domain 2 Cybersecurity Defense",
+        "official_reference": "ECC-2:2024:2",
+        "source_page": "19",
+        "sort_order": 1,
+        "metadata": {
+            "subdomain_count": 15,
+            "official_subdomains": [
+                "2-1",
+                "2-2",
+                "2-3",
+                "2-4",
+                "2-5",
+                "2-6",
+                "2-7",
+                "2-8",
+                "2-9",
+                "2-10",
+                "2-11",
+                "2-12",
+                "2-13",
+                "2-14",
+                "2-15"
+            ]
+        },
+        "controls": [
+            {
+                "code": "2-1-1",
+                "display_code": "2-1-1",
+                "normalized_code": "2_1_1",
+                "title_en": "Cybersecurity requirements for managing information and technology assets identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الأصول",
+                "description_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-1",
+                "official_reference": "ECC-2:2024:2:2-1-1",
+                "source_page": "19",
+                "sort_order": 1,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-1",
+                        "display_code": "2-1-1",
+                        "normalized_code": "2_1_1",
+                        "title_en": "Cybersecurity requirements for managing information and technology assets identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الأصول",
+                        "requirement_text_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-1",
+                        "official_reference": "ECC-2:2024:2:2-1-1",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-1-2",
+                "display_code": "2-1-2",
+                "normalized_code": "2_1_2",
+                "title_en": "Cybersecurity requirements for managing information and technology assets implementation",
+                "title_ar": "تطبيق متطلبات الأمن السيبراني لإدارة الأصول",
+                "description_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-2",
+                "official_reference": "ECC-2:2024:2:2-1-2",
+                "source_page": "19",
+                "sort_order": 2,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-2",
+                        "display_code": "2-1-2",
+                        "normalized_code": "2_1_2",
+                        "title_en": "Cybersecurity requirements for managing information and technology assets implementation",
+                        "title_ar": "تطبيق متطلبات الأمن السيبراني لإدارة الأصول",
+                        "requirement_text_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-2",
+                        "official_reference": "ECC-2:2024:2:2-1-2",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-1-3",
+                "display_code": "2-1-3",
+                "normalized_code": "2_1_3",
+                "title_en": "Acceptable use policy for information and technology assets identification",
+                "title_ar": "تحديد وتوثيق واعتماد ونشر سياسة الاستخدام المقبول للأصول",
+                "description_en": "The policy of acceptable use of information and technology assets of the entity shall be identified, documented, approved, and communicated.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد ونشر سياسة الاستخدام المقبول للأصول المعلوماتية والتقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-3",
+                "official_reference": "ECC-2:2024:2:2-1-3",
+                "source_page": "19",
+                "sort_order": 3,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-3",
+                        "display_code": "2-1-3",
+                        "normalized_code": "2_1_3",
+                        "title_en": "Acceptable use policy for information and technology assets identification",
+                        "title_ar": "تحديد وتوثيق واعتماد ونشر سياسة الاستخدام المقبول للأصول",
+                        "requirement_text_en": "The policy of acceptable use of information and technology assets of the entity shall be identified, documented, approved, and communicated.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد ونشر سياسة الاستخدام المقبول للأصول المعلوماتية والتقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-3",
+                        "official_reference": "ECC-2:2024:2:2-1-3",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-1-4",
+                "display_code": "2-1-4",
+                "normalized_code": "2_1_4",
+                "title_en": "Acceptable use policy for information and technology assets implementation",
+                "title_ar": "تطبيق سياسة الاستخدام المقبول للأصول",
+                "description_en": "The policy of acceptable use of information and technology assets of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق سياسة الاستخدام المقبول للأصول المعلوماتية والتقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-4",
+                "official_reference": "ECC-2:2024:2:2-1-4",
+                "source_page": "19",
+                "sort_order": 4,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-4",
+                        "display_code": "2-1-4",
+                        "normalized_code": "2_1_4",
+                        "title_en": "Acceptable use policy for information and technology assets implementation",
+                        "title_ar": "تطبيق سياسة الاستخدام المقبول للأصول",
+                        "requirement_text_en": "The policy of acceptable use of information and technology assets of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق سياسة الاستخدام المقبول للأصول المعلوماتية والتقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-4",
+                        "official_reference": "ECC-2:2024:2:2-1-4",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-1-5",
+                "display_code": "2-1-5",
+                "normalized_code": "2_1_5",
+                "title_en": "Information and technology assets classification, labeling, and handling",
+                "title_ar": "تصنيف الأصول المعلوماتية والتقنية وترميزها والتعامل معها",
+                "description_en": "Information and technology assets of the entity shall be classified, labeled, and handled as per the relevant legislative and regulatory requirements.",
+                "description_ar": "يجب تصنيف الأصول المعلوماتية والتقنية للجهة وترميزها (Labeling) والتعامل معها وفقاً للمتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-5",
+                "official_reference": "ECC-2:2024:2:2-1-5",
+                "source_page": "19",
+                "sort_order": 5,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-5",
+                        "display_code": "2-1-5",
+                        "normalized_code": "2_1_5",
+                        "title_en": "Information and technology assets classification, labeling, and handling",
+                        "title_ar": "تصنيف الأصول المعلوماتية والتقنية وترميزها والتعامل معها",
+                        "requirement_text_en": "Information and technology assets of the entity shall be classified, labeled, and handled as per the relevant legislative and regulatory requirements.",
+                        "requirement_text_ar": "يجب تصنيف الأصول المعلوماتية والتقنية للجهة وترميزها (Labeling) والتعامل معها وفقاً للمتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-5",
+                        "official_reference": "ECC-2:2024:2:2-1-5",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-1-6",
+                "display_code": "2-1-6",
+                "normalized_code": "2_1_6",
+                "title_en": "Cybersecurity requirements for managing information and technology assets review",
+                "title_ar": "مراجعة متطلبات الأمن السيبراني لإدارة الأصول",
+                "description_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-6",
+                "official_reference": "ECC-2:2024:2:2-1-6",
+                "source_page": "19",
+                "sort_order": 6,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-1"
+                },
+                "requirements": [
+                    {
+                        "code": "2-1-6",
+                        "display_code": "2-1-6",
+                        "normalized_code": "2_1_6",
+                        "title_en": "Cybersecurity requirements for managing information and technology assets review",
+                        "title_ar": "مراجعة متطلبات الأمن السيبراني لإدارة الأصول",
+                        "requirement_text_en": "Cybersecurity requirements for managing information and technology assets of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة متطلبات الأمن السيبراني لإدارة الأصول المعلوماتية والتقنية للجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-1-6",
+                        "official_reference": "ECC-2:2024:2:2-1-6",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-2-1",
+                "display_code": "2-2-1",
+                "normalized_code": "2_2_1",
+                "title_en": "Cybersecurity requirements for identity and access management identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة هويات الدخول والصلاحيات",
+                "description_en": "Cybersecurity requirements for identity and access management of the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-1",
+                "official_reference": "ECC-2:2024:2:2-2-1",
+                "source_page": "19",
+                "sort_order": 7,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-2"
+                },
+                "requirements": [
+                    {
+                        "code": "2-2-1",
+                        "display_code": "2-2-1",
+                        "normalized_code": "2_2_1",
+                        "title_en": "Cybersecurity requirements for identity and access management identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة هويات الدخول والصلاحيات",
+                        "requirement_text_en": "Cybersecurity requirements for identity and access management of the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-1",
+                        "official_reference": "ECC-2:2024:2:2-2-1",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-2"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-2-2",
+                "display_code": "2-2-2",
+                "normalized_code": "2_2_2",
+                "title_en": "Cybersecurity requirements for identity and access management implementation",
+                "title_ar": "تطبيق متطلبات إدارة هويات الدخول والصلاحيات",
+                "description_en": "Cybersecurity requirements for identity and access management of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-2",
+                "official_reference": "ECC-2:2024:2:2-2-2",
+                "source_page": "19",
+                "sort_order": 8,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-2"
+                },
+                "requirements": [
+                    {
+                        "code": "2-2-2",
+                        "display_code": "2-2-2",
+                        "normalized_code": "2_2_2",
+                        "title_en": "Cybersecurity requirements for identity and access management implementation",
+                        "title_ar": "تطبيق متطلبات إدارة هويات الدخول والصلاحيات",
+                        "requirement_text_en": "Cybersecurity requirements for identity and access management of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-2",
+                        "official_reference": "ECC-2:2024:2:2-2-2",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-2"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-2-3",
+                "display_code": "2-2-3",
+                "normalized_code": "2_2_3",
+                "title_en": "Identity and access management requirements coverage",
+                "title_ar": "متطلبات إدارة هويات الدخول والصلاحيات",
+                "description_en": "Cybersecurity requirements for identity and access management of the entity shall include the following as a minimum:\n2.2.3.1 Single-factor authentication based on username and password.\n2.2.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote access and for privileged accounts.\n2.2.3.3 User authorization based on identity and access control principles (Need-to Know and Need-to-Use principle, Least Privilege principle, and Segregation of Duties principle).\n2.2.3.4 Privileged access management.\n2.2.3.5 Periodic review of identities and access rights.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني المتعلقة بإدارة هويات الدخول والصلاحيات في الجهة بحد أدنى ما يلي: 1-3-2-2 التحقق من الهوية أحادي العنصر (Single-factor authentication) بناءً على إدارة تسجيل المستخدم، وإدارة كلمة المرور. 2-3-2-2 التحقق من الهوية متعدد العناصر (Multi-Factor Authentication) وتحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك لعمليات الدخول عن بعد. 3-3-2-2 إدارة تصاريح وصلاحيات المستخدمين (Authorization) بناءً على مبادئ التحكم بالدخول والصلاحيات (مبدأ الحاجة إلى المعرفة والاستخدام \"Need-to-know and Need-to-use\"، ومبدأ الحد الأدنى من الصلاحيات والامتيازات \"Least Privilege\"، ومبدأ فصل المهام \"Segregation of Duties\"). 4-3-2-2 إدارة الصلاحيات الهامة والحساسة (Privileged Access Management). 5-3-2-2 المراجعة الدورية لهويات الدخول والصلاحيات.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-3",
+                "official_reference": "ECC-2:2024:2:2-2-3",
+                "source_page": "19",
+                "sort_order": 9,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-2"
+                },
+                "requirements": [
+                    {
+                        "code": "2-2-3",
+                        "display_code": "2-2-3",
+                        "normalized_code": "2_2_3",
+                        "title_en": "Identity and access management requirements coverage",
+                        "title_ar": "متطلبات إدارة هويات الدخول والصلاحيات",
+                        "requirement_text_en": "Cybersecurity requirements for identity and access management of the entity shall include the following as a minimum:\n2.2.3.1 Single-factor authentication based on username and password.\n2.2.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote access and for privileged accounts.\n2.2.3.3 User authorization based on identity and access control principles (Need-to Know and Need-to-Use principle, Least Privilege principle, and Segregation of Duties principle).\n2.2.3.4 Privileged access management.\n2.2.3.5 Periodic review of identities and access rights.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني المتعلقة بإدارة هويات الدخول والصلاحيات في الجهة بحد أدنى ما يلي: 1-3-2-2 التحقق من الهوية أحادي العنصر (Single-factor authentication) بناءً على إدارة تسجيل المستخدم، وإدارة كلمة المرور. 2-3-2-2 التحقق من الهوية متعدد العناصر (Multi-Factor Authentication) وتحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك لعمليات الدخول عن بعد. 3-3-2-2 إدارة تصاريح وصلاحيات المستخدمين (Authorization) بناءً على مبادئ التحكم بالدخول والصلاحيات (مبدأ الحاجة إلى المعرفة والاستخدام \"Need-to-know and Need-to-use\"، ومبدأ الحد الأدنى من الصلاحيات والامتيازات \"Least Privilege\"، ومبدأ فصل المهام \"Segregation of Duties\"). 4-3-2-2 إدارة الصلاحيات الهامة والحساسة (Privileged Access Management). 5-3-2-2 المراجعة الدورية لهويات الدخول والصلاحيات.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-3",
+                        "official_reference": "ECC-2:2024:2:2-2-3",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-2"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-2-4",
+                "display_code": "2-2-4",
+                "normalized_code": "2_2_4",
+                "title_en": "Identity and access management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة هويات الدخول والصلاحيات",
+                "description_en": "The implementation of cybersecurity requirements for identity and access management of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-4",
+                "official_reference": "ECC-2:2024:2:2-2-4",
+                "source_page": "19",
+                "sort_order": 10,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-2"
+                },
+                "requirements": [
+                    {
+                        "code": "2-2-4",
+                        "display_code": "2-2-4",
+                        "normalized_code": "2_2_4",
+                        "title_en": "Identity and access management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة هويات الدخول والصلاحيات",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for identity and access management of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة هويات الدخول والصلاحيات في الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-2-4",
+                        "official_reference": "ECC-2:2024:2:2-2-4",
+                        "source_page": "19",
+                        "metadata": {
+                            "subdomain": "2-2"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-3-1",
+                "display_code": "2-3-1",
+                "normalized_code": "2_3_1",
+                "title_en": "Cybersecurity requirements for protection of information systems and processing facilities identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                "description_en": "Cybersecurity requirements for protection of information system and processing facilities of the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-1",
+                "official_reference": "ECC-2:2024:2:2-3-1",
+                "source_page": "20",
+                "sort_order": 11,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-3"
+                },
+                "requirements": [
+                    {
+                        "code": "2-3-1",
+                        "display_code": "2-3-1",
+                        "normalized_code": "2_3_1",
+                        "title_en": "Cybersecurity requirements for protection of information systems and processing facilities identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information system and processing facilities of the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-1",
+                        "official_reference": "ECC-2:2024:2:2-3-1",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-3"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-3-2",
+                "display_code": "2-3-2",
+                "normalized_code": "2_3_2",
+                "title_en": "Cybersecurity requirements for protection of information systems and processing facilities implementation",
+                "title_ar": "تطبيق متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                "description_en": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-2",
+                "official_reference": "ECC-2:2024:2:2-3-2",
+                "source_page": "20",
+                "sort_order": 12,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-3"
+                },
+                "requirements": [
+                    {
+                        "code": "2-3-2",
+                        "display_code": "2-3-2",
+                        "normalized_code": "2_3_2",
+                        "title_en": "Cybersecurity requirements for protection of information systems and processing facilities implementation",
+                        "title_ar": "تطبيق متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-2",
+                        "official_reference": "ECC-2:2024:2:2-3-2",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-3"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-3-3",
+                "display_code": "2-3-3",
+                "normalized_code": "2_3_3",
+                "title_en": "Information systems and processing facilities protection requirements coverage",
+                "title_ar": "متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                "description_en": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall include the following as a minimum:\n2.3.3.1 Protection from viruses, suspicious programs and activities, and malware on workstations and servers, using modern and advanced protection technologies and mechanisms, and securely managing them.\n2.3.3.2 Strict restriction on the use of external storage media and their security.\n2.3.3.3 Patch management for systems, applications, and devices.\n2.3.3.4 Centralized clock synchronization with an accurate and trusted source, such as sources provided by the Saudi Standards, Metrology and Quality Organization (SASO).",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة بحد أدنى ما يلي: 1-3-3-2 الحماية من الفيروسات والبرامج والأنشطة المشبوهة والبرمجيات الضارة (Malware) على أجهزة المستخدمين والخوادم باستخدام تقنيات وآليات الحماية الحديثة والمتقدمة، وإدارتها بشكل آمن. 2-3-3-2 التقييد الحازم لاستخدام أجهزة وسائط التخزين الخارجية والأمن المتعلق بها. 3-3-3-2 إدارة حزم التحديثات والإصلاحات للأنظمة والتطبيقات والأجهزة (Patch Management). 4-3-3-2 مزامنة التوقيت (Clock Synchronization) مركزياً ومن مصدر دقيق وموثوق، ومن هذه المصادر ما توفره الهيئة السعودية للمواصفات والمقاييس والجودة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-3",
+                "official_reference": "ECC-2:2024:2:2-3-3",
+                "source_page": "20",
+                "sort_order": 13,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-3"
+                },
+                "requirements": [
+                    {
+                        "code": "2-3-3",
+                        "display_code": "2-3-3",
+                        "normalized_code": "2_3_3",
+                        "title_en": "Information systems and processing facilities protection requirements coverage",
+                        "title_ar": "متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall include the following as a minimum:\n2.3.3.1 Protection from viruses, suspicious programs and activities, and malware on workstations and servers, using modern and advanced protection technologies and mechanisms, and securely managing them.\n2.3.3.2 Strict restriction on the use of external storage media and their security.\n2.3.3.3 Patch management for systems, applications, and devices.\n2.3.3.4 Centralized clock synchronization with an accurate and trusted source, such as sources provided by the Saudi Standards, Metrology and Quality Organization (SASO).",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة بحد أدنى ما يلي: 1-3-3-2 الحماية من الفيروسات والبرامج والأنشطة المشبوهة والبرمجيات الضارة (Malware) على أجهزة المستخدمين والخوادم باستخدام تقنيات وآليات الحماية الحديثة والمتقدمة، وإدارتها بشكل آمن. 2-3-3-2 التقييد الحازم لاستخدام أجهزة وسائط التخزين الخارجية والأمن المتعلق بها. 3-3-3-2 إدارة حزم التحديثات والإصلاحات للأنظمة والتطبيقات والأجهزة (Patch Management). 4-3-3-2 مزامنة التوقيت (Clock Synchronization) مركزياً ومن مصدر دقيق وموثوق، ومن هذه المصادر ما توفره الهيئة السعودية للمواصفات والمقاييس والجودة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-3",
+                        "official_reference": "ECC-2:2024:2:2-3-3",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-3"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-3-4",
+                "display_code": "2-3-4",
+                "normalized_code": "2_3_4",
+                "title_en": "Information systems and processing facilities protection requirements review",
+                "title_ar": "مراجعة متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                "description_en": "The implementation of cybersecurity requirements for protection of the information system and processing facilities of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-4",
+                "official_reference": "ECC-2:2024:2:2-3-4",
+                "source_page": "20",
+                "sort_order": 14,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-3"
+                },
+                "requirements": [
+                    {
+                        "code": "2-3-4",
+                        "display_code": "2-3-4",
+                        "normalized_code": "2_3_4",
+                        "title_en": "Information systems and processing facilities protection requirements review",
+                        "title_ar": "مراجعة متطلبات حماية الأنظمة وأجهزة معالجة المعلومات",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for protection of the information system and processing facilities of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية الأنظمة وأجهزة معالجة المعلومات للجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-3-4",
+                        "official_reference": "ECC-2:2024:2:2-3-4",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-3"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-4-1",
+                "display_code": "2-4-1",
+                "normalized_code": "2_4_1",
+                "title_en": "Cybersecurity requirements for protection of the email service identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية البريد الإلكتروني",
+                "description_en": "Cybersecurity requirements for protection of the email service of the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-1",
+                "official_reference": "ECC-2:2024:2:2-4-1",
+                "source_page": "20",
+                "sort_order": 15,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-4"
+                },
+                "requirements": [
+                    {
+                        "code": "2-4-1",
+                        "display_code": "2-4-1",
+                        "normalized_code": "2_4_1",
+                        "title_en": "Cybersecurity requirements for protection of the email service identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية البريد الإلكتروني",
+                        "requirement_text_en": "Cybersecurity requirements for protection of the email service of the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-1",
+                        "official_reference": "ECC-2:2024:2:2-4-1",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-4"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-4-2",
+                "display_code": "2-4-2",
+                "normalized_code": "2_4_2",
+                "title_en": "Cybersecurity requirements for protection of email service implementation",
+                "title_ar": "تطبيق متطلبات حماية البريد الإلكتروني",
+                "description_en": "Cybersecurity requirements for protection of email service of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-2",
+                "official_reference": "ECC-2:2024:2:2-4-2",
+                "source_page": "20",
+                "sort_order": 16,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-4"
+                },
+                "requirements": [
+                    {
+                        "code": "2-4-2",
+                        "display_code": "2-4-2",
+                        "normalized_code": "2_4_2",
+                        "title_en": "Cybersecurity requirements for protection of email service implementation",
+                        "title_ar": "تطبيق متطلبات حماية البريد الإلكتروني",
+                        "requirement_text_en": "Cybersecurity requirements for protection of email service of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-2",
+                        "official_reference": "ECC-2:2024:2:2-4-2",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-4"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-4-3",
+                "display_code": "2-4-3",
+                "normalized_code": "2_4_3",
+                "title_en": "Email protection requirements coverage",
+                "title_ar": "متطلبات حماية البريد الإلكتروني",
+                "description_en": "Cybersecurity requirements for protection of the email service of the entity shall include the following as a minimum:\n2.4.3.1 Analyzing and filtering email messages (specifically phishing emails and spam emails) using modern and advanced email protection techniques and mechanisms.\n2.4.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote and webmail access.\n2.4.3.3 Email archiving and backup.\n2.4.3.4 Secure management and protection against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.4.3.5 Validation of the entity's email service domains by using Sender Policy Framework (SPF), Domain Keys Identified Mail (DKIM), and Domain Message Authentication Reporting and Conformance (DMARC).",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة بحد أدنى ما يلي: 1-3-4-2 تحليل وتصفية (Filtering) رسائل البريد الإلكتروني (وخصوصاً رسائل التصيّد الإلكتروني \"Phishing Emails\" والرسائل الإقتحامية \"Spam Emails\") باستخدام تقنيات وآليات الحماية الحديثة والمتقدمة للبريد الإلكتروني. 2-3-4-2 التحقق من الهوية متعدد العناصر (Multi-Factor Authentication) وتحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك للدخول عن بعد والدخول عن طريق صفحة موقع البريد الإلكتروني (Webmail). 3-3-4-2 النسخ الاحتياطي والأرشفة للبريد الإلكتروني. 4-3-4-2 الحماية من التهديدات المتقدمة المستمرة (APT Protection)، التي تستخدم عادة الفيروسات والبرمجيات الضارة غير المعروفة مسبقاً (Zero-Day Malware)، وإدارتها بشكل آمن. 5-3-4-2 توثيق مجال البريد الإلكتروني للجهة من خلال منصة حصين باستخدام إطار سياسة المرسل (Sender Policy Framework \"SPF\") والبريد المعرّف بمفاتيح النطاق (Domain Keys Identified Mail \"DKIM\") وسياسة مصادقة الرسائل والإبلاغ عنها (Domain Message Authentication Reporting and Conformance \"DMARC\").",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-3",
+                "official_reference": "ECC-2:2024:2:2-4-3",
+                "source_page": "20",
+                "sort_order": 17,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-4"
+                },
+                "requirements": [
+                    {
+                        "code": "2-4-3",
+                        "display_code": "2-4-3",
+                        "normalized_code": "2_4_3",
+                        "title_en": "Email protection requirements coverage",
+                        "title_ar": "متطلبات حماية البريد الإلكتروني",
+                        "requirement_text_en": "Cybersecurity requirements for protection of the email service of the entity shall include the following as a minimum:\n2.4.3.1 Analyzing and filtering email messages (specifically phishing emails and spam emails) using modern and advanced email protection techniques and mechanisms.\n2.4.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote and webmail access.\n2.4.3.3 Email archiving and backup.\n2.4.3.4 Secure management and protection against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.4.3.5 Validation of the entity's email service domains by using Sender Policy Framework (SPF), Domain Keys Identified Mail (DKIM), and Domain Message Authentication Reporting and Conformance (DMARC).",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية البريد الإلكتروني للجهة بحد أدنى ما يلي: 1-3-4-2 تحليل وتصفية (Filtering) رسائل البريد الإلكتروني (وخصوصاً رسائل التصيّد الإلكتروني \"Phishing Emails\" والرسائل الإقتحامية \"Spam Emails\") باستخدام تقنيات وآليات الحماية الحديثة والمتقدمة للبريد الإلكتروني. 2-3-4-2 التحقق من الهوية متعدد العناصر (Multi-Factor Authentication) وتحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك للدخول عن بعد والدخول عن طريق صفحة موقع البريد الإلكتروني (Webmail). 3-3-4-2 النسخ الاحتياطي والأرشفة للبريد الإلكتروني. 4-3-4-2 الحماية من التهديدات المتقدمة المستمرة (APT Protection)، التي تستخدم عادة الفيروسات والبرمجيات الضارة غير المعروفة مسبقاً (Zero-Day Malware)، وإدارتها بشكل آمن. 5-3-4-2 توثيق مجال البريد الإلكتروني للجهة من خلال منصة حصين باستخدام إطار سياسة المرسل (Sender Policy Framework \"SPF\") والبريد المعرّف بمفاتيح النطاق (Domain Keys Identified Mail \"DKIM\") وسياسة مصادقة الرسائل والإبلاغ عنها (Domain Message Authentication Reporting and Conformance \"DMARC\").",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-3",
+                        "official_reference": "ECC-2:2024:2:2-4-3",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-4"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-4-4",
+                "display_code": "2-4-4",
+                "normalized_code": "2_4_4",
+                "title_en": "Email service protection requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات حماية البريد الإلكتروني",
+                "description_en": "The implementation of cybersecurity requirements for email service of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني الخاصة بحماية البريد الإلكتروني للجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-4",
+                "official_reference": "ECC-2:2024:2:2-4-4",
+                "source_page": "20",
+                "sort_order": 18,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-4"
+                },
+                "requirements": [
+                    {
+                        "code": "2-4-4",
+                        "display_code": "2-4-4",
+                        "normalized_code": "2_4_4",
+                        "title_en": "Email service protection requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات حماية البريد الإلكتروني",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for email service of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني الخاصة بحماية البريد الإلكتروني للجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-4-4",
+                        "official_reference": "ECC-2:2024:2:2-4-4",
+                        "source_page": "20",
+                        "metadata": {
+                            "subdomain": "2-4"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-5-1",
+                "display_code": "2-5-1",
+                "normalized_code": "2_5_1",
+                "title_en": "Cybersecurity requirements for network security management identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة أمن الشبكات",
+                "description_en": "Cybersecurity requirements for the entity's network security management shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-1",
+                "official_reference": "ECC-2:2024:2:2-5-1",
+                "source_page": "21",
+                "sort_order": 19,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-5"
+                },
+                "requirements": [
+                    {
+                        "code": "2-5-1",
+                        "display_code": "2-5-1",
+                        "normalized_code": "2_5_1",
+                        "title_en": "Cybersecurity requirements for network security management identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة أمن الشبكات",
+                        "requirement_text_en": "Cybersecurity requirements for the entity's network security management shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-1",
+                        "official_reference": "ECC-2:2024:2:2-5-1",
+                        "source_page": "21",
+                        "metadata": {
+                            "subdomain": "2-5"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-5-2",
+                "display_code": "2-5-2",
+                "normalized_code": "2_5_2",
+                "title_en": "Cybersecurity requirements for network security management implementation",
+                "title_ar": "تطبيق متطلبات إدارة أمن الشبكات",
+                "description_en": "Cybersecurity requirements for the entity's network security management shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-2",
+                "official_reference": "ECC-2:2024:2:2-5-2",
+                "source_page": "21",
+                "sort_order": 20,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-5"
+                },
+                "requirements": [
+                    {
+                        "code": "2-5-2",
+                        "display_code": "2-5-2",
+                        "normalized_code": "2_5_2",
+                        "title_en": "Cybersecurity requirements for network security management implementation",
+                        "title_ar": "تطبيق متطلبات إدارة أمن الشبكات",
+                        "requirement_text_en": "Cybersecurity requirements for the entity's network security management shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-2",
+                        "official_reference": "ECC-2:2024:2:2-5-2",
+                        "source_page": "21",
+                        "metadata": {
+                            "subdomain": "2-5"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-5-3",
+                "display_code": "2-5-3",
+                "normalized_code": "2_5_3",
+                "title_en": "Network security management requirements coverage",
+                "title_ar": "متطلبات إدارة أمن الشبكات",
+                "description_en": "Cybersecurity requirements for the entity's network security management shall include the following as a minimum:\n2.5.3.1 Logical or physical isolation and segmentation of network segments in a secure manner which is required to control relevant cybersecurity risks, using firewall and defense-in-depth principle.\n2.5.3.2 Isolation of production network from testing and development environment networks.\n2.5.3.3 Secure browsing and internet connectivity, including strict restrictions on suspicious websites, file storage\/sharing websites, and remote access websites.\n2.5.3.4 Wireless network security and protection using secure authentication and encryption techniques and avoiding the connection of wireless networks to the entity's internal network, except after a comprehensive assessment of subsequent risks, with handling them in a way that protects the technology assets of the entity.\n2.5.3.5 Restricting and managing network services, protocols, and ports.\n2.5.3.6 Intrusion Prevention Systems (IPS).\n2.5.3.7 Security of Domain Name Service (DNS).\n2.5.3.8 Secure management and protection of Internet browsing channel against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.5.3.9 Protecting against Distributed Denial of Service (DDoS) attacks to limit risks arising from these attacks.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة بحد أدنى ما يلي: 1-3-5-2 العزل والتقسيم المادي أو المنطقي لأجزاء الشبكات بشكل آمن، واللازم للسيطرة على مخاطر الأمن السيبراني ذات العلاقة، باستخدام جدار الحماية (Firewall) ومبدأ الدفاع الأمني متعدد المراحل (Defense-in-Depth). 2-3-5-2 عزل شبكة بيئة الإنتاج عن شبكات بيئات التطوير والاختبار. 3-3-5-2 أمن التصفح والاتصال بالإنترنت، ويشمل ذلك التقييد الحازم للمواقع الإلكترونية المشبوهة، ومواقع مشاركة وتخزين الملفات، ومواقع الدخول عن بعد. 4-3-5-2 أمن الشبكات اللاسلكية وحمايتها باستخدام وسائل آمنة للتحقق من الهوية والتشفير، وعدم ربط الشبكات اللاسلكية بشبكة الجهة الداخلية إلا بناءً على دراسة متكاملة للمخاطر المترتبة على ذلك والتعامل معها بما يضمن حماية الأصول التقنية للجهة. 5-3-5-2 قيود وإدارة منافذ وبروتوكولات وخدمات الشبكة. 6-3-5-2 أنظمة الحماية المتقدمة لاكتشاف ومنع الاختراقات (Intrusion Prevention Systems). 7-3-5-2 أمن نظام أسماء النطاقات (DNS). 8-3-5-2 حماية قناة تصفح الإنترنت من التهديدات المتقدمة المستمرة (APT Protection)، التي تستخدم عادة الفيروسات والبرمجيات الضارة غير المعروفة مسبقاً (Zero-Day Malware)، وإدارتها بشكل آمن. 9-3-5-2 الحماية من هجمات تعطيل الشبكات (Distributed Denial of Service Attack \"DDoS\") للحد من المخاطر الناتجة عن هجمات تعطيل الشبكات.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-3",
+                "official_reference": "ECC-2:2024:2:2-5-3",
+                "source_page": "21",
+                "sort_order": 21,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-5"
+                },
+                "requirements": [
+                    {
+                        "code": "2-5-3",
+                        "display_code": "2-5-3",
+                        "normalized_code": "2_5_3",
+                        "title_en": "Network security management requirements coverage",
+                        "title_ar": "متطلبات إدارة أمن الشبكات",
+                        "requirement_text_en": "Cybersecurity requirements for the entity's network security management shall include the following as a minimum:\n2.5.3.1 Logical or physical isolation and segmentation of network segments in a secure manner which is required to control relevant cybersecurity risks, using firewall and defense-in-depth principle.\n2.5.3.2 Isolation of production network from testing and development environment networks.\n2.5.3.3 Secure browsing and internet connectivity, including strict restrictions on suspicious websites, file storage\/sharing websites, and remote access websites.\n2.5.3.4 Wireless network security and protection using secure authentication and encryption techniques and avoiding the connection of wireless networks to the entity's internal network, except after a comprehensive assessment of subsequent risks, with handling them in a way that protects the technology assets of the entity.\n2.5.3.5 Restricting and managing network services, protocols, and ports.\n2.5.3.6 Intrusion Prevention Systems (IPS).\n2.5.3.7 Security of Domain Name Service (DNS).\n2.5.3.8 Secure management and protection of Internet browsing channel against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.5.3.9 Protecting against Distributed Denial of Service (DDoS) attacks to limit risks arising from these attacks.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة بحد أدنى ما يلي: 1-3-5-2 العزل والتقسيم المادي أو المنطقي لأجزاء الشبكات بشكل آمن، واللازم للسيطرة على مخاطر الأمن السيبراني ذات العلاقة، باستخدام جدار الحماية (Firewall) ومبدأ الدفاع الأمني متعدد المراحل (Defense-in-Depth). 2-3-5-2 عزل شبكة بيئة الإنتاج عن شبكات بيئات التطوير والاختبار. 3-3-5-2 أمن التصفح والاتصال بالإنترنت، ويشمل ذلك التقييد الحازم للمواقع الإلكترونية المشبوهة، ومواقع مشاركة وتخزين الملفات، ومواقع الدخول عن بعد. 4-3-5-2 أمن الشبكات اللاسلكية وحمايتها باستخدام وسائل آمنة للتحقق من الهوية والتشفير، وعدم ربط الشبكات اللاسلكية بشبكة الجهة الداخلية إلا بناءً على دراسة متكاملة للمخاطر المترتبة على ذلك والتعامل معها بما يضمن حماية الأصول التقنية للجهة. 5-3-5-2 قيود وإدارة منافذ وبروتوكولات وخدمات الشبكة. 6-3-5-2 أنظمة الحماية المتقدمة لاكتشاف ومنع الاختراقات (Intrusion Prevention Systems). 7-3-5-2 أمن نظام أسماء النطاقات (DNS). 8-3-5-2 حماية قناة تصفح الإنترنت من التهديدات المتقدمة المستمرة (APT Protection)، التي تستخدم عادة الفيروسات والبرمجيات الضارة غير المعروفة مسبقاً (Zero-Day Malware)، وإدارتها بشكل آمن. 9-3-5-2 الحماية من هجمات تعطيل الشبكات (Distributed Denial of Service Attack \"DDoS\") للحد من المخاطر الناتجة عن هجمات تعطيل الشبكات.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-3",
+                        "official_reference": "ECC-2:2024:2:2-5-3",
+                        "source_page": "21",
+                        "metadata": {
+                            "subdomain": "2-5"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-5-4",
+                "display_code": "2-5-4",
+                "normalized_code": "2_5_4",
+                "title_en": "Network security management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة أمن الشبكات",
+                "description_en": "The implementation of cybersecurity requirements for the entity's network security management shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-4",
+                "official_reference": "ECC-2:2024:2:2-5-4",
+                "source_page": "21",
+                "sort_order": 22,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-5"
+                },
+                "requirements": [
+                    {
+                        "code": "2-5-4",
+                        "display_code": "2-5-4",
+                        "normalized_code": "2_5_4",
+                        "title_en": "Network security management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة أمن الشبكات",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for the entity's network security management shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة أمن شبكات الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-5-4",
+                        "official_reference": "ECC-2:2024:2:2-5-4",
+                        "source_page": "21",
+                        "metadata": {
+                            "subdomain": "2-5"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-6-1",
+                "display_code": "2-6-1",
+                "normalized_code": "2_6_1",
+                "title_en": "Cybersecurity requirements for mobile devices and BYOD security identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات أمن الأجهزة المحمولة وBYOD",
+                "description_en": "Cybersecurity requirements for mobile devices and BYOD security when connected to the entity's network shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة والأجهزة الشخصية للعاملين (BYOD) عند ارتباطها بشبكة الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-1",
+                "official_reference": "ECC-2:2024:2:2-6-1",
+                "source_page": "22",
+                "sort_order": 23,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-6"
+                },
+                "requirements": [
+                    {
+                        "code": "2-6-1",
+                        "display_code": "2-6-1",
+                        "normalized_code": "2_6_1",
+                        "title_en": "Cybersecurity requirements for mobile devices and BYOD security identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات أمن الأجهزة المحمولة وBYOD",
+                        "requirement_text_en": "Cybersecurity requirements for mobile devices and BYOD security when connected to the entity's network shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة والأجهزة الشخصية للعاملين (BYOD) عند ارتباطها بشبكة الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-1",
+                        "official_reference": "ECC-2:2024:2:2-6-1",
+                        "source_page": "22",
+                        "metadata": {
+                            "subdomain": "2-6"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-6-2",
+                "display_code": "2-6-2",
+                "normalized_code": "2_6_2",
+                "title_en": "Cybersecurity requirements for mobile devices and BYOD security implementation",
+                "title_ar": "تطبيق متطلبات أمن الأجهزة المحمولة وBYOD",
+                "description_en": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة وأجهزة (BYOD) للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-2",
+                "official_reference": "ECC-2:2024:2:2-6-2",
+                "source_page": "22",
+                "sort_order": 24,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-6"
+                },
+                "requirements": [
+                    {
+                        "code": "2-6-2",
+                        "display_code": "2-6-2",
+                        "normalized_code": "2_6_2",
+                        "title_en": "Cybersecurity requirements for mobile devices and BYOD security implementation",
+                        "title_ar": "تطبيق متطلبات أمن الأجهزة المحمولة وBYOD",
+                        "requirement_text_en": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة وأجهزة (BYOD) للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-2",
+                        "official_reference": "ECC-2:2024:2:2-6-2",
+                        "source_page": "22",
+                        "metadata": {
+                            "subdomain": "2-6"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-6-3",
+                "display_code": "2-6-3",
+                "normalized_code": "2_6_3",
+                "title_en": "Mobile devices and BYOD security requirements coverage",
+                "title_ar": "متطلبات أمن الأجهزة المحمولة وBYOD",
+                "description_en": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall include the following as a minimum:\n2.6.3.1 Separation and encryption of the entity's data and information stored on mobile devices and BYODs.\n2.6.3.2 Controlled and restricted use based on the requirements of the interest of the entity's business.\n2.6.3.3 Deletion of the entity's data and information stored on mobile devices and BYOD in cases of device loss or after the ending\/termination of employment with the entity.\n2.6.3.4 Security awareness for users.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة وأجهزة (BYOD) للجهة بحد أدنى ما يلي: 1-3-6-2 فصل وتشفير البيانات والمعلومات (الخاصة بالجهة) المخزنة على الأجهزة المحمولة وأجهزة (BYOD). 2-3-6-2 الاستخدام المحدد والمقيد بناءً على ما تتطلبه مصلحة أعمال الجهة. 3-3-6-2 حذف البيانات والمعلومات (الخاصة بالجهة) المخزنة على الأجهزة المحمولة وأجهزة (BYOD) عند فقدان الأجهزة أو بعد انتهاء\/إنهاء العلاقة الوظيفية مع الجهة. 4-3-6-2 التوعية الأمنية للمستخدمين.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-3",
+                "official_reference": "ECC-2:2024:2:2-6-3",
+                "source_page": "22",
+                "sort_order": 25,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-6"
+                },
+                "requirements": [
+                    {
+                        "code": "2-6-3",
+                        "display_code": "2-6-3",
+                        "normalized_code": "2_6_3",
+                        "title_en": "Mobile devices and BYOD security requirements coverage",
+                        "title_ar": "متطلبات أمن الأجهزة المحمولة وBYOD",
+                        "requirement_text_en": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall include the following as a minimum:\n2.6.3.1 Separation and encryption of the entity's data and information stored on mobile devices and BYODs.\n2.6.3.2 Controlled and restricted use based on the requirements of the interest of the entity's business.\n2.6.3.3 Deletion of the entity's data and information stored on mobile devices and BYOD in cases of device loss or after the ending\/termination of employment with the entity.\n2.6.3.4 Security awareness for users.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني الخاصة بأمن الأجهزة المحمولة وأجهزة (BYOD) للجهة بحد أدنى ما يلي: 1-3-6-2 فصل وتشفير البيانات والمعلومات (الخاصة بالجهة) المخزنة على الأجهزة المحمولة وأجهزة (BYOD). 2-3-6-2 الاستخدام المحدد والمقيد بناءً على ما تتطلبه مصلحة أعمال الجهة. 3-3-6-2 حذف البيانات والمعلومات (الخاصة بالجهة) المخزنة على الأجهزة المحمولة وأجهزة (BYOD) عند فقدان الأجهزة أو بعد انتهاء\/إنهاء العلاقة الوظيفية مع الجهة. 4-3-6-2 التوعية الأمنية للمستخدمين.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-3",
+                        "official_reference": "ECC-2:2024:2:2-6-3",
+                        "source_page": "22",
+                        "metadata": {
+                            "subdomain": "2-6"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-6-4",
+                "display_code": "2-6-4",
+                "normalized_code": "2_6_4",
+                "title_en": "Mobile devices and BYOD security requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات أمن الأجهزة المحمولة وBYOD",
+                "description_en": "The implementation of cybersecurity requirements for mobile devices and BYOD security of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متكلبات الأمن السيبراني الخاصة لأمن الأجهزة المحمولة و أجهزة (BYOD) للجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-4",
+                "official_reference": "ECC-2:2024:2:2-6-4",
+                "source_page": "22",
+                "sort_order": 26,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-6"
+                },
+                "requirements": [
+                    {
+                        "code": "2-6-4",
+                        "display_code": "2-6-4",
+                        "normalized_code": "2_6_4",
+                        "title_en": "Mobile devices and BYOD security requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات أمن الأجهزة المحمولة وBYOD",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for mobile devices and BYOD security of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متكلبات الأمن السيبراني الخاصة لأمن الأجهزة المحمولة و أجهزة (BYOD) للجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-6-4",
+                        "official_reference": "ECC-2:2024:2:2-6-4",
+                        "source_page": "22",
+                        "metadata": {
+                            "subdomain": "2-6"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-7-1",
+                "display_code": "2-7-1",
+                "normalized_code": "2_7_1",
+                "title_en": "Cybersecurity requirements for protecting and handling data and information identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية بيانات ومعلومات الجهة",
+                "description_en": "Cybersecurity requirements for protecting and handling data and information of the entity shall be identified, documented, and approved, as per the relevant legislative and regulatory requirements.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة، والتعامل معها وفقاً للمتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-1",
+                "official_reference": "ECC-2:2024:2:2-7-1",
+                "source_page": "23",
+                "sort_order": 27,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-7"
+                },
+                "requirements": [
+                    {
+                        "code": "2-7-1",
+                        "display_code": "2-7-1",
+                        "normalized_code": "2_7_1",
+                        "title_en": "Cybersecurity requirements for protecting and handling data and information identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية بيانات ومعلومات الجهة",
+                        "requirement_text_en": "Cybersecurity requirements for protecting and handling data and information of the entity shall be identified, documented, and approved, as per the relevant legislative and regulatory requirements.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة، والتعامل معها وفقاً للمتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-1",
+                        "official_reference": "ECC-2:2024:2:2-7-1",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-7"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-7-2",
+                "display_code": "2-7-2",
+                "normalized_code": "2_7_2",
+                "title_en": "Cybersecurity requirements for protecting data and information implementation",
+                "title_ar": "تطبيق متطلبات حماية بيانات ومعلومات الجهة",
+                "description_en": "Cybersecurity requirements for protecting data and information of the entity shall be implemented, based on its classification level.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-2",
+                "official_reference": "ECC-2:2024:2:2-7-2",
+                "source_page": "23",
+                "sort_order": 28,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-7"
+                },
+                "requirements": [
+                    {
+                        "code": "2-7-2",
+                        "display_code": "2-7-2",
+                        "normalized_code": "2_7_2",
+                        "title_en": "Cybersecurity requirements for protecting data and information implementation",
+                        "title_ar": "تطبيق متطلبات حماية بيانات ومعلومات الجهة",
+                        "requirement_text_en": "Cybersecurity requirements for protecting data and information of the entity shall be implemented, based on its classification level.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-2",
+                        "official_reference": "ECC-2:2024:2:2-7-2",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-7"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-7-3",
+                "display_code": "2-7-3",
+                "normalized_code": "2_7_3",
+                "title_en": "Data and information protection requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات حماية بيانات ومعلومات الجهة",
+                "description_en": "The implementation of cybersecurity requirements for protecting data and information of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-3",
+                "official_reference": "ECC-2:2024:2:2-7-3",
+                "source_page": "23",
+                "sort_order": 29,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-7"
+                },
+                "requirements": [
+                    {
+                        "code": "2-7-3",
+                        "display_code": "2-7-3",
+                        "normalized_code": "2_7_3",
+                        "title_en": "Data and information protection requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات حماية بيانات ومعلومات الجهة",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for protecting data and information of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لحماية بيانات ومعلومات الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-7-3",
+                        "official_reference": "ECC-2:2024:2:2-7-3",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-7"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-8-1",
+                "display_code": "2-8-1",
+                "normalized_code": "2_8_1",
+                "title_en": "Cybersecurity requirements for cryptography identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات التشفير",
+                "description_en": "Cybersecurity requirements for cryptography within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني للتشفير في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-1",
+                "official_reference": "ECC-2:2024:2:2-8-1",
+                "source_page": "23",
+                "sort_order": 30,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-8"
+                },
+                "requirements": [
+                    {
+                        "code": "2-8-1",
+                        "display_code": "2-8-1",
+                        "normalized_code": "2_8_1",
+                        "title_en": "Cybersecurity requirements for cryptography identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات التشفير",
+                        "requirement_text_en": "Cybersecurity requirements for cryptography within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني للتشفير في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-1",
+                        "official_reference": "ECC-2:2024:2:2-8-1",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-8"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-8-2",
+                "display_code": "2-8-2",
+                "normalized_code": "2_8_2",
+                "title_en": "Cybersecurity requirements for cryptography implementation",
+                "title_ar": "تطبيق متطلبات التشفير",
+                "description_en": "Cybersecurity requirements for cryptography within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني للتشفير في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-2",
+                "official_reference": "ECC-2:2024:2:2-8-2",
+                "source_page": "23",
+                "sort_order": 31,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-8"
+                },
+                "requirements": [
+                    {
+                        "code": "2-8-2",
+                        "display_code": "2-8-2",
+                        "normalized_code": "2_8_2",
+                        "title_en": "Cybersecurity requirements for cryptography implementation",
+                        "title_ar": "تطبيق متطلبات التشفير",
+                        "requirement_text_en": "Cybersecurity requirements for cryptography within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني للتشفير في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-2",
+                        "official_reference": "ECC-2:2024:2:2-8-2",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-8"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-8-3",
+                "display_code": "2-8-3",
+                "normalized_code": "2_8_3",
+                "title_en": "Cryptography requirements coverage",
+                "title_ar": "متطلبات التشفير",
+                "description_en": "Cybersecurity requirements for cryptography shall include at least the requirements in the National Cryptographic Standards, published by NCA. The appropriate cryptographic standard level shall be implemented based on the nature and sensitivity of the data, systems, and networks to be protected as well as the entity's risk assessment, and as per the relevant legislative and regulatory requirements, as follows:\n2.8.3.1 Approved cryptographic systems and solutions standards and their technical and regulatory restrictions.\n2.8.3.2 Secure management of cryptographic keys during their lifecycles.\n2.8.3.3 Encryption of data in-transit and at-rest, as per their classification and the relevant legislative and regulatory requirements.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني للتشفير بحد أدنى المتطلبات المذكورة في المعايير الوطنية للتشفير الصادرة من الهيئة، مع تطبيق مستوى التشفير المناسب، وذلك بحسب طبيعة ومستوى حساسية البيانات والأنظمة والشبكات وبناءً على تقييم المخاطر من قبل الجهة وحسب المتطلبات التشريعية والتنظيمية ذات العلاقة، وفقاً لما يلي: 1-3-8-2 معايير أنظمة وحلول التشفير المعتمدة والقيود المطبقة عليها (تقنياً وتنظيمياً). 2-3-8-2 الإدارة الآمنة لمفاتيح التشفير خلال عمليات دورة حياتها. 3-3-8-2 تشفير البيانات أثناء النقل والتخزين والمعالجة بناءً على تصنيفها وحسب المتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-3",
+                "official_reference": "ECC-2:2024:2:2-8-3",
+                "source_page": "23",
+                "sort_order": 32,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-8"
+                },
+                "requirements": [
+                    {
+                        "code": "2-8-3",
+                        "display_code": "2-8-3",
+                        "normalized_code": "2_8_3",
+                        "title_en": "Cryptography requirements coverage",
+                        "title_ar": "متطلبات التشفير",
+                        "requirement_text_en": "Cybersecurity requirements for cryptography shall include at least the requirements in the National Cryptographic Standards, published by NCA. The appropriate cryptographic standard level shall be implemented based on the nature and sensitivity of the data, systems, and networks to be protected as well as the entity's risk assessment, and as per the relevant legislative and regulatory requirements, as follows:\n2.8.3.1 Approved cryptographic systems and solutions standards and their technical and regulatory restrictions.\n2.8.3.2 Secure management of cryptographic keys during their lifecycles.\n2.8.3.3 Encryption of data in-transit and at-rest, as per their classification and the relevant legislative and regulatory requirements.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني للتشفير بحد أدنى المتطلبات المذكورة في المعايير الوطنية للتشفير الصادرة من الهيئة، مع تطبيق مستوى التشفير المناسب، وذلك بحسب طبيعة ومستوى حساسية البيانات والأنظمة والشبكات وبناءً على تقييم المخاطر من قبل الجهة وحسب المتطلبات التشريعية والتنظيمية ذات العلاقة، وفقاً لما يلي: 1-3-8-2 معايير أنظمة وحلول التشفير المعتمدة والقيود المطبقة عليها (تقنياً وتنظيمياً). 2-3-8-2 الإدارة الآمنة لمفاتيح التشفير خلال عمليات دورة حياتها. 3-3-8-2 تشفير البيانات أثناء النقل والتخزين والمعالجة بناءً على تصنيفها وحسب المتطلبات التشريعية والتنظيمية ذات العلاقة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-3",
+                        "official_reference": "ECC-2:2024:2:2-8-3",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-8"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-8-4",
+                "display_code": "2-8-4",
+                "normalized_code": "2_8_4",
+                "title_en": "Cryptography requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات التشفير",
+                "description_en": "The implementation of cybersecurity requirements for cryptography within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني للتشفير في الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-4",
+                "official_reference": "ECC-2:2024:2:2-8-4",
+                "source_page": "23",
+                "sort_order": 33,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-8"
+                },
+                "requirements": [
+                    {
+                        "code": "2-8-4",
+                        "display_code": "2-8-4",
+                        "normalized_code": "2_8_4",
+                        "title_en": "Cryptography requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات التشفير",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for cryptography within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني للتشفير في الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-8-4",
+                        "official_reference": "ECC-2:2024:2:2-8-4",
+                        "source_page": "23",
+                        "metadata": {
+                            "subdomain": "2-8"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-9-1",
+                "display_code": "2-9-1",
+                "normalized_code": "2_9_1",
+                "title_en": "Cybersecurity requirements for backup and recovery management identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة النسخ الاحتياطية",
+                "description_en": "Cybersecurity requirements for backup and recovery management within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-1",
+                "official_reference": "ECC-2:2024:2:2-9-1",
+                "source_page": "24",
+                "sort_order": 34,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-9"
+                },
+                "requirements": [
+                    {
+                        "code": "2-9-1",
+                        "display_code": "2-9-1",
+                        "normalized_code": "2_9_1",
+                        "title_en": "Cybersecurity requirements for backup and recovery management identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة النسخ الاحتياطية",
+                        "requirement_text_en": "Cybersecurity requirements for backup and recovery management within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-1",
+                        "official_reference": "ECC-2:2024:2:2-9-1",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-9"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-9-2",
+                "display_code": "2-9-2",
+                "normalized_code": "2_9_2",
+                "title_en": "Cybersecurity requirements for backup and recovery management implementation",
+                "title_ar": "تطبيق متطلبات إدارة النسخ الاحتياطية",
+                "description_en": "Cybersecurity requirements for backup and recovery management within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-2",
+                "official_reference": "ECC-2:2024:2:2-9-2",
+                "source_page": "24",
+                "sort_order": 35,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-9"
+                },
+                "requirements": [
+                    {
+                        "code": "2-9-2",
+                        "display_code": "2-9-2",
+                        "normalized_code": "2_9_2",
+                        "title_en": "Cybersecurity requirements for backup and recovery management implementation",
+                        "title_ar": "تطبيق متطلبات إدارة النسخ الاحتياطية",
+                        "requirement_text_en": "Cybersecurity requirements for backup and recovery management within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-2",
+                        "official_reference": "ECC-2:2024:2:2-9-2",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-9"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-9-3",
+                "display_code": "2-9-3",
+                "normalized_code": "2_9_3",
+                "title_en": "Backup and recovery management requirements coverage",
+                "title_ar": "متطلبات إدارة النسخ الاحتياطية",
+                "description_en": "Cybersecurity requirements for backup and recovery management shall include the following as a minimum:\n2.9.3.1 Scope of backups to cover critical technology and information assets.\n2.9.3.2 Ability to perform quick recovery of data and systems after cybersecurity incidents.\n2.9.3.3 Periodic testing for the effectiveness of backup recovery.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية بحد أدنى ما يلي: 1-3-9-2 نطاق النسخ الاحتياطية وشموليتها للأصول المعلوماتية والتقنية الحساسة. 2-3-9-2 القدرة السريعة على استعادة البيانات والأنظمة بعد التعرض لحوادث الأمن السيبراني. 3-3-9-2 إجراء فحص دوري لمدى فعالية استعادة النسخ الاحتياطية.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-3",
+                "official_reference": "ECC-2:2024:2:2-9-3",
+                "source_page": "24",
+                "sort_order": 36,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-9"
+                },
+                "requirements": [
+                    {
+                        "code": "2-9-3",
+                        "display_code": "2-9-3",
+                        "normalized_code": "2_9_3",
+                        "title_en": "Backup and recovery management requirements coverage",
+                        "title_ar": "متطلبات إدارة النسخ الاحتياطية",
+                        "requirement_text_en": "Cybersecurity requirements for backup and recovery management shall include the following as a minimum:\n2.9.3.1 Scope of backups to cover critical technology and information assets.\n2.9.3.2 Ability to perform quick recovery of data and systems after cybersecurity incidents.\n2.9.3.3 Periodic testing for the effectiveness of backup recovery.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية بحد أدنى ما يلي: 1-3-9-2 نطاق النسخ الاحتياطية وشموليتها للأصول المعلوماتية والتقنية الحساسة. 2-3-9-2 القدرة السريعة على استعادة البيانات والأنظمة بعد التعرض لحوادث الأمن السيبراني. 3-3-9-2 إجراء فحص دوري لمدى فعالية استعادة النسخ الاحتياطية.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-3",
+                        "official_reference": "ECC-2:2024:2:2-9-3",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-9"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-9-4",
+                "display_code": "2-9-4",
+                "normalized_code": "2_9_4",
+                "title_en": "Backup and recovery management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة النسخ الاحتياطية",
+                "description_en": "The implementation of cybersecurity requirements for backup and recovery management within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-4",
+                "official_reference": "ECC-2:2024:2:2-9-4",
+                "source_page": "24",
+                "sort_order": 37,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-9"
+                },
+                "requirements": [
+                    {
+                        "code": "2-9-4",
+                        "display_code": "2-9-4",
+                        "normalized_code": "2_9_4",
+                        "title_en": "Backup and recovery management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة النسخ الاحتياطية",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for backup and recovery management within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة النسخ الاحتياطية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-9-4",
+                        "official_reference": "ECC-2:2024:2:2-9-4",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-9"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-10-1",
+                "display_code": "2-10-1",
+                "normalized_code": "2_10_1",
+                "title_en": "Cybersecurity requirements for technical vulnerabilities management identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة الثغرات التقنية",
+                "description_en": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-1",
+                "official_reference": "ECC-2:2024:2:2-10-1",
+                "source_page": "24",
+                "sort_order": 38,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-10"
+                },
+                "requirements": [
+                    {
+                        "code": "2-10-1",
+                        "display_code": "2-10-1",
+                        "normalized_code": "2_10_1",
+                        "title_en": "Cybersecurity requirements for technical vulnerabilities management identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة الثغرات التقنية",
+                        "requirement_text_en": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-1",
+                        "official_reference": "ECC-2:2024:2:2-10-1",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-10"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-10-2",
+                "display_code": "2-10-2",
+                "normalized_code": "2_10_2",
+                "title_en": "Cybersecurity requirements for technical vulnerabilities management implementation",
+                "title_ar": "تطبيق متطلبات إدارة الثغرات التقنية",
+                "description_en": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-2",
+                "official_reference": "ECC-2:2024:2:2-10-2",
+                "source_page": "24",
+                "sort_order": 39,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-10"
+                },
+                "requirements": [
+                    {
+                        "code": "2-10-2",
+                        "display_code": "2-10-2",
+                        "normalized_code": "2_10_2",
+                        "title_en": "Cybersecurity requirements for technical vulnerabilities management implementation",
+                        "title_ar": "تطبيق متطلبات إدارة الثغرات التقنية",
+                        "requirement_text_en": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-2",
+                        "official_reference": "ECC-2:2024:2:2-10-2",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-10"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-10-3",
+                "display_code": "2-10-3",
+                "normalized_code": "2_10_3",
+                "title_en": "Technical vulnerabilities management requirements coverage",
+                "title_ar": "متطلبات إدارة الثغرات",
+                "description_en": "Cybersecurity requirements for technical vulnerabilities management shall include the following as a minimum:\n2.10.3.1 Periodic vulnerabilities assessment and detection.\n2.10.3.2 Vulnerabilities classification based on their severities.\n2.10.3.3 Vulnerabilities remediation based on their classification and the associated cyber risks.\n2.10.3.4 Patch management to remediate vulnerabilities, and ensuring the integrity and effectiveness of these updates and fixes are verified using a non-production environment before being applied.\n2.10.3.5 Communication and subscription with trusted resources for new and up-to date vulnerabilities.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة الثغرات بحد أدنى ما يلي: 1-3-10-2 فحص واكتشاف الثغرات دورياً. 2-3-10-2 تصنيف الثغرات حسب خطورتها. 3-3-10-2 معالجة الثغرات بناءً على تصنيفها والمخاطر السيبرانية المترتبة عليها. 4-3-10-2 إدارة حزم التحديثات والإصلاحات الأمنية لمعالجة الثغرات، على أن يتم التحقق من سلامة وفعالية تلك التحديثات والإصلاحات الأمنية على بيئة غير بيئة الإنتاج قبل تطبيقها. 5-3-10-2 التواصل والاشتراك مع مصادر موثوقة فيما يتعلق بالتنبيهات المتعلقة بالثغرات الجديدة والمحدثة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-3",
+                "official_reference": "ECC-2:2024:2:2-10-3",
+                "source_page": "24",
+                "sort_order": 40,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-10"
+                },
+                "requirements": [
+                    {
+                        "code": "2-10-3",
+                        "display_code": "2-10-3",
+                        "normalized_code": "2_10_3",
+                        "title_en": "Technical vulnerabilities management requirements coverage",
+                        "title_ar": "متطلبات إدارة الثغرات",
+                        "requirement_text_en": "Cybersecurity requirements for technical vulnerabilities management shall include the following as a minimum:\n2.10.3.1 Periodic vulnerabilities assessment and detection.\n2.10.3.2 Vulnerabilities classification based on their severities.\n2.10.3.3 Vulnerabilities remediation based on their classification and the associated cyber risks.\n2.10.3.4 Patch management to remediate vulnerabilities, and ensuring the integrity and effectiveness of these updates and fixes are verified using a non-production environment before being applied.\n2.10.3.5 Communication and subscription with trusted resources for new and up-to date vulnerabilities.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لإدارة الثغرات بحد أدنى ما يلي: 1-3-10-2 فحص واكتشاف الثغرات دورياً. 2-3-10-2 تصنيف الثغرات حسب خطورتها. 3-3-10-2 معالجة الثغرات بناءً على تصنيفها والمخاطر السيبرانية المترتبة عليها. 4-3-10-2 إدارة حزم التحديثات والإصلاحات الأمنية لمعالجة الثغرات، على أن يتم التحقق من سلامة وفعالية تلك التحديثات والإصلاحات الأمنية على بيئة غير بيئة الإنتاج قبل تطبيقها. 5-3-10-2 التواصل والاشتراك مع مصادر موثوقة فيما يتعلق بالتنبيهات المتعلقة بالثغرات الجديدة والمحدثة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-3",
+                        "official_reference": "ECC-2:2024:2:2-10-3",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-10"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-10-4",
+                "display_code": "2-10-4",
+                "normalized_code": "2_10_4",
+                "title_en": "Technical vulnerabilities management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة الثغرات التقنية",
+                "description_en": "The implementation of cybersecurity requirements for technical vulnerabilities management within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-4",
+                "official_reference": "ECC-2:2024:2:2-10-4",
+                "source_page": "24",
+                "sort_order": 41,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-10"
+                },
+                "requirements": [
+                    {
+                        "code": "2-10-4",
+                        "display_code": "2-10-4",
+                        "normalized_code": "2_10_4",
+                        "title_en": "Technical vulnerabilities management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة الثغرات التقنية",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for technical vulnerabilities management within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لإدارة الثغرات التقنية للجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-10-4",
+                        "official_reference": "ECC-2:2024:2:2-10-4",
+                        "source_page": "24",
+                        "metadata": {
+                            "subdomain": "2-10"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-11-1",
+                "display_code": "2-11-1",
+                "normalized_code": "2_11_1",
+                "title_en": "Cybersecurity requirements for penetration testing identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات اختبار الاختراق",
+                "description_en": "Cybersecurity requirements for penetration testing within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لعمليات اختبار الاختراق في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-1",
+                "official_reference": "ECC-2:2024:2:2-11-1",
+                "source_page": "25",
+                "sort_order": 42,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-11"
+                },
+                "requirements": [
+                    {
+                        "code": "2-11-1",
+                        "display_code": "2-11-1",
+                        "normalized_code": "2_11_1",
+                        "title_en": "Cybersecurity requirements for penetration testing identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات اختبار الاختراق",
+                        "requirement_text_en": "Cybersecurity requirements for penetration testing within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لعمليات اختبار الاختراق في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-1",
+                        "official_reference": "ECC-2:2024:2:2-11-1",
+                        "source_page": "25",
+                        "metadata": {
+                            "subdomain": "2-11"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-11-2",
+                "display_code": "2-11-2",
+                "normalized_code": "2_11_2",
+                "title_en": "Cybersecurity requirements for penetration testing implementation",
+                "title_ar": "تنفيذ عمليات اختبار الاختراق",
+                "description_en": "Cybersecurity requirements for penetration testing within the entity shall be implemented.",
+                "description_ar": "يجب تنفيذ عمليات اختبار الاختراق في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-2",
+                "official_reference": "ECC-2:2024:2:2-11-2",
+                "source_page": "25",
+                "sort_order": 43,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-11"
+                },
+                "requirements": [
+                    {
+                        "code": "2-11-2",
+                        "display_code": "2-11-2",
+                        "normalized_code": "2_11_2",
+                        "title_en": "Cybersecurity requirements for penetration testing implementation",
+                        "title_ar": "تنفيذ عمليات اختبار الاختراق",
+                        "requirement_text_en": "Cybersecurity requirements for penetration testing within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تنفيذ عمليات اختبار الاختراق في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-2",
+                        "official_reference": "ECC-2:2024:2:2-11-2",
+                        "source_page": "25",
+                        "metadata": {
+                            "subdomain": "2-11"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-11-3",
+                "display_code": "2-11-3",
+                "normalized_code": "2_11_3",
+                "title_en": "Penetration testing requirements coverage",
+                "title_ar": "متطلبات اختبار الاختراق",
+                "description_en": "Cybersecurity requirements for penetration testing shall include the following as a minimum:\n2.11.3.1 Scope of penetration testing to include all externally provided services (via the Internet) and their technical components, including infrastructure, websites, web applications, smartphone and tablet applications, email, and remote access.\n2.11.3.2 Conducting penetration tests periodically.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لاختبار الاختراق بحد أدنى ما يلي: 1-3-11-2 نطاق عمل اختبار الاختراق، ليشمل جميع الخدمات المقدمة خارجياً (عن طريق الإنترنت) ومكوناتها التقنية، ومنها: البنية التحتية، المواقع الإلكترونية، تطبيقات الويب، تطبيقات الهواتف الذكية واللوحية، البريد الإلكتروني والدخول عن بعد. 2-3-11-2 عمل اختبار الاختراق دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-3",
+                "official_reference": "ECC-2:2024:2:2-11-3",
+                "source_page": "25",
+                "sort_order": 44,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-11"
+                },
+                "requirements": [
+                    {
+                        "code": "2-11-3",
+                        "display_code": "2-11-3",
+                        "normalized_code": "2_11_3",
+                        "title_en": "Penetration testing requirements coverage",
+                        "title_ar": "متطلبات اختبار الاختراق",
+                        "requirement_text_en": "Cybersecurity requirements for penetration testing shall include the following as a minimum:\n2.11.3.1 Scope of penetration testing to include all externally provided services (via the Internet) and their technical components, including infrastructure, websites, web applications, smartphone and tablet applications, email, and remote access.\n2.11.3.2 Conducting penetration tests periodically.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لاختبار الاختراق بحد أدنى ما يلي: 1-3-11-2 نطاق عمل اختبار الاختراق، ليشمل جميع الخدمات المقدمة خارجياً (عن طريق الإنترنت) ومكوناتها التقنية، ومنها: البنية التحتية، المواقع الإلكترونية، تطبيقات الويب، تطبيقات الهواتف الذكية واللوحية، البريد الإلكتروني والدخول عن بعد. 2-3-11-2 عمل اختبار الاختراق دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-3",
+                        "official_reference": "ECC-2:2024:2:2-11-3",
+                        "source_page": "25",
+                        "metadata": {
+                            "subdomain": "2-11"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-11-4",
+                "display_code": "2-11-4",
+                "normalized_code": "2_11_4",
+                "title_en": "Penetration testing requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات اختبار الاختراق",
+                "description_en": "The implementation of cybersecurity requirements for penetration testing shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لعمليات اختبار الاختراق في الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-4",
+                "official_reference": "ECC-2:2024:2:2-11-4",
+                "source_page": "25",
+                "sort_order": 45,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-11"
+                },
+                "requirements": [
+                    {
+                        "code": "2-11-4",
+                        "display_code": "2-11-4",
+                        "normalized_code": "2_11_4",
+                        "title_en": "Penetration testing requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات اختبار الاختراق",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for penetration testing shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات الأمن السيبراني لعمليات اختبار الاختراق في الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-11-4",
+                        "official_reference": "ECC-2:2024:2:2-11-4",
+                        "source_page": "25",
+                        "metadata": {
+                            "subdomain": "2-11"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-12-1",
+                "display_code": "2-12-1",
+                "normalized_code": "2_12_1",
+                "title_en": "Cybersecurity event logs and monitoring management requirements identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                "description_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-1",
+                "official_reference": "ECC-2:2024:2:2-12-1",
+                "source_page": "26",
+                "sort_order": 46,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-12"
+                },
+                "requirements": [
+                    {
+                        "code": "2-12-1",
+                        "display_code": "2-12-1",
+                        "normalized_code": "2_12_1",
+                        "title_en": "Cybersecurity event logs and monitoring management requirements identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                        "requirement_text_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-1",
+                        "official_reference": "ECC-2:2024:2:2-12-1",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-12"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-12-2",
+                "display_code": "2-12-2",
+                "normalized_code": "2_12_2",
+                "title_en": "Cybersecurity event logs and monitoring management requirements implementation",
+                "title_ar": "تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                "description_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-2",
+                "official_reference": "ECC-2:2024:2:2-12-2",
+                "source_page": "26",
+                "sort_order": 47,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-12"
+                },
+                "requirements": [
+                    {
+                        "code": "2-12-2",
+                        "display_code": "2-12-2",
+                        "normalized_code": "2_12_2",
+                        "title_en": "Cybersecurity event logs and monitoring management requirements implementation",
+                        "title_ar": "تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                        "requirement_text_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-2",
+                        "official_reference": "ECC-2:2024:2:2-12-2",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-12"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-12-3",
+                "display_code": "2-12-3",
+                "normalized_code": "2_12_3",
+                "title_en": "Cybersecurity event logs and monitoring management requirements coverage",
+                "title_ar": "متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                "description_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management shall include the following as a minimum:\n2.12.3.1 Activation of cybersecurity event logs for critical information assets within the entity.\n2.12.3.2 Activation of cybersecurity event logs for critical and privileged accounts accessing information assets as well as for remote access events within the entity.\n2.12.3.3 Identification of Security Information and Event Management (SIEM) techniques required for cybersecurity event logs collection.\n2.12.3.4 Continuous monitoring of cybersecurity event logs.\n2.12.3.5 Retention period of cybersecurity event logs (shall be at least 12 months).",
+                "description_ar": "يجب أن تغطي متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني بحد أدنى ما يلي: 1-3-12-2 تفعيل سجلات الأحداث (Event logs) الخاصة بالأمن السيبراني على الأصول المعلوماتية الحساسة لدى الجهة. 2-3-12-2 تفعيل سجلات الأحداث الخاصة بالحسابات ذات الصلاحيات الهامة والحساسة على الأصول المعلوماتية وأحداث عمليات الدخول عن بعد لدى الجهة. 3-3-12-2 تحديد التقنيات اللازمة (SIEM) لجمع سجلات الأحداث الخاصة بالأمن السيبراني. 4-3-12-2 المراقبة المستمرة لسجلات الأحداث الخاصة بالأمن السيبراني. 5-3-12-2 مدة الاحتفاظ بسجلات الأحداث الخاصة بالأمن السيبراني (على ألا تقل عن 12 شهر).",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-3",
+                "official_reference": "ECC-2:2024:2:2-12-3",
+                "source_page": "26",
+                "sort_order": 48,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-12"
+                },
+                "requirements": [
+                    {
+                        "code": "2-12-3",
+                        "display_code": "2-12-3",
+                        "normalized_code": "2_12_3",
+                        "title_en": "Cybersecurity event logs and monitoring management requirements coverage",
+                        "title_ar": "متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                        "requirement_text_en": "Cybersecurity requirements for cybersecurity event logs and monitoring management shall include the following as a minimum:\n2.12.3.1 Activation of cybersecurity event logs for critical information assets within the entity.\n2.12.3.2 Activation of cybersecurity event logs for critical and privileged accounts accessing information assets as well as for remote access events within the entity.\n2.12.3.3 Identification of Security Information and Event Management (SIEM) techniques required for cybersecurity event logs collection.\n2.12.3.4 Continuous monitoring of cybersecurity event logs.\n2.12.3.5 Retention period of cybersecurity event logs (shall be at least 12 months).",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني بحد أدنى ما يلي: 1-3-12-2 تفعيل سجلات الأحداث (Event logs) الخاصة بالأمن السيبراني على الأصول المعلوماتية الحساسة لدى الجهة. 2-3-12-2 تفعيل سجلات الأحداث الخاصة بالحسابات ذات الصلاحيات الهامة والحساسة على الأصول المعلوماتية وأحداث عمليات الدخول عن بعد لدى الجهة. 3-3-12-2 تحديد التقنيات اللازمة (SIEM) لجمع سجلات الأحداث الخاصة بالأمن السيبراني. 4-3-12-2 المراقبة المستمرة لسجلات الأحداث الخاصة بالأمن السيبراني. 5-3-12-2 مدة الاحتفاظ بسجلات الأحداث الخاصة بالأمن السيبراني (على ألا تقل عن 12 شهر).",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-3",
+                        "official_reference": "ECC-2:2024:2:2-12-3",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-12"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-12-4",
+                "display_code": "2-12-4",
+                "normalized_code": "2_12_4",
+                "title_en": "Cybersecurity event logs and monitoring management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                "description_en": "The implementation of cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني في الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-4",
+                "official_reference": "ECC-2:2024:2:2-12-4",
+                "source_page": "26",
+                "sort_order": 49,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-12"
+                },
+                "requirements": [
+                    {
+                        "code": "2-12-4",
+                        "display_code": "2-12-4",
+                        "normalized_code": "2_12_4",
+                        "title_en": "Cybersecurity event logs and monitoring management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات إدارة سجلات الأحداث ومراقبة الأمن السيبراني في الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-12-4",
+                        "official_reference": "ECC-2:2024:2:2-12-4",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-12"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-13-1",
+                "display_code": "2-13-1",
+                "normalized_code": "2_13_1",
+                "title_en": "Cybersecurity incident and threat management requirements identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                "description_en": "Requirements for cybersecurity incident and threat management within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-1",
+                "official_reference": "ECC-2:2024:2:2-13-1",
+                "source_page": "26",
+                "sort_order": 50,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-13"
+                },
+                "requirements": [
+                    {
+                        "code": "2-13-1",
+                        "display_code": "2-13-1",
+                        "normalized_code": "2_13_1",
+                        "title_en": "Cybersecurity incident and threat management requirements identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                        "requirement_text_en": "Requirements for cybersecurity incident and threat management within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-1",
+                        "official_reference": "ECC-2:2024:2:2-13-1",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-13"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-13-2",
+                "display_code": "2-13-2",
+                "normalized_code": "2_13_2",
+                "title_en": "Cybersecurity incident and threat management requirements implementation",
+                "title_ar": "تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                "description_en": "Requirements for cybersecurity incident and threat management within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-2",
+                "official_reference": "ECC-2:2024:2:2-13-2",
+                "source_page": "26",
+                "sort_order": 51,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-13"
+                },
+                "requirements": [
+                    {
+                        "code": "2-13-2",
+                        "display_code": "2-13-2",
+                        "normalized_code": "2_13_2",
+                        "title_en": "Cybersecurity incident and threat management requirements implementation",
+                        "title_ar": "تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                        "requirement_text_en": "Requirements for cybersecurity incident and threat management within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-2",
+                        "official_reference": "ECC-2:2024:2:2-13-2",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-13"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-13-3",
+                "display_code": "2-13-3",
+                "normalized_code": "2_13_3",
+                "title_en": "Cybersecurity incident and threat management requirements coverage",
+                "title_ar": "متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                "description_en": "Requirements for cybersecurity incident and threat management shall include the following as a minimum:\n2.13.3.1 Cybersecurity incident response plans and escalation procedures.\n2.13.3.2 Cybersecurity incident classification.\n2.13.3.3 Reporting cybersecurity incidents to the NCA.\n2.13.3.4 Sharing cybersecurity incident notifications, threat intelligence, penetration indicators, and incident reports with the NCA.\n2.13.3.5 Collecting and handling threat intelligence feeds.",
+                "description_ar": "يجب أن تغطي متطلبات إدارة حوادث وتهديدات الأمن السيبراني بحد أدنى ما يلي: 1-3-13-2 وضع خطط الاستجابة للحوادث الأمنية وآليات التصعيد. 2-3-13-2 تصنيف حوادث الأمن السيبراني. 3-3-13-2 تبليغ الهيئة عند حدوث حادثة أمن سيبراني. 4-3-13-2 مشاركة التنبيهات والمعلومات الاستباقية ومؤشرات الاختراق وتقارير حوادث الأمن السيبراني مع الهيئة. 5-3-13-2 الحصول على المعلومات الاستباقية (Threat Intelligence) والتعامل معها.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-3",
+                "official_reference": "ECC-2:2024:2:2-13-3",
+                "source_page": "26",
+                "sort_order": 52,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-13"
+                },
+                "requirements": [
+                    {
+                        "code": "2-13-3",
+                        "display_code": "2-13-3",
+                        "normalized_code": "2_13_3",
+                        "title_en": "Cybersecurity incident and threat management requirements coverage",
+                        "title_ar": "متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                        "requirement_text_en": "Requirements for cybersecurity incident and threat management shall include the following as a minimum:\n2.13.3.1 Cybersecurity incident response plans and escalation procedures.\n2.13.3.2 Cybersecurity incident classification.\n2.13.3.3 Reporting cybersecurity incidents to the NCA.\n2.13.3.4 Sharing cybersecurity incident notifications, threat intelligence, penetration indicators, and incident reports with the NCA.\n2.13.3.5 Collecting and handling threat intelligence feeds.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات إدارة حوادث وتهديدات الأمن السيبراني بحد أدنى ما يلي: 1-3-13-2 وضع خطط الاستجابة للحوادث الأمنية وآليات التصعيد. 2-3-13-2 تصنيف حوادث الأمن السيبراني. 3-3-13-2 تبليغ الهيئة عند حدوث حادثة أمن سيبراني. 4-3-13-2 مشاركة التنبيهات والمعلومات الاستباقية ومؤشرات الاختراق وتقارير حوادث الأمن السيبراني مع الهيئة. 5-3-13-2 الحصول على المعلومات الاستباقية (Threat Intelligence) والتعامل معها.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-3",
+                        "official_reference": "ECC-2:2024:2:2-13-3",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-13"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-13-4",
+                "display_code": "2-13-4",
+                "normalized_code": "2_13_4",
+                "title_en": "Cybersecurity incident and threat management requirements implementation review",
+                "title_ar": "مراجعة تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                "description_en": "The implementation of cybersecurity requirements for incident and threat management within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-4",
+                "official_reference": "ECC-2:2024:2:2-13-4",
+                "source_page": "26",
+                "sort_order": 53,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-13"
+                },
+                "requirements": [
+                    {
+                        "code": "2-13-4",
+                        "display_code": "2-13-4",
+                        "normalized_code": "2_13_4",
+                        "title_en": "Cybersecurity incident and threat management requirements implementation review",
+                        "title_ar": "مراجعة تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني",
+                        "requirement_text_en": "The implementation of cybersecurity requirements for incident and threat management within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة تطبيق متطلبات إدارة حوادث وتهديدات الأمن السيبراني في الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-13-4",
+                        "official_reference": "ECC-2:2024:2:2-13-4",
+                        "source_page": "26",
+                        "metadata": {
+                            "subdomain": "2-13"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-14-1",
+                "display_code": "2-14-1",
+                "normalized_code": "2_14_1",
+                "title_en": "Cybersecurity requirements for physical protection of information and technology assets identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات الحماية المادية للأصول",
+                "description_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-1",
+                "official_reference": "ECC-2:2024:2:2-14-1",
+                "source_page": "27",
+                "sort_order": 54,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-14"
+                },
+                "requirements": [
+                    {
+                        "code": "2-14-1",
+                        "display_code": "2-14-1",
+                        "normalized_code": "2_14_1",
+                        "title_en": "Cybersecurity requirements for physical protection of information and technology assets identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات الحماية المادية للأصول",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-1",
+                        "official_reference": "ECC-2:2024:2:2-14-1",
+                        "source_page": "27",
+                        "metadata": {
+                            "subdomain": "2-14"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-14-2",
+                "display_code": "2-14-2",
+                "normalized_code": "2_14_2",
+                "title_en": "Cybersecurity requirements for physical protection of information and technology assets implementation",
+                "title_ar": "تطبيق متطلبات الحماية المادية للأصول",
+                "description_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-2",
+                "official_reference": "ECC-2:2024:2:2-14-2",
+                "source_page": "27",
+                "sort_order": 55,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-14"
+                },
+                "requirements": [
+                    {
+                        "code": "2-14-2",
+                        "display_code": "2-14-2",
+                        "normalized_code": "2_14_2",
+                        "title_en": "Cybersecurity requirements for physical protection of information and technology assets implementation",
+                        "title_ar": "تطبيق متطلبات الحماية المادية للأصول",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-2",
+                        "official_reference": "ECC-2:2024:2:2-14-2",
+                        "source_page": "27",
+                        "metadata": {
+                            "subdomain": "2-14"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-14-3",
+                "display_code": "2-14-3",
+                "normalized_code": "2_14_3",
+                "title_en": "Physical protection of information and technology assets requirements coverage",
+                "title_ar": "متطلبات الحماية المادية للأصول",
+                "description_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall include the following as a minimum:\n2.14.3.1 Authorized access to critical areas within the entity (e.g. the entity's data center, disaster recovery center, critical information processing facilities, security surveillance center, network connection rooms, technical device and equipment supply areas, etc.).\n2.14.3.2 Access and monitoring logs (CCTV).\n2.14.3.3 Protection of access and monitoring log information.\n2.14.3.4 Security of the destruction and re-use of physical assets that hold classified information (including paper documents and storage media).\n2.14.3.5 Security of devices and equipment inside and outside the entity's facilities.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب بحد أدنى ما يلي: 1-3-14-2 الدخول المصرح به للأماكن الحساسة في الجهة (مثل: مركز بيانات الجهة، مركز التعافي من الكوارث، أماكن معالجة المعلومات الحساسة، مركز المراقبة الأمنية، غرف اتصالات الشبكة، مناطق الإمداد الخاصة بالأجهزة والعتاد التقنية، وغيرها). 2-3-14-2 سجلات الدخول والمراقبة (CCTV). 3-3-14-2 حماية معلومات سجلات الدخول والمراقبة. 4-3-14-2 أمن إتلاف وإعادة استخدام الأصول المادية التي تحوي معلومات مصنفة (وتشمل: الوثائق الورقية ووسائط الحفظ والتخزين). 5-3-14-2 أمن الأجهزة والمعدات داخل مباني الجهة وخارجها.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-3",
+                "official_reference": "ECC-2:2024:2:2-14-3",
+                "source_page": "27",
+                "sort_order": 56,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-14"
+                },
+                "requirements": [
+                    {
+                        "code": "2-14-3",
+                        "display_code": "2-14-3",
+                        "normalized_code": "2_14_3",
+                        "title_en": "Physical protection of information and technology assets requirements coverage",
+                        "title_ar": "متطلبات الحماية المادية للأصول",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall include the following as a minimum:\n2.14.3.1 Authorized access to critical areas within the entity (e.g. the entity's data center, disaster recovery center, critical information processing facilities, security surveillance center, network connection rooms, technical device and equipment supply areas, etc.).\n2.14.3.2 Access and monitoring logs (CCTV).\n2.14.3.3 Protection of access and monitoring log information.\n2.14.3.4 Security of the destruction and re-use of physical assets that hold classified information (including paper documents and storage media).\n2.14.3.5 Security of devices and equipment inside and outside the entity's facilities.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب بحد أدنى ما يلي: 1-3-14-2 الدخول المصرح به للأماكن الحساسة في الجهة (مثل: مركز بيانات الجهة، مركز التعافي من الكوارث، أماكن معالجة المعلومات الحساسة، مركز المراقبة الأمنية، غرف اتصالات الشبكة، مناطق الإمداد الخاصة بالأجهزة والعتاد التقنية، وغيرها). 2-3-14-2 سجلات الدخول والمراقبة (CCTV). 3-3-14-2 حماية معلومات سجلات الدخول والمراقبة. 4-3-14-2 أمن إتلاف وإعادة استخدام الأصول المادية التي تحوي معلومات مصنفة (وتشمل: الوثائق الورقية ووسائط الحفظ والتخزين). 5-3-14-2 أمن الأجهزة والمعدات داخل مباني الجهة وخارجها.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-3",
+                        "official_reference": "ECC-2:2024:2:2-14-3",
+                        "source_page": "27",
+                        "metadata": {
+                            "subdomain": "2-14"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-14-4",
+                "display_code": "2-14-4",
+                "normalized_code": "2_14_4",
+                "title_en": "Physical protection of information and technology assets requirements review",
+                "title_ar": "مراجعة متطلبات الحماية المادية للأصول",
+                "description_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-4",
+                "official_reference": "ECC-2:2024:2:2-14-4",
+                "source_page": "27",
+                "sort_order": 57,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-14"
+                },
+                "requirements": [
+                    {
+                        "code": "2-14-4",
+                        "display_code": "2-14-4",
+                        "normalized_code": "2_14_4",
+                        "title_en": "Physical protection of information and technology assets requirements review",
+                        "title_ar": "مراجعة متطلبات الحماية المادية للأصول",
+                        "requirement_text_en": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية الأصول المعلوماتية والتقنية للجهة من الوصول المادي غير المصرح به والفقدان والسرقة والتخريب دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-14-4",
+                        "official_reference": "ECC-2:2024:2:2-14-4",
+                        "source_page": "27",
+                        "metadata": {
+                            "subdomain": "2-14"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-15-1",
+                "display_code": "2-15-1",
+                "normalized_code": "2_15_1",
+                "title_en": "Cybersecurity requirements for protection of external web applications identification",
+                "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية تطبيقات الويب الخارجية",
+                "description_en": "Cybersecurity requirements for protection of external web applications of the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة من المخاطر السيبرانية.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-1",
+                "official_reference": "ECC-2:2024:2:2-15-1",
+                "source_page": "28",
+                "sort_order": 58,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-15"
+                },
+                "requirements": [
+                    {
+                        "code": "2-15-1",
+                        "display_code": "2-15-1",
+                        "normalized_code": "2_15_1",
+                        "title_en": "Cybersecurity requirements for protection of external web applications identification",
+                        "title_ar": "تحديد وتوثيق واعتماد متطلبات حماية تطبيقات الويب الخارجية",
+                        "requirement_text_en": "Cybersecurity requirements for protection of external web applications of the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة من المخاطر السيبرانية.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-1",
+                        "official_reference": "ECC-2:2024:2:2-15-1",
+                        "source_page": "28",
+                        "metadata": {
+                            "subdomain": "2-15"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-15-2",
+                "display_code": "2-15-2",
+                "normalized_code": "2_15_2",
+                "title_en": "Cybersecurity requirements for protection of external web applications implementation",
+                "title_ar": "تطبيق متطلبات حماية تطبيقات الويب الخارجية",
+                "description_en": "Cybersecurity requirements for protection of external web applications of the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-2",
+                "official_reference": "ECC-2:2024:2:2-15-2",
+                "source_page": "28",
+                "sort_order": 59,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-15"
+                },
+                "requirements": [
+                    {
+                        "code": "2-15-2",
+                        "display_code": "2-15-2",
+                        "normalized_code": "2_15_2",
+                        "title_en": "Cybersecurity requirements for protection of external web applications implementation",
+                        "title_ar": "تطبيق متطلبات حماية تطبيقات الويب الخارجية",
+                        "requirement_text_en": "Cybersecurity requirements for protection of external web applications of the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-2",
+                        "official_reference": "ECC-2:2024:2:2-15-2",
+                        "source_page": "28",
+                        "metadata": {
+                            "subdomain": "2-15"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-15-3",
+                "display_code": "2-15-3",
+                "normalized_code": "2_15_3",
+                "title_en": "External web application protection requirements coverage",
+                "title_ar": "متطلبات حماية تطبيقات الويب الخارجية",
+                "description_en": "Cybersecurity requirements for protection of external web applications of the entity shall include the following as a minimum:\n2.15.3.1 Use of web application firewall.\n2.15.3.2 Adoption of the multi-tier architecture principle.\n2.15.3.3 Use of secure protocols (e.g. HTTPS).\n2.15.3.4 Clarification of the secure usage policy for users.\n2.15.3.5 User authentication, and the suitable authentication factors and their numbers as well as the authentication techniques shall be defined based on the result of impact assessment of authentication failure and bypass for users' access.",
+                "description_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة بحد أدنى ما يلي: 1-3-15-2 استخدام جدار الحماية لتطبيقات الويب (Web Application Firewall). 2-3-15-2 استخدام مبدأ المعمارية متعددة المستويات (Multi-tier Architecture). 3-3-15-2 استخدام بروتوكولات آمنة (مثل بروتوكول HTTPS). 4-3-15-2 توضيح سياسة الاستخدام الآمن للمستخدمين. 5-3-15-2 التحقق من الهوية على أن يتم تحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك لعمليات دخول المستخدمين.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-3",
+                "official_reference": "ECC-2:2024:2:2-15-3",
+                "source_page": "28",
+                "sort_order": 60,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-15"
+                },
+                "requirements": [
+                    {
+                        "code": "2-15-3",
+                        "display_code": "2-15-3",
+                        "normalized_code": "2_15_3",
+                        "title_en": "External web application protection requirements coverage",
+                        "title_ar": "متطلبات حماية تطبيقات الويب الخارجية",
+                        "requirement_text_en": "Cybersecurity requirements for protection of external web applications of the entity shall include the following as a minimum:\n2.15.3.1 Use of web application firewall.\n2.15.3.2 Adoption of the multi-tier architecture principle.\n2.15.3.3 Use of secure protocols (e.g. HTTPS).\n2.15.3.4 Clarification of the secure usage policy for users.\n2.15.3.5 User authentication, and the suitable authentication factors and their numbers as well as the authentication techniques shall be defined based on the result of impact assessment of authentication failure and bypass for users' access.",
+                        "requirement_text_ar": "يجب أن تغطي متطلبات الأمن السيبراني لحماية تطبيقات الويب الخارجية للجهة بحد أدنى ما يلي: 1-3-15-2 استخدام جدار الحماية لتطبيقات الويب (Web Application Firewall). 2-3-15-2 استخدام مبدأ المعمارية متعددة المستويات (Multi-tier Architecture). 3-3-15-2 استخدام بروتوكولات آمنة (مثل بروتوكول HTTPS). 4-3-15-2 توضيح سياسة الاستخدام الآمن للمستخدمين. 5-3-15-2 التحقق من الهوية على أن يتم تحديد عناصر التحقق المناسبة وعددها وكذلك تقنيات التحقق المناسبة بناء على نتائج تقييم الأثر المحتمل لفشل عملية التحقق وتخطيها، وذلك لعمليات دخول المستخدمين.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-3",
+                        "official_reference": "ECC-2:2024:2:2-15-3",
+                        "source_page": "28",
+                        "metadata": {
+                            "subdomain": "2-15"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "2-15-4",
+                "display_code": "2-15-4",
+                "normalized_code": "2_15_4",
+                "title_en": "Web application protection requirements review",
+                "title_ar": "مراجعة متطلبات حماية تطبيقات الويب",
+                "description_en": "Cybersecurity requirements for protection of web applications of the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية تطبيقات الويب للجهة من المخاطر السيبرانية دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-4",
+                "official_reference": "ECC-2:2024:2:2-15-4",
+                "source_page": "28",
+                "sort_order": 61,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "2-15"
+                },
+                "requirements": [
+                    {
+                        "code": "2-15-4",
+                        "display_code": "2-15-4",
+                        "normalized_code": "2_15_4",
+                        "title_en": "Web application protection requirements review",
+                        "title_ar": "مراجعة متطلبات حماية تطبيقات الويب",
+                        "requirement_text_en": "Cybersecurity requirements for protection of web applications of the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة متطلبات الأمن السيبراني لحماية تطبيقات الويب للجهة من المخاطر السيبرانية دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 2 - Control 2-15-4",
+                        "official_reference": "ECC-2:2024:2:2-15-4",
+                        "source_page": "28",
+                        "metadata": {
+                            "subdomain": "2-15"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
 }

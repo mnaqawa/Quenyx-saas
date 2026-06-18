@@ -1,8 +1,18 @@
 {
-  "$schema": "quenyx/qcif/domain-batch/v1.0",
-  "status": "draft",
-  "reviewed_by": null,
-  "reviewed_at": null,
-  "notes": "",
-  "metadata": {}
+    "$schema": "quenyx\/qcif\/domain-batch\/v1.0",
+    "status": "draft",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "notes": "Sprint 3C — OT Security (Main Domain 5) is not part of ECC-2:2024. Operational Technology Cybersecurity Controls (OTCC) is a separate publication per Appendix C. No controls to populate.",
+    "metadata": {
+        "curation_sprint": "3C",
+        "domain_slug": "ot-security",
+        "source_publication": "ECC-2:2024",
+        "control_count": 0,
+        "requirement_count": 0,
+        "pending_manual_review": [
+            "ECC-2:2024 does not include Main Domain 5 (OT Security). Removed in 2024 edition; refer to OTCC framework.",
+            "Confirm manifest slug ot-security should remain as placeholder batch or be retired before production import."
+        ]
+    }
 }

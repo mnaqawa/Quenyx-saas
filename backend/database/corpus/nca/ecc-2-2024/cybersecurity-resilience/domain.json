@@ -1,8 +1,180 @@
 {
-  "$schema": "quenyx/qcif/domain-batch/v1.0",
-  "status": "draft",
-  "reviewed_by": null,
-  "reviewed_at": null,
-  "notes": "",
-  "metadata": {}
+    "$schema": "quenyx\/qcif\/domain-batch\/v1.0",
+    "status": "validated",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "notes": "Sprint 3C - curated from official NCA ECC-2:2024 EN\/AR publications. Pending human approval before production import.",
+    "metadata": {
+        "curation_sprint": "3C",
+        "domain_slug": "cybersecurity-resilience",
+        "source_publication": "ECC-2:2024",
+        "control_count": 4,
+        "requirement_count": 4
+    },
+    "domain": {
+        "code": "3",
+        "display_code": "ECC-3",
+        "normalized_code": "ecc_3",
+        "title_en": "Cybersecurity Resilience",
+        "title_ar": "صمود الأمن السيبراني",
+        "description_en": "Main Domain 3 of NCA Essential Cybersecurity Controls (ECC-2:2024).",
+        "description_ar": "المجال الرئيسي الثالث من الضوابط الأساسية للأمن السيبراني (ECC-2:2024).",
+        "source_document_key": "nca-ecc-2-2024-en",
+        "source_reference": "NCA ECC-2:2024 EN - Domain 3 Cybersecurity Resilience",
+        "official_reference": "ECC-2:2024:3",
+        "source_page": "29",
+        "sort_order": 1,
+        "metadata": {
+            "subdomain_count": 1,
+            "official_subdomains": [
+                "3-1"
+            ]
+        },
+        "controls": [
+            {
+                "code": "3-1-1",
+                "display_code": "3-1-1",
+                "normalized_code": "3_1_1",
+                "title_en": "Cybersecurity requirements for business continuity management identification",
+                "title_ar": "تحديد متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                "description_en": "Cybersecurity requirements for business continuity management within the entity shall be identified, documented, and approved.",
+                "description_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-1",
+                "official_reference": "ECC-2:2024:3:3-1-1",
+                "source_page": "29",
+                "sort_order": 1,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "3-1"
+                },
+                "requirements": [
+                    {
+                        "code": "3-1-1",
+                        "display_code": "3-1-1",
+                        "normalized_code": "3_1_1",
+                        "title_en": "Cybersecurity requirements for business continuity management identification",
+                        "title_ar": "تحديد متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                        "requirement_text_en": "Cybersecurity requirements for business continuity management within the entity shall be identified, documented, and approved.",
+                        "requirement_text_ar": "يجب تحديد وتوثيق واعتماد متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-1",
+                        "official_reference": "ECC-2:2024:3:3-1-1",
+                        "source_page": "29",
+                        "metadata": {
+                            "subdomain": "3-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "3-1-2",
+                "display_code": "3-1-2",
+                "normalized_code": "3_1_2",
+                "title_en": "Cybersecurity requirements for business continuity management implementation",
+                "title_ar": "تطبيق متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                "description_en": "Cybersecurity requirements for business continuity management within the entity shall be implemented.",
+                "description_ar": "يجب تطبيق متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-2",
+                "official_reference": "ECC-2:2024:3:3-1-2",
+                "source_page": "29",
+                "sort_order": 2,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "3-1"
+                },
+                "requirements": [
+                    {
+                        "code": "3-1-2",
+                        "display_code": "3-1-2",
+                        "normalized_code": "3_1_2",
+                        "title_en": "Cybersecurity requirements for business continuity management implementation",
+                        "title_ar": "تطبيق متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                        "requirement_text_en": "Cybersecurity requirements for business continuity management within the entity shall be implemented.",
+                        "requirement_text_ar": "يجب تطبيق متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-2",
+                        "official_reference": "ECC-2:2024:3:3-1-2",
+                        "source_page": "29",
+                        "metadata": {
+                            "subdomain": "3-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "3-1-3",
+                "display_code": "3-1-3",
+                "normalized_code": "3_1_3",
+                "title_en": "Cybersecurity business continuity management requirements coverage",
+                "title_ar": "متطلبات إدارة استمرارية الأعمال للأمن السيبراني",
+                "description_en": "Cybersecurity requirements for business continuity management within the entity shall include the following as a minimum:\n3.1.3.1 Ensuring the continuity of cybersecurity systems and procedures.\n3.1.3.2 Developing plans for response to cybersecurity incidents that may affect the entity's business continuity.\n3.1.3.3 Developing disaster recovery plans.",
+                "description_ar": "يجب أن تغطي إدارة استمرارية الأعمال في الجهة بحد أدنى ما يلي: 1-3-1-3 التأكد من استمرارية الأنظمة والإجراءات المتعلقة بالأمن السيبراني. 2-3-1-3 وضع خطط الاستجابة لحوادث الأمن السيبراني التي قد تؤثر على استمرارية أعمال الجهة. 3-3-1-3 وضع خطط التعافي من الكوارث (Disaster Recovery Plan).",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-3",
+                "official_reference": "ECC-2:2024:3:3-1-3",
+                "source_page": "29",
+                "sort_order": 3,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "3-1"
+                },
+                "requirements": [
+                    {
+                        "code": "3-1-3",
+                        "display_code": "3-1-3",
+                        "normalized_code": "3_1_3",
+                        "title_en": "Cybersecurity business continuity management requirements coverage",
+                        "title_ar": "متطلبات إدارة استمرارية الأعمال للأمن السيبراني",
+                        "requirement_text_en": "Cybersecurity requirements for business continuity management within the entity shall include the following as a minimum:\n3.1.3.1 Ensuring the continuity of cybersecurity systems and procedures.\n3.1.3.2 Developing plans for response to cybersecurity incidents that may affect the entity's business continuity.\n3.1.3.3 Developing disaster recovery plans.",
+                        "requirement_text_ar": "يجب أن تغطي إدارة استمرارية الأعمال في الجهة بحد أدنى ما يلي: 1-3-1-3 التأكد من استمرارية الأنظمة والإجراءات المتعلقة بالأمن السيبراني. 2-3-1-3 وضع خطط الاستجابة لحوادث الأمن السيبراني التي قد تؤثر على استمرارية أعمال الجهة. 3-3-1-3 وضع خطط التعافي من الكوارث (Disaster Recovery Plan).",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-3",
+                        "official_reference": "ECC-2:2024:3:3-1-3",
+                        "source_page": "29",
+                        "metadata": {
+                            "subdomain": "3-1"
+                        }
+                    }
+                ]
+            },
+            {
+                "code": "3-1-4",
+                "display_code": "3-1-4",
+                "normalized_code": "3_1_4",
+                "title_en": "Cybersecurity business continuity management requirements review",
+                "title_ar": "مراجعة متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                "description_en": "Cybersecurity requirements for business continuity management within the entity shall be periodically reviewed.",
+                "description_ar": "يجب مراجعة متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة دورياً.",
+                "source_document_key": "nca-ecc-2-2024-en",
+                "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-4",
+                "official_reference": "ECC-2:2024:3:3-1-4",
+                "source_page": "29",
+                "sort_order": 4,
+                "level": 1,
+                "metadata": {
+                    "subdomain": "3-1"
+                },
+                "requirements": [
+                    {
+                        "code": "3-1-4",
+                        "display_code": "3-1-4",
+                        "normalized_code": "3_1_4",
+                        "title_en": "Cybersecurity business continuity management requirements review",
+                        "title_ar": "مراجعة متطلبات الأمن السيبراني ضمن إدارة استمرارية الأعمال",
+                        "requirement_text_en": "Cybersecurity requirements for business continuity management within the entity shall be periodically reviewed.",
+                        "requirement_text_ar": "يجب مراجعة متطلبات الأمن السيبراني ضمن إدارة استمرارية أعمال الجهة دورياً.",
+                        "source_document_key": "nca-ecc-2-2024-en",
+                        "source_reference": "NCA ECC-2:2024 EN - Domain 3 - Control 3-1-4",
+                        "official_reference": "ECC-2:2024:3:3-1-4",
+                        "source_page": "29",
+                        "metadata": {
+                            "subdomain": "3-1"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
 }
