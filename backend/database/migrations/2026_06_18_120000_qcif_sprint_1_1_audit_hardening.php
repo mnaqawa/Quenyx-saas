@@ -72,16 +72,84 @@ return new class extends Migration
     private function dropLegacyCorpusUniqueConstraints(): void
     {
         $legacyUniques = [
-            'compliance_domains' => 'compliance_domains_framework_id_code_unique',
-            'compliance_controls' => 'compliance_controls_framework_id_code_unique',
-            'compliance_requirements' => 'compliance_requirements_control_id_code_unique',
+            'compliance_domains' => [
+                'index' => 'compliance_domains_framework_id_code_unique',
+                'fk_column' => 'framework_id',
+                'replacement_index' => 'cc_domains_framework_id_idx',
+            ],
+            'compliance_controls' => [
+                'index' => 'compliance_controls_framework_id_code_unique',
+                'fk_column' => 'framework_id',
+                'replacement_index' => 'cc_controls_framework_id_idx',
+            ],
+            'compliance_requirements' => [
+                'index' => 'compliance_requirements_control_id_code_unique',
+                'fk_column' => 'control_id',
+                'replacement_index' => 'cc_req_control_id_idx',
+            ],
         ];
 
-        foreach ($legacyUniques as $table => $indexName) {
-            if ($this->hasIndex($table, $indexName)) {
-                DB::statement("ALTER TABLE `{$table}` DROP INDEX `{$indexName}`");
+        foreach ($legacyUniques as $table => $config) {
+            $indexName = $config['index'];
+            if (! $this->hasIndex($table, $indexName)) {
+                continue;
+            }
+
+            $this->ensureForeignKeySupportIndex(
+                $table,
+                $config['fk_column'],
+                $indexName,
+                $config['replacement_index'],
+            );
+
+            DB::statement("ALTER TABLE `{$table}` DROP INDEX `{$indexName}`");
+        }
+    }
+
+    /**
+     * MySQL requires an index on FK columns. Legacy composite uniques often
+     * served as that index — add a dedicated one before dropping them.
+     */
+    private function ensureForeignKeySupportIndex(
+        string $table,
+        string $column,
+        string $indexBeingDropped,
+        string $replacementIndexName,
+    ): void {
+        if ($this->hasIndex($table, $replacementIndexName)) {
+            return;
+        }
+
+        if ($this->hasLeftPrefixIndex($table, $column, $indexBeingDropped)) {
+            return;
+        }
+
+        DB::statement("ALTER TABLE `{$table}` ADD INDEX `{$replacementIndexName}` (`{$column}`)");
+    }
+
+    private function hasLeftPrefixIndex(string $table, string $column, ?string $excludeIndex = null): bool
+    {
+        $connection = Schema::getConnection();
+        $database = $connection->getDatabaseName();
+
+        $rows = $connection->select(
+            'SELECT index_name, seq_in_index FROM information_schema.statistics
+             WHERE table_schema = ? AND table_name = ? AND column_name = ?
+             ORDER BY index_name, seq_in_index',
+            [$database, $table, $column]
+        );
+
+        foreach ($rows as $row) {
+            if ($excludeIndex !== null && $row->index_name === $excludeIndex) {
+                continue;
+            }
+
+            if ((int) $row->seq_in_index === 1) {
+                return true;
             }
         }
+
+        return false;
     }
 
     private function enforceReleaseIdNotNull(string $table): void
