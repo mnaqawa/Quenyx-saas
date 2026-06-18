@@ -143,7 +143,7 @@ export default function AlertManagement() {
     } finally {
       setTabLoading(false)
     }
-  }, [activeTab, selectedWorkspaceId, appliedHistoryFilters])
+  }, [activeTab, selectedWorkspaceId, appliedHistoryFilters, t])
 
   const refreshAll = useCallback(() => {
     setRefreshKey((k) => k + 1)
