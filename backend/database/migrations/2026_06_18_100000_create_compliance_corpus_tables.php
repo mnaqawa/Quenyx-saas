@@ -75,7 +75,7 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->foreignId('framework_id')->constrained('compliance_frameworks')->cascadeOnDelete();
             $table->foreignId('parent_domain_id')->nullable()
-                ->constrained('compliance_domains')->nullOnDelete();
+                ->constrained('compliance_domains', 'id', 'cc_domains_parent_fk')->nullOnDelete();
             $table->string('code', 64);
             $table->string('slug', 128);
             $table->string('title_en');
@@ -89,12 +89,12 @@ return new class extends Migration
             $table->text('source_reference')->nullable();
             $table->json('tags')->nullable();
             $table->foreignId('superseded_by_domain_id')->nullable()
-                ->constrained('compliance_domains')->nullOnDelete();
+                ->constrained('compliance_domains', 'id', 'cc_domains_superseded_fk')->nullOnDelete();
             $table->json('migration_reference')->nullable();
             $table->timestamps();
 
             $table->unique(['framework_id', 'code']);
-            $table->index(['framework_id', 'parent_domain_id']);
+            $table->index(['framework_id', 'parent_domain_id'], 'cc_domains_fw_parent_idx');
             $table->index('status');
         });
 
@@ -104,7 +104,7 @@ return new class extends Migration
             $table->foreignId('framework_id')->constrained('compliance_frameworks')->cascadeOnDelete();
             $table->foreignId('domain_id')->constrained('compliance_domains')->cascadeOnDelete();
             $table->foreignId('control_objective_id')->nullable()
-                ->constrained('compliance_control_objectives')->nullOnDelete();
+                ->constrained('compliance_control_objectives', 'id', 'cc_controls_objective_fk')->nullOnDelete();
             $table->string('code', 64);
             $table->string('slug', 128);
             $table->string('title_en');
@@ -119,13 +119,13 @@ return new class extends Migration
             $table->text('source_reference')->nullable();
             $table->json('tags')->nullable();
             $table->foreignId('superseded_by_control_id')->nullable()
-                ->constrained('compliance_controls')->nullOnDelete();
+                ->constrained('compliance_controls', 'id', 'cc_controls_superseded_fk')->nullOnDelete();
             $table->json('migration_reference')->nullable();
             $table->timestamps();
 
             $table->unique(['framework_id', 'code']);
-            $table->index(['framework_id', 'domain_id']);
-            $table->index('control_objective_id');
+            $table->index(['framework_id', 'domain_id'], 'cc_controls_fw_domain_idx');
+            $table->index('control_objective_id', 'cc_controls_objective_idx');
             $table->index('status');
         });
 
@@ -148,7 +148,7 @@ return new class extends Migration
             $table->text('source_reference')->nullable();
             $table->json('tags')->nullable();
             $table->foreignId('superseded_by_requirement_id')->nullable()
-                ->constrained('compliance_requirements')->nullOnDelete();
+                ->constrained('compliance_requirements', 'id', 'cc_requirements_superseded_fk')->nullOnDelete();
             $table->json('migration_reference')->nullable();
             $table->timestamps();
 
@@ -202,8 +202,8 @@ return new class extends Migration
         Schema::create('compliance_evidence_expectations', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('requirement_id')->constrained('compliance_requirements')->cascadeOnDelete();
-            $table->foreignId('evidence_type_id')->constrained('compliance_evidence_types')->restrictOnDelete();
+            $table->foreignId('requirement_id')->constrained('compliance_requirements', 'id', 'cc_ev_exp_req_fk')->cascadeOnDelete();
+            $table->foreignId('evidence_type_id')->constrained('compliance_evidence_types', 'id', 'cc_ev_exp_type_fk')->restrictOnDelete();
             $table->string('code', 64);
             $table->string('slug', 128);
             $table->string('title_en')->nullable();
@@ -220,16 +220,16 @@ return new class extends Migration
             $table->json('tags')->nullable();
             $table->timestamps();
 
-            $table->unique(['requirement_id', 'code']);
-            $table->index(['requirement_id', 'evidence_type_id']);
+            $table->unique(['requirement_id', 'code'], 'cc_ev_exp_req_code_uniq');
+            $table->index(['requirement_id', 'evidence_type_id'], 'cc_ev_exp_req_type_idx');
             $table->index('status');
         });
 
         Schema::create('compliance_control_objective_mappings', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('control_objective_id')->constrained('compliance_control_objectives')->cascadeOnDelete();
-            $table->foreignId('control_id')->constrained('compliance_controls')->cascadeOnDelete();
+            $table->foreignId('control_objective_id')->constrained('compliance_control_objectives', 'id', 'cc_obj_map_objective_fk')->cascadeOnDelete();
+            $table->foreignId('control_id')->constrained('compliance_controls', 'id', 'cc_obj_map_control_fk')->cascadeOnDelete();
             $table->string('mapping_type', 32)->default('related');
             $table->string('confidence', 16)->default('high');
             $table->text('notes_en')->nullable();
@@ -276,7 +276,7 @@ return new class extends Migration
             $table->json('payload')->nullable();
             $table->timestamp('created_at')->useCurrent();
 
-            $table->index(['import_run_id', 'level']);
+            $table->index(['import_run_id', 'level'], 'cc_import_logs_run_level_idx');
             $table->index('entity_type');
         });
     }
