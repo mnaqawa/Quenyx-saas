@@ -13,4 +13,9 @@ class ComplianceCorpusImportException extends RuntimeException
     {
         return new self('Corpus import validation failed: '.implode('; ', $errors));
     }
+
+    public static function invalidPayload(string $message): self
+    {
+        return new self($message);
+    }
 }

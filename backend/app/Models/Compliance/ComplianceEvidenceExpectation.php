@@ -15,6 +15,7 @@ class ComplianceEvidenceExpectation extends Model
 
     protected $fillable = [
         'uuid',
+        'source_document_id',
         'requirement_id',
         'evidence_type_id',
         'code',
@@ -30,7 +31,10 @@ class ComplianceEvidenceExpectation extends Model
         'deprecated_at',
         'sort_order',
         'source_reference',
+        'source_page',
+        'official_reference',
         'tags',
+        'metadata',
     ];
 
     protected $casts = [
@@ -38,8 +42,14 @@ class ComplianceEvidenceExpectation extends Model
         'published_at' => 'datetime',
         'deprecated_at' => 'datetime',
         'tags' => 'array',
+        'metadata' => 'array',
         'status' => PublicationStatus::class,
     ];
+
+    public function sourceDocument(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceSourceDocument::class, 'source_document_id');
+    }
 
     public function requirement(): BelongsTo
     {

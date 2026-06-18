@@ -79,6 +79,11 @@ class ComplianceFrameworkRelease extends Model
         return $this->hasMany(ComplianceCorpusImportRun::class, 'framework_release_id');
     }
 
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(ComplianceCorpusRevision::class, 'framework_release_id')->orderBy('revision_number');
+    }
+
     public function stableRef(): string
     {
         return "{$this->framework?->key}:{$this->version_code}";

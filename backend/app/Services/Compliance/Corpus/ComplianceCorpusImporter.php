@@ -28,6 +28,8 @@ class ComplianceCorpusImporter
 {
     public function __construct(
         private readonly ComplianceCorpusValidator $validator = new ComplianceCorpusValidator(),
+        private readonly ComplianceSourceDocumentRegistrar $sourceDocumentRegistrar = new ComplianceSourceDocumentRegistrar(),
+        private readonly ComplianceCorpusRevisionCreator $revisionCreator = new ComplianceCorpusRevisionCreator(),
     ) {
     }
 
@@ -59,6 +61,8 @@ class ComplianceCorpusImporter
 
         $release->loadMissing('framework');
 
+        $sourceDocumentMap = $this->sourceDocumentRegistrar->keyMapForRelease($release);
+
         $run->update([
             'status' => ImportRunStatus::Importing,
             'started_at' => now(),
@@ -80,7 +84,7 @@ class ComplianceCorpusImporter
         ];
 
         try {
-            DB::transaction(function () use ($payload, $release, $run, $dryRun, &$stats, &$rollback): void {
+            DB::transaction(function () use ($payload, $release, $run, $dryRun, $sourceDocumentMap, &$stats, &$rollback): void {
                 if (isset($payload['framework']) && is_array($payload['framework'])) {
                     $this->syncReleaseMetadata($release, $payload['framework'], $stats, $rollback, $dryRun);
                 }
@@ -96,6 +100,7 @@ class ComplianceCorpusImporter
                         $release,
                         $payload['domains'],
                         $objectiveMap,
+                        $sourceDocumentMap,
                         $stats,
                         $rollback,
                         $dryRun,
@@ -140,6 +145,14 @@ class ComplianceCorpusImporter
             'rollback_data' => $rollback,
         ]);
         $this->log($run, ImportLogLevel::Info, null, null, 'Import completed successfully.');
+
+        $this->revisionCreator->createFromImportRun(
+            $run,
+            $release,
+            $stats,
+            ComplianceCorpusValidator::contentHash($payload),
+            $run->initiated_by,
+        );
 
         return $run->fresh() ?? $run;
     }
@@ -221,6 +234,7 @@ class ComplianceCorpusImporter
         ComplianceFrameworkRelease $release,
         array $domains,
         array $objectiveMap,
+        array $sourceDocumentMap,
         array &$stats,
         array &$rollback,
         bool $dryRun,
@@ -228,6 +242,7 @@ class ComplianceCorpusImporter
     ): array {
         $domainIdByCode = [];
         $controlMap = [];
+        $pendingParentLinks = [];
         $frameworkId = $release->framework_id;
 
         foreach ($domains as $domainRow) {
@@ -248,7 +263,7 @@ class ComplianceCorpusImporter
             ]);
 
             $isNewDomain = ! $domain->exists;
-            $domainAttributes = $this->buildDomainAttributes($domainRow, $frameworkId, $release->id, $parentId);
+            $domainAttributes = $this->buildDomainAttributes($domainRow, $frameworkId, $release->id, $parentId, $sourceDocumentMap);
             if (! $dryRun) {
                 if ($domain->exists) {
                     $before = $domain->getAttributes();
@@ -285,6 +300,7 @@ class ComplianceCorpusImporter
                     $release->id,
                     $domainIdByCode[$domainCode],
                     $objectiveId,
+                    $sourceDocumentMap,
                 );
 
                 if (! $dryRun) {
@@ -301,10 +317,24 @@ class ComplianceCorpusImporter
                         $stats['created']['compliance_controls'] = ($stats['created']['compliance_controls'] ?? 0) + 1;
                     }
                     $controlMap[$controlCode] = $control->id;
-                    $this->importRequirements($control, $controlRow['requirements'] ?? [], $stats, $rollback, $dryRun);
+                    if (filled($controlRow['parent_control_code'] ?? null)) {
+                        $pendingParentLinks[$controlCode] = (string) $controlRow['parent_control_code'];
+                    }
+                    $this->importRequirements($control, $controlRow['requirements'] ?? [], $sourceDocumentMap, $stats, $rollback, $dryRun);
                 } else {
                     $controlMap[$controlCode] = $control->exists ? $control->id : -1;
                 }
+            }
+        }
+
+        if (! $dryRun) {
+            foreach ($pendingParentLinks as $childCode => $parentCode) {
+                $childId = $controlMap[$childCode] ?? null;
+                $parentId = $controlMap[$parentCode] ?? null;
+                if ($childId === null || $parentId === null) {
+                    throw new ComplianceCorpusImportException("Unable to resolve parent_control_code '{$parentCode}' for control '{$childCode}'.");
+                }
+                ComplianceControl::query()->whereKey($childId)->update(['parent_control_id' => $parentId]);
             }
         }
 
@@ -317,6 +347,7 @@ class ComplianceCorpusImporter
     private function importRequirements(
         ComplianceControl $control,
         array $requirements,
+        array $sourceDocumentMap,
         array &$stats,
         array &$rollback,
         bool $dryRun,
@@ -327,7 +358,7 @@ class ComplianceCorpusImporter
                 'code' => (string) $reqRow['code'],
             ]);
 
-            $attributes = $this->buildRequirementAttributes($reqRow, $control->id, $control->framework_release_id);
+            $attributes = $this->buildRequirementAttributes($reqRow, $control->id, $control->framework_release_id, $sourceDocumentMap);
             if ($requirement->exists) {
                 $before = $requirement->getAttributes();
                 $requirement->fill($attributes);
@@ -341,8 +372,8 @@ class ComplianceCorpusImporter
                 $stats['created']['compliance_requirements'] = ($stats['created']['compliance_requirements'] ?? 0) + 1;
             }
 
-            $this->importGuidance($requirement, $reqRow['guidance'] ?? [], $stats, $rollback, $dryRun);
-            $this->importEvidenceExpectations($requirement, $reqRow['evidence_expectations'] ?? [], $stats, $rollback, $dryRun);
+            $this->importGuidance($requirement, $reqRow['guidance'] ?? [], $sourceDocumentMap, $stats, $rollback, $dryRun);
+            $this->importEvidenceExpectations($requirement, $reqRow['evidence_expectations'] ?? [], $sourceDocumentMap, $stats, $rollback, $dryRun);
         }
     }
 
@@ -352,6 +383,7 @@ class ComplianceCorpusImporter
     private function importGuidance(
         ComplianceRequirement $requirement,
         array $items,
+        array $sourceDocumentMap,
         array &$stats,
         array &$rollback,
         bool $dryRun,
@@ -361,7 +393,7 @@ class ComplianceCorpusImporter
                 'requirement_id' => $requirement->id,
                 'code' => (string) $row['code'],
             ]);
-            $attributes = [
+            $attributes = array_merge([
                 'requirement_id' => $requirement->id,
                 'code' => (string) $row['code'],
                 'slug' => $row['slug'] ?? Str::slug((string) $row['code']),
@@ -372,9 +404,8 @@ class ComplianceCorpusImporter
                 'published_at' => $row['published_at'] ?? null,
                 'deprecated_at' => $row['deprecated_at'] ?? null,
                 'sort_order' => (int) ($row['sort_order'] ?? 0),
-                'source_reference' => $row['source_reference'] ?? null,
                 'tags' => $row['tags'] ?? null,
-            ];
+            ], $this->mergeProvenanceAttributes($row, $sourceDocumentMap));
             $this->persistChild($item, $attributes, 'compliance_guidance_items', $stats, $rollback);
         }
     }
@@ -385,6 +416,7 @@ class ComplianceCorpusImporter
     private function importEvidenceExpectations(
         ComplianceRequirement $requirement,
         array $items,
+        array $sourceDocumentMap,
         array &$stats,
         array &$rollback,
         bool $dryRun,
@@ -402,7 +434,7 @@ class ComplianceCorpusImporter
                 'code' => (string) $row['code'],
             ]);
 
-            $attributes = [
+            $attributes = array_merge([
                 'requirement_id' => $requirement->id,
                 'evidence_type_id' => $type->id,
                 'code' => (string) $row['code'],
@@ -417,9 +449,8 @@ class ComplianceCorpusImporter
                 'published_at' => $row['published_at'] ?? null,
                 'deprecated_at' => $row['deprecated_at'] ?? null,
                 'sort_order' => (int) ($row['sort_order'] ?? 0),
-                'source_reference' => $row['source_reference'] ?? null,
                 'tags' => $row['tags'] ?? null,
-            ];
+            ], $this->mergeProvenanceAttributes($row, $sourceDocumentMap));
             $this->persistChild($item, $attributes, 'compliance_evidence_expectations', $stats, $rollback);
         }
     }
@@ -494,9 +525,9 @@ class ComplianceCorpusImporter
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildDomainAttributes(array $row, int $frameworkId, int $releaseId, ?int $parentId): array
+    private function buildDomainAttributes(array $row, int $frameworkId, int $releaseId, ?int $parentId, array $sourceDocumentMap): array
     {
-        return [
+        return array_merge([
             'framework_id' => $frameworkId,
             'framework_release_id' => $releaseId,
             'parent_domain_id' => $parentId,
@@ -510,23 +541,30 @@ class ComplianceCorpusImporter
             'published_at' => $row['published_at'] ?? null,
             'deprecated_at' => $row['deprecated_at'] ?? null,
             'sort_order' => (int) ($row['sort_order'] ?? 0),
-            'source_reference' => $row['source_reference'] ?? null,
             'tags' => $row['tags'] ?? null,
             'migration_reference' => $row['migration_reference'] ?? null,
-        ];
+        ], ComplianceCodeNormalizer::displayAndNormalized($row), $this->mergeProvenanceAttributes($row, $sourceDocumentMap));
     }
 
     /**
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildControlAttributes(array $row, int $frameworkId, int $releaseId, int $domainId, ?int $objectiveId): array
-    {
-        return [
+    private function buildControlAttributes(
+        array $row,
+        int $frameworkId,
+        int $releaseId,
+        int $domainId,
+        ?int $objectiveId,
+        array $sourceDocumentMap,
+    ): array {
+        return array_merge([
             'framework_id' => $frameworkId,
             'framework_release_id' => $releaseId,
             'domain_id' => $domainId,
             'control_objective_id' => $objectiveId,
+            'parent_control_id' => null,
+            'level' => max(1, (int) ($row['level'] ?? 1)),
             'code' => (string) $row['code'],
             'slug' => $row['slug'] ?? Str::slug(str_replace('.', '-', (string) $row['code'])),
             'title_en' => (string) $row['title_en'],
@@ -538,19 +576,18 @@ class ComplianceCorpusImporter
             'published_at' => $row['published_at'] ?? null,
             'deprecated_at' => $row['deprecated_at'] ?? null,
             'sort_order' => (int) ($row['sort_order'] ?? 0),
-            'source_reference' => $row['source_reference'] ?? null,
             'tags' => $row['tags'] ?? null,
             'migration_reference' => $row['migration_reference'] ?? null,
-        ];
+        ], ComplianceCodeNormalizer::displayAndNormalized($row), $this->mergeProvenanceAttributes($row, $sourceDocumentMap));
     }
 
     /**
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function buildRequirementAttributes(array $row, int $controlId, ?int $releaseId): array
+    private function buildRequirementAttributes(array $row, int $controlId, ?int $releaseId, array $sourceDocumentMap): array
     {
-        return [
+        return array_merge([
             'control_id' => $controlId,
             'framework_release_id' => $releaseId,
             'code' => (string) $row['code'],
@@ -565,10 +602,32 @@ class ComplianceCorpusImporter
             'published_at' => $row['published_at'] ?? null,
             'deprecated_at' => $row['deprecated_at'] ?? null,
             'sort_order' => (int) ($row['sort_order'] ?? 0),
-            'source_reference' => $row['source_reference'] ?? null,
             'tags' => $row['tags'] ?? null,
             'migration_reference' => $row['migration_reference'] ?? null,
-        ];
+        ], ComplianceCodeNormalizer::displayAndNormalized($row), $this->mergeProvenanceAttributes($row, $sourceDocumentMap));
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, int> $sourceDocumentMap
+     * @return array<string, mixed>
+     */
+    private function mergeProvenanceAttributes(array $row, array $sourceDocumentMap): array
+    {
+        $attributes = [];
+
+        $sourceDocumentKey = (string) ($row['source_document_key'] ?? '');
+        if ($sourceDocumentKey !== '' && isset($sourceDocumentMap[$sourceDocumentKey])) {
+            $attributes['source_document_id'] = $sourceDocumentMap[$sourceDocumentKey];
+        }
+
+        foreach (['source_page', 'source_reference', 'official_reference', 'metadata'] as $field) {
+            if (array_key_exists($field, $row)) {
+                $attributes[$field] = $row[$field];
+            }
+        }
+
+        return $attributes;
     }
 
     /**

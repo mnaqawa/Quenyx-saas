@@ -17,11 +17,16 @@ class ComplianceControl extends Model
 
     protected $fillable = [
         'uuid',
+        'source_document_id',
         'framework_id',
         'framework_release_id',
         'domain_id',
+        'parent_control_id',
+        'level',
         'control_objective_id',
         'code',
+        'display_code',
+        'normalized_code',
         'slug',
         'title_en',
         'title_ar',
@@ -33,7 +38,10 @@ class ComplianceControl extends Model
         'deprecated_at',
         'sort_order',
         'source_reference',
+        'source_page',
+        'official_reference',
         'tags',
+        'metadata',
         'superseded_by_control_id',
         'migration_reference',
     ];
@@ -42,10 +50,16 @@ class ComplianceControl extends Model
         'published_at' => 'datetime',
         'deprecated_at' => 'datetime',
         'tags' => 'array',
+        'metadata' => 'array',
         'migration_reference' => 'array',
         'status' => PublicationStatus::class,
         'control_type' => ControlType::class,
     ];
+
+    public function sourceDocument(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceSourceDocument::class, 'source_document_id');
+    }
 
     public function framework(): BelongsTo
     {
@@ -60,6 +74,16 @@ class ComplianceControl extends Model
     public function domain(): BelongsTo
     {
         return $this->belongsTo(ComplianceDomain::class, 'domain_id');
+    }
+
+    public function parentControl(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_control_id');
+    }
+
+    public function childControls(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_control_id')->orderBy('sort_order');
     }
 
     public function controlObjective(): BelongsTo

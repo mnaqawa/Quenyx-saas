@@ -3,8 +3,8 @@
   "framework": {
     "key": "nca-ecc",
     "version_code": "2:2024",
-    "description_en": "Optional release metadata sync — release must exist via ComplianceCorpusSeeder.",
-    "description_ar": "مزامنة بيانات اختيارية — يجب أن يكون الإصدار موجودًا عبر ComplianceCorpusSeeder."
+    "description_en": "NCA ECC-2:2024 curated corpus workspace — controls added manually after official PDF review.",
+    "description_ar": "مساحة عمل corpus لـ ECC-2:2024 — تُضاف الضوابط يدويًا بعد مراجعة ملفات NCA الرسمية."
   },
   "source_document_keys": [
     "nca-ecc-2-2024-en",

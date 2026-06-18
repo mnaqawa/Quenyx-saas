@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ComplianceCorpusImportRun extends Model
 {
@@ -83,5 +84,10 @@ class ComplianceCorpusImportRun extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(ComplianceCorpusImportLog::class, 'import_run_id');
+    }
+
+    public function corpusRevision(): HasOne
+    {
+        return $this->hasOne(ComplianceCorpusRevision::class, 'import_run_id');
     }
 }

@@ -1,0 +1,46 @@
+{
+  "framework": {
+    "key": "nca-ecc",
+    "version_code": "2:2024"
+  },
+  "source_documents": [
+    {
+      "key": "nca-ecc-2-2024-en",
+      "title_en": "Essential Cybersecurity Controls (ECC – 2:2024)",
+      "title_ar": "الضوابط الأساسية للأمن السيبراني (ECC – 2:2024)",
+      "document_type": "framework",
+      "language": "en",
+      "source_url": "https://cdn.nca.gov.sa/api/files/public/upload/86e09090-44e4-481f-bc28-355673607654_ECC--2024-EN.pdf",
+      "official_file_name": "ECC--2024-EN.pdf",
+      "official_file_mime": "application/pdf",
+      "source_reference": "NCA official English publication — Essential Cybersecurity Controls (ECC-2:2024)",
+      "publication_date": "2024-01-01",
+      "effective_date": "2024-01-01",
+      "status": "active",
+      "metadata": {
+        "nca_portal_page": "https://nca.gov.sa/en/regulatory-documents/controls-list/ecc/",
+        "issuer": "National Cybersecurity Authority (NCA)",
+        "document_classification": "public"
+      }
+    },
+    {
+      "key": "nca-ecc-2-2024-ar",
+      "title_en": "Essential Cybersecurity Controls (ECC – 2:2024) — Arabic",
+      "title_ar": "الضوابط الأساسية للأمن السيبراني (ECC – 2:2024)",
+      "document_type": "framework",
+      "language": "ar",
+      "source_url": "https://cdn.nca.gov.sa/api/files/public/upload/29a9e86a-595f-4af9-8db5-88715a458a14_ECC-2-2024---NCA.pdf",
+      "official_file_name": "ECC-2-2024---NCA.pdf",
+      "official_file_mime": "application/pdf",
+      "source_reference": "NCA official Arabic publication — الضوابط الأساسية للأمن السيبراني (ECC-2:2024)",
+      "publication_date": "2024-01-01",
+      "effective_date": "2024-01-01",
+      "status": "active",
+      "metadata": {
+        "nca_portal_page": "https://nca.gov.sa/ar/regulatory-documents/controls-list/ecc/",
+        "issuer": "الهيئة الوطنية للأمن السيبراني",
+        "document_classification": "public"
+      }
+    }
+  ]
+}

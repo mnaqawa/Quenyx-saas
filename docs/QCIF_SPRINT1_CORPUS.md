@@ -619,3 +619,9 @@ php artisan tinker --execute="
 echo Schema::hasColumn('compliance_source_documents','official_file_name') ? 'official_* ok' : 'missing';
 "
 ```
+
+---
+
+## Sprint 2 preparation
+
+See **[QCIF_SPRINT2_NCA_ECC_CORPUS.md](./QCIF_SPRINT2_NCA_ECC_CORPUS.md)** — curation workspace, source document seeding, validator gates, provenance fields.

@@ -16,9 +16,12 @@ class ComplianceRequirement extends Model
 
     protected $fillable = [
         'uuid',
+        'source_document_id',
         'control_id',
         'framework_release_id',
         'code',
+        'display_code',
+        'normalized_code',
         'slug',
         'title_en',
         'title_ar',
@@ -31,7 +34,10 @@ class ComplianceRequirement extends Model
         'deprecated_at',
         'sort_order',
         'source_reference',
+        'source_page',
+        'official_reference',
         'tags',
+        'metadata',
         'superseded_by_requirement_id',
         'migration_reference',
     ];
@@ -40,9 +46,15 @@ class ComplianceRequirement extends Model
         'published_at' => 'datetime',
         'deprecated_at' => 'datetime',
         'tags' => 'array',
+        'metadata' => 'array',
         'migration_reference' => 'array',
         'status' => PublicationStatus::class,
     ];
+
+    public function sourceDocument(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceSourceDocument::class, 'source_document_id');
+    }
 
     public function control(): BelongsTo
     {

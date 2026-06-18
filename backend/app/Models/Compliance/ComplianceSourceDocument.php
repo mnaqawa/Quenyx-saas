@@ -24,6 +24,7 @@ class ComplianceSourceDocument extends Model
 
     protected $fillable = [
         'uuid',
+        'key',
         'framework_release_id',
         'title_en',
         'title_ar',

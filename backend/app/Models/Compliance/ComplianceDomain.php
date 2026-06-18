@@ -16,10 +16,13 @@ class ComplianceDomain extends Model
 
     protected $fillable = [
         'uuid',
+        'source_document_id',
         'framework_id',
         'framework_release_id',
         'parent_domain_id',
         'code',
+        'display_code',
+        'normalized_code',
         'slug',
         'title_en',
         'title_ar',
@@ -30,7 +33,10 @@ class ComplianceDomain extends Model
         'deprecated_at',
         'sort_order',
         'source_reference',
+        'source_page',
+        'official_reference',
         'tags',
+        'metadata',
         'superseded_by_domain_id',
         'migration_reference',
     ];
@@ -39,9 +45,15 @@ class ComplianceDomain extends Model
         'published_at' => 'datetime',
         'deprecated_at' => 'datetime',
         'tags' => 'array',
+        'metadata' => 'array',
         'migration_reference' => 'array',
         'status' => PublicationStatus::class,
     ];
+
+    public function sourceDocument(): BelongsTo
+    {
+        return $this->belongsTo(ComplianceSourceDocument::class, 'source_document_id');
+    }
 
     public function framework(): BelongsTo
     {
