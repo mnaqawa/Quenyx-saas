@@ -17,7 +17,7 @@ class ImportComplianceCorpusCommand extends Command
         {file : Path to JSON or CSV corpus file}
         {--framework=nca-ecc : Framework family key}
         {--release=2:2024 : Framework release version code}
-        {--version= : Deprecated alias for --release}
+        {--release-version= : Deprecated alias for --release (do not use --version; reserved by Artisan)}
         {--format= : json or csv (inferred from extension when omitted)}
         {--dry-run : Validate and simulate without persisting}
         {--rollback= : UUID of a completed import run to roll back}';
@@ -42,9 +42,9 @@ class ImportComplianceCorpusCommand extends Command
             return Command::FAILURE;
         }
 
-        $releaseCode = (string) ($this->option('release') ?: $this->option('version') ?: '2:2024');
-        if ($this->option('version') && ! $this->option('release')) {
-            $this->warn('--version is deprecated; use --release instead.');
+        $releaseCode = (string) ($this->option('release') ?: $this->option('release-version') ?: '2:2024');
+        if ($this->option('release-version') && ! $this->option('release')) {
+            $this->warn('--release-version is deprecated; use --release instead.');
         }
 
         try {

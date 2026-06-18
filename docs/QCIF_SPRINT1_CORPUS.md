@@ -202,8 +202,8 @@ Human experts prepare JSON from official NCA ECC-2:2024 publication.
 ### Step 4 — Import
 
 ```bash
-php artisan compliance:import-corpus /path/to/nca-ecc-curated.json --framework=nca-ecc --version=2:2024 --dry-run
-php artisan compliance:import-corpus /path/to/nca-ecc-curated.json --framework=nca-ecc --version=2:2024
+php artisan compliance:import-corpus /path/to/nca-ecc-curated.json --framework=nca-ecc --release=2:2024 --dry-run
+php artisan compliance:import-corpus /path/to/nca-ecc-curated.json --framework=nca-ecc --release=2:2024
 ```
 
 ### Rollback (import run)
@@ -275,7 +275,7 @@ Load file → Validate → Begin import_run → Transaction
 php artisan compliance:import-corpus corpus.json --dry-run
 
 # Import
-php artisan compliance:import-corpus corpus.json --format=json --framework=nca-ecc --version=2:2024
+php artisan compliance:import-corpus corpus.json --format=json --framework=nca-ecc --release=2:2024
 
 # Rollback
 php artisan compliance:import-corpus corpus.json --rollback=<uuid>
@@ -492,7 +492,7 @@ php artisan compliance:import-corpus corpus.json \
   --release=2:2024
 ```
 
-`--version` remains as deprecated alias for `--release`.
+`--release-version` remains as deprecated alias for `--release` (Artisan reserves `--version`).
 
 Import runs now store: `framework_release_id`, `source_document_id`, `import_type`, `summary`, `failed_at`, `rollback_of_import_run_id`.
 
@@ -521,6 +521,6 @@ Status `running` renamed to **`importing`**.
 | `framework_id` on corpus entities | Kept; populated from release |
 | `dry_run` column on import runs | Kept; mirrored by `import_type` |
 | `stats` column | Kept; duplicated into `summary` |
-| `--version` CLI flag | Deprecated alias for `--release` |
+| `--release-version` CLI flag | Deprecated alias for `--release` (do not use `--version`) |
 | JSON payload `framework.version_code` | Still required; matched against release |
 | Sprint 1 unique `(key, version_code)` on frameworks | Removed; replaced by `unique(key)` + release table |
