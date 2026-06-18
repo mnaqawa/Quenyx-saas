@@ -9,6 +9,24 @@ body,
   height: 100%;
 }
 
+/* RTL foundations — dir is set on <html> by LanguageProvider */
+html[dir='rtl'] {
+  direction: rtl;
+}
+
+html[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+html[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+html[dir='rtl'] aside[role='dialog'],
+html[dir='rtl'] [data-drawer-panel='true'] {
+  direction: rtl;
+}
+
 /* Light theme: when html has class "light", override main layout and content colors */
 html.light body,
 html.light #root {
@@ -21,7 +39,7 @@ html.light #app-layout {
 }
 html.light #app-layout aside {
   background: #e2e8f0 !important;
-  border-right-color: rgba(15, 23, 42, 0.12) !important;
+  border-inline-end-color: rgba(15, 23, 42, 0.12) !important;
   color: #0f172a;
 }
 html.light #app-layout aside p,

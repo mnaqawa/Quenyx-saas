@@ -4,6 +4,7 @@ import { translations, Language } from './translations'
 
 interface LanguageContextValue {
   language: Language
+  dir: 'ltr' | 'rtl'
   setLanguage: (language: Language) => void
   t: (key: string) => string
 }
@@ -28,8 +29,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [language])
 
   const value = useMemo<LanguageContextValue>(() => {
+    const dir = language === 'ar' ? 'rtl' : 'ltr'
     return {
       language,
+      dir,
       setLanguage,
       t: (key: string) => translations[language][key] ?? key,
     }

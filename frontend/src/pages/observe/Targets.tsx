@@ -787,7 +787,7 @@ export default function Targets() {
             onClick={() => setDrawerHostIndex(null)}
             aria-label={t('common.close')}
           />
-          <div className="flex h-full w-full min-w-0 max-w-3xl flex-col overflow-hidden border-l border-white/10 bg-[#0f151d] text-white">
+          <div className="flex h-full w-full min-w-0 max-w-3xl flex-col overflow-hidden border-s border-white/10 bg-[#0f151d] text-white" data-drawer-panel="true">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <h3 className="text-base font-semibold">{t('targets.configDrawer')}</h3>
               <button
@@ -1002,7 +1002,7 @@ export default function Targets() {
                                   {expandedServices.has(serviceKey) ? '▼' : '▶'} {t('targets.serviceConfiguration')}
                                 </button>
                                 {expandedServices.has(serviceKey) && (
-                                  <div className="min-w-0 space-y-4 pl-4 border-l border-white/10">
+                                  <div className="min-w-0 space-y-4 ps-4 border-s border-white/10">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <span className="text-xs font-medium text-white/70">{t('targets.serviceConfiguration')}</span>
                                       <button

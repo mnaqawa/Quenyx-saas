@@ -146,7 +146,7 @@ export function HostDetailsDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
       <button type="button" className="flex-1" onClick={onClose} aria-label={t('common.close')} />
-      <div className="flex h-full w-full min-w-0 max-w-xl flex-col overflow-hidden border-l border-white/10 bg-[#0f151d] text-white shadow-xl">
+      <div className="flex h-full w-full min-w-0 max-w-xl flex-col overflow-hidden border-s border-white/10 bg-[#0f151d] text-white shadow-xl" data-drawer-panel="true">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-5 py-4">
           <h3 className="text-base font-semibold">{t('hosts.drawer.title')}</h3>
           <div className="flex flex-wrap items-center gap-2">

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService, type AuthUser } from '../services/authService'
 import { routesByModule, getVisibleModuleRoutes, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleTemporarilyVisible } from '../constants/platformRegistry'
@@ -22,7 +23,7 @@ function AppLayoutInner() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     () => (typeof window === 'undefined' ? true : window.innerWidth >= 768),
   )
-  const { language, setLanguage, t } = useLanguage()
+  const { t } = useLanguage()
   const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
   const { startTour } = useProductTour()
   const { isOnboarded } = useOnboarding()
@@ -145,8 +146,8 @@ function AppLayoutInner() {
       ) : null}
       <aside
         className={[
-          'fixed left-0 top-0 z-40 flex h-full w-64 shrink-0 flex-col border-r border-white/5 bg-[#0f141b] text-white transition-transform',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'fixed start-0 top-0 z-40 flex h-full w-64 shrink-0 flex-col border-e border-white/5 bg-[#0f141b] text-white transition-transform',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full',
         ].join(' ')}
       >
         <div className="border-b border-white/10 px-6 py-6">
@@ -247,7 +248,7 @@ function AppLayoutInner() {
                 <button
                   type="button"
                   onClick={() => setIsObserveExpanded(!isObserveExpanded)}
-                  className={`rounded-md px-3 py-2 text-left text-sm transition w-full flex items-center justify-between ${
+                  className={`rounded-md px-3 py-2 text-start text-sm transition w-full flex items-center justify-between ${
                     isObserveRoute
                       ? 'bg-white/10 text-white'
                       : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -261,13 +262,13 @@ function AppLayoutInner() {
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
-                    className={`transition-transform ${isObserveExpanded ? 'rotate-90' : ''}`}
+                    className={`transition-transform ${isObserveExpanded ? 'rotate-90 rtl:-rotate-90' : ''}`}
                   >
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </button>
                 {isObserveExpanded && (
-                  <div className="ml-4 mt-1 space-y-0.5 border-l border-white/5 pl-10">
+                  <div className="ms-4 mt-1 space-y-0.5 border-s border-white/5 ps-10">
                     {(getVisibleModuleRoutes('qynsight') || []).map((route) => {
                       const routePath = selectedWorkspaceId
                         ? route.path.replace(':id', String(selectedWorkspaceId))
@@ -288,7 +289,7 @@ function AppLayoutInner() {
                             isDisabled
                               ? 'text-white/30 cursor-not-allowed opacity-50'
                               : isActive
-                              ? 'bg-white/15 text-white border-l-2 border-sky-500 pl-2.5'
+                              ? 'bg-white/15 text-white border-s-2 border-sky-500 ps-2.5'
                               : 'text-white/60 hover:bg-white/5 hover:text-white'
                           }`}
                         >
@@ -386,7 +387,7 @@ function AppLayoutInner() {
         </div>
         <div className="relative mt-auto border-t border-white/10 px-3 py-3" ref={userMenuRef}>
           {isUserMenuOpen && (
-            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#161c24] py-1 shadow-2xl shadow-black/50">
+            <div className="absolute bottom-full start-3 end-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#161c24] py-1 shadow-2xl shadow-black/50">
               <Link
                 to="/profile"
                 onClick={() => setIsUserMenuOpen(false)}
@@ -456,7 +457,7 @@ function AppLayoutInner() {
             onClick={() => setIsUserMenuOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={isUserMenuOpen}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-white/10"
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-start transition hover:bg-white/10"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-xs font-semibold text-orange-200">
               {userInitials}
@@ -488,7 +489,7 @@ function AppLayoutInner() {
       <main
         className={[
           'min-h-screen min-w-0 flex-1 bg-[#0b0f14] text-slate-100 transition-[margin]',
-          isSidebarOpen ? 'md:ml-64' : 'md:ml-0',
+          isSidebarOpen ? 'md:ms-64' : 'md:ms-0',
         ].join(' ')}
       >
         <div className="border-b border-white/5 px-4 py-4 md:px-6">
@@ -522,7 +523,7 @@ function AppLayoutInner() {
                 {t('tour.button')}
               </button>
               <div className="flex items-center gap-2 text-xs text-white/70" data-tour="tour-workspace">
-                <span className="text-white/50">Workspace:</span>
+                <span className="text-white/50">{t('nav.workspace')}:</span>
                 <select
                   value={selectedWorkspaceId ?? ''}
                   onChange={(event) => {
@@ -554,41 +555,7 @@ function AppLayoutInner() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center gap-2" data-tour="tour-language">
-                <span className="inline-flex items-center gap-2 text-xs text-white/70">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 2a10 10 0 100 20 10 10 0 000-20z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="M2 12h20M12 2c3 3 3 15 0 20M12 2c-3 3-3 15 0 20"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                    />
-                  </svg>
-                  {t('language.switch')}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setLanguage('en')}
-                  className={`rounded-full px-3 py-1 text-xs ${
-                    language === 'en' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  {t('language.english')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLanguage('ar')}
-                  className={`rounded-full px-3 py-1 text-xs ${
-                    language === 'ar' ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  {t('language.arabic')}
-                </button>
-              </div>
+              <LanguageSwitcher />
               <button
                 type="button"
                 data-tour="tour-ai-agent"

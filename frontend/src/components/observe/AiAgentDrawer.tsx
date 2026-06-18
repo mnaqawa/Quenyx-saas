@@ -225,7 +225,7 @@ export function AiAgentDrawer({ workspaceId, open, analyzeRequest, onClose }: Ai
   if (!open) return null
 
   return (
-    <aside className="fixed right-0 top-0 z-50 flex h-screen w-full max-w-[390px] flex-col border-l border-white/10 bg-[#0f151d] text-white shadow-2xl">
+    <aside className="fixed end-0 top-0 z-50 flex h-screen w-full max-w-[390px] flex-col border-s border-white/10 bg-[#0f151d] text-white shadow-2xl" data-drawer-panel="true">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div>
           <div className="flex items-center gap-2">

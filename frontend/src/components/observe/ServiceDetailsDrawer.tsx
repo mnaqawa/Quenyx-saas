@@ -104,7 +104,7 @@ export function ServiceDetailsDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
       <button type="button" className="flex-1" onClick={onClose} aria-label={t('common.close')} />
-      <div className="flex h-full w-full max-w-lg flex-col border-l border-white/10 bg-[#0f151d] text-white shadow-xl">
+      <div className="flex h-full w-full max-w-lg flex-col border-s border-white/10 bg-[#0f151d] text-white shadow-xl" data-drawer-panel="true">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <h3 className="text-base font-semibold">{t('services.drawer.title')}</h3>
           <button

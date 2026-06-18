@@ -210,10 +210,11 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
         aria-hidden="true"
       />
       <aside
-        className="fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-full flex-col border-l border-white/10 bg-[#0f151d] text-white shadow-2xl sm:w-[440px] sm:max-w-[90vw]"
+        className="fixed inset-y-0 end-0 z-50 flex h-full w-full max-w-full flex-col border-s border-white/10 bg-[#0f151d] text-white shadow-2xl sm:w-[440px] sm:max-w-[90vw]"
         role="dialog"
         aria-modal="true"
         aria-label="AI Agent"
+        data-drawer-panel="true"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
@@ -290,10 +291,10 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
               <div
                 className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl border px-3 py-2 text-sm ${
                   message.role === 'user'
-                    ? 'rounded-br-sm border-orange-500/30 bg-orange-500/15 text-orange-50'
+                    ? 'rounded-ee-sm border-orange-500/30 bg-orange-500/15 text-orange-50'
                     : message.isError
-                      ? 'rounded-bl-sm border-rose-500/40 bg-rose-500/10 text-rose-100'
-                      : `rounded-bl-sm ${activeTab.bubbleClass}`
+                      ? 'rounded-es-sm border-rose-500/40 bg-rose-500/10 text-rose-100'
+                      : `rounded-es-sm ${activeTab.bubbleClass}`
                 }`}
               >
                 {message.content}
@@ -306,7 +307,7 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
 
           {sending && (
             <div className="flex flex-col items-start">
-              <div className={`flex items-center gap-1.5 rounded-2xl rounded-bl-sm border px-3 py-2.5 ${activeTab.bubbleClass}`}>
+              <div className={`flex items-center gap-1.5 rounded-2xl rounded-es-sm border px-3 py-2.5 ${activeTab.bubbleClass}`}>
                 <span className={`h-1.5 w-1.5 animate-bounce rounded-full ${activeTab.dotClass} [animation-delay:-0.3s]`} />
                 <span className={`h-1.5 w-1.5 animate-bounce rounded-full ${activeTab.dotClass} [animation-delay:-0.15s]`} />
                 <span className={`h-1.5 w-1.5 animate-bounce rounded-full ${activeTab.dotClass}`} />
