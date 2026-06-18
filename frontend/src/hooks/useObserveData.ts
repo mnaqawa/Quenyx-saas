@@ -756,7 +756,7 @@ export function useObserveKpis(workspaceId: string | null, refreshKey = 0) {
     serviceTotals: data?.serviceTotals ?? { ok: 0, warning: 0, unknown: 0, critical: 0, pending: 0, unreachable: 0 },
     problems,
     engineUnreachable: data?.engine_unreachable ?? false,
-    stale: data?.stale ?? true,
+    stale: data?.stale ?? false,
     lastPollAt: data?.last_poll_at ?? null,
     loading,
     error,

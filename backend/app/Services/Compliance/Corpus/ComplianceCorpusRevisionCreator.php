@@ -6,6 +6,7 @@ use App\Enums\Compliance\CorpusRevisionStatus;
 use App\Models\Compliance\ComplianceCorpusImportRun;
 use App\Models\Compliance\ComplianceCorpusRevision;
 use App\Models\Compliance\ComplianceFrameworkRelease;
+use App\Services\Compliance\ComplianceCorpusCacheService;
 
 /**
  * Creates corpus revision records after successful imports (architecture preparation).
@@ -40,7 +41,7 @@ class ComplianceCorpusRevisionCreator
             ->where('framework_release_id', $release->id)
             ->max('revision_number') ?? 0) + 1;
 
-        return ComplianceCorpusRevision::query()->create([
+        $revision = ComplianceCorpusRevision::query()->create([
             'framework_release_id' => $release->id,
             'revision_number' => $nextNumber,
             'parent_revision_id' => $previousActive?->id,
@@ -55,6 +56,11 @@ class ComplianceCorpusRevisionCreator
                 'source_path' => $run->source_path,
             ],
         ]);
+
+        $release->loadMissing('framework');
+        (new ComplianceCorpusCacheService())->onRevisionActivated($release, $revision);
+
+        return $revision;
     }
 
     /**

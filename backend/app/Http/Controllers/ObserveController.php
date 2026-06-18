@@ -175,15 +175,13 @@ class ObserveController extends Controller
 
         // Get meta for last_poll_at (native engine)
         $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
-        $meta = $nativeMeta;
 
-        // Seed ObserveMeta when none exists (e.g. fresh workspace, scheduler not run yet) to avoid "Last poll: never" UX
-        if ($meta === null || $meta->last_poll_at === null) {
-            $meta = ObserveMeta::updateOrCreate(
-                ['workspace_id' => $project->id, 'engine_key' => 'native'],
-                ['last_poll_at' => now(), 'service_totals_json' => null, 'error' => null]
-            );
-        }
+        $monitoringConfigured = ObserveTargetHost::where('workspace_id', $project->id)
+            ->where('enabled', true)
+            ->exists()
+            || ObserveService::where('workspace_id', $project->id)
+                ->where('engine_key', 'native')
+                ->exists();
 
         // Normalized state code for UI (9 = UNREACHABLE per TPM)
         $stateCode = fn (string $state): int => match ($state) {
@@ -224,17 +222,18 @@ class ObserveController extends Controller
             ];
         })->toArray();
 
-        $lastPollAt = $meta?->last_poll_at?->toIso8601String();
+        $lastPollAt = $nativeMeta?->last_poll_at?->toIso8601String();
         // Only report unreachable from native engine (QynSight).
         $engineUnreachable = $nativeMeta && trim((string) ($nativeMeta->error ?? '')) !== '';
         $engineUnreachableReason = $engineUnreachable
             ? (trim((string) ($nativeMeta->error ?? '')) ?: 'Monitoring engine could not be reached.')
             : null;
-        $staleThresholdSeconds = (int) config('observe.stale_threshold_seconds', 300);
+        $staleThresholdSeconds = max(60, (int) config('observe.stale_threshold_seconds', 300));
         $sourceTimestamp = $lastPollAt;
-        $stale = $lastPollAt
-            ? (now()->parse($lastPollAt)->diffInSeconds(now(), false) > $staleThresholdSeconds)
-            : true;
+        $pollAt = $nativeMeta?->last_poll_at;
+        $stale = $monitoringConfigured
+            && ! $engineUnreachable
+            && ($pollAt === null || $pollAt->lt(now()->subSeconds($staleThresholdSeconds)));
 
         return response()
             ->json([

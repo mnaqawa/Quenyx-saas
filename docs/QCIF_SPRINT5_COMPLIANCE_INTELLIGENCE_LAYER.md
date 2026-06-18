@@ -181,11 +181,16 @@ Search rules:
 | Project/workspace scope | **No** — corpus is global reference data |
 | `project.module:qynshield` | **Not applied** — existing middleware requires `{project}` route parameter |
 
-### Entitlement gap (documented)
+### Entitlement gap (documented — resolved in Sprint 5.1)
 
-Workspace-scoped module middleware (`project.module:qynshield`) cannot gate global corpus routes without adding a project context. Sprint 5 uses **authenticated access only**.
+Workspace-scoped routes with `project.qynshield` middleware are available at:
 
-**Recommended follow-up:** add optional `?project={uuid}` or workspace-prefixed alias routes with `project.module:qynshield` when QynShield UI integrates.
+- `/api/projects/{project}/compliance/corpus/*`
+- `/api/workspaces/{project}/compliance/corpus/*`
+
+See [QCIF Sprint 5.1 — Workspace Access](./QCIF_SPRINT5_1_WORKSPACE_ACCESS.md).
+
+Global routes remain for internal/system and future AI consumers.
 
 ---
 

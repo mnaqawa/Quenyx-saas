@@ -9,6 +9,7 @@ use App\Models\ObserveTargetService;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ObserveTest extends TestCase
@@ -298,5 +299,66 @@ class ObserveTest extends TestCase
         } catch (\Illuminate\Database\QueryException $e) {
             $this->fail('SQL error when reading targets: ' . $e->getMessage());
         }
+    }
+
+    public function test_services_not_stale_when_last_poll_is_recent(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-18T22:32:00Z'));
+
+        ObserveMeta::where('workspace_id', $this->workspace->id)->update([
+            'last_poll_at' => Carbon::parse('2026-06-18T22:31:54Z'),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.stale', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_services_stale_when_last_poll_exceeds_threshold(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-18T22:32:00Z'));
+
+        ObserveMeta::where('workspace_id', $this->workspace->id)->update([
+            'last_poll_at' => Carbon::parse('2026-06-18T22:00:00Z'),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.stale', true);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_services_not_stale_when_monitoring_not_configured(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-18T22:32:00Z'));
+
+        $emptyWorkspace = Project::create([
+            'owner_id' => $this->user->id,
+            'name' => 'Empty Observe Workspace',
+            'status' => 'active',
+        ]);
+
+        ObserveMeta::create([
+            'workspace_id' => $emptyWorkspace->id,
+            'engine_key' => 'native',
+            'last_poll_at' => Carbon::parse('2026-06-17T10:00:00Z'),
+            'service_totals_json' => null,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/workspaces/{$emptyWorkspace->id}/observe/services");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.stale', false)
+            ->assertJsonPath('data.items', []);
+
+        Carbon::setTestNow();
     }
 }

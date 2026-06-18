@@ -60,5 +60,6 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'project.module' => \App\Http\Middleware\EnsureProjectModuleAccess::class,
+        'project.qynshield' => \App\Http\Middleware\EnsureQynShieldEntitlement::class,
     ];
 }

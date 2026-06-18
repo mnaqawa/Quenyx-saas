@@ -14,6 +14,10 @@ import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
 import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow } from '../../types/observe'
+import {
+  getPollAgeSeconds,
+  shouldShowObserveStaleBanner,
+} from '../../lib/observeFreshness'
 
 const statusOptions = ['ok', 'warning', 'critical', 'unknown', 'pending'] as const
 const limitOptions = [25, 50, 100, 200]
@@ -245,9 +249,13 @@ export default function Services() {
     )
   }
 
+  const showStaleBanner = shouldShowObserveStaleBanner(data)
+  const pollAgeSeconds = getPollAgeSeconds(data.last_poll_at)
+  const freshnessSecondsAgo = pollAgeSeconds ?? secondsAgo
+
   return (
     <div className="space-y-6">
-      {(data.engine_unreachable || data.stale) && (
+      {(data.engine_unreachable || showStaleBanner) && (
         <div className={`rounded-lg border px-4 py-3 text-sm ${
           data.engine_unreachable
             ? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
@@ -279,7 +287,7 @@ export default function Services() {
           <ObservePageToolbar
             interval={interval}
             onIntervalChange={setInterval}
-            secondsAgo={secondsAgo}
+            secondsAgo={freshnessSecondsAgo}
             onRefresh={() => {
               triggerRefresh()
               refreshNow()
