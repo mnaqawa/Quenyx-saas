@@ -10,6 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Official regulatory source document metadata for a framework release.
+ *
+ * This model tracks external official documents only (URLs, publication metadata,
+ * checksums). Quenyx does not store or upload corpus PDFs in QCIF v1.
+ */
 class ComplianceSourceDocument extends Model
 {
     use HasComplianceUuid;
@@ -24,9 +30,9 @@ class ComplianceSourceDocument extends Model
         'document_type',
         'language',
         'source_url',
-        'file_name',
-        'file_mime',
-        'file_size',
+        'official_file_name',
+        'official_file_mime',
+        'official_file_size',
         'checksum_sha256',
         'source_reference',
         'publication_date',

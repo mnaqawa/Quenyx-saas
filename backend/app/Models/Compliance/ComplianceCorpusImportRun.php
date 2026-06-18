@@ -70,6 +70,11 @@ class ComplianceCorpusImportRun extends Model
         return $this->belongsTo(self::class, 'rollback_of_import_run_id');
     }
 
+    public function rollbacks(): HasMany
+    {
+        return $this->hasMany(self::class, 'rollback_of_import_run_id');
+    }
+
     public function initiator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'initiated_by');

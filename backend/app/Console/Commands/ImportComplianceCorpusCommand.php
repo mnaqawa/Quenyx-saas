@@ -97,14 +97,15 @@ class ImportComplianceCorpusCommand extends Command
         }
 
         try {
-            $importer->rollback($run);
+            $rollbackRun = $importer->rollback($run);
         } catch (ComplianceCorpusImportException $e) {
             $this->error($e->getMessage());
 
             return Command::FAILURE;
         }
 
-        $this->info("Import run {$uuid} rolled back.");
+        $this->info("Import run {$uuid} marked rolled_back.");
+        $this->info("Rollback audit run {$rollbackRun->uuid} completed with status: {$rollbackRun->status->value}");
 
         return Command::SUCCESS;
     }

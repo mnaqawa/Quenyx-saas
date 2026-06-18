@@ -472,7 +472,9 @@ Families link to authorities via `authority_id`.
 
 ### Source document model
 
-`compliance_source_documents` — metadata-only tracking of official PDFs/regulations per release. No file storage in this sprint.
+`compliance_source_documents` — metadata-only tracking of official PDFs/regulations per release. No file storage or upload in QCIF v1.
+
+External official file fields: `official_file_name`, `official_file_mime`, `official_file_size` (not Quenyx uploads).
 
 ### Corpus scoping
 
@@ -524,3 +526,96 @@ Status `running` renamed to **`importing`**.
 | `--release-version` CLI flag | Deprecated alias for `--release` (do not use `--version`) |
 | JSON payload `framework.version_code` | Still required; matched against release |
 | Sprint 1 unique `(key, version_code)` on frameworks | Removed; replaced by `unique(key)` + release table |
+
+---
+
+## Sprint 1.1 — Architecture Audit Fixes
+
+**Migration:** `2026_06_18_120000_qcif_sprint_1_1_audit_hardening.php`
+
+Post-hardening audit fixes applied before Sprint 2 / full corpus QA.
+
+### 1. Source document metadata (external only)
+
+`compliance_source_documents` remains **metadata-only**. No upload, storage, or file serving in QCIF v1.
+
+Official external document fields (renamed for clarity):
+
+| Column | Purpose |
+|--------|---------|
+| `source_url` | Official public URL (NCA portal, regulator site) |
+| `official_file_name` | Filename as published by the authority (not a Quenyx upload) |
+| `official_file_mime` | MIME type of the official document |
+| `official_file_size` | Byte size of the official document |
+| `checksum_sha256` | Integrity hash of the official file (optional) |
+
+### 2. Rollback auditability
+
+Rollback creates a **new** `compliance_corpus_import_runs` row:
+
+| Field | Value |
+|-------|--------|
+| `import_type` | `rollback` |
+| `rollback_of_import_run_id` | Original import run ID |
+| `framework_release_id` | Copied from original |
+| `status` | `pending` → `importing` → `completed` or `failed` |
+
+The original run is marked `rolled_back` only (its `import_type` stays `import`). Rollback logs attach to the new rollback run.
+
+```bash
+php artisan compliance:import-corpus corpus.json --rollback=<original-import-run-uuid>
+```
+
+### 3. `framework_release_id` enforcement
+
+After backfill, NOT NULL is enforced on:
+
+- `compliance_domains.framework_release_id`
+- `compliance_controls.framework_release_id`
+- `compliance_requirements.framework_release_id`
+
+Migration fails if any null rows remain (prevents silent partial scoping).
+
+### 4. Unique constraints (release-aware)
+
+**Source of truth:**
+
+| Table | Unique constraint |
+|-------|-------------------|
+| `compliance_domains` | `(framework_release_id, code)` |
+| `compliance_controls` | `(framework_release_id, code)` |
+| `compliance_requirements` | `(framework_release_id, control_id, code)` |
+
+**Removed legacy constraints** (block multiple releases per family):
+
+- `(framework_id, code)` on domains and controls
+- `(control_id, code)` on requirements (superseded by release-scoped unique)
+
+### 5. Import run status
+
+Canonical active status: **`importing`** (replaces legacy `running`).
+
+Migration `120000` normalizes any remaining `running` rows to `importing`.
+
+### Audit QA commands
+
+```bash
+cd backend
+php artisan migrate --force
+php artisan db:seed --class=ComplianceCorpusSeeder --force
+
+php artisan compliance:import-corpus database/corpus/examples/nca-ecc-2-2024.template.json \
+  --dry-run --framework=nca-ecc --release=2:2024
+
+# Verify NOT NULL (should return 0 for each)
+php artisan tinker --execute="
+foreach (['compliance_domains','compliance_controls','compliance_requirements'] as \$t) {
+  echo \$t.': '.DB::table(\$t)->whereNull('framework_release_id')->count().PHP_EOL;
+}
+"
+
+# Verify source document columns
+php artisan tinker --execute="
+echo Schema::hasColumn('compliance_source_documents','official_file_name') ? 'official_* ok' : 'missing';
+"
+```

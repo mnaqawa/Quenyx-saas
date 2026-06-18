@@ -641,41 +641,98 @@ class ComplianceCorpusImporter
         ]);
     }
 
-    public function rollback(ComplianceCorpusImportRun $run): void
+    public function rollback(ComplianceCorpusImportRun $originalRun): ComplianceCorpusImportRun
     {
-        if ($run->status !== ImportRunStatus::Completed || $run->import_type === ImportType::DryRun) {
+        if ($originalRun->import_type === ImportType::DryRun || $originalRun->import_type === ImportType::Rollback) {
+            throw new ComplianceCorpusImportException('Only completed corpus imports can be rolled back.');
+        }
+
+        if ($originalRun->status === ImportRunStatus::RolledBack) {
+            throw new ComplianceCorpusImportException('Import run has already been rolled back.');
+        }
+
+        if ($originalRun->status !== ImportRunStatus::Completed) {
             throw new ComplianceCorpusImportException('Only completed non-dry-run imports can be rolled back.');
         }
 
-        $rollback = $run->rollback_data ?? [];
-        DB::transaction(function () use ($rollback, $run): void {
-            foreach ($rollback['updated'] ?? [] as $table => $entries) {
-                foreach ($entries as $entry) {
-                    $this->restoreRow($table, $entry['id'], $entry['before']);
+        $rollbackPayload = $originalRun->rollback_data ?? [];
+
+        $rollbackRun = ComplianceCorpusImportRun::query()->create([
+            'format' => $originalRun->format,
+            'source_path' => $originalRun->source_path,
+            'content_hash' => $originalRun->content_hash,
+            'status' => ImportRunStatus::Pending,
+            'import_type' => ImportType::Rollback,
+            'dry_run' => false,
+            'framework_id' => $originalRun->framework_id,
+            'framework_release_id' => $originalRun->framework_release_id,
+            'source_document_id' => $originalRun->source_document_id,
+            'rollback_of_import_run_id' => $originalRun->id,
+            'initiated_by' => $originalRun->initiated_by,
+        ]);
+
+        $rollbackRun->update([
+            'status' => ImportRunStatus::Importing,
+            'started_at' => now(),
+        ]);
+
+        $stats = [
+            'original_import_run_uuid' => $originalRun->uuid,
+            'restored' => [],
+            'deleted' => [],
+        ];
+
+        try {
+            DB::transaction(function () use ($rollbackPayload, $originalRun, $rollbackRun, &$stats): void {
+                foreach ($rollbackPayload['updated'] ?? [] as $table => $entries) {
+                    foreach ($entries as $entry) {
+                        $this->restoreRow($table, $entry['id'], $entry['before']);
+                        $stats['restored'][$table] = ($stats['restored'][$table] ?? 0) + 1;
+                    }
                 }
-            }
 
-            $deleteOrder = [
-                'compliance_control_objective_mappings',
-                'compliance_evidence_expectations',
-                'compliance_guidance_items',
-                'compliance_requirements',
-                'compliance_controls',
-                'compliance_domains',
-                'compliance_control_objectives',
-            ];
+                $deleteOrder = [
+                    'compliance_control_objective_mappings',
+                    'compliance_evidence_expectations',
+                    'compliance_guidance_items',
+                    'compliance_requirements',
+                    'compliance_controls',
+                    'compliance_domains',
+                    'compliance_control_objectives',
+                ];
 
-            foreach ($deleteOrder as $table) {
-                foreach ($rollback['created'][$table] ?? [] as $id) {
-                    DB::table($table)->where('id', $id)->delete();
+                foreach ($deleteOrder as $table) {
+                    foreach ($rollbackPayload['created'][$table] ?? [] as $id) {
+                        DB::table($table)->where('id', $id)->delete();
+                        $stats['deleted'][$table] = ($stats['deleted'][$table] ?? 0) + 1;
+                    }
                 }
-            }
 
-            $run->update([
-                'status' => ImportRunStatus::RolledBack,
-                'import_type' => ImportType::Rollback,
+                $originalRun->update(['status' => ImportRunStatus::RolledBack]);
+            });
+        } catch (\Throwable $e) {
+            $rollbackRun->update([
+                'status' => ImportRunStatus::Failed,
+                'failure_message' => $e->getMessage(),
+                'failed_at' => now(),
+                'completed_at' => now(),
+                'summary' => $stats,
+                'stats' => $stats,
             ]);
-        });
+            $this->log($rollbackRun, ImportLogLevel::Error, null, null, $e->getMessage());
+
+            throw $e;
+        }
+
+        $rollbackRun->update([
+            'status' => ImportRunStatus::Completed,
+            'completed_at' => now(),
+            'summary' => $stats,
+            'stats' => $stats,
+        ]);
+        $this->log($rollbackRun, ImportLogLevel::Info, null, null, 'Rollback completed successfully.');
+
+        return $rollbackRun->fresh() ?? $rollbackRun;
     }
 
     /**

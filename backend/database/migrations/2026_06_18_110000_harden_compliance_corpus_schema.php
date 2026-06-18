@@ -95,9 +95,9 @@ return new class extends Migration
                 $table->string('document_type', 32)->default('framework');
                 $table->string('language', 16)->default('bilingual');
                 $table->string('source_url')->nullable();
-                $table->string('file_name')->nullable();
-                $table->string('file_mime', 128)->nullable();
-                $table->unsignedBigInteger('file_size')->nullable();
+                $table->string('official_file_name')->nullable();
+                $table->string('official_file_mime', 128)->nullable();
+                $table->unsignedBigInteger('official_file_size')->nullable();
                 $table->string('checksum_sha256', 64)->nullable();
                 $table->text('source_reference')->nullable();
                 $table->date('publication_date')->nullable();
