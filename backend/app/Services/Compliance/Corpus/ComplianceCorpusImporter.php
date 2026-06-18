@@ -146,13 +146,31 @@ class ComplianceCorpusImporter
         ]);
         $this->log($run, ImportLogLevel::Info, null, null, 'Import completed successfully.');
 
-        $this->revisionCreator->createFromImportRun(
+        $revision = $this->revisionCreator->createFromImportRun(
             $run,
             $release,
             $stats,
             ComplianceCorpusValidator::contentHash($payload),
             $run->initiated_by,
         );
+
+        if ($revision !== null) {
+            $this->log(
+                $run,
+                ImportLogLevel::Info,
+                'corpus_revision',
+                (string) $revision->revision_number,
+                "Corpus revision {$revision->revision_number} created.",
+            );
+        } else {
+            $this->log(
+                $run,
+                ImportLogLevel::Info,
+                null,
+                null,
+                'No corpus revision created: import contained zero domains, controls, and requirements.',
+            );
+        }
 
         return $run->fresh() ?? $run;
     }

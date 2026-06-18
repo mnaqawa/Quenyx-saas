@@ -9,6 +9,8 @@ use App\Models\Compliance\ComplianceFrameworkRelease;
 
 /**
  * Creates corpus revision records after successful imports (architecture preparation).
+ *
+ * Empty corpus imports (0 domains, 0 controls, 0 requirements) do not create a revision.
  */
 class ComplianceCorpusRevisionCreator
 {
@@ -21,7 +23,13 @@ class ComplianceCorpusRevisionCreator
         array $stats,
         string $checksumSha256,
         ?int $createdBy = null,
-    ): ComplianceCorpusRevision {
+    ): ?ComplianceCorpusRevision {
+        $entityCounts = $this->buildEntityCounts($stats);
+
+        if (! $this->hasCorpusEntities($entityCounts)) {
+            return null;
+        }
+
         $previousActive = ComplianceCorpusRevision::query()
             ->where('framework_release_id', $release->id)
             ->where('status', CorpusRevisionStatus::Active)
@@ -38,7 +46,7 @@ class ComplianceCorpusRevisionCreator
             'parent_revision_id' => $previousActive?->id,
             'import_run_id' => $run->id,
             'status' => CorpusRevisionStatus::Active,
-            'entity_counts' => $this->buildEntityCounts($stats),
+            'entity_counts' => $entityCounts,
             'checksum_sha256' => $checksumSha256,
             'created_by' => $createdBy ?? $run->initiated_by,
             'activated_at' => now(),
@@ -47,6 +55,24 @@ class ComplianceCorpusRevisionCreator
                 'source_path' => $run->source_path,
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $stats
+     */
+    public function shouldCreateRevision(array $stats): bool
+    {
+        return $this->hasCorpusEntities($this->buildEntityCounts($stats));
+    }
+
+    /**
+     * @param array<string, int> $entityCounts
+     */
+    private function hasCorpusEntities(array $entityCounts): bool
+    {
+        return ($entityCounts['domains'] ?? 0) > 0
+            || ($entityCounts['controls'] ?? 0) > 0
+            || ($entityCounts['requirements'] ?? 0) > 0;
     }
 
     /**

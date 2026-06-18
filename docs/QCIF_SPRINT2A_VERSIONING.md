@@ -28,7 +28,11 @@ Freeze the corpus architecture so future frameworks (NCA ECC, CST, SAMA CSF, ISO
 
 **Unique:** `(framework_release_id, revision_number)`
 
-**Lifecycle (preparation):** On successful non-dry-run import, revision is created with `status=active`, `revision_number=max+1`, linked to import run. No activation/supersession automation yet.
+**Lifecycle (preparation):** On successful non-dry-run import **with at least one domain, control, or requirement**, a revision is created with `status=active`, `revision_number=max+1`, linked to import run.
+
+**Empty corpus guard:** If the import completes with `domains=0`, `controls=0`, and `requirements=0`, the import run may still succeed but **no** `compliance_corpus_revisions` row is created. Revision v1 must represent the first approved real corpus import, not an empty preparation import.
+
+No activation/supersession automation yet.
 
 **Future use:**
 
@@ -186,7 +190,17 @@ php artisan compliance:import-corpus \
   database/corpus/nca/ecc-2-2024/curated-corpus.json \
   --dry-run --framework=nca-ecc --release=2:2024
 
-# After approved non-dry-run import (future):
+# Empty non-dry-run import: completes but must NOT create a revision
+php artisan compliance:import-corpus \
+  database/corpus/nca/ecc-2-2024/curated-corpus.json \
+  --framework=nca-ecc --release=2:2024
+
+php artisan tinker --execute="
+echo 'revisions: '.\App\Models\Compliance\ComplianceCorpusRevision::count().PHP_EOL;
+"
+# Expected: revisions: 0
+
+# After approved non-dry-run import with real corpus entities (future):
 # php artisan tinker --execute="
 # echo \App\Models\Compliance\ComplianceCorpusRevision::count();
 # "
