@@ -687,10 +687,3 @@ class ComplianceCorpusImporter
         DB::table($table)->where('id', $id)->update($before);
     }
 }
-
-/**
- * Internal sentinel to roll back dry-run transactions.
- */
-class DryRunRollbackException extends RuntimeException
-{
-}
