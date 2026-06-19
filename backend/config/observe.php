@@ -38,6 +38,8 @@ return [
     */
     'plugins_dir' => env('OBSERVE_PLUGINS_DIR', 'app/observe_plugins'),
     'plugin_timeout_seconds' => (int) env('OBSERVE_PLUGIN_TIMEOUT_SECONDS', 30),
+    /** CLI binary for plugin scripts — required when PHP_BINARY points at php-fpm (common under FPM/queue). */
+    'php_cli_binary' => env('OBSERVE_PHP_CLI', ''),
 
     /*
     |--------------------------------------------------------------------------

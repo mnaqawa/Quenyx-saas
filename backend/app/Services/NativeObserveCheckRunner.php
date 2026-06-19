@@ -650,7 +650,7 @@ class NativeObserveCheckRunner
                 $candidate = $dir . DIRECTORY_SEPARATOR . $base;
                 if (is_file($candidate)) {
                     $path = $candidate;
-                    $phpBinary = (defined('PHP_BINARY') && PHP_BINARY !== '') ? PHP_BINARY : 'php';
+                    $phpBinary = $this->resolvePhpCliBinary();
                     $runner = [$phpBinary, $path];
                     break;
                 }
@@ -673,7 +673,7 @@ class NativeObserveCheckRunner
                     $candidate = $dir . DIRECTORY_SEPARATOR . $base . $e;
                     if (is_file($candidate)) {
                         $path = $candidate;
-                        $phpBinary = (defined('PHP_BINARY') && PHP_BINARY !== '') ? PHP_BINARY : 'php';
+                        $phpBinary = $this->resolvePhpCliBinary();
                         $runner = $e === '.php' ? [$phpBinary, $path] : ($e === '.pl' ? ['perl', $path] : ['bash', $path]);
                         break 2;
                     }
@@ -745,8 +745,37 @@ class NativeObserveCheckRunner
             } else {
                 $output = strtoupper($state) . ' - exit code ' . $exitCode;
             }
+        } elseif (str_contains($output, 'Usage: php') && str_contains(strtolower($output), 'fpm')) {
+            $output = 'Plugin failed: PHP-FPM was invoked instead of PHP CLI. Set OBSERVE_PHP_CLI=/usr/bin/php8.2 in backend/.env and restart queue/scheduler.';
+            $state = 'unknown';
         }
 
         return ['state' => $state, 'output' => $output, 'perfdata' => $perfdata];
+    }
+
+    /**
+     * Resolve PHP CLI for plugin subprocesses. Under php-fpm or queue workers PHP_BINARY is often php-fpm.
+     */
+    private function resolvePhpCliBinary(): string
+    {
+        $configured = trim((string) config('observe.php_cli_binary', ''));
+        if ($configured !== '' && is_executable($configured)) {
+            return $configured;
+        }
+
+        if (defined('PHP_BINARY') && PHP_BINARY !== '') {
+            $binary = PHP_BINARY;
+            if (! str_contains(strtolower($binary), 'fpm') && is_executable($binary)) {
+                return $binary;
+            }
+        }
+
+        foreach (['/usr/bin/php8.3', '/usr/bin/php8.2', '/usr/bin/php8.1', '/usr/bin/php'] as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return 'php';
     }
 }
