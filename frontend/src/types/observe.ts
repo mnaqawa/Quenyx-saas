@@ -704,7 +704,7 @@ export interface ObserveMeta {
 }
 
 // Service definitions (capability-driven UI); no engine syntax
-export type ArgsSchemaType = 'string' | 'int' | 'float' | 'bool' | 'json'
+export type ArgsSchemaType = 'string' | 'int' | 'float' | 'bool' | 'json' | 'password' | 'textarea'
 
 export interface ArgsSchemaEntry {
   position: number

@@ -49,26 +49,28 @@ class NativeObserveCheckRunner
     }
 
     /**
-     * HTTP check: GET host:port/path, compare status to expect (default 200).
+     * HTTP check: GET url or host:port/path, compare status to expect (default 200).
+     *
+     * Supports url (full URL), hostname (SNI/vhost), path, port, use_ssl, expect.
      */
     private function runHttp(string $host, array $args): array
     {
-        $port = (int) ($args['port'] ?? 80);
-        $path = isset($args['path']) ? ('/' . trim((string) $args['path'], '/')) : '/';
-        if ($path === '') {
-            $path = '/';
-        }
-        $expect = isset($args['expect']) ? (int) $args['expect'] : 200;
-        $scheme = ($port === 443 || ($args['use_ssl'] ?? false)) ? 'https' : 'http';
-        $url = "{$scheme}://{$host}:{$port}{$path}";
+        $expect = (int) ($args['expect'] ?? 200);
+        $url = $this->buildHttpUrl($host, $args);
 
         $httpTimeout = (float) config('observe.http_timeout_seconds', 10);
         $connectTimeout = (float) config('observe.connect_timeout_seconds', 5);
         $start = microtime(true);
+
         try {
-            $response = Http::timeout($httpTimeout)
-                ->connectTimeout($connectTimeout)
-                ->get($url);
+            $request = Http::timeout($httpTimeout)->connectTimeout($connectTimeout);
+
+            $hostnameOverride = trim((string) ($args['hostname'] ?? ''));
+            if ($hostnameOverride !== '' && ! str_contains($url, $hostnameOverride)) {
+                $request = $request->withHeaders(['Host' => $hostnameOverride]);
+            }
+
+            $response = $request->get($url);
             $elapsed = round((microtime(true) - $start) * 1000);
             $status = $response->status();
             $bodySize = strlen($response->body());
@@ -76,21 +78,21 @@ class NativeObserveCheckRunner
             if ($status === $expect) {
                 return [
                     'state' => 'ok',
-                    'output' => "HTTP OK: HTTP/1.1 {$status} - {$bodySize} bytes in " . round($elapsed / 1000, 3) . ' second response time',
+                    'output' => "HTTP OK: HTTP/1.1 {$status} - {$bodySize} bytes in " . round($elapsed / 1000, 3) . " second response time ({$url})",
                     'perfdata' => null,
                 ];
             }
             if ($status >= 400 && $status < 500) {
                 return [
                     'state' => 'warning',
-                    'output' => "HTTP WARNING: HTTP/1.1 {$status} - {$bodySize} bytes in " . round($elapsed / 1000, 3) . ' second response time',
+                    'output' => "HTTP WARNING: HTTP/1.1 {$status} - {$bodySize} bytes in " . round($elapsed / 1000, 3) . " second response time ({$url})",
                     'perfdata' => null,
                 ];
             }
 
             return [
                 'state' => 'critical',
-                'output' => "HTTP CRITICAL: HTTP/1.1 {$status} (expected {$expect}) - {$bodySize} bytes in " . round($elapsed / 1000, 3) . ' second response time',
+                'output' => "HTTP CRITICAL: HTTP/1.1 {$status} (expected {$expect}) - {$bodySize} bytes in " . round($elapsed / 1000, 3) . " second response time ({$url})",
                 'perfdata' => null,
             ];
         } catch (\Throwable $e) {
@@ -99,10 +101,51 @@ class NativeObserveCheckRunner
 
             return [
                 'state' => 'critical',
-                'output' => 'HTTP CRITICAL: ' . (str_contains($msg, 'Connection refused') ? 'Connection refused' : $msg),
+                'output' => 'HTTP CRITICAL: ' . (str_contains($msg, 'Connection refused') ? 'Connection refused' : $msg) . " ({$url})",
                 'perfdata' => null,
             ];
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function buildHttpUrl(string $targetHost, array $args): string
+    {
+        $rawUrl = trim((string) ($args['url'] ?? ''));
+        if ($rawUrl !== '') {
+            if (! preg_match('#^https?://#i', $rawUrl)) {
+                $rawUrl = 'https://' . ltrim($rawUrl, '/');
+            }
+
+            return $rawUrl;
+        }
+
+        $pathRaw = trim((string) ($args['path'] ?? '/'));
+        if ($pathRaw !== '' && preg_match('#^https?://#i', $pathRaw)) {
+            return $pathRaw;
+        }
+
+        $hostname = trim((string) ($args['hostname'] ?? ''));
+        $connectHost = $hostname !== '' ? $hostname : trim($targetHost);
+        if ($connectHost === '') {
+            $connectHost = '127.0.0.1';
+        }
+
+        $useSsl = filter_var($args['use_ssl'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $port = isset($args['port']) && $args['port'] !== '' ? (int) $args['port'] : null;
+        if ($port === null || $port < 1) {
+            $port = $useSsl ? 443 : 80;
+        }
+
+        $path = trim($pathRaw, '/');
+        $pathPart = $path === '' ? '/' : '/' . $path;
+        $scheme = ($port === 443 || $useSsl) ? 'https' : 'http';
+
+        $omitPort = ($scheme === 'http' && $port === 80) || ($scheme === 'https' && $port === 443);
+        $portPart = $omitPort ? '' : ":{$port}";
+
+        return "{$scheme}://{$connectHost}{$portPart}{$pathPart}";
     }
 
     /**

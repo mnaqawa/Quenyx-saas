@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
+import { ObservePasswordInput } from '../../components/observe/ObservePasswordInput'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useObserveAccess } from '../../hooks/useObserveAccess'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
@@ -103,6 +104,25 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
 
 function serializeHosts(hosts: TargetHost[]): string {
   return JSON.stringify(normalizeHostsServiceKeys(hosts))
+}
+
+function fieldLabel(key: string): string {
+  const labels: Record<string, string> = {
+    url: 'URL',
+    urls: 'URLs (one per line)',
+    hostname: 'Hostname',
+    host: 'Host / IP',
+    path: 'Path',
+    port: 'Port',
+    password: 'Password',
+    user: 'Username',
+    database: 'Database',
+    expect: 'Expected HTTP status',
+    use_ssl: 'Use HTTPS',
+    warn_days: 'Warning (days before expiry)',
+    crit_days: 'Critical (days before expiry)',
+  }
+  return labels[key] ?? key.replace(/_/g, ' ')
 }
 
 /**
@@ -425,6 +445,12 @@ export default function Targets() {
   }
 
   const inferType = (arg: ArgsSchemaEntry, val: unknown): string => {
+    if (arg.type === 'password' || arg.key === 'password' || arg.key.endsWith('_password') || arg.key === 'secret') {
+      return 'password'
+    }
+    if (arg.type === 'textarea' || arg.key === 'urls') {
+      return 'textarea'
+    }
     if (arg.type) return arg.type
     if (typeof val === 'number') return Number.isInteger(val) ? 'int' : 'float'
     if (typeof val === 'boolean') return 'bool'
@@ -544,7 +570,18 @@ export default function Targets() {
     const sorted = [...def.args_schema].sort((a, b) => a.position - b.position)
     sorted.forEach((arg) => {
       let assigned = false
+      if (arg.key === 'host' || arg.key === 'database') {
+        if (!groups['Connection']) groups['Connection'] = []
+        groups['Connection'].push(arg)
+        assigned = true
+      }
+      if (arg.key === 'urls') {
+        if (!groups['URLs']) groups['URLs'] = []
+        groups['URLs'].push(arg)
+        assigned = true
+      }
       for (const flag of def.capability_flags) {
+        if (assigned) break
         if (flag === 'supports_thresholds' && (arg.key.includes('warn') || arg.key.includes('crit') || arg.key.includes('threshold'))) {
           if (!groups['Thresholds']) groups['Thresholds'] = []
           groups['Thresholds'].push(arg)
@@ -557,13 +594,13 @@ export default function Targets() {
           assigned = true
           break
         }
-        if (flag === 'supports_urls' && (arg.key === 'path' || arg.key === 'url' || arg.key.includes('url'))) {
+        if (flag === 'supports_urls' && (arg.key === 'path' || arg.key === 'url' || arg.key === 'hostname' || arg.key.includes('url'))) {
           if (!groups['URL']) groups['URL'] = []
           groups['URL'].push(arg)
           assigned = true
           break
         }
-        if (flag === 'supports_auth' && (arg.key === 'basic_auth' || arg.key.includes('auth') || arg.key.includes('credential'))) {
+        if (flag === 'supports_auth' && (arg.key === 'basic_auth' || arg.key.includes('auth') || arg.key.includes('credential') || arg.key === 'password' || arg.key === 'user' || arg.key === 'secret')) {
           if (!groups['Auth']) groups['Auth'] = []
           groups['Auth'].push(arg)
           assigned = true
@@ -599,10 +636,10 @@ export default function Targets() {
       <div key={arg.key} className="space-y-1">
         <div className="flex items-center gap-2">
           <label className="text-xs text-white/70 flex-1">
-            {arg.key}
+            {fieldLabel(arg.key)}
             {arg.required && <span className="text-rose-400 ml-1">*</span>}
             {arg.help && (
-              <span className="text-white/40 ml-2 text-[10px]">({arg.help})</span>
+              <span className="block text-white/40 text-[10px] mt-0.5">{arg.help}</span>
             )}
           </label>
           {hasOverride && (
@@ -638,6 +675,21 @@ export default function Targets() {
             }}
             disabled={saving}
             className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
+          />
+        ) : inferredType === 'password' ? (
+          <ObservePasswordInput
+            value={displayValue !== null && displayValue !== undefined ? String(displayValue) : ''}
+            onChange={onChange}
+            disabled={saving}
+          />
+        ) : inferredType === 'textarea' ? (
+          <textarea
+            value={displayValue !== null && displayValue !== undefined ? String(displayValue) : ''}
+            onChange={(e) => onChange(e.target.value || null)}
+            disabled={saving}
+            rows={4}
+            placeholder={'https://example.com\nhttps://other.example.com'}
+            className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50 font-mono"
           />
         ) : inferredType === 'json' ? (
           <textarea
