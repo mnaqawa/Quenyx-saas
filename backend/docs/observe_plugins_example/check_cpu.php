@@ -5,6 +5,8 @@
  * Host and args from engine (UI: host under target; warn_pct/crit_pct from service config).
  * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
+require_once __DIR__ . '/_observe_local.php';
+
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
 $warnPct = isset($args['warn_pct']) ? (float) $args['warn_pct'] : 80;
 $critPct = isset($args['crit_pct']) ? (float) $args['crit_pct'] : 95;
@@ -15,20 +17,7 @@ if ($host === '') {
     exit(3);
 }
 
-// Local = same machine (derived at runtime; no hardcoded IPs)
-$localIdentifiers = [];
-if (function_exists('gethostname')) {
-    $localIdentifiers[] = strtolower(trim((string) gethostname()));
-}
-$localIdentifiers[] = 'localhost';
-if (function_exists('gethostbyname')) {
-    $lb = gethostbyname('localhost');
-    if ($lb !== '' && $lb !== 'localhost') {
-        $localIdentifiers[] = $lb;
-    }
-}
-$localIdentifiers[] = '::1';
-$isLocal = in_array(strtolower($host), $localIdentifiers, true);
+$isLocal = observe_is_local_host($host);
 
 if ($isLocal) {
     $load = is_readable('/proc/loadavg') ? file_get_contents('/proc/loadavg') : '';

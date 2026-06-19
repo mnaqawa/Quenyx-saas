@@ -5,6 +5,7 @@
  * Host and args from engine (UI: host under target; warn/crit thresholds from service config).
  * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
+require_once __DIR__ . '/_observe_local.php';
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
 $warn1 = isset($args['warn_1']) ? (float) $args['warn_1'] : 4.0;
 $crit1 = isset($args['crit_1']) ? (float) $args['crit_1'] : 6.0;
@@ -15,20 +16,7 @@ if ($host === '') {
     exit(3);
 }
 
-// Local = same machine (derived at runtime; no hardcoded IPs)
-$localIdentifiers = [];
-if (function_exists('gethostname')) {
-    $localIdentifiers[] = strtolower(trim((string) gethostname()));
-}
-$localIdentifiers[] = 'localhost';
-if (function_exists('gethostbyname')) {
-    $lb = gethostbyname('localhost');
-    if ($lb !== '' && $lb !== 'localhost') {
-        $localIdentifiers[] = $lb;
-    }
-}
-$localIdentifiers[] = '::1';
-$isLocal = in_array(strtolower($host), $localIdentifiers, true);
+$isLocal = observe_is_local_host($host);
 
 if ($isLocal) {
     $load = is_readable('/proc/loadavg') ? file_get_contents('/proc/loadavg') : '';

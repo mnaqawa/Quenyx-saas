@@ -9,6 +9,7 @@ use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Services\NativeObserveCheckRunner;
+use App\Services\ObserveServiceKeyResolver;
 use App\Services\PerfMetricExtractor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -138,9 +139,13 @@ class RunObserveChecks extends Command
                 }
 
                 $checkArgs = is_array($service->check_args) ? $service->check_args : [];
-                $serviceKey = $service->service_key ?? '';
-                $originalServiceKey = $serviceKey;
                 $checkCommand = $service->check_command ?? '';
+                $serviceKey = app(ObserveServiceKeyResolver::class)->resolve(
+                    (string) ($service->service_key ?? ''),
+                    (string) $checkCommand,
+                    (string) ($service->name ?? '')
+                );
+                $originalServiceKey = $serviceKey;
                 // Resolve check_command from definition when missing (e.g. disk, load, cpu)
                 if ($checkCommand === '' && $serviceKey !== '' && \Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
                     // Engine-agnostic lookup to support existing definitions during migration to native-only runtime.
@@ -158,8 +163,9 @@ class RunObserveChecks extends Command
                     ->resolve($originalServiceKey !== '' ? $originalServiceKey : $serviceKey, $address, $checkArgs, $definition);
 
                 // NRPE-style types (disk, load, swap, ssh, etc.): run as plugin with script name = check_command
-                if (!in_array($serviceKey, ['http', 'tcp_port', 'ping', 'plugin'], true) && $checkCommand !== '') {
-                    $checkArgs = array_merge($checkArgs, ['plugin' => $checkCommand]);
+                if (! in_array($serviceKey, NativeObserveCheckRunner::NATIVE_SERVICE_KEYS, true) && $checkCommand !== '') {
+                    $pluginName = strtolower(preg_replace('/!.*/', '', trim($checkCommand)));
+                    $checkArgs = array_merge($checkArgs, ['plugin' => $pluginName !== '' ? $pluginName : $checkCommand]);
                     $serviceKey = 'plugin';
                 }
 

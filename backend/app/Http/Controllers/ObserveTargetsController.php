@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
+use App\Services\ObserveServiceKeyResolver;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\Project;
@@ -113,7 +114,12 @@ class ObserveTargetsController extends Controller
         if ($baseCommand !== '' && isset($definitionsByCommand[$baseCommand])) {
             return $definitionsByCommand[$baseCommand];
         }
-        return $this->inferServiceKeyFromServiceName($service->name ?? '') ?? '';
+
+        return app(ObserveServiceKeyResolver::class)->resolve(
+            '',
+            (string) ($service->check_command ?? ''),
+            (string) ($service->name ?? '')
+        );
     }
 
     /**
@@ -758,29 +764,6 @@ class ObserveTargetsController extends Controller
     }
 
     /**
-     * Infer service_key from service name when check_command is empty (legacy/edge-case).
-     *
-     * @return string|null service_key or null
-     */
-    private function inferServiceKeyFromServiceName(string $name): ?string
-    {
-        $n = strtolower(trim(preg_replace('/\s+/', ' ', $name)));
-        if ($n === '') {
-            return null;
-        }
-        if (str_contains($n, 'http') && !str_contains($n, 'tcp') && !preg_match('/port\s*\d+/', $n)) {
-            return 'http';
-        }
-        if (str_contains($n, 'tcp') || preg_match('/port\s*\d+/', $n)) {
-            return 'tcp_port';
-        }
-        if (str_contains($n, 'ping') || str_contains($n, 'live')) {
-            return 'ping';
-        }
-        return null;
-    }
-
-    /**
      * Fallback map when observe_service_definitions is missing or not seeded.
      * Ensures service_key is always restored from check_command for known types.
      *
@@ -792,6 +775,9 @@ class ObserveTargetsController extends Controller
             'check_ping' => 'ping',
             'check_http' => 'http',
             'check_tcp' => 'tcp_port',
+            'check_mysql' => 'mysql',
+            'check_pgsql' => 'pgsql',
+            'check_ssl_validity' => 'ssl_validity',
         ];
     }
 

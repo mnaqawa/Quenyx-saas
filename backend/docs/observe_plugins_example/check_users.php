@@ -5,6 +5,7 @@
  * Host and thresholds from UI (OBSERVE_HOST_ADDRESS, OBSERVE_CHECK_ARGS). No hardcoded values.
  * Env: OBSERVE_HOST_ADDRESS (required), OBSERVE_CHECK_ARGS (JSON). Exit: 0=OK, 1=Warning, 2=Critical, 3=Unknown.
  */
+require_once __DIR__ . '/_observe_local.php';
 $args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true) ?: [];
 $warn = isset($args['warn']) ? (int) $args['warn'] : 20;
 $crit = isset($args['crit']) ? (int) $args['crit'] : 50;
@@ -15,19 +16,7 @@ if ($host === '') {
     exit(3);
 }
 
-$localIdentifiers = [];
-if (function_exists('gethostname')) {
-    $localIdentifiers[] = strtolower(trim((string) gethostname()));
-}
-$localIdentifiers[] = 'localhost';
-if (function_exists('gethostbyname')) {
-    $lb = gethostbyname('localhost');
-    if ($lb !== '' && $lb !== 'localhost') {
-        $localIdentifiers[] = $lb;
-    }
-}
-$localIdentifiers[] = '::1';
-$isLocal = in_array(strtolower($host), $localIdentifiers, true);
+$isLocal = observe_is_local_host($host);
 
 if ($isLocal) {
     $count = 0;

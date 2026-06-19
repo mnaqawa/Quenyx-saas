@@ -8,10 +8,12 @@ use Symfony\Component\Process\Process;
 
 /**
  * Runs observe checks natively in PHP (no Nagios daemon).
- * Supports http, tcp_port, ping and plugin (custom PHP/Perl/shell scripts).
+ * Supports http, tcp_port, ping, mysql, pgsql, ssl_validity, and plugin scripts.
  */
 class NativeObserveCheckRunner
 {
+    /** @var list<string> */
+    public const NATIVE_SERVICE_KEYS = ['http', 'tcp_port', 'ping', 'mysql', 'pgsql', 'ssl_validity', 'plugin'];
 
     /**
      * Run one check. Returns ['state' => 'ok'|'warning'|'critical'|'unknown', 'output' => string, 'perfdata' => string|null].
@@ -37,6 +39,15 @@ class NativeObserveCheckRunner
         }
         if ($key === 'ping') {
             return $this->runPing($hostAddress, $checkArgs);
+        }
+        if ($key === 'mysql') {
+            return $this->runMysql($hostAddress, $checkArgs);
+        }
+        if ($key === 'pgsql') {
+            return $this->runPgsql($hostAddress, $checkArgs);
+        }
+        if ($key === 'ssl_validity') {
+            return $this->runSslValidity($hostAddress, $checkArgs);
         }
         if ($key === 'plugin') {
             return $this->runPlugin($hostAddress, $checkArgs, $context);
@@ -264,6 +275,329 @@ class NativeObserveCheckRunner
     }
 
     /**
+     * MySQL/MariaDB connectivity (in-process — same PHP as Laravel scheduler).
+     *
+     * @param  array<string, mixed>  $args
+     */
+    private function runMysql(string $hostAddress, array $args): array
+    {
+        $host = trim((string) ($args['host'] ?? $hostAddress));
+        if ($host === '') {
+            $host = '127.0.0.1';
+        }
+        $port = (int) ($args['port'] ?? 3306);
+        $user = trim((string) ($args['user'] ?? '')) !== '' ? trim((string) $args['user']) : 'root';
+        $password = (string) ($args['password'] ?? '');
+        $database = trim((string) ($args['database'] ?? ''));
+
+        if ($port < 1 || $port > 65535) {
+            $port = 3306;
+        }
+
+        try {
+            if (extension_loaded('mysqli')) {
+                if (function_exists('mysqli_report')) {
+                    mysqli_report(MYSQLI_REPORT_OFF);
+                }
+                $mysqli = @new \mysqli($host, $user, $password, $database, $port);
+                if ($mysqli->connect_errno) {
+                    return [
+                        'state' => 'critical',
+                        'output' => 'MYSQL CRITICAL - ' . $mysqli->connect_error . " ({$host}:{$port})",
+                        'perfdata' => null,
+                    ];
+                }
+                $version = $mysqli->server_info;
+                $mysqli->close();
+
+                return [
+                    'state' => 'ok',
+                    'output' => "MYSQL OK - Connected to {$host}:{$port} (server {$version})",
+                    'perfdata' => null,
+                ];
+            }
+
+            if (extension_loaded('pdo_mysql')) {
+                $dsn = "mysql:host={$host};port={$port};charset=utf8mb4"
+                    . ($database !== '' ? ";dbname={$database}" : '');
+                $pdo = new \PDO($dsn, $user, $password, [
+                    \PDO::ATTR_TIMEOUT => 5,
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ]);
+                $pdo = null;
+
+                return [
+                    'state' => 'ok',
+                    'output' => "MYSQL OK - Connected to {$host}:{$port}",
+                    'perfdata' => null,
+                ];
+            }
+
+            $errno = 0;
+            $errstr = '';
+            $fp = @fsockopen($host, $port, $errno, $errstr, 5);
+            if ($fp !== false) {
+                fclose($fp);
+
+                return [
+                    'state' => 'warning',
+                    'output' => "MYSQL WARNING - Port {$port} open on {$host} but PHP mysqli/pdo_mysql is not loaded",
+                    'perfdata' => null,
+                ];
+            }
+
+            return [
+                'state' => 'critical',
+                'output' => "MYSQL CRITICAL - Cannot reach {$host}:{$port}"
+                    . ($errstr !== '' ? " ({$errstr})" : '')
+                    . '. Enable PHP mysqli or pdo_mysql for authentication checks.',
+                'perfdata' => null,
+            ];
+        } catch (\Throwable $e) {
+            Log::debug('NativeObserveCheckRunner MySQL check failed', [
+                'host' => $host,
+                'port' => $port,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'state' => 'critical',
+                'output' => 'MYSQL CRITICAL - ' . $e->getMessage() . " ({$host}:{$port})",
+                'perfdata' => null,
+            ];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function runPgsql(string $hostAddress, array $args): array
+    {
+        $host = trim((string) ($args['host'] ?? $hostAddress));
+        if ($host === '') {
+            $host = '127.0.0.1';
+        }
+        $port = (int) ($args['port'] ?? 5432);
+        $user = trim((string) ($args['user'] ?? '')) !== '' ? trim((string) $args['user']) : 'postgres';
+        $password = (string) ($args['password'] ?? '');
+        $database = trim((string) ($args['database'] ?? '')) !== '' ? trim((string) $args['database']) : 'postgres';
+
+        if ($port < 1 || $port > 65535) {
+            $port = 5432;
+        }
+
+        try {
+            if (extension_loaded('pdo_pgsql')) {
+                $dsn = "pgsql:host={$host};port={$port};dbname={$database}";
+                $pdo = new \PDO($dsn, $user, $password, [
+                    \PDO::ATTR_TIMEOUT => 5,
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ]);
+                $pdo = null;
+
+                return [
+                    'state' => 'ok',
+                    'output' => "PGSQL OK - Connected to {$host}:{$port}",
+                    'perfdata' => null,
+                ];
+            }
+
+            $errno = 0;
+            $errstr = '';
+            $fp = @fsockopen($host, $port, $errno, $errstr, 5);
+            if ($fp !== false) {
+                fclose($fp);
+
+                return [
+                    'state' => 'warning',
+                    'output' => "PGSQL WARNING - Port {$port} open on {$host} (PHP pdo_pgsql not loaded)",
+                    'perfdata' => null,
+                ];
+            }
+
+            return [
+                'state' => 'critical',
+                'output' => 'PGSQL CRITICAL - ' . ($errstr ?: "Error {$errno}") . " ({$host}:{$port})",
+                'perfdata' => null,
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'state' => 'critical',
+                'output' => 'PGSQL CRITICAL - ' . $e->getMessage() . " ({$host}:{$port})",
+                'perfdata' => null,
+            ];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function runSslValidity(string $hostAddress, array $args): array
+    {
+        if (! extension_loaded('openssl')) {
+            return [
+                'state' => 'unknown',
+                'output' => 'SSL UNKNOWN - PHP openssl extension is required',
+                'perfdata' => null,
+            ];
+        }
+
+        $defaultPort = (int) ($args['port'] ?? 443);
+        $warnDays = (int) ($args['warn_days'] ?? 30);
+        $critDays = (int) ($args['crit_days'] ?? 7);
+        $targets = $this->parseSslTargets($args, $hostAddress, $defaultPort);
+
+        if ($targets === []) {
+            return ['state' => 'unknown', 'output' => 'SSL UNKNOWN - No hostname or URL configured', 'perfdata' => null];
+        }
+
+        $worstState = 'ok';
+        $messages = [];
+        foreach ($targets as $target) {
+            $result = $this->checkSslCertificate(
+                $target['host'],
+                $target['port'],
+                $target['sni'],
+                $warnDays,
+                $critDays
+            );
+            $messages[] = $result['output'];
+            $worstState = $this->worstState($worstState, $result['state']);
+        }
+
+        return ['state' => $worstState, 'output' => implode(' | ', $messages), 'perfdata' => null];
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<int, array{host: string, port: int, sni: string}>
+     */
+    private function parseSslTargets(array $args, string $fallbackHost, int $defaultPort): array
+    {
+        $rawList = [];
+        if (! empty($args['urls'])) {
+            $rawList = preg_split('/[\r\n,;]+/', trim((string) $args['urls'])) ?: [];
+        } elseif (! empty($args['url'])) {
+            $rawList = [trim((string) $args['url'])];
+        } elseif (! empty($args['hostname'])) {
+            $rawList = [trim((string) $args['hostname'])];
+        } elseif (trim($fallbackHost) !== '') {
+            $rawList = [trim($fallbackHost)];
+        }
+
+        $targets = [];
+        foreach ($rawList as $raw) {
+            $raw = trim((string) $raw);
+            if ($raw === '') {
+                continue;
+            }
+            $targets[] = $this->normalizeSslTarget($raw, $args, $defaultPort);
+        }
+
+        return $targets;
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array{host: string, port: int, sni: string}
+     */
+    private function normalizeSslTarget(string $raw, array $args, int $defaultPort): array
+    {
+        $host = $raw;
+        $port = isset($args['port']) ? (int) $args['port'] : $defaultPort;
+        $sni = $raw;
+
+        if (preg_match('#^https?://#i', $raw)) {
+            $parts = parse_url($raw);
+            $host = $parts['host'] ?? $raw;
+            $sni = $host;
+            if (! empty($parts['port'])) {
+                $port = (int) $parts['port'];
+            } elseif (($parts['scheme'] ?? '') === 'https') {
+                $port = 443;
+            }
+        } elseif (str_contains($raw, ':') && ! str_contains($raw, ' ')) {
+            [$maybeHost, $maybePort] = explode(':', $raw, 2);
+            if (ctype_digit($maybePort)) {
+                $host = $maybeHost;
+                $sni = $maybeHost;
+                $port = (int) $maybePort;
+            }
+        }
+
+        if ($port < 1 || $port > 65535) {
+            $port = 443;
+        }
+
+        return ['host' => $host, 'port' => $port, 'sni' => $sni];
+    }
+
+    /**
+     * @return array{state: string, output: string}
+     */
+    private function checkSslCertificate(string $host, int $port, string $sni, int $warnDays, int $critDays): array
+    {
+        $context = stream_context_create([
+            'ssl' => [
+                'capture_peer_cert' => true,
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'SNI_enabled' => true,
+                'peer_name' => $sni,
+            ],
+        ]);
+
+        $errno = 0;
+        $errstr = '';
+        $fp = @stream_socket_client(
+            "ssl://{$host}:{$port}",
+            $errno,
+            $errstr,
+            10,
+            STREAM_CLIENT_CONNECT,
+            $context
+        );
+
+        if ($fp === false) {
+            return [
+                'state' => 'unknown',
+                'output' => "SSL UNKNOWN - Could not connect to {$host}:{$port}" . ($errstr !== '' ? " ({$errstr})" : ''),
+            ];
+        }
+
+        $params = stream_context_get_params($fp);
+        fclose($fp);
+        $cert = $params['options']['ssl']['peer_certificate'] ?? null;
+        if (! $cert) {
+            return ['state' => 'unknown', 'output' => "SSL UNKNOWN - No certificate from {$host}:{$port}"];
+        }
+
+        $parsed = openssl_x509_parse($cert);
+        $validTo = $parsed['validTo_time_t'] ?? null;
+        if ($validTo === null) {
+            return ['state' => 'unknown', 'output' => "SSL UNKNOWN - Could not parse certificate for {$host}:{$port}"];
+        }
+
+        $daysLeft = (int) floor(($validTo - time()) / 86400);
+
+        if ($daysLeft <= $critDays) {
+            return ['state' => 'critical', 'output' => "SSL CRITICAL - {$host}:{$port} expires in {$daysLeft} days"];
+        }
+        if ($daysLeft <= $warnDays) {
+            return ['state' => 'warning', 'output' => "SSL WARNING - {$host}:{$port} expires in {$daysLeft} days"];
+        }
+
+        return ['state' => 'ok', 'output' => "SSL OK - {$host}:{$port} valid for {$daysLeft} days"];
+    }
+
+    private function worstState(string $current, string $candidate): string
+    {
+        $rank = ['ok' => 0, 'warning' => 1, 'critical' => 2, 'unknown' => 3];
+
+        return ($rank[$candidate] ?? 3) > ($rank[$current] ?? 0) ? $candidate : $current;
+    }
+
+    /**
      * Run a custom plugin script (PHP, Perl, or shell). Script receives env vars from the engine;
      * must exit 0=OK, 1=Warning, 2=Critical, 3=Unknown. Stdout: message, optional " | perfdata".
      */
@@ -303,7 +637,8 @@ class NativeObserveCheckRunner
                 $candidate = $dir . DIRECTORY_SEPARATOR . $base;
                 if (is_file($candidate)) {
                     $path = $candidate;
-                    $runner = ['php', $path];
+                    $phpBinary = (defined('PHP_BINARY') && PHP_BINARY !== '') ? PHP_BINARY : 'php';
+                    $runner = [$phpBinary, $path];
                     break;
                 }
             } elseif (in_array($ext, ['pl'], true)) {
@@ -325,7 +660,8 @@ class NativeObserveCheckRunner
                     $candidate = $dir . DIRECTORY_SEPARATOR . $base . $e;
                     if (is_file($candidate)) {
                         $path = $candidate;
-                        $runner = $e === '.php' ? ['php', $path] : ($e === '.pl' ? ['perl', $path] : ['bash', $path]);
+                        $phpBinary = (defined('PHP_BINARY') && PHP_BINARY !== '') ? PHP_BINARY : 'php';
+                        $runner = $e === '.php' ? [$phpBinary, $path] : ($e === '.pl' ? ['perl', $path] : ['bash', $path]);
                         break 2;
                     }
                 }
@@ -365,7 +701,8 @@ class NativeObserveCheckRunner
             return ['state' => 'unknown', 'output' => 'Plugin execution failed: ' . $e->getMessage(), 'perfdata' => null];
         }
 
-        $stdout = $process->getOutput();
+        $stdout = trim($process->getOutput());
+        $stderr = trim($process->getErrorOutput());
         $exitCode = $process->getExitCode();
         if ($exitCode === null) {
             $exitCode = $process->isSuccessful() ? 0 : 3;
@@ -378,14 +715,23 @@ class NativeObserveCheckRunner
             default => 'unknown',
         };
 
-        $output = trim($stdout);
+        $output = $stdout;
+        if ($output === '' && $stderr !== '') {
+            $output = $stderr;
+        } elseif ($stderr !== '' && $output !== $stderr) {
+            $output = trim($output . ' ' . $stderr);
+        }
         $perfdata = null;
         if (preg_match('/\s\|\s(.+)$/', $output, $m)) {
             $perfdata = trim($m[1]);
             $output = trim(preg_replace('/\s\|\s.+$/', '', $output));
         }
         if ($output === '') {
-            $output = strtoupper($state) . ' - exit code ' . $exitCode;
+            if ($exitCode === 255) {
+                $output = 'Plugin crashed (exit 255). Check PHP CLI extensions match the web/scheduler PHP (enable mysqli/pdo_mysql for DB checks).';
+            } else {
+                $output = strtoupper($state) . ' - exit code ' . $exitCode;
+            }
         }
 
         return ['state' => $state, 'output' => $output, 'perfdata' => $perfdata];
