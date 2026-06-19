@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
-use App\Services\ObserveServiceKeyResolver;
-use App\Models\ObserveService;
-use App\Models\ObserveServiceDefinition;
-use App\Models\Project;
 use App\Services\DefaultMonitoringProfileService;
+use App\Services\ObserveCheckArgsSecrets;
+use App\Services\ObserveServiceKeyResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -144,9 +142,16 @@ class ObserveTargetsController extends Controller
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
                     'services' => $host->services->map(function ($service) use ($definitionsByCommand, $project) {
-                        $check_args = $service->check_args ?? [];
-                        $responseOverrides = $this->overridesForResponse($check_args);
+                        $check_args = is_array($service->check_args) ? $service->check_args : [];
                         $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
+                        $definition = $service_key !== ''
+                            ? ObserveServiceDefinition::where('service_key', $service_key)->first()
+                            : null;
+                        $secrets = app(ObserveCheckArgsSecrets::class);
+                        $responseOverrides = $this->overridesForResponse(
+                            $secrets->redactForResponse($check_args, $definition)
+                        );
+                        $configuredSecrets = $secrets->configuredSecretKeys($check_args, $definition);
                         if (config('app.debug')) {
                             Log::debug('ObserveTargets GET overrides', [
                                 'workspace_id' => $project->id,
@@ -161,8 +166,9 @@ class ObserveTargetsController extends Controller
                             'name' => $service->name,
                             'service_key' => $service_key,
                             'check_command' => $service->check_command,
-                            'check_args' => $check_args,
+                            'check_args' => $secrets->redactForResponse($check_args, $definition),
                             'overrides' => $responseOverrides,
+                            'configured_secrets' => $configuredSecrets,
                             'enabled' => $service->enabled,
                         ];
                         if (Schema::hasColumn($service->getTable(), 'check_interval')) {
@@ -375,17 +381,23 @@ class ObserveTargetsController extends Controller
                     foreach ($servicesData as $serviceIndex => $serviceData) {
                         // Single source of truth: use normalized value from validation loop; do not read from $serviceData (can be lost in closure).
                         $checkArgsToStore = $normalizedCheckArgsByIndex[$hostIndex][$serviceIndex] ?? [];
-                        // When request sent empty overrides, preserve existing DB value so we don't wipe saved config
-                        if ($checkArgsToStore === []) {
-                            $existing = ObserveTargetService::where('host_id', $host->id)
-                                ->where('name', $serviceData['name'])
-                                ->first();
-                            if ($existing && is_array($existing->check_args) && $existing->check_args !== []
-                                && ! (array_keys($existing->check_args) === range(0, count($existing->check_args) - 1))) {
-                                $checkArgsToStore = $existing->check_args;
-                            }
-                        }
+                        $existing = ObserveTargetService::where('host_id', $host->id)
+                            ->where('name', $serviceData['name'])
+                            ->first();
                         $serviceKeyToStore = isset($serviceData['service_key']) && $serviceData['service_key'] !== '' ? $serviceData['service_key'] : null;
+                        $definition = $serviceKeyToStore
+                            ? ObserveServiceDefinition::where('service_key', $serviceKeyToStore)->first()
+                            : null;
+                        $existingArgs = $existing && is_array($existing->check_args) ? $existing->check_args : null;
+                        $checkArgsToStore = app(ObserveCheckArgsSecrets::class)->mergePreservedSecrets(
+                            $checkArgsToStore,
+                            $existingArgs,
+                            $definition
+                        );
+                        // When request sent empty overrides, preserve existing DB value so we don't wipe saved config
+                        if ($checkArgsToStore === [] && $existingArgs !== null && $existingArgs !== []) {
+                            $checkArgsToStore = $existingArgs;
+                        }
 
                         if (config('app.debug')) {
                             Log::debug('ObserveTargets PUT overrides (before save)', [
@@ -516,15 +528,22 @@ class ObserveTargetsController extends Controller
                         'tags' => $host->tags ?? [],
                         'enabled' => $host->enabled,
                         'services' => $host->services->map(function ($service) use ($definitionsByCommand) {
-                            $check_args = $service->check_args ?? [];
+                            $check_args = is_array($service->check_args) ? $service->check_args : [];
                             $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);
+                            $definition = $service_key !== ''
+                                ? ObserveServiceDefinition::where('service_key', $service_key)->first()
+                                : null;
+                            $secrets = app(ObserveCheckArgsSecrets::class);
                             $row = [
                                 'id' => $service->id,
                                 'name' => $service->name,
                                 'service_key' => $service_key,
                                 'check_command' => $service->check_command,
-                                'check_args' => $check_args,
-                                'overrides' => $this->overridesForResponse($check_args),
+                                'check_args' => $secrets->redactForResponse($check_args, $definition),
+                                'overrides' => $this->overridesForResponse(
+                                    $secrets->redactForResponse($check_args, $definition)
+                                ),
+                                'configured_secrets' => $secrets->configuredSecretKeys($check_args, $definition),
                                 'enabled' => $service->enabled,
                             ];
                             if (Schema::hasColumn($service->getTable(), 'check_interval')) {

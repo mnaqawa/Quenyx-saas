@@ -63,10 +63,11 @@ class ObserveServiceDefinitionSeeder extends Seeder
                 'engine' => 'native',
                 'service_key' => 'plugin',
                 'display_name' => 'Custom Script',
-                'description' => 'Runs your own monitoring script by name. Place the script (e.g. my_check.sh or my_check.php) in the observe plugins directory and enter its name here. The script receives the host address and your args via environment variables and must exit 0=OK, 1=Warning, 2=Critical, 3=Unknown.',
+                'description' => 'Run your own monitoring script from the plugins directory. Scripts receive OBSERVE_HOST_ADDRESS and OBSERVE_CHECK_ARGS (JSON). Exit codes: 0=OK, 1=Warning, 2=Critical, 3=Unknown. Install built-in scripts with: php artisan observe:install-plugins',
                 'check_command' => 'check_plugin',
                 'args_schema' => [
-                    ['position' => 0, 'key' => 'plugin', 'default' => null, 'required' => true],
+                    ['position' => 0, 'key' => 'plugin', 'type' => 'string', 'default' => null, 'required' => true, 'help' => 'Script filename without path (e.g. check_health or my_check.php). Must exist in storage/app/observe_plugins/'],
+                    ['position' => 1, 'key' => 'args', 'type' => 'json', 'default' => null, 'required' => false, 'help' => 'Optional JSON object merged into arguments passed to the script'],
                 ],
                 'capability_flags' => ['supports_custom_scripts'],
                 'status' => 'active',

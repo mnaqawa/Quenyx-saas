@@ -273,10 +273,10 @@ class ObserveServiceDefinitionReadyPluginsSeeder extends Seeder
                 'description' => 'Checks MySQL/MariaDB connectivity and optionally authentication. Set host/IP when the database is not on the monitored host address.',
                 'check_command' => 'check_mysql',
                 'args_schema' => [
-                    ['position' => 0, 'key' => 'host', 'type' => 'string', 'default' => null, 'required' => false, 'help' => 'Database host/IP (defaults to monitored host)'],
+                    ['position' => 0, 'key' => 'host', 'type' => 'string', 'default' => null, 'required' => false, 'help' => 'Database host/IP (defaults to monitored host). Use 127.0.0.1 instead of localhost for TCP auth.'],
                     ['position' => 1, 'key' => 'port', 'type' => 'int', 'default' => 3306, 'required' => false, 'help' => 'TCP port (default 3306)'],
-                    ['position' => 2, 'key' => 'user', 'type' => 'string', 'default' => null, 'required' => false, 'help' => 'Database user (default root)'],
-                    ['position' => 3, 'key' => 'password', 'type' => 'password', 'default' => null, 'required' => false, 'help' => 'Database password'],
+                    ['position' => 2, 'key' => 'user', 'type' => 'string', 'default' => null, 'required' => false, 'help' => 'Database user (required for auth checks — defaults to root if empty)'],
+                    ['position' => 3, 'key' => 'password', 'type' => 'password', 'default' => null, 'required' => false, 'help' => 'Database password. Saved securely; leave blank when editing other fields to keep the current password.'],
                     ['position' => 4, 'key' => 'database', 'type' => 'string', 'default' => null, 'required' => false, 'help' => 'Database name (optional)'],
                 ],
                 'capability_flags' => ['supports_ports', 'supports_auth'],

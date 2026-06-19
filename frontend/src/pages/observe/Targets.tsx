@@ -6,6 +6,7 @@ import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
 import { ObservePasswordInput } from '../../components/observe/ObservePasswordInput'
+import { ObserveServiceTypeSelect } from '../../components/observe/ObserveServiceTypeSelect'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useObserveAccess } from '../../hooks/useObserveAccess'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
@@ -41,6 +42,8 @@ interface TargetService {
   check_args?: unknown[]
   service_key?: string
   overrides?: Record<string, unknown>
+  /** Secret fields stored server-side (password not returned on GET). */
+  configured_secrets?: string[]
   enabled: boolean
   /** Seconds between native QynSight checks. Configurable per service. */
   check_interval?: number | null
@@ -65,6 +68,9 @@ function inferServiceKeyFromServiceName(serviceName: string | undefined): string
   if (n.includes('http') && !n.includes('tcp') && !/port\s*\d+/.test(n)) return 'http'
   if (n.includes('tcp') || /port\s*\d+/.test(n)) return 'tcp_port'
   if (n.includes('ping') || n.includes('live')) return 'ping'
+  if (n.includes('mysql') || n.includes('mariadb') || /\bdb\b/.test(n)) return 'mysql'
+  if (n.includes('postgres') || n.includes('pgsql')) return 'pgsql'
+  if (n.includes('ssl') || n.includes('certificate') || n.includes('cert')) return 'ssl_validity'
   return ''
 }
 
@@ -97,6 +103,7 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
         ...svc,
         ...(key ? { service_key: key } : {}),
         overrides,
+        configured_secrets: Array.isArray(svc.configured_secrets) ? svc.configured_secrets : [],
       }
     }),
   }))
@@ -112,7 +119,13 @@ function fieldLabel(key: string): string {
     urls: 'URLs (one per line)',
     hostname: 'Hostname',
     host: 'Host / IP',
-    path: 'Path',
+    plugin: 'Script name',
+    args: 'Extra arguments (JSON)',
+    logfile: 'Log file path',
+    pattern: 'Search pattern',
+    path: 'Path / file',
+    warn_sec: 'Warning (seconds)',
+    crit_sec: 'Critical (seconds)',
     port: 'Port',
     password: 'Password',
     user: 'Username',
@@ -151,10 +164,15 @@ function mergeResponseWithCurrent(
       const fromSvc = ensureOverridesObject(svc.overrides)
       const fromCurrent = ensureOverridesObject(currentSvc?.overrides)
       const overrides = Object.keys(fromSvc).length > 0 ? fromSvc : fromCurrent
+      const configuredSecrets =
+        (svc.configured_secrets && svc.configured_secrets.length > 0
+          ? svc.configured_secrets
+          : currentSvc?.configured_secrets) ?? []
       return {
         ...svc,
         service_key: serviceKey || svc.service_key,
         overrides,
+        configured_secrets: configuredSecrets,
       }
     }),
   }))
@@ -347,19 +365,35 @@ export default function Targets() {
     setHosts(newHosts)
   }
 
+  const isSecretField = (arg: ArgsSchemaEntry): boolean =>
+    arg.type === 'password' ||
+    arg.key === 'password' ||
+    arg.key.endsWith('_password') ||
+    arg.key === 'secret' ||
+    arg.key === 'basic_auth'
+
   const handleUpdateOverride = (
     hostIndex: number,
     serviceIndex: number,
     key: string,
-    value: unknown
+    value: unknown,
+    isSecret = false
   ) => {
     const newHosts = [...hosts]
     const service = newHosts[hostIndex].services[serviceIndex]
     const overrides = { ...ensureOverridesObject(service.overrides) }
     if (value === null || value === undefined || value === '') {
-      delete overrides[key]
+      if (isSecret) {
+        overrides[key] = ''
+        service.configured_secrets = (service.configured_secrets ?? []).filter((k) => k !== key)
+      } else {
+        delete overrides[key]
+      }
     } else {
       overrides[key] = value
+      if (isSecret && !(service.configured_secrets ?? []).includes(key)) {
+        service.configured_secrets = [...(service.configured_secrets ?? []), key]
+      }
     }
     service.overrides = overrides
     setHosts(newHosts)
@@ -379,8 +413,8 @@ export default function Targets() {
     }
   }
 
-  const handleClearOverride = (hostIndex: number, serviceIndex: number, key: string) => {
-    handleUpdateOverride(hostIndex, serviceIndex, key, null)
+  const handleClearOverride = (hostIndex: number, serviceIndex: number, key: string, isSecret = false) => {
+    handleUpdateOverride(hostIndex, serviceIndex, key, isSecret ? '' : null, isSecret)
   }
 
   const validateClient = (): boolean => {
@@ -404,8 +438,9 @@ export default function Targets() {
             def.args_schema.forEach((arg) => {
               if (arg.required) {
                 const val = service.overrides?.[arg.key]
-                if (val === null || val === undefined || val === '') {
-                  errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = [`${arg.key} is required`]
+                const secretConfigured = service.configured_secrets?.includes(arg.key) ?? false
+                if ((val === null || val === undefined || val === '') && !secretConfigured) {
+                  errors[`hosts.${hi}.services.${si}.overrides.${arg.key}`] = [`${fieldLabel(arg.key)} is required`]
                 }
               }
               const val = service.overrides?.[arg.key]
@@ -482,11 +517,32 @@ export default function Targets() {
           enabled: host.enabled,
           services: host.services.map((service) => {
             const effectiveKey = effectiveServiceKey(service)
+            const overrides = { ...ensureOverridesObject(service.overrides) }
+            const def = effectiveKey ? definitionsByKey.get(effectiveKey) : null
+            if (def) {
+              def.args_schema.forEach((arg) => {
+                if (isSecretField(arg) && overrides[arg.key] === '') {
+                  overrides[arg.key] = ''
+                }
+              })
+            }
+            // Omit untouched secret keys so the server preserves stored values.
+            if (def) {
+              def.args_schema.forEach((arg) => {
+                if (
+                  isSecretField(arg) &&
+                  !(service.configured_secrets ?? []).includes(arg.key) &&
+                  (overrides[arg.key] === undefined || overrides[arg.key] === null || overrides[arg.key] === '')
+                ) {
+                  delete overrides[arg.key]
+                }
+              })
+            }
             return {
               name: service.name,
               service_key: effectiveKey || undefined,
               check_command: effectiveKey ? undefined : (service.check_command || undefined),
-              overrides: ensureOverridesObject(service.overrides),
+              overrides,
               enabled: service.enabled,
               check_interval: service.check_interval ?? undefined,
               retry_interval: service.retry_interval ?? undefined,
@@ -575,6 +631,11 @@ export default function Targets() {
         groups['Connection'].push(arg)
         assigned = true
       }
+      if (arg.key === 'plugin' || arg.key === 'args') {
+        if (!groups['Script']) groups['Script'] = []
+        groups['Script'].push(arg)
+        assigned = true
+      }
       if (arg.key === 'urls') {
         if (!groups['URLs']) groups['URLs'] = []
         groups['URLs'].push(arg)
@@ -626,7 +687,8 @@ export default function Targets() {
     value: unknown,
     onChange: (val: unknown) => void,
     onClear: () => void,
-    error?: string
+    error?: string,
+    configuredSecrets: string[] = []
   ) => {
     const inferredType = inferType(arg, value ?? arg.default)
     const hasOverride = value !== null && value !== undefined && value !== ''
@@ -681,6 +743,7 @@ export default function Targets() {
             value={displayValue !== null && displayValue !== undefined ? String(displayValue) : ''}
             onChange={onChange}
             disabled={saving}
+            configured={configuredSecrets.includes(arg.key)}
           />
         ) : inferredType === 'textarea' ? (
           <textarea
@@ -1037,24 +1100,16 @@ export default function Targets() {
                                         : 'border-white/10 bg-white/5'
                                     }`}
                                   />
-                                  <select
+                                  <ObserveServiceTypeSelect
                                     value={displayedServiceKey || ''}
-                                    onChange={(e) => handleUpdateService(hostIndex, serviceIndex, 'service_key', e.target.value)}
+                                    options={definitions}
+                                    onChange={(key) => handleUpdateService(hostIndex, serviceIndex, 'service_key', key)}
                                     disabled={saving}
-                                    className={`min-w-0 w-full flex-1 rounded border px-2 py-1 text-xs text-white disabled:opacity-50 sm:min-w-[12rem] ${
+                                    error={
                                       getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.service_key`) ||
                                       getFieldError(`hosts.${hostIndex}.services.${serviceIndex}.check_command`)
-                                        ? 'border-rose-500/50 bg-rose-500/10'
-                                        : 'border-white/10 bg-white/5'
-                                    }`}
-                                  >
-                                    <option value="">{t('targets.selectServiceCheckType')}</option>
-                                    {definitions.map((d) => (
-                                      <option key={d.service_key} value={d.service_key}>
-                                        {d.display_name}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    }
+                                  />
                                 </>
                               ) : (
                                 <>
@@ -1102,8 +1157,7 @@ export default function Targets() {
                                 </button>
                                 {expandedServices.has(serviceKey) && (
                                   <div className="min-w-0 space-y-4 ps-4 border-s border-white/10">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <span className="text-xs font-medium text-white/70">{t('targets.serviceConfiguration')}</span>
+                                    <div className="flex flex-wrap items-center justify-end gap-2">
                                       <button
                                         type="button"
                                         onClick={() => handleResetToDefaults(hostIndex, serviceIndex)}
@@ -1159,9 +1213,10 @@ export default function Targets() {
                                           return renderField(
                                             arg,
                                             value,
-                                            (val) => handleUpdateOverride(hostIndex, serviceIndex, arg.key, val),
-                                            () => handleClearOverride(hostIndex, serviceIndex, arg.key),
-                                            error
+                                            (val) => handleUpdateOverride(hostIndex, serviceIndex, arg.key, val, isSecretField(arg)),
+                                            () => handleClearOverride(hostIndex, serviceIndex, arg.key, isSecretField(arg)),
+                                            error,
+                                            service.configured_secrets ?? []
                                           )
                                         })}
                                       </div>

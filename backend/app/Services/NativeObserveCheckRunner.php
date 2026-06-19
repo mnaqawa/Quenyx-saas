@@ -286,7 +286,10 @@ class NativeObserveCheckRunner
             $host = '127.0.0.1';
         }
         $port = (int) ($args['port'] ?? 3306);
-        $user = trim((string) ($args['user'] ?? '')) !== '' ? trim((string) $args['user']) : 'root';
+        $user = trim((string) ($args['user'] ?? ''));
+        if ($user === '') {
+            $user = 'root';
+        }
         $password = (string) ($args['password'] ?? '');
         $database = trim((string) ($args['database'] ?? ''));
 
@@ -301,11 +304,11 @@ class NativeObserveCheckRunner
                 }
                 $mysqli = @new \mysqli($host, $user, $password, $database, $port);
                 if ($mysqli->connect_errno) {
-                    return [
-                        'state' => 'critical',
-                        'output' => 'MYSQL CRITICAL - ' . $mysqli->connect_error . " ({$host}:{$port})",
-                        'perfdata' => null,
-                    ];
+                return [
+                    'state' => 'critical',
+                    'output' => 'MYSQL CRITICAL - ' . $mysqli->connect_error . " (user {$user} @ {$host}:{$port})",
+                    'perfdata' => null,
+                ];
                 }
                 $version = $mysqli->server_info;
                 $mysqli->close();
@@ -607,6 +610,16 @@ class NativeObserveCheckRunner
         $pluginName = trim((string) $pluginName);
         if ($pluginName === '') {
             return ['state' => 'unknown', 'output' => 'Plugin name (plugin or script) required in check_args', 'perfdata' => null];
+        }
+
+        if (isset($checkArgs['args']) && is_array($checkArgs['args'])) {
+            $extraArgs = $checkArgs['args'];
+            unset($checkArgs['args']);
+            foreach ($extraArgs as $extraKey => $extraValue) {
+                if (! array_key_exists($extraKey, $checkArgs)) {
+                    $checkArgs[$extraKey] = $extraValue;
+                }
+            }
         }
 
         $pluginsDir = config('observe.plugins_dir', 'app/observe_plugins');

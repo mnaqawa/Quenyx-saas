@@ -108,6 +108,10 @@ class ObserveCheckArgsResolver
         if (empty($args['host'])) {
             $args['host'] = trim($hostAddress) !== '' ? trim($hostAddress) : '127.0.0.1';
         }
+        $host = strtolower(trim((string) $args['host']));
+        if ($host === 'localhost') {
+            $args['host'] = '127.0.0.1';
+        }
         if (! isset($args['port']) || $args['port'] === '' || $args['port'] === null) {
             $args['port'] = 3306;
         }

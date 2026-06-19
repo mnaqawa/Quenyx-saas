@@ -6,6 +6,8 @@ interface ObservePasswordInputProps {
   onChange: (value: string | null) => void
   disabled?: boolean
   placeholder?: string
+  /** True when a password is stored server-side but not returned to the browser. */
+  configured?: boolean
 }
 
 export function ObservePasswordInput({
@@ -13,18 +15,23 @@ export function ObservePasswordInput({
   onChange,
   disabled = false,
   placeholder,
+  configured = false,
 }: ObservePasswordInputProps) {
   const { t } = useLanguage()
   const [visible, setVisible] = useState(false)
+  const effectivePlaceholder =
+    placeholder ??
+    (configured && !value ? t('targets.passwordSavedPlaceholder') : undefined)
 
   return (
+    <div className="space-y-1">
     <div className="flex gap-2">
       <input
         type={visible ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value || null)}
         disabled={disabled}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         autoComplete="new-password"
         className="min-w-0 flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder:text-white/40 disabled:opacity-50"
       />
@@ -36,6 +43,10 @@ export function ObservePasswordInput({
       >
         {visible ? t('targets.hidePassword') : t('targets.showPassword')}
       </button>
+    </div>
+    {configured && !value && (
+      <p className="text-[10px] text-white/45">{t('targets.passwordSavedHint')}</p>
+    )}
     </div>
   )
 }
