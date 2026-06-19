@@ -1188,7 +1188,7 @@ export default function Targets() {
                                               handleUpdateService(hostIndex, serviceIndex, 'check_interval', v === '' ? null : parseInt(v, 10))
                                             }}
                                             className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-white"
-                                            placeholder="5"
+                                            placeholder={String(DEFAULT_CHECK_INTERVAL_MIN)}
                                           />
                                         </label>
                                         <label className="flex flex-wrap items-center gap-2 text-xs text-white/80">
@@ -1203,7 +1203,7 @@ export default function Targets() {
                                               handleUpdateService(hostIndex, serviceIndex, 'retry_interval', v === '' ? null : parseInt(v, 10))
                                             }}
                                             className="w-20 rounded border border-white/20 bg-white/5 px-2 py-1 text-white"
-                                            placeholder="1"
+                                            placeholder={String(DEFAULT_RETRY_INTERVAL_MIN)}
                                           />
                                         </label>
                                       </div>
