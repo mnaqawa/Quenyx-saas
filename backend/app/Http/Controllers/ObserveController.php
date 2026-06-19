@@ -270,6 +270,10 @@ class ObserveController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Monitoring checks queued.',
+            'data' => [
+                'queued' => true,
+                'message' => 'Monitoring checks queued.',
+            ],
         ]);
     }
 

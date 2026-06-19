@@ -723,7 +723,7 @@ class ObserveTargetsController extends Controller
                 $engineServiceKey = $scopedHostName . '::' . $service->name;
                 $receivedKeys[] = $engineServiceKey;
 
-                ObserveService::updateOrCreate(
+                $record = ObserveService::firstOrCreate(
                     [
                         'workspace_id' => $workspaceId,
                         'engine_key' => $engineKey,
@@ -740,13 +740,20 @@ class ObserveTargetsController extends Controller
                         'perfdata' => null,
                     ]
                 );
+
+                if (! $record->wasRecentlyCreated) {
+                    $record->update([
+                        'host_name' => $scopedHostName,
+                        'service_name' => $service->name,
+                    ]);
+                }
             }
             // Hosts with no services get a synthetic Host-Alive (ping) so they show real status instead of "Pending"
             if (! $hasServices) {
                 $engineServiceKey = $scopedHostName . '::Host-Alive';
                 $receivedKeys[] = $engineServiceKey;
 
-                ObserveService::updateOrCreate(
+                $alive = ObserveService::firstOrCreate(
                     [
                         'workspace_id' => $workspaceId,
                         'engine_key' => $engineKey,
@@ -763,6 +770,13 @@ class ObserveTargetsController extends Controller
                         'perfdata' => null,
                     ]
                 );
+
+                if (! $alive->wasRecentlyCreated) {
+                    $alive->update([
+                        'host_name' => $scopedHostName,
+                        'service_name' => 'Host-Alive',
+                    ]);
+                }
             }
         }
 

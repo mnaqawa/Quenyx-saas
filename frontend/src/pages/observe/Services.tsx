@@ -144,7 +144,9 @@ export default function Services() {
     setRecheckError(null)
     try {
       await observeService.runChecks(Number(selectedWorkspaceId))
+      // Checks run asynchronously — refresh again shortly so statuses update after the job completes.
       triggerRefresh()
+      window.setTimeout(() => triggerRefresh(), 5000)
       markUpdated()
     } catch (e) {
       setRecheckError(e instanceof Error ? e.message : t('services.recheckError'))

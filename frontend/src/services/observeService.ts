@@ -239,8 +239,8 @@ export const observeService = {
     )
   },
 
-  async runChecks(workspaceId: number): Promise<{ success: boolean; message: string }> {
-    return gatewayClient.post<{ success: boolean; message: string }>(
+  async runChecks(workspaceId: number): Promise<{ queued: boolean; message: string }> {
+    return gatewayClient.post<{ queued: boolean; message: string }>(
       `workspaces/${workspaceId}/observe/run-checks`,
       {},
       { workspaceId, moduleKey: 'qynsight' }
