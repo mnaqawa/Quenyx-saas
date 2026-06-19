@@ -321,8 +321,9 @@ export const observeService = {
       { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
     )
     if (Array.isArray(res)) return res
+    if (Array.isArray(res?.targets)) return res.targets
     if (Array.isArray(res?.data)) return res.data
-    return res?.targets ?? []
+    return []
   },
 
   // Observe summary (backend /api/workspaces/:id/observe/summary)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
@@ -17,6 +17,7 @@ import { gatewayClient } from '../../services/gatewayClient'
 import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow, ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
 import { getRequestErrorFieldErrors } from '../../lib/requestError'
+import { parseTargetsResponse } from '../../lib/observeTargets'
 
 interface TargetHost {
   id?: number
@@ -100,6 +101,10 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
   }))
 }
 
+function serializeHosts(hosts: TargetHost[]): string {
+  return JSON.stringify(normalizeHostsServiceKeys(hosts))
+}
+
 /**
  * Merge PUT response with current state so we never lose service_key or overrides
  * when the API omits them. Match by host name + service name (not index) so order
@@ -155,8 +160,20 @@ export default function Targets() {
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [runtimeServices, setRuntimeServices] = useState<ObserveServiceRow[]>([])
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
+  const [savedSnapshot, setSavedSnapshot] = useState('[]')
+  const isDirtyRef = useRef(false)
+  const serviceListEndRef = useRef<HTMLDivElement>(null)
 
   const workspaceId = id || selectedWorkspaceId
+
+  const isDirty = useMemo(
+    () => serializeHosts(hosts) !== savedSnapshot,
+    [hosts, savedSnapshot],
+  )
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty
+  }, [isDirty])
 
   const { canEditConfig: canEdit } = useObserveAccess()
   const aiAvailable = useAiAgentAvailable(workspaceId)
@@ -169,28 +186,31 @@ export default function Targets() {
     return map
   }, [definitions])
 
-  const reloadTargets = useCallback(async () => {
+  const reloadTargets = useCallback(async (options?: { force?: boolean }) => {
     if (!workspaceId) return
+    const force = options?.force === true
     try {
+      if (!force && isDirtyRef.current) {
+        setError(null)
+        const servicesResponse = await observeService.getServices(Number(workspaceId), { limit: 500 })
+        setRuntimeServices(servicesResponse?.items ?? [])
+        return
+      }
+
       setLoading(true)
       setError(null)
       const [targetsResponse, defsResponse, servicesResponse] = await Promise.all([
-        gatewayClient.get<TargetHost[] | { data?: TargetHost[] }>(
+        gatewayClient.get<TargetHost[] | { data?: TargetHost[]; targets?: TargetHost[] }>(
           `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
           { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
         ),
         observeService.getServiceDefinitions(Number(workspaceId), { engine: 'native', status: 'active' }),
         observeService.getServices(Number(workspaceId), { limit: 500 }),
       ])
-      const hostsList: TargetHost[] = Array.isArray(targetsResponse)
-        ? targetsResponse
-        : typeof targetsResponse === 'object' &&
-            targetsResponse !== null &&
-            'data' in targetsResponse &&
-            Array.isArray((targetsResponse as { data: TargetHost[] }).data)
-          ? (targetsResponse as { data: TargetHost[] }).data
-          : []
-      setHosts(normalizeHostsServiceKeys(hostsList))
+      const hostsList = parseTargetsResponse(targetsResponse) as TargetHost[]
+      const normalized = normalizeHostsServiceKeys(hostsList)
+      setHosts(normalized)
+      setSavedSnapshot(serializeHosts(normalized))
       setRuntimeServices(servicesResponse?.items ?? [])
       if (Array.isArray(defsResponse)) {
         setDefinitions(defsResponse)
@@ -216,7 +236,17 @@ export default function Targets() {
     void reloadTargets().then(() => markUpdated())
   }, [reloadTargets, dataRefreshKey, markUpdated])
 
+  useEffect(() => {
+    if (drawerHostIndex === null) return
+    const host = hosts[drawerHostIndex]
+    if (!host) return
+    const hostKey = host.id ?? `new-${drawerHostIndex}`
+    setExpandedHosts(new Set([hostKey]))
+  }, [drawerHostIndex, hosts])
+
   const handleAddHost = () => {
+    const newIndex = hosts.length
+    const hostKey = `new-${newIndex}`
     setHosts([
       ...hosts,
       {
@@ -229,9 +259,13 @@ export default function Targets() {
         services: [],
       },
     ])
+    setDrawerHostIndex(newIndex)
+    setExpandedHosts(new Set([hostKey]))
   }
 
   const handleAddService = (hostIndex: number) => {
+    const newServiceIndex = hosts[hostIndex].services.length
+    const serviceKey = `${hostIndex}-${newServiceIndex}`
     const newHosts = [...hosts]
     newHosts[hostIndex].services = [
       ...newHosts[hostIndex].services,
@@ -243,6 +277,10 @@ export default function Targets() {
       },
     ]
     setHosts(newHosts)
+    setExpandedServices((prev) => new Set([...prev, serviceKey]))
+    window.requestAnimationFrame(() => {
+      serviceListEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
   }
 
   const handleRemoveHost = (hostIndex: number) => {
@@ -281,6 +319,9 @@ export default function Targets() {
           }
         })
         newHosts[hostIndex].services[serviceIndex].overrides = ensureOverridesObject(defaults)
+      }
+      if (value) {
+        setExpandedServices((prev) => new Set([...prev, `${hostIndex}-${serviceIndex}`]))
       }
     }
     setHosts(newHosts)
@@ -391,12 +432,12 @@ export default function Targets() {
     return 'string'
   }
 
-  const handleSave = async () => {
-    if (!workspaceId) return
+  const handleSave = async (): Promise<boolean> => {
+    if (!workspaceId) return false
 
     if (!validateClient()) {
       setError('Please fix validation errors before saving')
-      return
+      return false
     }
 
     try {
@@ -435,9 +476,11 @@ export default function Targets() {
         { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
       )
 
-      const hostsFromResponse = Array.isArray(result) ? result : (result?.targets ?? [])
+      const hostsFromResponse = parseTargetsResponse(result) as TargetHost[]
       const merged = mergeResponseWithCurrent(hosts, hostsFromResponse)
-      setHosts(normalizeHostsServiceKeys(merged))
+      const normalized = normalizeHostsServiceKeys(merged)
+      setHosts(normalized)
+      setSavedSnapshot(serializeHosts(normalized))
 
       setSuccess(t('targets.saveSuccess'))
       setError(null)
@@ -446,6 +489,10 @@ export default function Targets() {
         delete next.native
         return next
       })
+
+      const servicesResponse = await observeService.getServices(Number(workspaceId), { limit: 500 })
+      setRuntimeServices(servicesResponse?.items ?? [])
+      return true
     } catch (err: unknown) {
       const fromApi = getRequestErrorFieldErrors(err)
       if (fromApi) {
@@ -454,8 +501,16 @@ export default function Targets() {
       } else {
         setError(err instanceof Error ? err.message : t('targets.error.saveFailed'))
       }
+      return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveFromDrawer = async (closeAfter = false) => {
+    const ok = await handleSave()
+    if (ok && closeAfter) {
+      setDrawerHostIndex(null)
     }
   }
 
@@ -657,6 +712,9 @@ export default function Targets() {
             />
             {canEdit && (
               <>
+                {isDirty ? (
+                  <span className="text-xs text-amber-300/90">{t('targets.unsavedChanges')}</span>
+                ) : null}
                 <button
                   onClick={handleAddHost}
                   disabled={saving}
@@ -665,8 +723,8 @@ export default function Targets() {
                   {t('targets.addHost')}
                 </button>
                 <button
-                  onClick={handleSave}
-                  disabled={saving}
+                  onClick={() => void handleSave()}
+                  disabled={saving || !isDirty}
                   className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-4 py-1.5 text-xs font-medium text-sky-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sky-500/30"
                 >
                   {saving ? t('targets.saving') : t('targets.save')}
@@ -732,8 +790,8 @@ export default function Targets() {
                   const os = operatingSystemFromTags(host.tags)
                   return (
                     <tr
-                      key={host.id ?? host.name}
-                      className="border-b border-white/5 hover:bg-white/5"
+                      key={host.id ?? `new-${hostIndex}`}
+                      className={`border-b border-white/5 hover:bg-white/5 ${!host.id ? 'bg-sky-500/5' : ''}`}
                     >
                       <td className="px-3 py-2.5 font-medium">{host.name || '—'}</td>
                       <td className="px-3 py-2.5 text-white/70">{host.address || '—'}</td>
@@ -900,19 +958,8 @@ export default function Targets() {
                 </div>
 
                 {expandedHosts.has(hostKey) && (
-                  <div className="mt-4 space-y-2 pl-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-white/70">{t('targets.servicesSection')}</span>
-                      {canEdit && (
-                        <button
-                          onClick={() => handleAddService(hostIndex)}
-                          disabled={saving}
-                          className="text-xs text-sky-400 hover:text-sky-300 disabled:opacity-50"
-                        >
-                          + {t('targets.addServiceCheck')}
-                        </button>
-                      )}
-                    </div>
+                  <div className="mt-4 space-y-3 pl-6">
+                    <span className="text-xs font-medium text-white/70">{t('targets.servicesSection')}</span>
                     {host.services.length === 0 ? (
                       <div className="text-xs text-white/50">{t('targets.noServiceChecks')}</div>
                     ) : (
@@ -1075,6 +1122,18 @@ export default function Targets() {
                         )
                       })
                     )}
+                    {canEdit ? (
+                      <div ref={serviceListEndRef} className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAddService(hostIndex)}
+                          disabled={saving}
+                          className="w-full rounded-lg border border-dashed border-sky-500/40 bg-sky-500/5 px-4 py-2.5 text-xs font-medium text-sky-300 transition hover:bg-sky-500/10 disabled:opacity-50"
+                        >
+                          + {t('targets.addServiceCheck')}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -1082,6 +1141,34 @@ export default function Targets() {
         })()}
       </div>
             </div>
+            {canEdit ? (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-white/10 bg-[#0f151d] px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => setDrawerHostIndex(null)}
+                  disabled={saving}
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70 hover:bg-white/10 disabled:opacity-50"
+                >
+                  {t('common.close')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveFromDrawer(false)}
+                  disabled={saving}
+                  className="rounded-lg border border-sky-500/30 bg-sky-500/20 px-4 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-50"
+                >
+                  {saving ? t('targets.saving') : t('targets.save')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveFromDrawer(true)}
+                  disabled={saving}
+                  className="rounded-lg border border-sky-500/50 bg-sky-500/30 px-4 py-2 text-xs font-medium text-sky-100 hover:bg-sky-500/40 disabled:opacity-50"
+                >
+                  {saving ? t('targets.saving') : t('targets.saveAndClose')}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
