@@ -20,6 +20,12 @@ import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow, ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
 import { getRequestErrorFieldErrors } from '../../lib/requestError'
 import { parseTargetsResponse } from '../../lib/observeTargets'
+import {
+  normalizeServiceIntervalsForUi,
+  serviceIntervalsForApi,
+  DEFAULT_CHECK_INTERVAL_MIN,
+  DEFAULT_RETRY_INTERVAL_MIN,
+} from '../../lib/observeIntervals'
 
 interface TargetHost {
   id?: number
@@ -104,6 +110,7 @@ function normalizeHostsServiceKeys(hosts: TargetHost[]): TargetHost[] {
         ...(key ? { service_key: key } : {}),
         overrides,
         configured_secrets: Array.isArray(svc.configured_secrets) ? svc.configured_secrets : [],
+        ...normalizeServiceIntervalsForUi(svc),
       }
     }),
   }))
@@ -538,14 +545,14 @@ export default function Targets() {
                 }
               })
             }
+            const intervals = serviceIntervalsForApi(service)
             return {
               name: service.name,
               service_key: effectiveKey || undefined,
               check_command: effectiveKey ? undefined : (service.check_command || undefined),
               overrides,
               enabled: service.enabled,
-              check_interval: service.check_interval ?? undefined,
-              retry_interval: service.retry_interval ?? undefined,
+              ...intervals,
             }
           }),
         })),

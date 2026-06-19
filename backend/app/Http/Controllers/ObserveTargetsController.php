@@ -9,7 +9,7 @@ use App\Services\ObserveCheckArgsSecrets;
 use App\Services\ObserveServiceKeyResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
+use App\Jobs\RunObserveChecksJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -503,14 +503,7 @@ class ObserveTargetsController extends Controller
             }
 
             // Run native checks once for this workspace so Services page updates immediately
-            try {
-                Artisan::call('observe:run-checks', ['--workspace_id' => (string) $project->id]);
-            } catch (\Exception $e) {
-                Log::warning('observe:run-checks after save failed', [
-                    'workspace_id' => $project->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            RunObserveChecksJob::dispatch($project->id)->afterResponse();
 
             // Return updated targets (no Nagios publish; we use QynSight native engine only)
             $definitionsByCommand = $this->definitionsByCheckCommand($project->id);

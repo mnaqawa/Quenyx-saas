@@ -11,7 +11,7 @@ function readStoredInterval(): ObserveAutoRefreshInterval {
   } catch {
     void 0
   }
-  return '30'
+  return '60'
 }
 
 export function useObserveAutoRefresh(onRefresh: () => void, enabled = true) {

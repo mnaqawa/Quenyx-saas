@@ -19,7 +19,7 @@ use App\Services\CapacityPlanningService;
 use App\Services\SystemMetricsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
+use App\Jobs\RunObserveChecksJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -74,18 +74,23 @@ class ObserveController extends Controller
             ->first();
 
         $prefix = 'ws' . $project->id . '-';
-        $allServices = ObserveService::where('workspace_id', $project->id)
+        $totals = [
+            'ok' => 0,
+            'warning' => 0,
+            'critical' => 0,
+            'unknown' => 0,
+            'pending' => 0,
+            'unreachable' => 0,
+        ];
+        $counts = ObserveService::where('workspace_id', $project->id)
             ->where('engine_key', 'native')
             ->where('host_name', 'like', $prefix . '%')
-            ->get();
-        $totals = [
-            'ok' => $allServices->where('state', 'ok')->count(),
-            'warning' => $allServices->where('state', 'warning')->count(),
-            'critical' => $allServices->where('state', 'critical')->count(),
-            'unknown' => $allServices->where('state', 'unknown')->count(),
-            'pending' => $allServices->where('state', 'pending')->count(),
-            'unreachable' => $allServices->where('state', 'unreachable')->count(),
-        ];
+            ->select('state', \Illuminate\Support\Facades\DB::raw('count(*) as aggregate'))
+            ->groupBy('state')
+            ->pluck('aggregate', 'state');
+        foreach ($totals as $state => $_) {
+            $totals[$state] = (int) ($counts[$state] ?? 0);
+        }
 
         return response()->json([
             'success' => true,
@@ -260,24 +265,12 @@ class ObserveController extends Controller
     {
         $this->authorize('runObserveOperations', $project);
 
-        try {
-            Artisan::call('observe:run-checks', ['--workspace_id' => (string) $project->id]);
+        RunObserveChecksJob::dispatch($project->id)->afterResponse();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Monitoring checks completed.',
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('observe run-checks API failed', [
-                'workspace_id' => $project->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to run monitoring checks.',
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Monitoring checks queued.',
+        ]);
     }
 
     /**

@@ -659,7 +659,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'targets.pollingTitle': 'Polling (check interval)',
     'targets.checkIntervalMin': 'Check interval (min)',
     'targets.retryIntervalMin': 'Retry interval (min)',
-    'targets.pollingHint': 'How often QynSight runs this check and retries on failure. Leave empty for defaults (5 min / 1 min).',
+    'targets.pollingHint': 'How often QynSight runs this check (minutes). Minimum 1 minute. Leave empty for defaults (5 min / 1 min).',
     'targets.searchServiceType': 'Search service types…',
     'targets.noServiceTypeMatch': 'No matching service types',
     'targets.passwordSavedPlaceholder': 'Password saved — enter new value to change',

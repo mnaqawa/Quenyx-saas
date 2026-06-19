@@ -7,24 +7,30 @@ use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
-use App\Models\ObserveTargetService;
 use App\Services\NativeObserveCheckRunner;
+use App\Services\ObserveCheckArgsResolver;
 use App\Services\ObserveServiceKeyResolver;
 use App\Services\PerfMetricExtractor;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class RunObserveChecks extends Command
 {
     protected $signature = 'observe:run-checks {--workspace_id= : Run only for this workspace}';
+
     protected $description = 'Run native observe checks (no Nagios) and update ObserveService for Services UI';
+
+    /** @var array<string, ObserveServiceDefinition> */
+    private array $definitionsByKey = [];
 
     public function handle(): int
     {
         $workspaceId = $this->option('workspace_id');
         $runner = new NativeObserveCheckRunner();
         $extractor = new PerfMetricExtractor();
+        $this->definitionsByKey = $this->loadDefinitionsByKey();
 
         $query = ObserveTargetHost::with(['services' => fn ($q) => $q->where('enabled', true)])
             ->where('enabled', true);
@@ -33,8 +39,12 @@ class RunObserveChecks extends Command
         }
         $hosts = $query->get();
 
+        $existingByWorkspace = $this->preloadExistingServices($hosts->pluck('workspace_id')->unique()->all());
+
         $run = 0;
         $errors = 0;
+        $maxChecks = (int) config('observe.max_checks_per_run', 0);
+        $now = now();
 
         foreach ($hosts as $host) {
             $workspaceId = $host->workspace_id;
@@ -45,96 +55,41 @@ class RunObserveChecks extends Command
                 continue;
             }
 
-            // Hosts with no services: run Host-Alive (ping) check so they show real status instead of "Pending"
+            $existingForWorkspace = $existingByWorkspace[$workspaceId] ?? [];
+
             if ($host->services->isEmpty()) {
-                $engineKey = 'native';
-                $engineServiceKey = "{$hostName}::Host-Alive";
-                $existing = ObserveService::where('workspace_id', $workspaceId)
-                    ->where('engine_key', $engineKey)
-                    ->where('engine_service_key', $engineServiceKey)
-                    ->first();
-
-                $intervalSec = 5;
-                $now = now();
-                $due = $existing === null
-                    || $existing->next_check_at === null
-                    || $existing->next_check_at->getTimestamp() <= $now->getTimestamp();
-
-                if ($due) {
-                    try {
-                        $result = $runner->run('ping', $address, [], [
-                            'workspace_id' => $workspaceId,
-                            'host_name' => $hostName,
-                            'service_name' => 'Host-Alive',
-                        ]);
-                    } catch (\Throwable $e) {
-                        $result = [
-                            'state' => 'unknown',
-                            'output' => 'Check failed: ' . $e->getMessage(),
-                            'perfdata' => null,
-                        ];
+                if ($maxChecks > 0 && $run >= $maxChecks) {
+                    break;
+                }
+                $result = $this->runHostAliveIfDue(
+                    $runner,
+                    $extractor,
+                    $workspaceId,
+                    $hostName,
+                    $address,
+                    $existingForWorkspace,
+                    $now
+                );
+                if ($result['ran']) {
+                    $run++;
+                    if ($result['error']) {
                         $errors++;
                     }
-
-                    $nextCheck = $now->copy()->addSeconds($intervalSec);
-                    $payload = [
-                        'workspace_id' => $workspaceId,
-                        'engine_key' => $engineKey,
-                        'engine_service_key' => $engineServiceKey,
-                        'host_name' => $hostName,
-                        'service_name' => 'Host-Alive',
-                        'state' => $result['state'],
-                        'last_check_at' => $now,
-                        'next_check_at' => $nextCheck,
-                        'output' => $result['output'],
-                        'plugin_output' => $result['output'],
-                        'perfdata' => $result['perfdata'] ?? null,
-                        'attempt' => '1/3',
-                        'current_attempt' => 1,
-                        'max_attempts' => 3,
-                    ];
-
-                    if ($existing !== null && $existing->state !== $result['state']) {
-                        $payload['last_state_change_at'] = $now;
-                        $payload['duration_sec'] = 0;
-                    } elseif ($existing !== null && $existing->last_state_change_at) {
-                        $payload['last_state_change_at'] = $existing->last_state_change_at;
-                        $payload['duration_sec'] = (int) $existing->last_state_change_at->diffInSeconds($now);
-                    } else {
-                        $payload['duration_sec'] = 0;
-                    }
-
-                    ObserveService::updateOrCreate(
-                        [
-                            'workspace_id' => $workspaceId,
-                            'engine_key' => $engineKey,
-                            'engine_service_key' => $engineServiceKey,
-                        ],
-                        $payload
-                    );
-                    $this->recordHistory($extractor, $workspaceId, $hostName, 'Host-Alive', $result, $now);
-                    $run++;
                 }
+                continue;
             }
 
             foreach ($host->services as $service) {
+                if ($maxChecks > 0 && $run >= $maxChecks) {
+                    break 2;
+                }
+
                 $serviceName = $service->name;
-                $engineKey = 'native';
                 $engineServiceKey = "{$hostName}::{$serviceName}";
+                $existing = $existingForWorkspace[$engineServiceKey] ?? null;
 
-                $existing = ObserveService::where('workspace_id', $workspaceId)
-                    ->where('engine_key', $engineKey)
-                    ->where('engine_service_key', $engineServiceKey)
-                    ->first();
-
-                $intervalSec = (int) ($service->check_interval ?? 5);
-                $intervalSec = $intervalSec >= 1 ? $intervalSec : 5;
-                $now = now();
-                $due = $existing === null
-                    || $existing->next_check_at === null
-                    || $existing->next_check_at->getTimestamp() <= $now->getTimestamp();
-
-                if (! $due) {
+                $intervalSec = $this->resolveIntervalSeconds($service->check_interval);
+                if (! $this->isCheckDue($existing, $intervalSec, $now)) {
                     continue;
                 }
 
@@ -146,23 +101,20 @@ class RunObserveChecks extends Command
                     (string) ($service->name ?? '')
                 );
                 $originalServiceKey = $serviceKey;
-                // Resolve check_command from definition when missing (e.g. disk, load, cpu)
-                if ($checkCommand === '' && $serviceKey !== '' && \Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
-                    // Engine-agnostic lookup to support existing definitions during migration to native-only runtime.
-                    $def = ObserveServiceDefinition::where('service_key', $serviceKey)->first();
+
+                if ($checkCommand === '' && $serviceKey !== '' && $this->definitionsByKey !== []) {
+                    $def = $this->definitionsByKey[$serviceKey] ?? null;
                     if ($def && $def->check_command !== '') {
                         $checkCommand = $def->check_command;
                     }
                 }
 
-                $definition = null;
-                if ($originalServiceKey !== '' && \Illuminate\Support\Facades\Schema::hasTable('observe_service_definitions')) {
-                    $definition = ObserveServiceDefinition::where('service_key', $originalServiceKey)->first();
-                }
-                $checkArgs = app(\App\Services\ObserveCheckArgsResolver::class)
+                $definition = $originalServiceKey !== ''
+                    ? ($this->definitionsByKey[$originalServiceKey] ?? null)
+                    : null;
+                $checkArgs = app(ObserveCheckArgsResolver::class)
                     ->resolve($originalServiceKey !== '' ? $originalServiceKey : $serviceKey, $address, $checkArgs, $definition);
 
-                // NRPE-style types (disk, load, swap, ssh, etc.): run as plugin with script name = check_command
                 if (! in_array($serviceKey, NativeObserveCheckRunner::NATIVE_SERVICE_KEYS, true) && $checkCommand !== '') {
                     $pluginName = strtolower(preg_replace('/!.*/', '', trim($checkCommand)));
                     $checkArgs = array_merge($checkArgs, ['plugin' => $pluginName !== '' ? $pluginName : $checkCommand]);
@@ -186,79 +138,221 @@ class RunObserveChecks extends Command
                     $errors++;
                 }
 
-                $nextCheck = $now->copy()->addSeconds($intervalSec);
-                $payload = [
-                    'workspace_id' => $workspaceId,
-                    'engine_key' => $engineKey,
-                    'engine_service_key' => $engineServiceKey,
-                    'host_name' => $hostName,
-                    'service_name' => $serviceName,
-                    'state' => $result['state'],
-                    'last_check_at' => $now,
-                    'next_check_at' => $nextCheck,
-                    'output' => $result['output'],
-                    'plugin_output' => $result['output'],
-                    'perfdata' => $result['perfdata'] ?? null,
-                    'attempt' => '1/3',
-                    'current_attempt' => 1,
-                    'max_attempts' => 3,
-                ];
-
-                if ($existing !== null && $existing->state !== $result['state']) {
-                    $payload['last_state_change_at'] = $now;
-                    $payload['duration_sec'] = 0;
-                } elseif ($existing !== null && $existing->last_state_change_at) {
-                    $payload['last_state_change_at'] = $existing->last_state_change_at;
-                    $payload['duration_sec'] = (int) $existing->last_state_change_at->diffInSeconds($now);
-                } else {
-                    $payload['duration_sec'] = 0;
-                }
-
-                ObserveService::updateOrCreate(
-                    [
-                        'workspace_id' => $workspaceId,
-                        'engine_key' => $engineKey,
-                        'engine_service_key' => $engineServiceKey,
-                    ],
-                    $payload
+                $saved = $this->persistServiceResult(
+                    $workspaceId,
+                    $hostName,
+                    $serviceName,
+                    $engineServiceKey,
+                    $existing,
+                    $result,
+                    $intervalSec,
+                    $now
                 );
+                $existingForWorkspace[$engineServiceKey] = $saved;
                 $this->recordHistory($extractor, $workspaceId, $hostName, $serviceName, $result, $now);
                 $run++;
             }
         }
 
-        // Update meta for native engine (workspaces we have hosts in) so UI shows last run
-        $workspaceIds = $hosts->pluck('workspace_id')->unique();
-        foreach ($workspaceIds as $wid) {
-            $nativeServices = ObserveService::where('workspace_id', $wid)->where('engine_key', 'native')->get();
-            $totals = [
-                'ok' => $nativeServices->where('state', 'ok')->count(),
-                'warning' => $nativeServices->where('state', 'warning')->count(),
-                'critical' => $nativeServices->where('state', 'critical')->count(),
-                'unknown' => $nativeServices->where('state', 'unknown')->count(),
-                'pending' => $nativeServices->where('state', 'pending')->count(),
-                'unreachable' => $nativeServices->where('state', 'unreachable')->count(),
-            ];
-            ObserveMeta::updateOrCreate(
-                ['workspace_id' => $wid, 'engine_key' => 'native'],
-                ['last_poll_at' => now(), 'service_totals_json' => $totals, 'error' => null]
-            );
+        foreach ($hosts->pluck('workspace_id')->unique() as $wid) {
+            $this->updateWorkspaceMeta((int) $wid);
         }
 
-        // Retention: prune old history occasionally (not on every tick) to bound table growth.
         $this->pruneHistory();
 
         $this->info("Ran {$run} native check(s).");
         if ($errors > 0) {
             $this->warn("{$errors} error(s).");
         }
+
         return $errors > 0 ? 1 : 0;
     }
 
     /**
-     * Persist per-metric history samples derived from a check result. Best-effort:
-     * any failure is logged and never interrupts the check loop.
-     *
+     * @return array<string, ObserveServiceDefinition>
+     */
+    private function loadDefinitionsByKey(): array
+    {
+        if (! Schema::hasTable('observe_service_definitions')) {
+            return [];
+        }
+
+        return ObserveServiceDefinition::query()
+            ->get()
+            ->keyBy('service_key')
+            ->all();
+    }
+
+    /**
+     * @param  list<int>  $workspaceIds
+     * @return array<int, array<string, ObserveService>>
+     */
+    private function preloadExistingServices(array $workspaceIds): array
+    {
+        if ($workspaceIds === []) {
+            return [];
+        }
+
+        $rows = ObserveService::query()
+            ->where('engine_key', 'native')
+            ->whereIn('workspace_id', $workspaceIds)
+            ->get();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[$row->workspace_id][$row->engine_service_key] = $row;
+        }
+
+        return $grouped;
+    }
+
+    private function resolveIntervalSeconds(?int $storedInterval): int
+    {
+        $default = (int) config('observe.default_check_interval_seconds', 300);
+        $min = (int) config('observe.min_check_interval_seconds', 60);
+        $interval = $storedInterval ?? $default;
+
+        return max($min, $interval >= 1 ? $interval : $default);
+    }
+
+    private function isCheckDue(?ObserveService $existing, int $intervalSec, \Illuminate\Support\Carbon $now): bool
+    {
+        if ($existing === null || $existing->next_check_at === null) {
+            return true;
+        }
+
+        return $existing->next_check_at->getTimestamp() <= $now->getTimestamp();
+    }
+
+    /**
+     * @param  array<string, ObserveService>  $existingForWorkspace
+     * @return array{ran: bool, error: bool}
+     */
+    private function runHostAliveIfDue(
+        NativeObserveCheckRunner $runner,
+        PerfMetricExtractor $extractor,
+        int $workspaceId,
+        string $hostName,
+        string $address,
+        array &$existingForWorkspace,
+        \Illuminate\Support\Carbon $now
+    ): array {
+        $engineServiceKey = "{$hostName}::Host-Alive";
+        $existing = $existingForWorkspace[$engineServiceKey] ?? null;
+        $intervalSec = $this->resolveIntervalSeconds(null);
+
+        if (! $this->isCheckDue($existing, $intervalSec, $now)) {
+            return ['ran' => false, 'error' => false];
+        }
+
+        try {
+            $result = $runner->run('ping', $address, [], [
+                'workspace_id' => $workspaceId,
+                'host_name' => $hostName,
+                'service_name' => 'Host-Alive',
+            ]);
+            $error = false;
+        } catch (\Throwable $e) {
+            $result = [
+                'state' => 'unknown',
+                'output' => 'Check failed: ' . $e->getMessage(),
+                'perfdata' => null,
+            ];
+            $error = true;
+        }
+
+        $saved = $this->persistServiceResult(
+            $workspaceId,
+            $hostName,
+            'Host-Alive',
+            $engineServiceKey,
+            $existing,
+            $result,
+            $intervalSec,
+            $now
+        );
+        $existingForWorkspace[$engineServiceKey] = $saved;
+        $this->recordHistory($extractor, $workspaceId, $hostName, 'Host-Alive', $result, $now);
+
+        return ['ran' => true, 'error' => $error];
+    }
+
+    /**
+     * @param  array{state: string, output: string, perfdata: string|null}  $result
+     */
+    private function persistServiceResult(
+        int $workspaceId,
+        string $hostName,
+        string $serviceName,
+        string $engineServiceKey,
+        ?ObserveService $existing,
+        array $result,
+        int $intervalSec,
+        \Illuminate\Support\Carbon $now
+    ): ObserveService {
+        $nextCheck = $now->copy()->addSeconds($intervalSec);
+        $payload = [
+            'workspace_id' => $workspaceId,
+            'engine_key' => 'native',
+            'engine_service_key' => $engineServiceKey,
+            'host_name' => $hostName,
+            'service_name' => $serviceName,
+            'state' => $result['state'],
+            'last_check_at' => $now,
+            'next_check_at' => $nextCheck,
+            'output' => $result['output'],
+            'plugin_output' => $result['output'],
+            'perfdata' => $result['perfdata'] ?? null,
+            'attempt' => '1/3',
+            'current_attempt' => 1,
+            'max_attempts' => 3,
+        ];
+
+        if ($existing !== null && $existing->state !== $result['state']) {
+            $payload['last_state_change_at'] = $now;
+            $payload['duration_sec'] = 0;
+        } elseif ($existing !== null && $existing->last_state_change_at) {
+            $payload['last_state_change_at'] = $existing->last_state_change_at;
+            $payload['duration_sec'] = (int) $existing->last_state_change_at->diffInSeconds($now);
+        } else {
+            $payload['duration_sec'] = 0;
+        }
+
+        return ObserveService::updateOrCreate(
+            [
+                'workspace_id' => $workspaceId,
+                'engine_key' => 'native',
+                'engine_service_key' => $engineServiceKey,
+            ],
+            $payload
+        );
+    }
+
+    private function updateWorkspaceMeta(int $workspaceId): void
+    {
+        $counts = ObserveService::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('engine_key', 'native')
+            ->select('state', DB::raw('count(*) as aggregate'))
+            ->groupBy('state')
+            ->pluck('aggregate', 'state');
+
+        $totals = [
+            'ok' => (int) ($counts['ok'] ?? 0),
+            'warning' => (int) ($counts['warning'] ?? 0),
+            'critical' => (int) ($counts['critical'] ?? 0),
+            'unknown' => (int) ($counts['unknown'] ?? 0),
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'unreachable' => (int) ($counts['unreachable'] ?? 0),
+        ];
+
+        ObserveMeta::updateOrCreate(
+            ['workspace_id' => $workspaceId, 'engine_key' => 'native'],
+            ['last_poll_at' => now(), 'service_totals_json' => $totals, 'error' => null]
+        );
+    }
+
+    /**
      * @param  array{state: string, output: string|null, perfdata: string|null}  $result
      */
     private function recordHistory(
@@ -297,10 +391,6 @@ class RunObserveChecks extends Command
         }
     }
 
-    /**
-     * Delete history older than the retention window. Gated by probability so it
-     * runs roughly once per ~50 invocations instead of every minute.
-     */
     private function pruneHistory(): void
     {
         if (! Schema::hasTable('observe_metrics_history')) {

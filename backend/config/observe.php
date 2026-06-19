@@ -49,6 +49,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Check scheduling (native engine)
+    |--------------------------------------------------------------------------
+    | Intervals are stored in seconds. UI shows minutes and converts on save.
+    */
+    'default_check_interval_seconds' => (int) env('OBSERVE_DEFAULT_CHECK_INTERVAL_SECONDS', 300),
+    'default_retry_interval_seconds' => (int) env('OBSERVE_DEFAULT_RETRY_INTERVAL_SECONDS', 60),
+    'min_check_interval_seconds' => (int) env('OBSERVE_MIN_CHECK_INTERVAL_SECONDS', 60),
+    'run_checks_unique_seconds' => (int) env('OBSERVE_RUN_CHECKS_UNIQUE_SECONDS', 120),
+    'max_checks_per_run' => (int) env('OBSERVE_MAX_CHECKS_PER_RUN', 0),
+
+    /*
+    |--------------------------------------------------------------------------
     | Nmap port scan (Infrastructure Map)
     |--------------------------------------------------------------------------
     | Ports: --top-ports 100 (fast) or -p 1-1024 (common) or -p- (all 65535, slow).

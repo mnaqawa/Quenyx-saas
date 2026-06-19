@@ -15,10 +15,10 @@ class Kernel extends ConsoleKernel
         // Legacy alias command kept for compatibility (routes to native checks)
         // $schedule->command('observe:poll')->everyMinute()->withoutOverlapping(90);
 
-        // QynSight engine: run native checks (HTTP/TCP/Ping/plugins); no Nagios required
+        // QynSight engine: run native checks; due services only (respects per-service interval)
         $schedule->command('observe:run-checks')
-            ->everyMinute()
-            ->withoutOverlapping(90)
+            ->everyTwoMinutes()
+            ->withoutOverlapping(120)
             ->appendOutputTo(storage_path('logs/scheduler.log'));
 
         $schedule->command('observe:evaluate-alerts')
