@@ -4,29 +4,48 @@ export type ObserveAutoRefreshInterval = '15' | '30' | '60' | '300' | 'off'
 
 const STORAGE_KEY = 'qynsight_auto_refresh_interval'
 
-function readStoredInterval(): ObserveAutoRefreshInterval {
+interface UseObserveAutoRefreshOptions {
+  defaultInterval?: ObserveAutoRefreshInterval
+  storageKey?: string
+}
+
+function readStoredInterval(
+  storageKey: string,
+  fallback: ObserveAutoRefreshInterval,
+): ObserveAutoRefreshInterval {
   try {
-    const v = localStorage.getItem(STORAGE_KEY)
+    const v = localStorage.getItem(storageKey)
     if (v === '15' || v === '30' || v === '60' || v === '300' || v === 'off') return v
   } catch {
     void 0
   }
-  return '60'
+  return fallback
 }
 
-export function useObserveAutoRefresh(onRefresh: () => void, enabled = true) {
-  const [interval, setIntervalState] = useState<ObserveAutoRefreshInterval>(readStoredInterval)
+export function useObserveAutoRefresh(
+  onRefresh: () => void,
+  enabled = true,
+  options?: UseObserveAutoRefreshOptions,
+) {
+  const storageKey = options?.storageKey ?? STORAGE_KEY
+  const fallback = options?.defaultInterval ?? '60'
+  const [interval, setIntervalState] = useState<ObserveAutoRefreshInterval>(() =>
+    readStoredInterval(storageKey, fallback),
+  )
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
   const [, setAgeTick] = useState(0)
 
-  const setInterval = useCallback((value: ObserveAutoRefreshInterval) => {
-    setIntervalState(value)
-    try {
-      localStorage.setItem(STORAGE_KEY, value)
-    } catch {
-      void 0
-    }
-  }, [])
+  const setInterval = useCallback(
+    (value: ObserveAutoRefreshInterval) => {
+      setIntervalState(value)
+      try {
+        localStorage.setItem(storageKey, value)
+      } catch {
+        void 0
+      }
+    },
+    [storageKey],
+  )
 
   const markUpdated = useCallback(() => {
     setLastUpdatedAt(new Date())

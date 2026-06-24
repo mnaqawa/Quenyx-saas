@@ -132,10 +132,14 @@ class CapacityPlanningService
             'data_confidence' => $dataConfidence,
         ];
 
+        $cpuStatus = $this->runwayStatusFor($dailySeries['cpu'] ?? [], $cpuRunway);
+        $memoryStatus = $this->runwayStatusFor($dailySeries['memory'] ?? [], $memoryRunway);
+        $storageStatus = $this->runwayStatusFor($dailySeries['disk'] ?? [], $storageRunway);
+
         $runway = [
-            'cpu' => ['months' => $cpuRunway, 'days' => $cpuRunwayDays, 'status' => $this->runwayStatus($cpuRunway)],
-            'memory' => ['months' => $memoryRunway, 'days' => $memoryRunwayDays, 'status' => $this->runwayStatus($memoryRunway)],
-            'storage' => ['months' => $storageRunway, 'days' => $storageRunwayDays, 'status' => $this->runwayStatus($storageRunway)],
+            'cpu' => ['months' => $cpuRunway, 'days' => $cpuRunwayDays, 'status' => $cpuStatus],
+            'memory' => ['months' => $memoryRunway, 'days' => $memoryRunwayDays, 'status' => $memoryStatus],
+            'storage' => ['months' => $storageRunway, 'days' => $storageRunwayDays, 'status' => $storageStatus],
         ];
 
         $legacySummary = [
@@ -145,9 +149,9 @@ class CapacityPlanningService
             'cost_optimization_potential' => null,
             'capacity_risk_score' => $riskScore,
             'statuses' => [
-                'cpu' => $this->runwayStatus($cpuRunway),
-                'memory' => $this->runwayStatus($memoryRunway),
-                'storage' => $this->runwayStatus($storageRunway),
+                'cpu' => $cpuStatus,
+                'memory' => $memoryStatus,
+                'storage' => $storageStatus,
                 'cost' => 'insufficient_data',
                 'risk' => $riskScore === null ? 'insufficient_data' : $this->riskStatus($riskScore),
             ],
@@ -738,6 +742,27 @@ class CapacityPlanningService
         }
 
         return 'healthy';
+    }
+
+    /**
+     * Resolve a runway status that distinguishes a genuinely data-starved metric
+     * ("insufficient_data") from one that has enough history but shows no upward
+     * growth trend ("stable"). A null runway only means "collecting data" when we
+     * do not yet have the minimum number of samples to compute a trend.
+     *
+     * @param  list<array{timestamp: int, value: float}>  $series
+     */
+    private function runwayStatusFor(array $series, ?float $months): string
+    {
+        if (count($series) < self::MIN_POINTS_FOR_RUNWAY) {
+            return 'insufficient_data';
+        }
+
+        if ($months === null) {
+            return 'stable';
+        }
+
+        return $this->runwayStatus($months);
     }
 
     private function riskStatus(float $score): string

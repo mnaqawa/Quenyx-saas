@@ -44,8 +44,14 @@ const FORECAST_COLORS = {
   storage: '#f59e0b',
 }
 
-function formatRunway(months: number | null, monthsLabel: string, insufficient: string): string {
-  if (months === null) return insufficient
+function formatRunway(
+  months: number | null,
+  status: CapacityStatus,
+  monthsLabel: string,
+  insufficient: string,
+  stableLabel: string,
+): string {
+  if (months === null) return status === 'stable' ? stableLabel : insufficient
   return `${months} ${monthsLabel}`
 }
 
@@ -102,9 +108,13 @@ export default function CapacityPlanning() {
     markUpdated,
     refreshNow,
     secondsAgo,
-  } = useObserveAutoRefresh(() => {
-    void load().then(() => markUpdated())
-  }, !!wsId)
+  } = useObserveAutoRefresh(
+    () => {
+      void load().then(() => markUpdated())
+    },
+    !!wsId,
+    { defaultInterval: 'off', storageKey: 'qynsight_capacity_auto_refresh' },
+  )
 
   useEffect(() => {
     void load().then(() => markUpdated())
@@ -119,6 +129,8 @@ export default function CapacityPlanning() {
           return t('cap.status.warning')
         case 'healthy':
           return t('cap.status.healthy')
+        case 'stable':
+          return t('cap.status.stable')
         default:
           return t('cap.insufficientHistory')
       }
@@ -341,21 +353,24 @@ export default function CapacityPlanning() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CapacitySummaryCard
           title={t('cap.kpi.cpuRunway')}
-          value={formatRunway(summary?.cpu_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
+          value={formatRunway(summary?.cpu_runway_months ?? null, summary?.statuses.cpu ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
           status={summary?.statuses.cpu ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.cpu ?? 'insufficient_data')}
+          detail={summary?.statuses.cpu === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.memoryRunway')}
-          value={formatRunway(summary?.memory_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
+          value={formatRunway(summary?.memory_runway_months ?? null, summary?.statuses.memory ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
           status={summary?.statuses.memory ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.memory ?? 'insufficient_data')}
+          detail={summary?.statuses.memory === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.storageRunway')}
-          value={formatRunway(summary?.storage_runway_months ?? null, t('cap.months'), t('cap.insufficientHistory'))}
+          value={formatRunway(summary?.storage_runway_months ?? null, summary?.statuses.storage ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
           status={summary?.statuses.storage ?? 'insufficient_data'}
           statusLabel={statusLabel(summary?.statuses.storage ?? 'insufficient_data')}
+          detail={summary?.statuses.storage === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.riskScore')}

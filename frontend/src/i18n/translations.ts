@@ -270,6 +270,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cap.status.critical': 'Critical',
     'cap.status.warning': 'Warning',
     'cap.status.healthy': 'Healthy',
+    'cap.status.stable': 'Stable',
+    'cap.runway.stable': 'Stable',
+    'cap.runway.stableDetail': 'No upward trend',
     'cap.insufficientData': 'Insufficient data',
     'cap.learningPeriod': 'Learning period',
     'cap.learningPeriodDesc':
@@ -1338,6 +1341,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'cap.status.critical': 'حرج',
     'cap.status.warning': 'تحذير',
     'cap.status.healthy': 'سليم',
+    'cap.status.stable': 'مستقر',
+    'cap.runway.stable': 'مستقر',
+    'cap.runway.stableDetail': 'لا يوجد اتجاه تصاعدي',
     'cap.insufficientData': 'بيانات غير كافية',
     'cap.learningPeriod': 'فترة التعلّم',
     'cap.learningPeriodDesc':

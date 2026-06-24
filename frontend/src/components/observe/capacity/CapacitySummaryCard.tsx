@@ -12,6 +12,7 @@ const statusClass: Record<CapacityStatus, string> = {
   critical: 'border-rose-500/30 bg-rose-500/15 text-rose-200',
   warning: 'border-amber-500/30 bg-amber-500/15 text-amber-200',
   healthy: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-200',
+  stable: 'border-sky-500/30 bg-sky-500/15 text-sky-200',
   insufficient_data: 'border-white/15 bg-white/5 text-white/50',
 }
 
