@@ -44,4 +44,23 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Knowledge Graph Layer (QCIF Sprint 7)
+    |--------------------------------------------------------------------------
+    | Deterministic, read-only, UUID-only intra-framework graph navigation. NO AI
+    | execution. Caching reuses the revision-keyed corpus cache; only the rate
+    | limit is configured here.
+    */
+    'graph' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_GRAPH_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];

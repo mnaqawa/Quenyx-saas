@@ -225,4 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 6 — AI Consumption Contract Layer (no AI execution) — see routes/compliance-ai-context.php
     require base_path('routes/compliance-ai-context.php');
+
+    // QCIF Sprint 7 — Compliance Knowledge Graph Layer (no AI execution) — see routes/compliance-graph.php
+    require base_path('routes/compliance-graph.php');
 });
