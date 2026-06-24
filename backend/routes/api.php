@@ -231,4 +231,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 8 — Cross-Framework Mapping Foundation (no AI execution) — see routes/compliance-mappings.php
     require base_path('routes/compliance-mappings.php');
+
+    // QCIF Sprint 9 — AI Orchestration Platform (mocked unless AI explicitly enabled) — see routes/ai-orchestration.php
+    require base_path('routes/ai-orchestration.php');
 });

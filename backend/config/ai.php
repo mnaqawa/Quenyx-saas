@@ -1,56 +1,81 @@
 <?php
 
+use App\Services\Ai\Providers\MockAiProvider;
+use App\Services\Ai\Providers\OpenAiProvider;
+
+/*
+|--------------------------------------------------------------------------
+| QCIF Sprint 9 — AI Orchestration Platform
+|--------------------------------------------------------------------------
+| Infrastructure-only configuration for the AI orchestration platform. No
+| business AI logic is configured here. AI execution is OFF by default and is
+| gated behind feature flags. Models are NEVER hardcoded — they come from env.
+*/
+
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | AI Agent master switch
-    |--------------------------------------------------------------------------
-    | When false, all AI endpoints return 503 (service disabled). This lets you
-    | ship the feature dark and turn it on once a provider key is configured.
-    */
-    'enabled' => (bool) env('AI_ENABLED', false),
 
     /*
-    |--------------------------------------------------------------------------
-    | LLM provider (OpenAI-compatible Chat Completions API)
-    |--------------------------------------------------------------------------
-    | base_url must point at an OpenAI-compatible endpoint root (no trailing
-    | /chat/completions). Works with OpenAI, OpenRouter, Azure-compatible
-    | gateways, Together, Groq, or a self-hosted vLLM/Ollama proxy.
+    | Default provider key. Resolved by AiProviderRegistry. Defaults to the mock
+    | provider so nothing reaches a real model unless explicitly configured.
     */
-    'provider' => env('AI_PROVIDER', 'openai'),
-    'base_url' => rtrim(env('AI_BASE_URL', 'https://api.openai.com/v1'), '/'),
-    'api_key' => env('AI_API_KEY'),
-    'model' => env('AI_MODEL', 'gpt-4o-mini'),
+    'default' => env('AI_PROVIDER', 'mock'),
 
     /*
-    |--------------------------------------------------------------------------
-    | Generation parameters
-    |--------------------------------------------------------------------------
+    | Feature flags. Until 'enabled' is true, the orchestration API returns mocked
+    | responses and no real provider is invoked.
     */
-    'temperature' => (float) env('AI_TEMPERATURE', 0.3),
-    'max_tokens' => (int) env('AI_MAX_TOKENS', 900),
-    'timeout' => (int) env('AI_TIMEOUT', 60),
+    'feature_flags' => [
+        'enabled' => (bool) env('AI_ENABLED', false),
+        'streaming_enabled' => (bool) env('AI_STREAMING_ENABLED', false),
+        'persist_conversations' => (bool) env('AI_PERSIST_CONVERSATIONS', false),
+        // When false, user/assistant prompt CONTENT is never written to storage.
+        'prompt_logging' => (bool) env('AI_PROMPT_LOGGING', false),
+    ],
 
     /*
-    |--------------------------------------------------------------------------
-    | Conversation / context limits (guardrails)
-    |--------------------------------------------------------------------------
-    | history_limit: max prior turns accepted from the client per request.
-    | message_max_chars: max length of a single user message.
-    | context_* : how much real telemetry we summarize into the system prompt.
+    | Generation defaults applied when a request omits them. No model here.
     */
-    'history_limit' => (int) env('AI_HISTORY_LIMIT', 12),
-    'message_max_chars' => (int) env('AI_MESSAGE_MAX_CHARS', 4000),
-    'context_max_hosts' => (int) env('AI_CONTEXT_MAX_HOSTS', 25),
-    'context_metric_chars' => (int) env('AI_CONTEXT_METRIC_CHARS', 1500),
+    'defaults' => [
+        'temperature' => (float) env('AI_TEMPERATURE', 0.0),
+        'max_tokens' => (int) env('AI_MAX_TOKENS', 1024),
+        'timeout' => (int) env('AI_TIMEOUT', 30),
+    ],
 
     /*
-    |--------------------------------------------------------------------------
-    | Module gating
-    |--------------------------------------------------------------------------
-    | The workspace must have access to this module for the AI agent to run.
-    | QynSight is the observability module the AI agent belongs to.
+    | Provider registry. Each entry maps a provider key to its implementing class
+    | plus provider-specific config. Implemented today: mock, openai. The remaining
+    | keys are FUTURE providers — declared here for discovery but intentionally not
+    | implemented; selecting one throws until a class is provided.
     */
-    'required_module' => env('AI_REQUIRED_MODULE', 'qynsight'),
+    'providers' => [
+
+        'mock' => [
+            'class' => MockAiProvider::class,
+        ],
+
+        'openai' => [
+            'class' => OpenAiProvider::class,
+            'api_key' => env('OPENAI_API_KEY'),
+            'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+            'organization' => env('OPENAI_ORGANIZATION'),
+            // Models come from env only — never hardcoded.
+            'model' => env('OPENAI_MODEL'),
+            'embeddings_model' => env('OPENAI_EMBEDDINGS_MODEL'),
+        ],
+
+        // Future providers (declared, not implemented in Sprint 9):
+        // 'azure'  => ['class' => null],
+        // 'claude' => ['class' => null],
+        // 'gemini' => ['class' => null],
+        // 'ollama' => ['class' => null],
+        // 'local'  => ['class' => null],
+    ],
+
+    'rate_limits' => [
+        'chat' => [
+            'max_attempts' => (int) env('AI_CHAT_RATE_LIMIT', 30),
+            'decay_minutes' => 1,
+        ],
+    ],
+
 ];
