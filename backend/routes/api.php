@@ -237,4 +237,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 11 — Evidence Intelligence Foundation (read-only, no AI execution) — see routes/compliance-evidence.php
     require base_path('routes/compliance-evidence.php');
+
+    // QCIF Sprint 12 — Gap Assessment & Evidence Correlation Engine (read-only, deterministic, no AI) — see routes/compliance-gap.php
+    require base_path('routes/compliance-gap.php');
 });

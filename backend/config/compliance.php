@@ -101,4 +101,24 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Gap Assessment & Evidence Correlation Engine (QCIF Sprint 12)
+    |--------------------------------------------------------------------------
+    | The first deterministic Compliance Intelligence Engine. Read-only,
+    | UUID-only, workspace scoped, fully explainable. NO AI execution, NO
+    | probabilistic scoring. Caching reuses the revision-keyed corpus cache plus
+    | a workspace evidence fingerprint; only the rate limit is configured here.
+    */
+    'gap' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_GAP_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];

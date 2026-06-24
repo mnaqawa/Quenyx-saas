@@ -64,6 +64,22 @@ class EvidenceNormalizationService
     }
 
     /**
+     * Retrieve ALL workspace evidence (no UI cap) with relationships eager-loaded, for the
+     * deterministic correlation engine (QCIF Sprint 12). Applicability is decided by corpus id
+     * membership downstream, so no framework/release filter is applied here. No AI, no file access.
+     *
+     * @return Collection<int, ComplianceEvidence>
+     */
+    public function correlationEvidence(int $projectId): Collection
+    {
+        return ComplianceEvidence::query()
+            ->where('project_id', $projectId)
+            ->with(['relationships'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
      * Normalize one evidence record into a UUID-only node (no numeric ids exposed).
      *
      * @return array<string, mixed>
