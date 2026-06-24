@@ -22,4 +22,26 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI Consumption Contract Layer (QCIF Sprint 6)
+    |--------------------------------------------------------------------------
+    | Deterministic, read-only AI-ready payloads. NO AI execution. Caching reuses
+    | the revision-keyed corpus cache; only the rate limits are configured here.
+    */
+    'ai_context' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_AI_CONTEXT_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+            'search' => [
+                'max_attempts' => (int) env('COMPLIANCE_AI_CONTEXT_SEARCH_RATE_LIMIT', 30),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];

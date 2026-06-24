@@ -222,4 +222,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Compliance Intelligence Layer — see routes/compliance-corpus.php
     require base_path('routes/compliance-corpus.php');
+
+    // QCIF Sprint 6 — AI Consumption Contract Layer (no AI execution) — see routes/compliance-ai-context.php
+    require base_path('routes/compliance-ai-context.php');
 });
