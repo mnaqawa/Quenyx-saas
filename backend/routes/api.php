@@ -240,4 +240,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 12 — Gap Assessment & Evidence Correlation Engine (read-only, deterministic, no AI) — see routes/compliance-gap.php
     require base_path('routes/compliance-gap.php');
+
+    // QCIF Sprint 13 — Recommendation Engine (deterministic, rule-based, no AI) — see routes/compliance-recommendations.php
+    require base_path('routes/compliance-recommendations.php');
 });

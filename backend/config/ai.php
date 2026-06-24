@@ -7,6 +7,7 @@ use App\Services\Ai\Skills\EvidenceSkill;
 use App\Services\Ai\Skills\FrameworkMappingSkill;
 use App\Services\Ai\Skills\GapAssessmentSkill;
 use App\Services\Ai\Skills\KnowledgeGraphSkill;
+use App\Services\Ai\Skills\RecommendationSkill;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,9 +112,14 @@ return [
                 'priority' => 60,
                 'enabled' => (bool) env('AI_SKILL_GAP_ASSESSMENT_ENABLED', true),
             ],
+            'recommendation' => [
+                'class' => RecommendationSkill::class,
+                'priority' => 50,
+                'enabled' => (bool) env('AI_SKILL_RECOMMENDATION_ENABLED', true),
+            ],
 
             // Future skills (later sprints — NOT implemented here):
-            // 'recommendation'  => RecommendationSkill::class,
+            // 'copilot'  => ComplianceCopilotSkill::class,
         ],
     ],
 

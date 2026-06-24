@@ -121,4 +121,24 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Recommendation Engine (QCIF Sprint 13)
+    |--------------------------------------------------------------------------
+    | Deterministic, rule-based remediation recommendations grounded in gap
+    | findings. UUID-only, workspace scoped, fully explainable. NO LLM, NO RAG,
+    | NO probabilistic scoring. GET endpoints reuse the revision-keyed corpus
+    | cache plus a workspace evidence fingerprint; only the rate limit is here.
+    */
+    'recommendations' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_RECOMMENDATION_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];
