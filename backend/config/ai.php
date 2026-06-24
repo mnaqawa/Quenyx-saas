@@ -2,6 +2,9 @@
 
 use App\Services\Ai\Providers\MockAiProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\Ai\Skills\CorpusSearchSkill;
+use App\Services\Ai\Skills\FrameworkMappingSkill;
+use App\Services\Ai\Skills\KnowledgeGraphSkill;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,9 +74,46 @@ return [
         // 'local'  => ['class' => null],
     ],
 
+    /*
+    | QCIF Sprint 10 — AI Skills Framework. The execution layer between the orchestrator and the
+    | Compliance Intelligence services. Skills reuse existing services and return AI Context
+    | payloads — they make NO AI/provider calls. Each skill is feature-flagged and prioritized
+    | (higher priority is preferred during auto-routing).
+    */
+    'skills' => [
+        'enabled' => (bool) env('AI_SKILLS_ENABLED', true),
+
+        'registered' => [
+            'corpus_search' => [
+                'class' => CorpusSearchSkill::class,
+                'priority' => 100,
+                'enabled' => (bool) env('AI_SKILL_CORPUS_SEARCH_ENABLED', true),
+            ],
+            'knowledge_graph' => [
+                'class' => KnowledgeGraphSkill::class,
+                'priority' => 90,
+                'enabled' => (bool) env('AI_SKILL_KNOWLEDGE_GRAPH_ENABLED', true),
+            ],
+            'framework_mapping' => [
+                'class' => FrameworkMappingSkill::class,
+                'priority' => 80,
+                'enabled' => (bool) env('AI_SKILL_FRAMEWORK_MAPPING_ENABLED', true),
+            ],
+
+            // Future skills (later sprints — NOT implemented here):
+            // 'evidence'        => EvidenceSkill::class,
+            // 'gap_assessment'  => GapAssessmentSkill::class,
+            // 'recommendation'  => RecommendationSkill::class,
+        ],
+    ],
+
     'rate_limits' => [
         'chat' => [
             'max_attempts' => (int) env('AI_CHAT_RATE_LIMIT', 30),
+            'decay_minutes' => 1,
+        ],
+        'skills' => [
+            'max_attempts' => (int) env('AI_SKILLS_RATE_LIMIT', 60),
             'decay_minutes' => 1,
         ],
     ],

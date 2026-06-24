@@ -3,17 +3,76 @@
 namespace App\Services\Ai;
 
 use App\DataTransferObjects\Ai\AiPrompt;
+use App\DataTransferObjects\Ai\AiSkillResponse;
 
 /**
- * Assembles a grounded prompt from an AI Context payload (produced by the Sprint 6 AI
- * Consumption Contract Layer) plus a user question.
+ * Assembles a grounded prompt from compliance context plus a user question. It accepts EITHER a
+ * single AI Context payload (Sprint 6 contract envelope) OR — as of Sprint 10 — multiple
+ * SkillResponses produced by the AI Skills Framework, and composes them into one prompt.
  *
  * STRICT boundaries: this class performs NO corpus querying and NO database access. It only
- * transforms the already-assembled, already-cited context array it is handed into a system
- * prompt + user prompt, embedding the citations and guardrails so any provider honors them.
+ * transforms the already-assembled, already-cited data it is handed into a system prompt + user
+ * prompt, embedding the citations and guardrails so any provider honors them.
  */
 class CompliancePromptOrchestrator
 {
+    /**
+     * Compose a single prompt from multiple skill responses. Only successful results contribute
+     * context; their citations are merged (de-duplicated) and their guardrails unioned. Still
+     * performs no corpus/DB access — it consumes the data the skills already produced.
+     *
+     * @param  list<AiSkillResponse>  $skillResponses
+     * @param  array<string, mixed>  $options
+     */
+    public function composeFromSkills(array $skillResponses, string $userPrompt, array $options = []): AiPrompt
+    {
+        $contextBlocks = [];
+        $citations = [];
+        $guardrails = [];
+        $contributing = [];
+        $citationSeen = [];
+
+        foreach ($skillResponses as $response) {
+            if (! $response->success || $response->result === null) {
+                continue;
+            }
+
+            $result = $response->result;
+            $contributing[] = $result->skillKey;
+            $contextBlocks[] = [
+                'skill' => $result->skillKey,
+                'context_type' => $result->contextType,
+                'payload' => $result->payload,
+            ];
+
+            foreach ($result->citations as $citation) {
+                $key = json_encode($citation);
+                if (! isset($citationSeen[$key])) {
+                    $citationSeen[$key] = true;
+                    $citations[] = $citation;
+                }
+            }
+
+            foreach ($result->guardrails as $name => $enabled) {
+                $guardrails[$name] = ($guardrails[$name] ?? false) || (bool) $enabled;
+            }
+        }
+
+        $systemPrompt = $this->buildMultiSkillSystemPrompt($contextBlocks, $citations, $guardrails, $options);
+
+        return new AiPrompt(
+            systemPrompt: $systemPrompt,
+            userPrompt: trim($userPrompt),
+            citations: $citations,
+            guardrails: $guardrails,
+            metadata: [
+                'skills' => $contributing,
+                'skill_count' => count($contributing),
+                'citation_count' => count($citations),
+            ],
+        );
+    }
+
     /**
      * @param  array<string, mixed>  $aiContext  AI Contract Layer envelope (context_type, payload, citations, guardrails, ...)
      * @param  array<string, mixed>  $options
@@ -36,6 +95,42 @@ class CompliancePromptOrchestrator
                 'citation_count' => count($citations),
             ],
         );
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $contextBlocks
+     * @param  list<array<string, mixed>>  $citations
+     * @param  array<string, bool>  $guardrails
+     * @param  array<string, mixed>  $options
+     */
+    private function buildMultiSkillSystemPrompt(array $contextBlocks, array $citations, array $guardrails, array $options): string
+    {
+        $lines = [];
+        $lines[] = (string) ($options['role_preamble']
+            ?? 'You are a compliance assistant for the Quenyx QynShield platform. You answer strictly from the provided official compliance context.');
+        $lines[] = '';
+        $lines[] = 'GUARDRAILS (must be honored):';
+        foreach ($this->guardrailDirectives($guardrails) as $directive) {
+            $lines[] = '- '.$directive;
+        }
+        $lines[] = '';
+
+        if ($contextBlocks === []) {
+            $lines[] = 'PROVIDED CONTEXT: (none — if so, state that you cannot answer without context).';
+        } else {
+            $lines[] = 'PROVIDED CONTEXT (from '.count($contextBlocks).' skill(s); the only source of truth — do not use outside knowledge):';
+            foreach ($contextBlocks as $index => $block) {
+                $lines[] = '';
+                $lines[] = sprintf('--- CONTEXT %d | skill: %s | type: %s ---', $index + 1, $block['skill'], $block['context_type'] ?? 'n/a');
+                $lines[] = $this->encode($block['payload']);
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = 'CITATIONS (cite these by source_document_key / official_reference for every claim):';
+        $lines[] = $citations === [] ? '(none provided — if so, state that you cannot answer without citations)' : $this->encode($citations);
+
+        return implode("\n", $lines);
     }
 
     /**

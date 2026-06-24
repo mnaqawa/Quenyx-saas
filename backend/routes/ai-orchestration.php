@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Ai\AiOrchestrationController;
+use App\Http\Controllers\Ai\AiSkillController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +21,14 @@ $registerWorkspaceAiRoutes = function (string $projectPrefix): void {
         ->group(function () {
             Route::post('/chat', [AiOrchestrationController::class, 'chat']);
             Route::post('/stream', [AiOrchestrationController::class, 'stream']);
+        });
+
+    // QCIF Sprint 10 — AI Skills Framework (execution layer; returns SkillResponse only, no AI).
+    Route::prefix("{$projectPrefix}/{project}/ai/skills")
+        ->middleware(['project.qynshield', 'throttle:ai-skills'])
+        ->group(function () {
+            Route::get('/', [AiSkillController::class, 'skills']);
+            Route::post('/execute', [AiSkillController::class, 'execute']);
         });
 };
 
