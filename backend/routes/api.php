@@ -234,4 +234,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 9 — AI Orchestration Platform (mocked unless AI explicitly enabled) — see routes/ai-orchestration.php
     require base_path('routes/ai-orchestration.php');
+
+    // QCIF Sprint 11 — Evidence Intelligence Foundation (read-only, no AI execution) — see routes/compliance-evidence.php
+    require base_path('routes/compliance-evidence.php');
 });

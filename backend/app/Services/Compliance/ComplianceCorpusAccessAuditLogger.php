@@ -122,4 +122,35 @@ class ComplianceCorpusAccessAuditLogger
             'timestamp' => now(),
         ]);
     }
+
+    /**
+     * Audit access to the Evidence Intelligence Foundation (read-only tenant evidence context,
+     * no AI execution). Captures the requested evidence context type. Never logs evidence
+     * content — only the access event.
+     */
+    public function logEvidence(
+        User $user,
+        Project $project,
+        string $contextType,
+        string $endpoint,
+        ?string $framework = null,
+        ?string $release = null,
+    ): void {
+        if (! Schema::hasTable('audit_logs')) {
+            return;
+        }
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'action' => 'compliance_evidence_access',
+            'metadata' => array_filter([
+                'context_type' => $contextType,
+                'framework' => $framework,
+                'release' => $release,
+                'endpoint' => $endpoint,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'timestamp' => now(),
+        ]);
+    }
 }

@@ -82,4 +82,23 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Evidence Intelligence Foundation (QCIF Sprint 11)
+    |--------------------------------------------------------------------------
+    | Tenant evidence as a first-class object. Read-only, UUID-only, workspace
+    | scoped. NO AI execution, no uploads/blob/OCR. Only the rate limit is
+    | configured here.
+    */
+    'evidence' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_EVIDENCE_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];

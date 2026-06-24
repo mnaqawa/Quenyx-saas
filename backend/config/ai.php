@@ -3,6 +3,7 @@
 use App\Services\Ai\Providers\MockAiProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
 use App\Services\Ai\Skills\CorpusSearchSkill;
+use App\Services\Ai\Skills\EvidenceSkill;
 use App\Services\Ai\Skills\FrameworkMappingSkill;
 use App\Services\Ai\Skills\KnowledgeGraphSkill;
 
@@ -99,9 +100,13 @@ return [
                 'priority' => 80,
                 'enabled' => (bool) env('AI_SKILL_FRAMEWORK_MAPPING_ENABLED', true),
             ],
+            'evidence' => [
+                'class' => EvidenceSkill::class,
+                'priority' => 70,
+                'enabled' => (bool) env('AI_SKILL_EVIDENCE_ENABLED', true),
+            ],
 
             // Future skills (later sprints — NOT implemented here):
-            // 'evidence'        => EvidenceSkill::class,
             // 'gap_assessment'  => GapAssessmentSkill::class,
             // 'recommendation'  => RecommendationSkill::class,
         ],
