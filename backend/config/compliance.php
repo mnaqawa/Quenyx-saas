@@ -63,4 +63,23 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cross-Framework Mapping Foundation (QCIF Sprint 8)
+    |--------------------------------------------------------------------------
+    | Deterministic, read-only, UUID-only objective-based mappings. NO AI
+    | execution. Caching reuses the revision-keyed corpus cache; only the rate
+    | limit is configured here.
+    */
+    'mappings' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_MAPPING_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];

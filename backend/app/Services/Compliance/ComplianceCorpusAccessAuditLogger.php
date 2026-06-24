@@ -92,4 +92,34 @@ class ComplianceCorpusAccessAuditLogger
             'timestamp' => now(),
         ]);
     }
+
+    /**
+     * Audit access to the Cross-Framework Mapping Foundation (deterministic objective-based
+     * mappings, no AI execution). Captures the requested mapping context type.
+     */
+    public function logMapping(
+        User $user,
+        Project $project,
+        string $contextType,
+        string $endpoint,
+        ?string $framework = null,
+        ?string $release = null,
+    ): void {
+        if (! Schema::hasTable('audit_logs')) {
+            return;
+        }
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'action' => 'compliance_mapping_access',
+            'metadata' => array_filter([
+                'context_type' => $contextType,
+                'framework' => $framework,
+                'release' => $release,
+                'endpoint' => $endpoint,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'timestamp' => now(),
+        ]);
+    }
 }

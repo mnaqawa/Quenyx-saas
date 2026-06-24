@@ -59,6 +59,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('compliance-mapping-read', function (Request $request) {
+            $max = (int) config('compliance.mappings.rate_limits.read.max_attempts', 120);
+
+            return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

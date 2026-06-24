@@ -228,4 +228,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 7 — Compliance Knowledge Graph Layer (no AI execution) — see routes/compliance-graph.php
     require base_path('routes/compliance-graph.php');
+
+    // QCIF Sprint 8 — Cross-Framework Mapping Foundation (no AI execution) — see routes/compliance-mappings.php
+    require base_path('routes/compliance-mappings.php');
 });
