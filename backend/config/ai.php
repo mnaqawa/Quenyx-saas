@@ -73,6 +73,12 @@ return [
         // context package that is appended to the prompt. OFF by default; the Sprint 16 flow is
         // unchanged when disabled. Requires rag.enabled to actually consult a vector provider.
         'rag_enabled' => (bool) env('AI_COPILOT_RAG_ENABLED', false),
+
+        // QCIF Sprint 18: demo mode surfaces the deterministic BUSINESS reasoning behind an answer —
+        // reasoning trace, citations, retrieved chunks, recommendation sources, and evidence chain —
+        // in a single `demo` block. It exposes existing intelligence only; it is NOT chain-of-thought
+        // and adds NO new reasoning. OFF by default.
+        'demo_mode' => (bool) env('AI_COPILOT_DEMO_MODE', false),
     ],
 
     /*

@@ -30,6 +30,26 @@ class ComplianceReasoningRuleSet
     public const SEVERITY_INFO = 'info';
 
     /**
+     * Deterministic catalog of the business rules this engine can fire (QCIF Sprint 16). Exposed for
+     * explainability / platform metrics (QCIF Sprint 18) — this is documentation of the existing
+     * intelligence, not new logic.
+     *
+     * @return list<array{id: string, summary_en: string}>
+     */
+    public static function catalog(): array
+    {
+        return [
+            ['id' => 'R-EVIDENCE-MISSING', 'summary_en' => 'No evidence recorded for a mandatory requirement ⇒ missing-evidence finding + collect-evidence recommendation.'],
+            ['id' => 'R-GAP-OPEN', 'summary_en' => 'Open compliance gaps exist ⇒ open-gaps finding + remediate-gaps recommendation.'],
+            ['id' => 'R-COMPLIANT', 'summary_en' => 'All assessed requirements satisfied with no open gaps ⇒ compliant finding.'],
+            ['id' => 'R-RECO-CRITICAL', 'summary_en' => 'Critical remediation actions pending ⇒ critical finding + address-critical recommendation.'],
+            ['id' => 'R-RECO-HIGH', 'summary_en' => 'High-priority remediation actions pending ⇒ high finding + schedule-high recommendation.'],
+            ['id' => 'R-CORPUS-CITATIONS-MISSING', 'summary_en' => 'A citation-required decision has no corpus citations ⇒ missing-information (fail closed).'],
+            ['id' => 'R-NO-DATA', 'summary_en' => 'No deterministic skill data available ⇒ missing-information (nothing to reason over).'],
+        ];
+    }
+
+    /**
      * @return array{findings: list<ReasoningFinding>, recommendations: list<ReasoningRecommendation>, missing: list<array<string, mixed>>, applied: list<string>, warnings: list<string>}
      */
     public function apply(ComplianceReasoningContext $context, ComplianceReasoningDecision $decision): array

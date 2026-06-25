@@ -164,6 +164,9 @@ class ComplianceCopilotService
             'reasoning' => $reasoning->toArray(),
             'retrieval_context' => (bool) config('ai.copilot.retrieval_enabled', false) ? $retrievalResult->toCopilotContext() : null,
             'rag_context' => $ragContext,
+            'demo' => $this->demoMode()
+                ? $this->buildDemoBlock($reasoning, $retrievalResult, $groundingRefs, $corpusCitations, $responses)
+                : null,
             'usage' => $answer['usage']->toArray(),
             'mocked' => $answer['mocked'],
             'plain_answer' => trim($answer['answer_en']."\n".$answer['answer_ar']),
@@ -216,6 +219,45 @@ class ComplianceCopilotService
     private function ragEnabled(): bool
     {
         return (bool) config('ai.copilot.rag_enabled', false);
+    }
+
+    private function demoMode(): bool
+    {
+        return (bool) config('ai.copilot.demo_mode', false);
+    }
+
+    /**
+     * QCIF Sprint 18 — assemble the demonstration block exposing the deterministic BUSINESS reasoning
+     * behind the answer. This surfaces EXISTING intelligence only (reasoning trace, citations,
+     * retrieved chunks, recommendation sources, evidence chain). It is NOT chain-of-thought.
+     *
+     * @param  \App\DataTransferObjects\Compliance\Reasoning\ReasoningOutput  $reasoning
+     * @param  RetrievalResult  $retrievalResult
+     * @param  list<array<string, mixed>>  $groundingRefs
+     * @param  list<array<string, mixed>>  $corpusCitations
+     * @param  list<AiSkillResponse>  $responses
+     * @return array<string, mixed>
+     */
+    private function buildDemoBlock($reasoning, $retrievalResult, array $groundingRefs, array $corpusCitations, array $responses): array
+    {
+        return [
+            'reasoning_trace' => $reasoning->trace->toArray(),
+            'rules_fired' => $reasoning->explanation->appliedRuleIds,
+            'findings' => array_map(static fn ($f) => $f->toArray(), $reasoning->findings),
+            'recommendation_source' => array_map(static fn ($r) => [
+                'uuid' => $r->uuid,
+                'rule_id' => $r->ruleId,
+                'action' => $r->action,
+                'priority' => $r->priority,
+                'citations' => $r->citations,
+            ], $reasoning->recommendations),
+            'citations' => $this->mergeCitations($corpusCitations, $groundingRefs),
+            'retrieved_chunks' => array_map(static fn ($c) => $c->toArray(), $retrievalResult->chunks),
+            'evidence_chain' => $groundingRefs,
+            'missing_information' => $reasoning->missingInformation,
+            'answer_strategy' => $reasoning->answerStrategy(),
+            'disclaimer' => 'Business reasoning only — deterministic, rule-based, and citation-grounded. Not chain-of-thought.',
+        ];
     }
 
     // -------------------------------------------------------------------------

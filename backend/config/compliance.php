@@ -183,4 +183,30 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Executive Demonstration Platform (QCIF Sprint 18)
+    |--------------------------------------------------------------------------
+    | Read-only executive/investor/customer demonstration surface. It aggregates
+    | and exposes the intelligence already built by the QCIF engines — NO new
+    | intelligence, NO fabricated data, NO AI required. UUID-only, deterministic,
+    | workspace scoped. Only the rate limit is configured here.
+    */
+    'executive' => [
+
+        'rate_limits' => [
+            'read' => [
+                'max_attempts' => (int) env('COMPLIANCE_EXECUTIVE_READ_RATE_LIMIT', 120),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+        /** Default number of recent items returned in the timeline / recent-activity feeds. */
+        'timeline_limit' => (int) env('COMPLIANCE_EXECUTIVE_TIMELINE_LIMIT', 50),
+
+        /** Number of historical gap assessments used to build scorecard trends. */
+        'trend_window' => (int) env('COMPLIANCE_EXECUTIVE_TREND_WINDOW', 12),
+
+    ],
+
 ];

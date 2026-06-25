@@ -107,6 +107,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('compliance-executive', function (Request $request) {
+            $max = (int) config('compliance.executive.rate_limits.read.max_attempts', 120);
+
+            return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
+        });
+
         RateLimiter::for('compliance-recommendation-read', function (Request $request) {
             $max = (int) config('compliance.recommendations.rate_limits.read.max_attempts', 120);
 

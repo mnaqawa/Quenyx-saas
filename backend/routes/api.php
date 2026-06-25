@@ -252,4 +252,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 17 — RAG Runtime (hybrid retrieval + bounded cited context; feature-flagged) — see routes/compliance-rag.php
     require base_path('routes/compliance-rag.php');
+
+    // QCIF Sprint 18 — Executive Demonstration Platform (read-only aggregation of existing intelligence) — see routes/compliance-executive.php
+    require base_path('routes/compliance-executive.php');
 });
