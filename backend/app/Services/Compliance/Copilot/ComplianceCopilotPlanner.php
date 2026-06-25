@@ -12,12 +12,32 @@ use App\Enums\Compliance\Copilot\ComplianceCopilotIntent;
  * query). There is NO LLM, NO probability, and NO open-ended chat: the same message always
  * produces the same plan, and anything that doesn't match is `unsupported_intent`.
  *
- * This service performs NO database access.
+ * Intent classification ({@see classify()}) performs NO database access. Scope attachment
+ * ({@see plan()}) delegates the only DB work to {@see ComplianceCopilotScopeResolver} (the
+ * sanctioned boundary) — the planner itself issues no queries.
  */
 class ComplianceCopilotPlanner
 {
     /** Matches codes like "1-1-1", "2-8-4", "A.5.1", "AC-2". */
     private const CODE_PATTERN = '/\b([0-9]+(?:[-.][0-9]+)+|[A-Za-z]{1,3}[-.][0-9]+(?:[-.][0-9]+)*)\b/';
+
+    public function __construct(
+        private readonly ComplianceCopilotScopeResolver $scopeResolver = new ComplianceCopilotScopeResolver(),
+    ) {}
+
+    /**
+     * Classify a message AND attach the resolved framework/release/revision scope (QCIF Sprint 14.1)
+     * so every selected skill receives scope automatically — even when the caller omits it.
+     *
+     * @return array{intent: ComplianceCopilotIntent, code: ?string, query: ?string, entity_type: string, scope: array<string, mixed>}
+     */
+    public function plan(string $message, ?string $framework = null, ?string $release = null): array
+    {
+        return array_merge(
+            $this->classify($message),
+            ['scope' => $this->scopeResolver->resolve($framework, $release)],
+        );
+    }
 
     /**
      * @return array{intent: ComplianceCopilotIntent, code: ?string, query: ?string, entity_type: string}

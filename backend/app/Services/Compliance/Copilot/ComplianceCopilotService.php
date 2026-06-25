@@ -51,14 +51,20 @@ class ComplianceCopilotService
         $framework = $this->stringOrNull($options['framework'] ?? null);
         $release = $this->stringOrNull($options['release'] ?? null);
 
-        $plan = $this->planner->classify($userMessage);
+        $plan = $this->planner->plan($userMessage, $framework, $release);
         $intent = $plan['intent'];
+        $scope = $plan['scope'];
 
         if (! $intent->isSupported()) {
-            return $this->unsupportedResult();
+            return $this->unsupportedResult($scope);
         }
 
-        $requests = $this->selector->select($plan, $projectId, $framework, $release);
+        // An explicitly-requested framework/release that does not exist fails clearly.
+        if (($scope['error_code'] ?? null) === 'scope_unresolved') {
+            return $this->scopeFailedResult($intent, $scope);
+        }
+
+        $requests = $this->selector->select($plan, $projectId, $scope['framework_key'], $scope['release_code']);
         $responses = $this->router->executeMany($requests);
 
         $prompt = $this->orchestrator->composeFromSkills($responses, $userMessage);
@@ -85,11 +91,11 @@ class ComplianceCopilotService
         );
 
         if (! $citationCheck['ok']) {
-            return $this->citationFailedResult($intent, $mode, $answer['provider'], $responses, $guardrails, $citationCheck['warnings']);
+            return $this->citationFailedResult($intent, $mode, $answer['provider'], $responses, $guardrails, $citationCheck['warnings'], $scope);
         }
 
         $validatorWarnings = $this->validator->validate($guardrails, $answer['answer_en'], $answer['answer_ar'], $mode);
-        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings]));
+        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings, ...$this->scopeWarnings($scope)]));
 
         if ($citationCheck['needs_review']) {
             $warnings[] = 'needs_review';
@@ -106,6 +112,7 @@ class ComplianceCopilotService
             'skill_results' => $this->summarizeSkills($responses),
             'guardrails' => $guardrails,
             'warnings' => $warnings,
+            'scope' => $this->scopeBlock($scope),
             'usage' => $answer['usage']->toArray(),
             'mocked' => $answer['mocked'],
             'plain_answer' => trim($answer['answer_en']."\n".$answer['answer_ar']),
@@ -288,9 +295,10 @@ class ComplianceCopilotService
     // -------------------------------------------------------------------------
 
     /**
+     * @param  array<string, mixed>  $scope
      * @return array<string, mixed>
      */
-    private function unsupportedResult(): array
+    private function unsupportedResult(array $scope): array
     {
         return [
             'intent' => ComplianceCopilotIntent::Unsupported->value,
@@ -302,6 +310,7 @@ class ComplianceCopilotService
             'skill_results' => [],
             'guardrails' => [],
             'warnings' => ['unsupported_intent'],
+            'scope' => $this->scopeBlock($scope),
             'usage' => (new AiUsage())->toArray(),
             'mocked' => true,
             'plain_answer' => 'unsupported_intent',
@@ -309,12 +318,39 @@ class ComplianceCopilotService
     }
 
     /**
+     * Explicit framework/release that does not exist — fail clearly (HTTP 422 at the controller).
+     *
+     * @param  array<string, mixed>  $scope
+     * @return array<string, mixed>
+     */
+    private function scopeFailedResult(ComplianceCopilotIntent $intent, array $scope): array
+    {
+        return [
+            'intent' => $intent->value,
+            'mode' => $this->aiEnabled() ? 'ai' : 'mock',
+            'provider' => null,
+            'answer_en' => '',
+            'answer_ar' => '',
+            'citations' => [],
+            'skill_results' => [],
+            'guardrails' => [],
+            'warnings' => array_values(array_unique([...$this->scopeWarnings($scope), 'scope_unresolved'])),
+            'scope' => $this->scopeBlock($scope),
+            'usage' => (new AiUsage())->toArray(),
+            'mocked' => ! $this->aiEnabled(),
+            'plain_answer' => '',
+            'error_code' => 'scope_unresolved',
+        ];
+    }
+
+    /**
      * @param  list<AiSkillResponse>  $responses
      * @param  array<string, bool>  $guardrails
      * @param  list<string>  $warnings
+     * @param  array<string, mixed>  $scope
      * @return array<string, mixed>
      */
-    private function citationFailedResult(ComplianceCopilotIntent $intent, string $mode, ?string $provider, array $responses, array $guardrails, array $warnings): array
+    private function citationFailedResult(ComplianceCopilotIntent $intent, string $mode, ?string $provider, array $responses, array $guardrails, array $warnings, array $scope): array
     {
         return [
             'intent' => $intent->value,
@@ -325,12 +361,39 @@ class ComplianceCopilotService
             'citations' => [],
             'skill_results' => $this->summarizeSkills($responses),
             'guardrails' => $guardrails,
-            'warnings' => array_values(array_unique([...$warnings, 'citation_validation_failed', 'needs_review'])),
+            'warnings' => array_values(array_unique([...$warnings, ...$this->scopeWarnings($scope), 'citation_validation_failed', 'needs_review'])),
+            'scope' => $this->scopeBlock($scope),
             'usage' => (new AiUsage())->toArray(),
             'mocked' => $mode === 'mock',
             'plain_answer' => '',
             'error_code' => 'citation_validation_failed',
         ];
+    }
+
+    /**
+     * The response-contract scope block (QCIF Sprint 14.1).
+     *
+     * @param  array<string, mixed>  $scope
+     * @return array<string, mixed>
+     */
+    private function scopeBlock(array $scope): array
+    {
+        return [
+            'framework_key' => $scope['framework_key'] ?? null,
+            'release_code' => $scope['release_code'] ?? null,
+            'revision_uuid' => $scope['revision_uuid'] ?? null,
+            'source' => $scope['source'] ?? 'unresolved',
+            'warnings' => array_values($scope['warnings'] ?? []),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $scope
+     * @return list<string>
+     */
+    private function scopeWarnings(array $scope): array
+    {
+        return array_values($scope['warnings'] ?? []);
     }
 
     // -------------------------------------------------------------------------

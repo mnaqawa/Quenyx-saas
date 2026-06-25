@@ -62,8 +62,53 @@ citations.
 | `ComplianceCopilotResponseValidator` | Emits guardrail warnings (bilingual, disclaimer, empty) | No |
 | `ComplianceCopilotCitationVerifier` | Enforces "no citation, no answer"; flags AI drift | No |
 | `ComplianceCopilotSessionService` | Conversation/session state via `AiConversationRepository` | Only via repository boundary |
+| `ComplianceCopilotScopeResolver` *(Sprint 14.1)* | Resolves framework/release/revision scope | **Yes — the ONLY Copilot DB boundary** |
 
 ---
+
+## 1a. Scope resolver & default scope (Sprint 14.1)
+
+Corpus/graph/mapping skills require a `framework` + `release`. To make the Copilot demo-ready,
+`ComplianceCopilotScopeResolver` resolves scope automatically. It is the **only** Copilot service
+permitted to touch the database; the core stays DB-free and receives the resolved scope via the
+planner's `plan()` method.
+
+**Resolution order:**
+
+1. **Explicit** `framework` + `release` on the request → validated (`source = explicit`). An
+   explicit but **invalid** scope fails clearly with HTTP 422 + `scope_unresolved`.
+2. **Configured default** — NCA **ECC-2:2024** (`config('ai.copilot.default_scope')`, keys
+   `nca-ecc` / `2:2024`) if it exists (`source = defaulted`, warning `default_scope_used`).
+3. **Primary** — the single framework release with an active corpus revision (`source = defaulted`).
+4. **Unresolved** — engine intents still work; corpus/graph/mapping intents fail closed honestly
+   (no fabricated answer).
+
+The resolved scope is attached to the plan and passed to **every** selected skill, and is surfaced
+in the response `scope` block. Config:
+
+```php
+'copilot' => [
+    'default_scope' => [
+        'framework' => env('COPILOT_DEFAULT_FRAMEWORK', 'nca-ecc'),
+        'release' => env('COPILOT_DEFAULT_RELEASE', '2:2024'),
+    ],
+],
+```
+
+The `scope` block (added to the response contract):
+
+```json
+"scope": {
+  "framework_key": "nca-ecc",
+  "release_code": "2:2024",
+  "revision_uuid": "…",
+  "source": "explicit | defaulted | invalid | unresolved",
+  "warnings": ["default_scope_used"]
+}
+```
+
+When scope is defaulted, `default_scope_used` appears in both `scope.warnings` and the top-level
+`warnings`.
 
 ## 2. Intent model (deterministic)
 
@@ -237,6 +282,17 @@ chatbot · direct OpenAI/provider SDK calls · any open-ended/general-purpose qu
 database query inside the Copilot services.
 
 ---
+
+## 8a. Demo readiness & current limitations (Sprint 14.1)
+
+- **Demo-ready:** the five demo prompts work **without** passing framework/release — scope
+  auto-resolves to NCA ECC-2:2024. See `docs/QCIF_COPILOT_DEMO_SCRIPT_V1.md`.
+- **Honest degradation:** corpus/graph/mapping answers depend on what is imported into the corpus;
+  if a referenced control is not seeded, the Copilot fails closed instead of inventing an answer.
+- **Clear failures:** an explicit, invalid `framework`/`release` returns HTTP 422 with
+  `scope_unresolved` (not a silent default).
+- **Limitations:** backend/API only (no UI); closed 5-intent set; AI-mode Arabic only when the model
+  returns it; single-release scope per turn; no RAG/vector/OCR/upload/auto-remediation.
 
 ## 9. Future UI integration
 

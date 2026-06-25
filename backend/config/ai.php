@@ -48,6 +48,14 @@ return [
         'enabled' => (bool) env('COPILOT_ENABLED', true),
         'persist_conversations' => (bool) env('AI_CONVERSATION_PERSISTENCE_ENABLED', env('AI_PERSIST_CONVERSATIONS', false)),
         'prompt_logging' => (bool) env('AI_PROMPT_LOGGING_ENABLED', env('AI_PROMPT_LOGGING', false)),
+
+        // Safe default scope (QCIF Sprint 14.1) used when a request omits framework/release so
+        // corpus/graph/mapping intents work in demos without manual scoping. Resolved ONLY by
+        // ComplianceCopilotScopeResolver (the sanctioned DB boundary) — never by Copilot core.
+        'default_scope' => [
+            'framework' => env('COPILOT_DEFAULT_FRAMEWORK', 'nca-ecc'),
+            'release' => env('COPILOT_DEFAULT_RELEASE', '2:2024'),
+        ],
     ],
 
     /*

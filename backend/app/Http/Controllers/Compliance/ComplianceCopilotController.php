@@ -125,8 +125,11 @@ class ComplianceCopilotController extends Controller
             );
         }
 
+        $errorCode = $result['error_code'] ?? null;
+        $status = $errorCode === 'scope_unresolved' ? 422 : 200;
+
         return response()->json([
-            'success' => true,
+            'success' => $errorCode === null,
             'data' => [
                 'conversation_uuid' => $session['conversation_uuid'],
                 'message_uuid' => $session['message_uuid'],
@@ -138,9 +141,10 @@ class ComplianceCopilotController extends Controller
                 'skill_results' => $result['skill_results'],
                 'guardrails' => $result['guardrails'],
                 'warnings' => $result['warnings'],
+                'scope' => $result['scope'] ?? null,
                 'generated_at' => now()->toIso8601String(),
             ],
-        ]);
+        ], $status);
     }
 
     /**
