@@ -7,9 +7,12 @@ use App\DataTransferObjects\Ai\AiSkillResponse;
 use App\DataTransferObjects\Ai\AiUsage;
 use App\Enums\Compliance\Copilot\ComplianceCopilotIntent;
 use App\Exceptions\Ai\AiProviderException;
+use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
+use App\Enums\Compliance\Retrieval\ComplianceRetrievalMode;
 use App\Services\Ai\AiProviderRegistry;
 use App\Services\Ai\CompliancePromptOrchestrator;
 use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\Compliance\Retrieval\ComplianceRetrievalService;
 
 /**
  * Compliance Copilot v0 orchestrator (QCIF Sprint 14).
@@ -40,6 +43,7 @@ class ComplianceCopilotService
         private readonly AiProviderRegistry $registry,
         private readonly ComplianceCopilotResponseValidator $validator,
         private readonly ComplianceCopilotCitationVerifier $citationVerifier,
+        private readonly ComplianceRetrievalService $retrieval,
     ) {}
 
     /**
@@ -113,10 +117,40 @@ class ComplianceCopilotService
             'guardrails' => $guardrails,
             'warnings' => $warnings,
             'scope' => $this->scopeBlock($scope),
+            'retrieval_context' => $this->buildRetrievalContext($projectId, $userMessage, $plan, $scope, $responses),
             'usage' => $answer['usage']->toArray(),
             'mocked' => $answer['mocked'],
             'plain_answer' => trim($answer['answer_en']."\n".$answer['answer_ar']),
         ];
+    }
+
+    /**
+     * Optionally attach a deterministic retrieval_context (QCIF Sprint 15), built from the SAME
+     * skill responses already executed (skills are NOT re-run). OFF by default; returns null when
+     * `ai.copilot.retrieval_enabled` is false so the existing Copilot flow is unchanged.
+     *
+     * @param  array{intent: ComplianceCopilotIntent, code: ?string, query: ?string, entity_type: string, scope: array<string, mixed>}  $plan
+     * @param  array<string, mixed>  $scope
+     * @param  list<AiSkillResponse>  $responses
+     * @return array<string, mixed>|null
+     */
+    private function buildRetrievalContext(int $projectId, string $userMessage, array $plan, array $scope, array $responses): ?array
+    {
+        if (! (bool) config('ai.copilot.retrieval_enabled', false)) {
+            return null;
+        }
+
+        $query = new RetrievalQuery(
+            query: $userMessage,
+            mode: ComplianceRetrievalMode::CopilotContext,
+            projectId: $projectId,
+            framework: $scope['framework_key'] ?? null,
+            release: $scope['release_code'] ?? null,
+            limit: 20,
+            code: $plan['code'] ?? null,
+        );
+
+        return $this->retrieval->fromResponses($query, $responses, $scope)->toCopilotContext();
     }
 
     // -------------------------------------------------------------------------

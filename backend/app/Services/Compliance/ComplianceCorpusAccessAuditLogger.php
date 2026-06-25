@@ -218,6 +218,37 @@ class ComplianceCorpusAccessAuditLogger
     }
 
     /**
+     * Audit a deterministic retrieval query (QCIF Sprint 15). Records the access event metadata —
+     * mode + framework/release — never the query text or retrieved content. NO vector/embedding/AI
+     * execution occurs in the retrieval layer.
+     */
+    public function logRetrieval(
+        User $user,
+        Project $project,
+        string $endpoint,
+        string $mode,
+        ?string $framework = null,
+        ?string $release = null,
+    ): void {
+        if (! Schema::hasTable('audit_logs')) {
+            return;
+        }
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'action' => 'compliance_retrieval_access',
+            'metadata' => array_filter([
+                'mode' => $mode,
+                'framework' => $framework,
+                'release' => $release,
+                'endpoint' => $endpoint,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'timestamp' => now(),
+        ]);
+    }
+
+    /**
      * Audit a Compliance Copilot turn (QCIF Sprint 14). Records ONLY the access event metadata —
      * who, which workspace, which conversation, the deterministically-classified intent, the mode
      * (mock/ai), and the provider. NEVER logs the user message, the prompt, or the answer content.

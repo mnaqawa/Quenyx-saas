@@ -128,22 +128,28 @@ class ComplianceCopilotController extends Controller
         $errorCode = $result['error_code'] ?? null;
         $status = $errorCode === 'scope_unresolved' ? 422 : 200;
 
+        $data = [
+            'conversation_uuid' => $session['conversation_uuid'],
+            'message_uuid' => $session['message_uuid'],
+            'intent' => $result['intent'],
+            'mode' => $result['mode'],
+            'answer_en' => $result['answer_en'],
+            'answer_ar' => $result['answer_ar'],
+            'citations' => $result['citations'],
+            'skill_results' => $result['skill_results'],
+            'guardrails' => $result['guardrails'],
+            'warnings' => $result['warnings'],
+            'scope' => $result['scope'] ?? null,
+            'generated_at' => now()->toIso8601String(),
+        ];
+
+        if (($result['retrieval_context'] ?? null) !== null) {
+            $data['retrieval_context'] = $result['retrieval_context'];
+        }
+
         return response()->json([
             'success' => $errorCode === null,
-            'data' => [
-                'conversation_uuid' => $session['conversation_uuid'],
-                'message_uuid' => $session['message_uuid'],
-                'intent' => $result['intent'],
-                'mode' => $result['mode'],
-                'answer_en' => $result['answer_en'],
-                'answer_ar' => $result['answer_ar'],
-                'citations' => $result['citations'],
-                'skill_results' => $result['skill_results'],
-                'guardrails' => $result['guardrails'],
-                'warnings' => $result['warnings'],
-                'scope' => $result['scope'] ?? null,
-                'generated_at' => now()->toIso8601String(),
-            ],
+            'data' => $data,
         ], $status);
     }
 

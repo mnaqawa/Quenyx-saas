@@ -246,4 +246,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 14 — Compliance Copilot v0 (skill orchestration + citation-enforced AI) — see routes/compliance-copilot.php
     require base_path('routes/compliance-copilot.php');
+
+    // QCIF Sprint 15 — Retrieval & RAG Optimization Foundation (deterministic, no vector/embeddings) — see routes/compliance-retrieval.php
+    require base_path('routes/compliance-retrieval.php');
 });

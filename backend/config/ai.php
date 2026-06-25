@@ -56,6 +56,11 @@ return [
             'framework' => env('COPILOT_DEFAULT_FRAMEWORK', 'nca-ecc'),
             'release' => env('COPILOT_DEFAULT_RELEASE', '2:2024'),
         ],
+
+        // QCIF Sprint 15: when true, the Copilot attaches an optional deterministic
+        // `retrieval_context` block (built from the SAME skill responses — skills are not re-run).
+        // OFF by default; the existing Copilot flow is unchanged when disabled.
+        'retrieval_enabled' => (bool) env('AI_COPILOT_RETRIEVAL_ENABLED', false),
     ],
 
     /*

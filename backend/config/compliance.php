@@ -162,4 +162,25 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Retrieval & RAG Optimization Foundation (QCIF Sprint 15)
+    |--------------------------------------------------------------------------
+    | Deterministic retrieval planning, chunking, and explainable ranking that
+    | reuse existing AI Skills. UUID-only, workspace scoped, citation-backed.
+    | NO vector DB, NO embeddings, NO external retrieval provider, NO AI ranking.
+    | Revision-stable modes are cached via the corpus cache; only the rate limit
+    | is configured here.
+    */
+    'retrieval' => [
+
+        'rate_limits' => [
+            'query' => [
+                'max_attempts' => (int) env('COMPLIANCE_RETRIEVAL_RATE_LIMIT', 60),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];
