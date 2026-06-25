@@ -33,13 +33,30 @@ class ComplianceRetrievalService
      */
     public function query(RetrievalQuery $query): RetrievalResult
     {
+        return $this->queryDetailed($query)['result'];
+    }
+
+    /**
+     * Like {@see query()} but also returns the resolved scope, the executed (deterministic) skill
+     * responses, and the code-resolved query. Used by the RAG runtime (QCIF Sprint 17) which needs
+     * the skill payloads for the Reasoning Engine without re-running the skills.
+     *
+     * @return array{result: RetrievalResult, responses: list<AiSkillResponse>, scope: array<string, mixed>, query: RetrievalQuery}
+     */
+    public function queryDetailed(RetrievalQuery $query): array
+    {
         $scope = $this->scopeResolver->resolve($query->framework, $query->release);
         $query = $query->withCode($this->planner->extractCode($query->query));
 
         $requests = $this->planner->plan($query, $scope['framework_key'], $scope['release_code']);
         $responses = $this->router->executeMany($requests);
 
-        return $this->assemble($query, $responses, $scope);
+        return [
+            'result' => $this->assemble($query, $responses, $scope),
+            'responses' => $responses,
+            'scope' => $scope,
+            'query' => $query,
+        ];
     }
 
     /**

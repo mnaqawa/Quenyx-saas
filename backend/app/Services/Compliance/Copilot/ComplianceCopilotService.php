@@ -8,12 +8,13 @@ use App\DataTransferObjects\Ai\AiUsage;
 use App\Enums\Compliance\Copilot\ComplianceCopilotIntent;
 use App\Exceptions\Ai\AiProviderException;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
-use App\DataTransferObjects\Compliance\Retrieval\RetrievalResult;
 use App\DataTransferObjects\Compliance\Reasoning\ComplianceReasoningContext;
 use App\Enums\Compliance\Retrieval\ComplianceRetrievalMode;
 use App\Services\Ai\AiProviderRegistry;
 use App\Services\Ai\CompliancePromptOrchestrator;
 use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\Compliance\Rag\ComplianceHybridRetrievalService;
+use App\Services\Compliance\Rag\ComplianceRagContextBuilder;
 use App\Services\Compliance\Reasoning\ComplianceReasoningEngine;
 use App\Services\Compliance\Retrieval\ComplianceRetrievalService;
 
@@ -48,6 +49,8 @@ class ComplianceCopilotService
         private readonly ComplianceCopilotCitationVerifier $citationVerifier,
         private readonly ComplianceRetrievalService $retrieval,
         private readonly ComplianceReasoningEngine $reasoningEngine,
+        private readonly ComplianceHybridRetrievalService $hybridRetrieval,
+        private readonly ComplianceRagContextBuilder $ragContextBuilder,
     ) {}
 
     /**
@@ -83,7 +86,15 @@ class ComplianceCopilotService
         $skillWarnings = $this->collectSkillWarnings($responses);
 
         // QCIF Sprint 15 — deterministic retrieval over the SAME skill responses (no AI/DB).
-        $retrievalResult = $this->buildRetrievalResult($projectId, $userMessage, $plan, $scope, $responses);
+        $retrievalQuery = $this->buildRetrievalQuery($projectId, $userMessage, $plan, $scope);
+        $retrievalResult = $this->retrieval->fromResponses($retrievalQuery, $responses, $scope);
+
+        // QCIF Sprint 17 — optional Hybrid Retrieval (deterministic + optional vector). Falls back to
+        // deterministic retrieval (with a warning) if the vector provider is unavailable.
+        $ragEnabled = $this->ragEnabled();
+        if ($ragEnabled) {
+            $retrievalResult = $this->hybridRetrieval->augment($retrievalResult, $retrievalQuery);
+        }
 
         // QCIF Sprint 16 — the deterministic Reasoning Engine decides WHAT to answer BEFORE any LLM.
         $reasoning = $this->reasoningEngine->reason(new ComplianceReasoningContext(
@@ -98,9 +109,15 @@ class ComplianceCopilotService
             guardrails: $guardrails,
         ));
 
-        // The Prompt Orchestrator consumes the ReasoningOutput (not raw skills) when enabled.
+        // QCIF Sprint 17 — build a bounded, cited RAG context package (no AI call). Only when enabled.
+        $ragContext = $ragEnabled
+            ? $this->ragContextBuilder->build($retrievalResult, $reasoning, $responses)
+            : null;
+
+        // The Prompt Orchestrator consumes the ReasoningOutput (not raw skills) when enabled. When RAG
+        // is on, the bounded RAG context is appended to the prompt as RETRIEVED CONTEXT.
         $prompt = $this->reasoningEnabled()
-            ? $this->orchestrator->composeFromReasoning($reasoning, $userMessage)
+            ? $this->orchestrator->composeFromReasoning($reasoning, $userMessage, $ragContext !== null ? ['rag_context' => $ragContext] : [])
             : $skillPrompt;
 
         $mode = $this->aiEnabled() ? 'ai' : 'mock';
@@ -125,7 +142,8 @@ class ComplianceCopilotService
         }
 
         $validatorWarnings = $this->validator->validate($guardrails, $answer['answer_en'], $answer['answer_ar'], $mode);
-        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings, ...$this->scopeWarnings($scope), ...$reasoning->warnings]));
+        $ragWarnings = $ragEnabled ? $retrievalResult->warnings : [];
+        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings, ...$this->scopeWarnings($scope), ...$reasoning->warnings, ...$ragWarnings]));
 
         if ($citationCheck['needs_review']) {
             $warnings[] = 'needs_review';
@@ -145,6 +163,7 @@ class ComplianceCopilotService
             'scope' => $this->scopeBlock($scope),
             'reasoning' => $reasoning->toArray(),
             'retrieval_context' => (bool) config('ai.copilot.retrieval_enabled', false) ? $retrievalResult->toCopilotContext() : null,
+            'rag_context' => $ragContext,
             'usage' => $answer['usage']->toArray(),
             'mocked' => $answer['mocked'],
             'plain_answer' => trim($answer['answer_en']."\n".$answer['answer_ar']),
@@ -152,17 +171,15 @@ class ComplianceCopilotService
     }
 
     /**
-     * Build a deterministic retrieval result (QCIF Sprint 15) from the SAME skill responses already
-     * executed (skills are NOT re-run; no AI/DB/vector work). Feeds both the Reasoning Engine and
-     * the optional `retrieval_context` block.
+     * Build the deterministic retrieval query (QCIF Sprint 15) used to turn the SAME skill responses
+     * (skills are NOT re-run) into retrieval chunks, and (Sprint 17) to drive Hybrid Retrieval.
      *
      * @param  array{intent: ComplianceCopilotIntent, code: ?string, query: ?string, entity_type: string, scope: array<string, mixed>}  $plan
      * @param  array<string, mixed>  $scope
-     * @param  list<AiSkillResponse>  $responses
      */
-    private function buildRetrievalResult(int $projectId, string $userMessage, array $plan, array $scope, array $responses): RetrievalResult
+    private function buildRetrievalQuery(int $projectId, string $userMessage, array $plan, array $scope): RetrievalQuery
     {
-        $query = new RetrievalQuery(
+        return new RetrievalQuery(
             query: $userMessage,
             mode: ComplianceRetrievalMode::CopilotContext,
             projectId: $projectId,
@@ -171,8 +188,6 @@ class ComplianceCopilotService
             limit: 20,
             code: $plan['code'] ?? null,
         );
-
-        return $this->retrieval->fromResponses($query, $responses, $scope);
     }
 
     /**
@@ -196,6 +211,11 @@ class ComplianceCopilotService
     private function reasoningEnabled(): bool
     {
         return (bool) config('ai.copilot.reasoning_enabled', true);
+    }
+
+    private function ragEnabled(): bool
+    {
+        return (bool) config('ai.copilot.rag_enabled', false);
     }
 
     // -------------------------------------------------------------------------

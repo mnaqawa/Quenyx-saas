@@ -142,6 +142,15 @@ class CompliancePromptOrchestrator
         $lines[] = 'CITATIONS (cite these by source_document_key / official_reference for every claim):';
         $lines[] = $citations === [] ? '(none provided — if so, state that you cannot answer without citations)' : $this->encode($citations);
 
+        // QCIF Sprint 17 — optional bounded RAG context (cited chunks only). Supplementary grounding;
+        // it NEVER overrides the deterministic facts/findings/recommendations above.
+        $ragContext = $options['rag_context'] ?? null;
+        if (is_array($ragContext) && ($ragContext['context_package'] ?? []) !== []) {
+            $lines[] = '';
+            $lines[] = 'RETRIEVED CONTEXT (supplementary, cited corpus excerpts — supporting evidence only, never a substitute for the FACTS above):';
+            $lines[] = $this->encode($ragContext['context_package']);
+        }
+
         return implode("\n", $lines);
     }
 

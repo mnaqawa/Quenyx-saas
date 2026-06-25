@@ -151,6 +151,10 @@ class ComplianceCopilotController extends Controller
             $data['retrieval_context'] = $result['retrieval_context'];
         }
 
+        if (($result['rag_context'] ?? null) !== null) {
+            $data['rag_context'] = $result['rag_context'];
+        }
+
         return response()->json([
             'success' => $errorCode === null,
             'data' => $data,

@@ -2,6 +2,7 @@
 
 use App\Services\Ai\Providers\MockAiProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\Compliance\Rag\Providers\OpenAiVectorRetrievalProvider;
 use App\Services\Ai\Skills\CorpusSearchSkill;
 use App\Services\Ai\Skills\EvidenceSkill;
 use App\Services\Ai\Skills\FrameworkMappingSkill;
@@ -67,6 +68,54 @@ return [
         // instead of raw skills. Reasoning is always deterministic (no AI/DB); disabling only falls
         // back to the legacy skill-composed prompt.
         'reasoning_enabled' => (bool) env('AI_COPILOT_REASONING_ENABLED', true),
+
+        // QCIF Sprint 17: when true, the Copilot runs Hybrid Retrieval + builds a bounded, cited RAG
+        // context package that is appended to the prompt. OFF by default; the Sprint 16 flow is
+        // unchanged when disabled. Requires rag.enabled to actually consult a vector provider.
+        'rag_enabled' => (bool) env('AI_COPILOT_RAG_ENABLED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | QCIF Sprint 17 — RAG Runtime & Vector Provider Foundation
+    |--------------------------------------------------------------------------
+    | Provider-agnostic, feature-flagged RAG runtime. Everything is OFF by
+    | default. Without a real vector backend (e.g. pgvector) the OpenAI provider
+    | runs in METADATA-ONLY mode: it may compute embeddings but stores metadata
+    | only and NEVER fakes vector similarity — search falls back to deterministic
+    | retrieval. Tenant evidence is NEVER indexed by default. No direct OpenAI
+    | calls happen outside provider classes (embeddings go through the registry).
+    */
+    'rag' => [
+        'enabled' => (bool) env('RAG_ENABLED', false),
+        'embeddings_enabled' => (bool) env('EMBEDDINGS_ENABLED', false),
+
+        // 'openai' or null. Null/unknown ⇒ no vector provider ⇒ deterministic only.
+        'vector_provider' => env('VECTOR_PROVIDER'),
+
+        'embeddings_model' => env('OPENAI_EMBEDDINGS_MODEL'),
+
+        // Tenant evidence embeddings are OFF by default (privacy). Indexing only ever covers the
+        // approved active corpus revision unless this is explicitly enabled.
+        'index_tenant_evidence' => (bool) env('RAG_INDEX_TENANT_EVIDENCE', false),
+
+        // Approximate token budget for the bounded RAG context package.
+        'token_budget' => (int) env('RAG_TOKEN_BUDGET', 6000),
+
+        // Vector provider registry (mirrors ai.providers). Only implemented: openai.
+        'providers' => [
+            'openai' => [
+                'class' => OpenAiVectorRetrievalProvider::class,
+                'ai_provider' => env('RAG_AI_PROVIDER', 'openai'),
+            ],
+        ],
+
+        'rate_limits' => [
+            'query' => [
+                'max_attempts' => (int) env('COMPLIANCE_RAG_RATE_LIMIT', 30),
+                'decay_minutes' => 1,
+            ],
+        ],
     ],
 
     /*

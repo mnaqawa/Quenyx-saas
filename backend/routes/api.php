@@ -249,4 +249,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 15 — Retrieval & RAG Optimization Foundation (deterministic, no vector/embeddings) — see routes/compliance-retrieval.php
     require base_path('routes/compliance-retrieval.php');
+
+    // QCIF Sprint 17 — RAG Runtime (hybrid retrieval + bounded cited context; feature-flagged) — see routes/compliance-rag.php
+    require base_path('routes/compliance-rag.php');
 });
