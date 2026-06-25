@@ -10,9 +10,14 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = env('SEED_ADMIN_PASSWORD');
+        // Read via config() (not env() directly) so it works when the config is cached in
+        // production; fall back to env() for uncached/local runs.
+        $password = config('auth.seed.admin_password') ?: env('SEED_ADMIN_PASSWORD');
         if (empty($password)) {
-            throw new \RuntimeException('Set SEED_ADMIN_PASSWORD in .env before running UserSeeder.');
+            throw new \RuntimeException(
+                'Set SEED_ADMIN_PASSWORD in .env before running UserSeeder. '
+                .'If the config is cached, run "php artisan config:cache" after setting it.'
+            );
         }
 
         $attrs = [

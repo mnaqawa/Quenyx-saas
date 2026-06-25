@@ -32,4 +32,16 @@ return [
             'throttle' => 60,
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Database seeding
+    |--------------------------------------------------------------------------
+    | Read through the config layer (not env() directly) so the value survives
+    | `php artisan config:cache` in production — env() returns null for keys
+    | referenced outside of config files once the config is cached.
+    */
+    'seed' => [
+        'admin_password' => env('SEED_ADMIN_PASSWORD'),
+    ],
 ];
