@@ -216,4 +216,37 @@ class ComplianceCorpusAccessAuditLogger
             'timestamp' => now(),
         ]);
     }
+
+    /**
+     * Audit a Compliance Copilot turn (QCIF Sprint 14). Records ONLY the access event metadata —
+     * who, which workspace, which conversation, the deterministically-classified intent, the mode
+     * (mock/ai), and the provider. NEVER logs the user message, the prompt, or the answer content.
+     */
+    public function logCopilot(
+        User $user,
+        Project $project,
+        string $endpoint,
+        ?string $conversationUuid,
+        string $intent,
+        string $mode,
+        ?string $provider,
+    ): void {
+        if (! Schema::hasTable('audit_logs')) {
+            return;
+        }
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'action' => 'compliance_copilot_access',
+            'metadata' => array_filter([
+                'conversation_uuid' => $conversationUuid,
+                'intent' => $intent,
+                'mode' => $mode,
+                'provider' => $provider,
+                'endpoint' => $endpoint,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'timestamp' => now(),
+        ]);
+    }
 }

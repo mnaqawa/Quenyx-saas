@@ -37,6 +37,32 @@ class AiConversationRepository
     }
 
     /**
+     * List a project's conversations (most recent first). Metadata-only; no message content.
+     *
+     * @return \Illuminate\Support\Collection<int, AiConversation>
+     */
+    public function listForProject(Project $project, int $limit = 50): \Illuminate\Support\Collection
+    {
+        return AiConversation::query()
+            ->where('project_id', $project->id)
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Load a single conversation with its messages (oldest first) scoped to the project.
+     */
+    public function findForProjectWithMessages(Project $project, string $uuid): ?AiConversation
+    {
+        return AiConversation::query()
+            ->where('project_id', $project->id)
+            ->where('uuid', $uuid)
+            ->with(['messages' => fn ($q) => $q->orderBy('id')])
+            ->first();
+    }
+
+    /**
      * @param  array<string, mixed>  $metadata
      */
     public function recordMessage(

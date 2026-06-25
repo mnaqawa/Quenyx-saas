@@ -39,6 +39,18 @@ return [
     ],
 
     /*
+    | Compliance Copilot v0 (QCIF Sprint 14). The Copilot reuses the master AI switch
+    | (feature_flags.enabled) to decide mock vs AI mode. Conversation persistence and prompt
+    | logging are OFF by default and gated by their OWN env vars so the Copilot can stay silent
+    | (no message content stored) even if the orchestration platform enables them, and vice versa.
+    */
+    'copilot' => [
+        'enabled' => (bool) env('COPILOT_ENABLED', true),
+        'persist_conversations' => (bool) env('AI_CONVERSATION_PERSISTENCE_ENABLED', env('AI_PERSIST_CONVERSATIONS', false)),
+        'prompt_logging' => (bool) env('AI_PROMPT_LOGGING_ENABLED', env('AI_PROMPT_LOGGING', false)),
+    ],
+
+    /*
     | Generation defaults applied when a request omits them. No model here.
     */
     'defaults' => [

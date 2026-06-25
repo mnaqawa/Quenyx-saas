@@ -243,4 +243,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 13 — Recommendation Engine (deterministic, rule-based, no AI) — see routes/compliance-recommendations.php
     require base_path('routes/compliance-recommendations.php');
+
+    // QCIF Sprint 14 — Compliance Copilot v0 (skill orchestration + citation-enforced AI) — see routes/compliance-copilot.php
+    require base_path('routes/compliance-copilot.php');
 });

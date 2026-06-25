@@ -89,6 +89,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('compliance-copilot', function (Request $request) {
+            $max = (int) config('compliance.copilot.rate_limits.message.max_attempts', 30);
+
+            return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
+        });
+
         RateLimiter::for('compliance-recommendation-read', function (Request $request) {
             $max = (int) config('compliance.recommendations.rate_limits.read.max_attempts', 120);
 

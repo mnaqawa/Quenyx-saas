@@ -141,4 +141,25 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Compliance Copilot v0 (QCIF Sprint 14)
+    |--------------------------------------------------------------------------
+    | The first user-facing backend Copilot. Orchestrates existing AI Skills and
+    | optionally calls a provider through the AI Provider Registry. UUID-only,
+    | workspace scoped, citation-enforced. NO direct DB queries, NO RAG, NO
+    | direct provider SDK calls. Only the rate limit is configured here; AI/
+    | persistence/prompt-logging feature flags live in config/ai.php (copilot).
+    */
+    'copilot' => [
+
+        'rate_limits' => [
+            'message' => [
+                'max_attempts' => (int) env('COMPLIANCE_COPILOT_RATE_LIMIT', 30),
+                'decay_minutes' => 1,
+            ],
+        ],
+
+    ],
+
 ];
