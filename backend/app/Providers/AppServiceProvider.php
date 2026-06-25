@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Services\AI\LlmClient;
+use App\Services\QuenyxAI\Adapters\QynShieldAiAdapter;
+use App\Services\QuenyxAI\QuenyxAiPlatform;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\ServiceProvider;
 use OpenAI;
@@ -15,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // QCIF Sprint 19 — the Quenyx AI Platform is a process-wide singleton so registered module
+        // adapters persist for the request lifecycle.
+        $this->app->singleton(QuenyxAiPlatform::class);
+
         // LlmClient is config-driven; bind it so AiAgentService can be auto-resolved.
         $this->app->singleton(LlmClient::class, fn () => LlmClient::fromConfig());
 
@@ -40,6 +46,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // QCIF Sprint 19 — register QynShield as the first Quenyx AI Platform adapter. Future modules
+        // (QynSight, …) register the same way with no platform change.
+        $this->app->make(QuenyxAiPlatform::class)
+            ->registerAdapter($this->app->make(QynShieldAiAdapter::class));
     }
 }

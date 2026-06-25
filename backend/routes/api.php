@@ -255,4 +255,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 18 — Executive Demonstration Platform (read-only aggregation of existing intelligence) — see routes/compliance-executive.php
     require base_path('routes/compliance-executive.php');
+
+    // QCIF Sprint 19 — Quenyx AI Platform Foundation (shared AI runtime capability catalog) — see routes/quenyx-ai.php
+    require base_path('routes/quenyx-ai.php');
 });
