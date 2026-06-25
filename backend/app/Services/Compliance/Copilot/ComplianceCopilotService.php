@@ -8,10 +8,13 @@ use App\DataTransferObjects\Ai\AiUsage;
 use App\Enums\Compliance\Copilot\ComplianceCopilotIntent;
 use App\Exceptions\Ai\AiProviderException;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
+use App\DataTransferObjects\Compliance\Retrieval\RetrievalResult;
+use App\DataTransferObjects\Compliance\Reasoning\ComplianceReasoningContext;
 use App\Enums\Compliance\Retrieval\ComplianceRetrievalMode;
 use App\Services\Ai\AiProviderRegistry;
 use App\Services\Ai\CompliancePromptOrchestrator;
 use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\Compliance\Reasoning\ComplianceReasoningEngine;
 use App\Services\Compliance\Retrieval\ComplianceRetrievalService;
 
 /**
@@ -44,6 +47,7 @@ class ComplianceCopilotService
         private readonly ComplianceCopilotResponseValidator $validator,
         private readonly ComplianceCopilotCitationVerifier $citationVerifier,
         private readonly ComplianceRetrievalService $retrieval,
+        private readonly ComplianceReasoningEngine $reasoningEngine,
     ) {}
 
     /**
@@ -71,11 +75,33 @@ class ComplianceCopilotService
         $requests = $this->selector->select($plan, $projectId, $scope['framework_key'], $scope['release_code']);
         $responses = $this->router->executeMany($requests);
 
-        $prompt = $this->orchestrator->composeFromSkills($responses, $userMessage);
-        $corpusCitations = $prompt->citations;
+        // Deterministic grounding from the skills (citations + guardrails).
+        $skillPrompt = $this->orchestrator->composeFromSkills($responses, $userMessage);
+        $corpusCitations = $skillPrompt->citations;
         $groundingRefs = $this->buildGroundingRefs($responses);
-        $guardrails = $prompt->guardrails;
+        $guardrails = $skillPrompt->guardrails;
         $skillWarnings = $this->collectSkillWarnings($responses);
+
+        // QCIF Sprint 15 — deterministic retrieval over the SAME skill responses (no AI/DB).
+        $retrievalResult = $this->buildRetrievalResult($projectId, $userMessage, $plan, $scope, $responses);
+
+        // QCIF Sprint 16 — the deterministic Reasoning Engine decides WHAT to answer BEFORE any LLM.
+        $reasoning = $this->reasoningEngine->reason(new ComplianceReasoningContext(
+            intent: $intent,
+            query: $userMessage,
+            code: $plan['code'] ?? null,
+            scope: $scope,
+            skillPayloads: $this->collectPayloads($responses),
+            corpusCitations: $corpusCitations,
+            groundingRefs: $groundingRefs,
+            retrievalChunks: array_map(static fn ($c) => $c->toArray(), $retrievalResult->chunks),
+            guardrails: $guardrails,
+        ));
+
+        // The Prompt Orchestrator consumes the ReasoningOutput (not raw skills) when enabled.
+        $prompt = $this->reasoningEnabled()
+            ? $this->orchestrator->composeFromReasoning($reasoning, $userMessage)
+            : $skillPrompt;
 
         $mode = $this->aiEnabled() ? 'ai' : 'mock';
 
@@ -99,7 +125,7 @@ class ComplianceCopilotService
         }
 
         $validatorWarnings = $this->validator->validate($guardrails, $answer['answer_en'], $answer['answer_ar'], $mode);
-        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings, ...$this->scopeWarnings($scope)]));
+        $warnings = array_values(array_unique([...$skillWarnings, ...$citationCheck['warnings'], ...$validatorWarnings, ...$this->scopeWarnings($scope), ...$reasoning->warnings]));
 
         if ($citationCheck['needs_review']) {
             $warnings[] = 'needs_review';
@@ -117,7 +143,8 @@ class ComplianceCopilotService
             'guardrails' => $guardrails,
             'warnings' => $warnings,
             'scope' => $this->scopeBlock($scope),
-            'retrieval_context' => $this->buildRetrievalContext($projectId, $userMessage, $plan, $scope, $responses),
+            'reasoning' => $reasoning->toArray(),
+            'retrieval_context' => (bool) config('ai.copilot.retrieval_enabled', false) ? $retrievalResult->toCopilotContext() : null,
             'usage' => $answer['usage']->toArray(),
             'mocked' => $answer['mocked'],
             'plain_answer' => trim($answer['answer_en']."\n".$answer['answer_ar']),
@@ -125,21 +152,16 @@ class ComplianceCopilotService
     }
 
     /**
-     * Optionally attach a deterministic retrieval_context (QCIF Sprint 15), built from the SAME
-     * skill responses already executed (skills are NOT re-run). OFF by default; returns null when
-     * `ai.copilot.retrieval_enabled` is false so the existing Copilot flow is unchanged.
+     * Build a deterministic retrieval result (QCIF Sprint 15) from the SAME skill responses already
+     * executed (skills are NOT re-run; no AI/DB/vector work). Feeds both the Reasoning Engine and
+     * the optional `retrieval_context` block.
      *
      * @param  array{intent: ComplianceCopilotIntent, code: ?string, query: ?string, entity_type: string, scope: array<string, mixed>}  $plan
      * @param  array<string, mixed>  $scope
      * @param  list<AiSkillResponse>  $responses
-     * @return array<string, mixed>|null
      */
-    private function buildRetrievalContext(int $projectId, string $userMessage, array $plan, array $scope, array $responses): ?array
+    private function buildRetrievalResult(int $projectId, string $userMessage, array $plan, array $scope, array $responses): RetrievalResult
     {
-        if (! (bool) config('ai.copilot.retrieval_enabled', false)) {
-            return null;
-        }
-
         $query = new RetrievalQuery(
             query: $userMessage,
             mode: ComplianceRetrievalMode::CopilotContext,
@@ -150,7 +172,30 @@ class ComplianceCopilotService
             code: $plan['code'] ?? null,
         );
 
-        return $this->retrieval->fromResponses($query, $responses, $scope)->toCopilotContext();
+        return $this->retrieval->fromResponses($query, $responses, $scope);
+    }
+
+    /**
+     * Map successful skill responses to a skill-keyed payload map for the Reasoning Engine.
+     *
+     * @param  list<AiSkillResponse>  $responses
+     * @return array<string, array<string, mixed>>
+     */
+    private function collectPayloads(array $responses): array
+    {
+        $payloads = [];
+        foreach ($responses as $response) {
+            if ($response->success && $response->result !== null) {
+                $payloads[$response->skillKey] = $response->result->payload;
+            }
+        }
+
+        return $payloads;
+    }
+
+    private function reasoningEnabled(): bool
+    {
+        return (bool) config('ai.copilot.reasoning_enabled', true);
     }
 
     // -------------------------------------------------------------------------

@@ -61,6 +61,12 @@ return [
         // `retrieval_context` block (built from the SAME skill responses — skills are not re-run).
         // OFF by default; the existing Copilot flow is unchanged when disabled.
         'retrieval_enabled' => (bool) env('AI_COPILOT_RETRIEVAL_ENABLED', false),
+
+        // QCIF Sprint 16: when true (default), the deterministic Compliance Reasoning Engine decides
+        // WHAT to answer and the Prompt Orchestrator composes the prompt from the ReasoningOutput
+        // instead of raw skills. Reasoning is always deterministic (no AI/DB); disabling only falls
+        // back to the legacy skill-composed prompt.
+        'reasoning_enabled' => (bool) env('AI_COPILOT_REASONING_ENABLED', true),
     ],
 
     /*

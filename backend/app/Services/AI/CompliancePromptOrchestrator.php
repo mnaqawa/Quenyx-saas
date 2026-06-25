@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use App\DataTransferObjects\Ai\AiPrompt;
 use App\DataTransferObjects\Ai\AiSkillResponse;
+use App\DataTransferObjects\Compliance\Reasoning\ReasoningOutput;
 
 /**
  * Assembles a grounded prompt from compliance context plus a user question. It accepts EITHER a
@@ -71,6 +72,77 @@ class CompliancePromptOrchestrator
                 'citation_count' => count($citations),
             ],
         );
+    }
+
+    /**
+     * Compose a prompt from the deterministic Reasoning Engine output (QCIF Sprint 16).
+     *
+     * The Reasoning Engine — not the LLM — has already decided WHAT to answer (the answer strategy),
+     * the facts, the findings, the recommendations, the missing information, and the citations. The
+     * model's only job is to render that structured reasoning in natural language while honoring the
+     * guardrails. Still NO corpus/DB access here.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function composeFromReasoning(ReasoningOutput $reasoning, string $userPrompt, array $options = []): AiPrompt
+    {
+        $guardrails = $reasoning->guardrails;
+        $citations = $reasoning->citations;
+
+        $systemPrompt = $this->buildReasoningSystemPrompt($reasoning, $citations, $guardrails, $options);
+
+        return new AiPrompt(
+            systemPrompt: $systemPrompt,
+            userPrompt: trim($userPrompt),
+            citations: $citations,
+            guardrails: $guardrails,
+            metadata: [
+                'source' => 'reasoning_engine',
+                'decision_type' => $reasoning->decision->type->value,
+                'answer_strategy' => $reasoning->answerStrategy(),
+                'finding_count' => count($reasoning->findings),
+                'recommendation_count' => count($reasoning->recommendations),
+                'citation_count' => count($citations),
+            ],
+        );
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $citations
+     * @param  array<string, bool>  $guardrails
+     * @param  array<string, mixed>  $options
+     */
+    private function buildReasoningSystemPrompt(ReasoningOutput $reasoning, array $citations, array $guardrails, array $options): string
+    {
+        $lines = [];
+        $lines[] = (string) ($options['role_preamble']
+            ?? 'You are a compliance assistant for the Quenyx QynShield platform. You answer strictly from the structured reasoning provided below — you do NOT decide what to answer; the deterministic reasoning engine already did.');
+        $lines[] = '';
+        $lines[] = 'ANSWER STRATEGY (follow exactly — do not deviate): '.$reasoning->answerStrategy();
+        $lines[] = 'DECISION TYPE: '.$reasoning->decision->type->value;
+        $lines[] = '';
+        $lines[] = 'GUARDRAILS (must be honored):';
+        foreach ($this->guardrailDirectives($guardrails) as $directive) {
+            $lines[] = '- '.$directive;
+        }
+        $lines[] = '- Render ONLY the facts, findings, and recommendations below. Do not add, infer, or reprioritize anything yourself.';
+        $lines[] = '';
+        $lines[] = 'FACTS (deterministic; the only source of truth):';
+        $lines[] = $reasoning->facts === [] ? '(none)' : $this->encode($reasoning->facts);
+        $lines[] = '';
+        $lines[] = 'FINDINGS (deterministic — already decided by business rules):';
+        $lines[] = $reasoning->findings === [] ? '(none)' : $this->encode(array_map(static fn ($f) => $f->toArray(), $reasoning->findings));
+        $lines[] = '';
+        $lines[] = 'RECOMMENDATIONS (deterministic — priorities already assigned by rules):';
+        $lines[] = $reasoning->recommendations === [] ? '(none)' : $this->encode(array_map(static fn ($r) => $r->toArray(), $reasoning->recommendations));
+        $lines[] = '';
+        $lines[] = 'MISSING INFORMATION (state these limitations honestly; never fill the gap with assumptions):';
+        $lines[] = $reasoning->missingInformation === [] ? '(none)' : $this->encode($reasoning->missingInformation);
+        $lines[] = '';
+        $lines[] = 'CITATIONS (cite these by source_document_key / official_reference for every claim):';
+        $lines[] = $citations === [] ? '(none provided — if so, state that you cannot answer without citations)' : $this->encode($citations);
+
+        return implode("\n", $lines);
     }
 
     /**

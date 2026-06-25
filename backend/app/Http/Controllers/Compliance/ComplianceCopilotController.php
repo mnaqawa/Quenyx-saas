@@ -143,6 +143,10 @@ class ComplianceCopilotController extends Controller
             'generated_at' => now()->toIso8601String(),
         ];
 
+        if (($result['reasoning'] ?? null) !== null) {
+            $data['reasoning'] = $result['reasoning'];
+        }
+
         if (($result['retrieval_context'] ?? null) !== null) {
             $data['retrieval_context'] = $result['retrieval_context'];
         }
