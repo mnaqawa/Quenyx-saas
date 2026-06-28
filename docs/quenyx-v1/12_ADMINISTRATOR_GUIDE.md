@@ -1,0 +1,81 @@
+# 12 — Administrator Guide
+
+**Audience:** Platform administrators.
+**Scope:** Admin tasks supported by the current product (APIs/UI at Sprint 19).
+
+---
+
+## 1. Login
+
+- Sign in at the SPA with your credentials (`POST /api/auth/login`). The seeded admin is
+  `admin@quenyx.test` with the password set via `SEED_ADMIN_PASSWORD` at deploy time. **Rotate it
+  after first login.**
+- Manage your own profile/password under `auth/me`.
+
+## 2. Workspace management
+
+- A **workspace** = a **project** (the tenant boundary). Create/list/update/delete via the Projects
+  UI or `/api/workspaces`.
+- The seeder provisions **Production Env** and **Staging Env** by default (adjust in `ProjectSeeder`).
+
+## 3. Project management
+
+- Each workspace has its own monitoring data, compliance scope, members, subscription, audit log,
+  and integrations. Switch the active workspace from the workspace selector.
+
+## 4. Roles
+
+- Members are attached to a workspace via **memberships** with a **role**. Manage via the
+  Memberships UI or `/api/workspaces/{project}/memberships` (invite, update role, remove).
+- Authorization is enforced by `ProjectPolicy` — only members can access a workspace's data.
+
+## 5. Users
+
+- Users register/are invited, then accept an invite token (`POST /api/invites/{token}/accept`) to
+  join a workspace.
+
+## 6. Module subscriptions
+
+- View entitlements: `GET /api/workspaces/{project}/entitlements` and `…/modules/access`.
+- Manage subscription: `…/subscription` (GET/PUT).
+- **Per‑module override:** `PUT /api/workspaces/{project}/modules/{moduleKey}/override` — grants/
+  revokes a module for a workspace. Overrides are **audited**.
+- Today the **sidebar shows QynSight only** (other modules are hidden by a frontend flag); module
+  entitlement data still exists for all modules.
+
+## 7. QynSight administration
+
+- Configure **monitored targets/hosts** (`observe/targets`), **service definitions**, and
+  **alert rules** (create/update/toggle/delete) and **monitoring profiles**.
+- Manage **agents**: create enrollment tokens, list/revoke tokens, view metadata, remove agents.
+- Ensure the **scheduler** (cron) and **queue worker** run (see Doc 10) — otherwise checks/port
+  scans won't run.
+
+## 8. QynShield administration
+
+- Requires the **QynShield entitlement** (`project.qynshield`) on the workspace.
+- Corpus is seeded by operators (NCA ECC‑2:2024 v1). Admins consume corpus/graph/mapping/evidence/
+  gap/recommendation/executive APIs; there is no in‑UI corpus authoring (official‑source‑only model).
+
+## 9. AI settings
+
+- AI is configured via **environment variables**, not a UI toggle today (see Doc 10 §11).
+- Defaults are safe: mock provider, AI off, no prompt logging, no conversation persistence, RAG off,
+  no tenant‑evidence indexing. Change only deliberately.
+
+## 10. Audit logs
+
+- `GET /api/workspaces/{project}/audit-logs` — review sensitive actions (module overrides, executive
+  reads, copilot, etc.). Use for access reviews and incident investigation.
+
+## 11. Integrations
+
+- Workspace integrations and billing integrations via `…/integrations` and `…/billing/integrations`.
+  Configure per‑workspace settings; secrets are stored as configuration, not in code.
+
+## 12. Limitations
+
+- No self‑service AI toggle UI yet (env‑driven).
+- QynShield UI beyond executive/demo is roadmap.
+- Hidden modules cannot be enabled in the sidebar without changing the frontend flag (out of scope
+  pre‑Sprint 20).

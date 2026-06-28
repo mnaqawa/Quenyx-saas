@@ -1,0 +1,84 @@
+# 16 — AI User Guide
+
+**Audience:** All users.
+**Principle:** Quenyx AI is **governable**, **deterministic‑first**, **cited**, and **off by
+default**.
+
+---
+
+## 1. What Quenyx AI is
+
+A **shared AI platform** behind the HUB that explains compliance and operational data — not a
+free‑form chatbot. Business logic (deterministic engines) decides *what* is true; AI only helps
+*phrase* it, always with citations.
+
+## 2. What it can do today 🟢/🟡
+
+- **Compliance Copilot** — answers questions about the loaded framework (NCA ECC‑2:2024) with
+  **citations**, backed by deterministic reasoning. (Mock mode by default; real‑model when enabled.)
+- **Skills** — corpus search, knowledge graph, framework mapping, evidence, gap assessment,
+  recommendations — all reusing deterministic services.
+- **Capability catalog** — `GET /api/ai/platform/capabilities` shows exactly what the platform can
+  do right now.
+
+## 3. What is feature‑flagged 🟡
+
+- **Real‑model AI** (`AI_ENABLED` / `AI_PROVIDER=openai`) — off by default.
+- **RAG** (`RAG_ENABLED`, `AI_COPILOT_RAG_ENABLED`, `EMBEDDINGS_ENABLED`) — off; metadata‑only with
+  deterministic fallback when on.
+- **Demo mode** (`AI_COPILOT_DEMO_MODE`) — surfaces reasoning trace + citations + sources.
+
+## 4. How citations work
+
+Every compliance answer references the **official source** (control/requirement + source document).
+If the platform cannot cite a source, it **does not answer**. This is the anti‑hallucination
+guarantee.
+
+## 5. How reasoning works
+
+A deterministic **Reasoning Engine** applies explicit rules to the corpus + evidence and produces a
+`ReasoningOutput` (findings, fired rule IDs, explanation). The same inputs always yield the same
+result. AI renders this output; it does not invent it.
+
+## 6. What AI cannot do
+
+- It **cannot** answer without a citable source.
+- It **cannot** access tenant evidence embeddings (not indexed by default).
+- It **cannot** call a model unless an operator enabled it (`AI_ENABLED`).
+- It is **not** an autonomous agent and does **not** take actions on your infrastructure.
+
+## 7. Mock mode vs AI mode
+
+| | Mock mode (default) | AI mode (`AI_ENABLED=true`) |
+|---|---|---|
+| Model calls | none | OpenAI provider |
+| Output | deterministic mock phrasing | model‑phrased, still cited + reasoning‑gated |
+| Safety | maximal (no external calls) | governed by the same guardrails |
+
+Mock mode is safe for demos and produces real, cited structure without contacting any model.
+
+## 8. Prompt logging policy
+
+**Off by default.** Prompt/response **content is not stored** unless an operator sets
+`AI_PROMPT_LOGGING_ENABLED=true`.
+
+## 9. Privacy / security
+
+- Conversation persistence **off by default**.
+- Tenant **evidence is never embedded** by default.
+- All AI routes are authenticated, entitlement‑gated, and rate‑limited.
+- Models/keys come from server env, never hardcoded.
+
+## 10. Safe usage guidance
+
+- Scope questions to a loaded framework (NCA ECC‑2:2024) for best results.
+- Treat answers as **explanations of platform data**, verifiable via their citations.
+- If an answer lacks a citation, it won't be given — refine the question or check entitlement/scope.
+
+## 11. Demo prompts
+
+- "Summarize domain 1 of NCA ECC‑2:2024."
+- "Why is requirement 1‑1‑1 non‑compliant?"
+- "What evidence is missing for control 2‑1‑1?"
+- "What do you recommend for the open gaps in domain 2?"
+- "Show the capability catalog for the AI platform." *(→ `GET /api/ai/platform/capabilities`)*
