@@ -121,20 +121,48 @@ gaps in the sandbox (see §2), not code defects.
 
 | # | Severity | Finding | Root cause |
 |---|---|---|---|
-| 1 | **Low** | Duplicate route registration for `POST /…/ai/chat` (both `AiAgentController@chat` and `Ai\AiOrchestrationController@chat`). | `routes/api.php` declares the legacy `ai/chat` route, then `routes/ai-orchestration.php` (required later) re‑declares the same path. Laravel keeps the **last** registration, so orchestration wins and the legacy mapping is dead/shadowed. |
-| 2 | **Info** | `php artisan optimize:clear` `views` step errors locally (`View path not found`). | Missing local view‑cache directory in the audit sandbox. Does **not** occur in a normally bootstrapped deployment. |
+| 1 | **High** | **Backend fails to boot on the Linux production server** (CloudQuenyx): `Target class [App\Services\Ai\AiProviderRegistry] does not exist` during `php artisan migrate`. | **Namespace/directory case mismatch.** The directory is physically `app/Services/AI/` (uppercase), but 14 QCIF files in it declare `namespace App\Services\Ai;` (lowercase). On case‑insensitive Windows this always worked (so local audits passed); on **case‑sensitive Linux**, PSR‑4 maps `App\Services\Ai\…` → `app/Services/Ai/…`, which does not exist → class not found. Triggered at boot by the Sprint‑19 `QynShieldAiAdapter` wiring. (A stale/non‑optimized server autoloader removes the classmap fallback that previously masked it.) |
+| 2 | **Low** | Duplicate route registration for `POST /…/ai/chat` (both `AiAgentController@chat` and `Ai\AiOrchestrationController@chat`). | `routes/api.php` declares the legacy `ai/chat` route, then `routes/ai-orchestration.php` (required later) re‑declares the same path. Laravel keeps the **last** registration, so orchestration wins and the legacy mapping is dead/shadowed. |
+| 3 | **Info** | `php artisan optimize:clear` `views` step errors locally (`View path not found`). | Missing local view‑cache directory in the audit sandbox. Does **not** occur in a normally bootstrapped deployment. |
 
-No high or critical functional bugs were found.
+> **Why the Windows audit sandbox missed #1:** its filesystem is case‑insensitive, so
+> `App\Services\Ai\…` resolved against the `app/Services/AI/` directory. The defect manifests only
+> on a **case‑sensitive (Linux)** filesystem — exactly the production smoke test (Audit Area 13).
 
 ---
 
 ## 7. Bugs fixed
-- **None changed in code.** Per the Track‑B rule "do not change business logic unless fixing bugs,"
-  finding #1 is a **shadowed duplicate** where the *intended* controller (orchestration) already
-  wins — there is **no functional misbehavior** to fix, and the affected area is the **frozen
-  legacy QynSight AI agent**. The safe, in‑scope action is to delete the dead legacy `ai/chat`
-  line in a future cleanup PR; it is intentionally **not** modified here to avoid touching frozen
-  code outside this audit's mandate. Finding #2 is environment‑only.
+
+### Bug #1 — Linux boot failure (FIXED)
+
+- **Root cause:** PSR‑4 case mismatch — lowercase namespace `App\Services\Ai` vs uppercase directory
+  `app/Services/AI` (case‑sensitive only on Linux). Sibling namespaces `app/Contracts/Ai/` and
+  `app/Exceptions/Ai/` were verified **already correct** (lowercase) — the mismatch is isolated to
+  `app/Services/AI`.
+- **Fix (surgical, zero PHP/behaviour change):** added an explicit PSR‑4 mapping so the lowercase
+  namespace resolves to the existing directory on any filesystem.
+  - **File changed:** `backend/composer.json` → `autoload.psr-4` now includes
+    `"App\\Services\\Ai\\": "app/Services/AI/"`. The broad `"App\\": "app/"` rule still serves the 5
+    legacy `App\Services\AI` classes (`LlmClient`, `AiAgentService`, `Personas`, `AgentContextBuilder`,
+    `AiException`) — both casings now resolve, in both dynamic and optimized autoload modes.
+  - Chosen over a directory rename / mass namespace rewrite to **minimise blast radius** during a
+    production incident; the permanent cosmetic cleanup (normalise directory + the 5 legacy files to
+    one casing) is recorded as a follow‑up in §8.
+- **QA proof:**
+  - `composer.json` validated as well‑formed JSON; `autoload.psr-4` keys now:
+    `App\`, `App\Services\Ai\`, `Database\Factories\`, `Database\Seeders\`.
+  - PSR‑4 resolution after the change (both modes): `App\Services\Ai\AiProviderRegistry` →
+    `app/Services/AI/AiProviderRegistry.php` ✓; `App\Services\AI\LlmClient` →
+    `app/Services/AI/LlmClient.php` ✓ (longest‑prefix, case‑sensitive matching).
+  - **Server step required to apply:** on CloudQuenyx run `composer dump-autoload -o`
+    (or `composer install --no-dev --optimize-autoloader`), then `php artisan migrate --force`
+    (note: the original command used `--froce`, an invalid flag — use `--force`).
+
+### Bug #2 — shadowed `ai/chat` route (NOT changed)
+- Per the Track‑B rule, finding #2 is a **shadowed duplicate** where the *intended* controller
+  (orchestration) already wins — **no functional misbehavior**, and it sits in the **frozen legacy
+  QynSight AI agent** area. Safe in‑scope action: delete the dead legacy `ai/chat` line in a future
+  cleanup PR. Intentionally **not** modified here. Finding #3 is environment‑only.
 
 ---
 
@@ -146,6 +174,8 @@ No high or critical functional bugs were found.
 | Frontend `lint`/`build` and gateway build/test not run in sandbox (no Node). | **Medium** | Run `npm ci && npm run lint && npm run build` (frontend + gateway) in CI. |
 | PHP test suite not executed in sandbox (no `mbstring`/`pdo_mysql`). | **Medium** | Run `php artisan test` on CI/CloudQuenyx. |
 | Shadowed duplicate `ai/chat` route (legacy). | **Low** | Remove the dead legacy declaration in a cleanup PR. |
+| **Casing inconsistency** under `app/Services/AI` (lowercase `Ai` namespace in an uppercase `AI` dir). Now masked by the PSR‑4 mapping (Bug #1 fix). | **Low** | Permanent cleanup PR: normalise to one casing (rename dir → `app/Services/Ai` and convert the 5 legacy `App\Services\AI` files + their 3 referrers to `App\Services\Ai`), then remove the extra PSR‑4 mapping. |
+| Other case‑mismatch defects could hide from the Windows sandbox. | **Medium** | Add a CI step that runs the build/boot on **Linux** (case‑sensitive) so PSR‑4 case bugs surface pre‑deploy. |
 | Local PHP missing `mbstring`/`openssl`/`curl`/`fileinfo`. | **Low (sandbox only)** | Production/CI PHP must include these (already standard on CloudQuenyx). |
 
 ---
@@ -154,9 +184,13 @@ No high or critical functional bugs were found.
 
 **Conditionally ready.** Everything verifiable in the audit sandbox **passed**: the backend boots,
 all 261 routes resolve, AI is safe‑by‑default, RBAC/entitlements are enforced, and there is no fake
-data or out‑of‑bounds AI access. **No critical or high code bugs were found.** The only **high‑risk**
-items are *verification gaps* caused by sandbox tooling limits (DB, Node, PHP extensions) — they must
-be closed by running §10 on CI/CloudQuenyx before Sprint 20.
+data or out‑of‑bounds AI access. **One HIGH bug — a Linux‑only PSR‑4 case mismatch that blocked
+backend boot on CloudQuenyx (Bug #1) — was found during the production smoke test and FIXED** (a
+zero‑behaviour `composer.json` autoload mapping); apply it on the server with `composer dump-autoload -o`.
+The remaining **high‑risk** items are *verification gaps* caused by sandbox tooling limits (DB, Node,
+PHP extensions) — they must be closed by running §10 on CI/CloudQuenyx before Sprint 20. A
+case‑sensitive (Linux) CI boot check should be added so defects like Bug #1 cannot reach production
+undetected.
 
 ---
 
@@ -169,6 +203,7 @@ Run on **CloudQuenyx** (or CI) with the full toolchain:
 cd backend
 composer validate
 composer install --no-dev --optimize-autoloader      # or composer install
+composer dump-autoload -o                             # REQUIRED after pulling new code (fixes Bug #1 class resolution)
 php artisan optimize:clear
 php artisan about
 php artisan route:list
