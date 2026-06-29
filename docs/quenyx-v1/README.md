@@ -1,12 +1,45 @@
-# Quenyx vOPS HUB — Documentation Pack v1
+# Quenyx vOPS HUB — Documentation Pack v2.0 (RC1 Alignment)
 
-This pack is the **canonical documentation set** for Quenyx vOPS HUB at the close of **Phase I
-(through Sprint 19)**. Every statement here is grounded in the **current codebase and actually
-delivered features**. Where something is not yet built, it is labelled as roadmap.
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal |
+> | Owner | Platform Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Documentation index |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial canonical pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | RC1 alignment: native QynSight monitoring (Nagios removed as platform dependency), QynCore internal communication, Integrations = external systems only, Quenyx AI as a shared platform layer, roadmap Phases 1–4 / Sprints 20–25, document metadata headers. |
+
+This pack is the **canonical, definitive documentation set** for Quenyx vOPS HUB at **v1.0.0 RC1**.
+Every statement here is grounded in the **current production codebase and actually delivered
+features**. Where something is not yet built, it is labelled as roadmap.
 
 > **No fabrication policy.** These documents do **not** invent customers, revenue, TAM/SAM/SOM,
 > benchmarks, certifications, production metrics, unimplemented integrations, or AI capabilities
 > that do not exist.
+
+> **Architecture invariants (read first).**
+> - **Monitoring is native.** QynSight runs its own engines — Discovery, Monitoring, Metrics,
+>   Service Checks, Alert Engine, Capacity Planning, Analytics, and Infrastructure Map. **Nagios is
+>   not a platform dependency**; it may appear only as a legacy migration source or as an optional
+>   third‑party integration via the Integrations page.
+> - **Internal communication is platform‑native.** Modules communicate through **QynCore** platform
+>   services (Platform Event Bus, Shared Services, Module Registry, Service Registry, AI Context
+>   Broker, Permission Broker, Audit Pipeline, Notification Broker, Workspace Context, Domain
+>   Events) — **never** via HTTP, webhooks, or the Integrations page.
+> - **Integrations is a platform page** for **external** systems only (cloud, identity, ITSM,
+>   security tooling, messaging). There is no `QynIntegrations` business module.
+> - **Quenyx AI is a shared platform layer** across the whole HUB — it is **not** "QynShield AI".
 
 ---
 
@@ -51,11 +84,11 @@ delivered features**. Where something is not yet built, it is labelled as roadma
 
 ---
 
-## Platform status at a glance (Phase I / Sprint 19)
+## Platform status at a glance (v1.0.0 RC1)
 
 | Capability | Status |
 |---|---|
-| QynSight v1.0 (monitoring, infra map, performance, capacity, alerts, service checks, agents) | 🟢 Production‑ready, **feature‑frozen** |
+| QynSight v1.0 — **native** monitoring engines (Discovery, Monitoring, Metrics, Service Checks, Alert Engine, Capacity Planning, Analytics, Infrastructure Map) + agents | 🟢 Production‑ready, **feature‑frozen** |
 | QCIF Corpus Engine + NCA ECC‑2:2024 Revision v1 | 🟢 Built (backend/API) |
 | Knowledge Graph, Cross‑Framework Mapping | 🟢 Built (backend/API) |
 | Evidence Intelligence, Gap Assessment, Recommendation Engine | 🟢 Built (backend/API) |
@@ -63,11 +96,56 @@ delivered features**. Where something is not yet built, it is labelled as roadma
 | Executive Demonstration Platform (dashboard/scorecard/timeline/explainability/platform) | 🟢 Built (read‑only) |
 | Compliance Copilot v0 (mock mode) | 🟢 Built · 🟡 real‑model mode flag‑gated |
 | Retrieval / RAG Foundation | 🟡 Feature‑flagged (metadata‑only; deterministic fallback) |
-| Quenyx AI Platform (provider registry, skills, adapters, capability catalog) | 🟢 Built · QynShield adapter live |
+| Quenyx AI Platform (shared, platform‑wide: provider abstraction, skills, context, retrieval, reasoning, knowledge graph, gap/evidence/recommendation engines, copilot, RAG runtime, executive platform, capability catalog) | 🟢 Built · QynShield adapter live |
+| Unified AI Workspace (Sprint 20) — top‑level platform AI surface, workspace‑scoped, UUID‑only APIs | 🟢 Built · 🟡 master switch (`AI_WORKSPACE_ENABLED`) |
 | QynSight AI adapter | 🔵 Architecture‑ready (interface only) |
-| Other HUB modules (QynRun, QynAsset, QynKnow, …) | 🔵 Registered internally · UI hidden by flag · ⚪ product roadmap |
+| Other HUB modules (QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance) | 🔵 Registered internally · **disabled in the navigation by sidebar flag** until production rollout |
+| QynCore (platform core: internal communication services) | 🟢 Platform layer (not a navigable module) |
+| Integrations (platform page, **external** systems only) | 🟢 Platform page (not a module) |
 
 ---
+
+## Official roadmap (v1.0.0 RC1)
+
+> Hidden business modules (QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport,
+> QynBalance) already exist as registered platform modules; they are **disabled in the navigation by
+> a sidebar feature flag only** and are restored by flipping that flag. `platformRegistry.ts` is
+> untouched. They are **not** "unavailable" — they are switched off in the UI until production
+> rollout.
+
+| Phase | Name | Status |
+|---|---|---|
+| **Phase 1** | Platform Foundation | ✅ Completed |
+| **Phase 2** | Operations Platform (QynSight) | ✅ Completed |
+| **Phase 3** | Compliance & Enterprise AI Foundation (QCIF Sprints 1–19, AI Platform Foundation) | ✅ Completed |
+| **Phase 4** | **Enterprise AI Platform** | 🟡 In progress (Sprint 20 delivered) |
+
+**Phase 4 — Enterprise AI Platform**
+
+| Sprint | Title | Status |
+|---|---|---|
+| Sprint 20 | Unified AI Workspace | ✅ Delivered in RC1 |
+| Sprint 21 | Operations Intelligence | Planned |
+| Sprint 22 | Asset & Knowledge Intelligence | Planned |
+| Sprint 23 | Automation & Response Intelligence | Planned |
+| Sprint 24 | Service, Notification & Cost Intelligence | Planned |
+| Sprint 25 | Enterprise Intelligence Platform | Planned |
+
+There is **no roadmap content beyond Sprint 25** at this time.
+
+---
+
+## PDF deliverables
+
+Branded, print-ready PDFs of the external-facing documents are generated into
+[`./pdf/`](./pdf/) (and `docs/pdf/` for the Observe runbook). They are built from the Markdown
+sources — Markdown remains the editable source of truth. Regenerate with:
+
+```bash
+powershell -File scripts/docs/build-pdfs.ps1
+```
+
+The full alignment summary is in [`../DOCUMENTATION_AUDIT_REPORT_v2.md`](../DOCUMENTATION_AUDIT_REPORT_v2.md).
 
 ## How to keep these docs updated
 

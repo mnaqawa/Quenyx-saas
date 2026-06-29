@@ -1,5 +1,25 @@
 # 15 — QynShield Guide
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Product |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Module guide |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; AI referenced as the shared platform layer. |
+
 **Audience:** Compliance users, auditors.
 **Status:** 🟢 Backend/API built and exercised; UI surface = executive/demo layer (broader UI is
 roadmap). All routes require the **QynShield entitlement** (`project.qynshield`).

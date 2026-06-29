@@ -1,17 +1,44 @@
 # 07 — Quenyx AI Platform Bible
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Confidential — Architecture |
+> | Owner | AI Platform Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Architecture reference |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial AI platform bible (through Sprint 19). |
+> | 2.0 | 2026-06-29 | RC1 alignment: Quenyx AI documented as a shared platform layer (not "QynShield AI"); explicit future‑adapter list; Unified AI Workspace (Sprint 20). |
+
 **Audience:** Architects, AI engineers.
-**Scope:** The shared Quenyx AI Platform extracted in Sprint 19, plus the QCIF AI runtime
-(Sprints 9–18) it consumes.
+**Scope:** The shared, platform‑wide Quenyx AI Platform (extracted in Sprint 19, surfaced
+platform‑wide by the Unified AI Workspace in Sprint 20), plus the QCIF AI runtime (Sprints 9–18) it
+consumes.
 
 ---
 
 ## 1. AI Platform vision
 
-Quenyx AI is a **shared, governable AI runtime for the whole vOPS HUB** — not a feature of one
-module. Modules plug in through a thin **adapter**; the platform owns provider abstraction, skill
-routing, prompt orchestration, retrieval/RAG, and the capability catalog. The platform is
-**deterministic‑first**: business logic decides *what*; AI only *renders*.
+Quenyx AI is a **shared, governable AI runtime for the whole vOPS HUB** — **it is not "QynShield
+AI"** and is not a feature of any single module. Modules plug in through a thin **adapter**; the
+platform owns provider abstraction, skill routing, prompt orchestration, retrieval/RAG, and the
+capability catalog. The platform is **deterministic‑first**: business logic decides *what*; AI only
+*renders*.
+
+Current platform‑wide capabilities: **AI Provider Abstraction**, **AI Skills**, **AI Context**,
+**Retrieval**, **Reasoning**, **Knowledge Graph**, **Gap Engine**, **Evidence Engine**,
+**Recommendation Engine**, **Copilot**, **RAG Runtime**, **Executive Platform**, provider
+abstraction, and **workspace isolation**.
 
 ## 2. Provider abstraction
 
@@ -136,9 +163,11 @@ operate without storing any message content.
 
 ## 20. Future module adapters 🔵/⚪
 
-Any HUB module (QynRun, QynAsset, QynKnow, …) can become an AI consumer by implementing
-`AiModuleAdapterInterface` and registering — inheriting providers, skills, prompt orchestration,
-retrieval/RAG, reasoning, and the capability catalog automatically.
+Each HUB module can become an AI consumer by implementing `AiModuleAdapterInterface` and registering
+— inheriting providers, skills, prompt orchestration, retrieval/RAG, reasoning, and the capability
+catalog automatically. **Future AI adapters** are planned for: **QynSight, QynAsset, QynRun,
+QynNotify, QynReact, QynKnow, QynSupport, QynBalance, and QynVA**. (`QynCore` is the platform core,
+not an adapter target; there is no `QynIntegrations` module.)
 
 ## 21. No direct DB from AI core
 

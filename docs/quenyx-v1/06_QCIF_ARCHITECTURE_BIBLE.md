@@ -1,5 +1,25 @@
 # 06 — QCIF Architecture Bible
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Confidential — Architecture |
+> | Owner | Compliance Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Architecture reference |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1 (Documentation Pack v2.0). |
+
 **Audience:** Architects, auditors.
 **Scope:** Consolidates the QCIF sprint docs (`docs/QCIF_*.md`) into one reference for the
 **Quenyx Compliance Intelligence Foundation** that powers QynShield.

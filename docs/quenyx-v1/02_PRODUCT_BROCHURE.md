@@ -1,5 +1,25 @@
 # 02 — Product Brochure
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Product Marketing |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Product brochure |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring; QynCore vs Integrations clarified; shared platform AI. |
+
 **Audience:** Customers, sales, pre‑sales.
 **Tone:** Sales‑friendly, but factual.
 
@@ -27,8 +47,15 @@ your teams stop stitching together disconnected tools.
 |---|---|---|
 | **QynSight** | Operations monitoring & observability | 🟢 Production‑ready (frozen) |
 | **QynShield** | Compliance intelligence (QCIF) | 🟢 Backend/API built |
-| **Quenyx AI** | Shared, governable AI layer | 🟢 Foundation built |
-| QynRun, QynAsset, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance, QynCore, QynIntegrations | Future operational modules | 🔵 Registered internally / ⚪ roadmap (hidden in UI) |
+| **Quenyx AI** | Shared, platform‑wide governable AI layer | 🟢 Foundation built |
+| QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance | Platform modules | 🔵 Registered internally, **currently disabled in the navigation** until production rollout |
+
+> **QynCore** is the platform core (not a business module): it provides the internal services
+> through which all modules communicate — Platform Event Bus, Shared Services, Module Registry,
+> Service Registry, AI Context Broker, Permission Broker, Audit Pipeline, Notification Broker,
+> Workspace Context, and Domain Events. **Integrations** is a platform page for **external**
+> systems only (cloud, identity, ITSM, security tooling, messaging); it is not a module and does not
+> carry internal module‑to‑module traffic.
 
 ## QynSight overview 🟢
 

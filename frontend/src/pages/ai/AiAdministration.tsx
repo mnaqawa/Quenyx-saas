@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
-import { AiView, Card, StatTile, formatNumber } from '../../components/ai/workspace/shared'
+import { AiView, Card, StatTile } from '../../components/ai/workspace/shared'
+import { formatNumber } from '../../components/ai/workspace/format'
 
 /**
  * Workspace AI Administration — landing for owners/admins. Surfaces governance status and links to

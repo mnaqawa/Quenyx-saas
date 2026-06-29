@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quenyx Platform Architecture Bible — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Quenyx Platform Architecture Bible"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Confidential — Architecture"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Confidential — Architecture</div>
+  <div class="tp-title">Quenyx Platform Architecture Bible</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Confidential — Architecture</td></tr>
+<tr><th>Owner</th><td>Platform Architecture</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Architecture reference</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial architecture bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-platform-architecture-high-level"><span class="toc-text">1. Platform architecture (high level)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-monorepo-structure"><span class="toc-text">2. Monorepo structure</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-backend-frontend-gateway"><span class="toc-text">3. Backend / frontend / gateway</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-workspace-project-model"><span class="toc-text">4. Workspace / project model</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-rbac-and-entitlements"><span class="toc-text">5. RBAC and entitlements</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-module-registry"><span class="toc-text">6. Module registry</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#6-1-internal-communication-qyncore-platform-services"><span class="toc-text">6.1 Internal communication — QynCore platform services</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#6-2-integrations-platform-page-external-only"><span class="toc-text">6.2 Integrations (platform page, external only)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-qynsight-architecture-native-monitoring"><span class="toc-text">7. QynSight architecture (native monitoring)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-qynshield-architecture"><span class="toc-text">8. QynShield architecture</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-quenyx-ai-platform-architecture"><span class="toc-text">9. Quenyx AI Platform architecture</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-api-layer"><span class="toc-text">10. API layer</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-service-layer"><span class="toc-text">11. Service layer</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-database-layer"><span class="toc-text">12. Database layer</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#13-cache"><span class="toc-text">13. Cache</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#14-queues"><span class="toc-text">14. Queues</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#15-audit-logging"><span class="toc-text">15. Audit logging</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#16-security-boundaries"><span class="toc-text">16. Security boundaries</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#17-deployment-architecture"><span class="toc-text">17. Deployment architecture</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#18-current-limitations"><span class="toc-text">18. Current limitations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer)</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>05 — Quenyx Platform Architecture Bible</h1>
+<p><strong>Audience:</strong> Architects, senior engineers, auditors.
+<strong>Status basis:</strong> v1.0.0 RC1. Diagrams reflect the <strong>current</strong> production code.</p>
+<hr />
+<h2 id="1-platform-architecture-high-level">1. Platform architecture (high level)</h2>
+<p>Quenyx vOPS HUB is a <strong>monorepo</strong> with three runtimes — a Laravel API backend, a React SPA frontend,
+and a Node gateway — over a relational database, queue, and cache.</p>
+<div class="mermaid">flowchart LR
+  U[Browser SPA&lt;br/&gt;React + Vite] --&gt;|HTTPS| GW[Node Gateway]
+  AG[QynSight Agents] --&gt;|token-auth API| API
+  GW --&gt;|proxy /api| API[Laravel API&lt;br/&gt;backend]
+  API --&gt; DB[(Relational DB&lt;br/&gt;MySQL)]
+  API --&gt; Q[[Queue / Jobs]]
+  API --&gt; C[[Cache]]
+  API --&gt; AIP[Quenyx AI Platform]
+  AIP --&gt; PR{Provider Registry}
+  PR --&gt; MOCK[Mock Provider]
+  PR --&gt; OAI[OpenAI Provider]
+</div>
+<h2 id="2-monorepo-structure">2. Monorepo structure</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Runtime</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/</code></td>
+<td>Laravel (PHP 8.3)</td>
+<td>API, services, QCIF engines, AI platform, persistence</td>
+</tr>
+<tr>
+<td><code>frontend/</code></td>
+<td>React + Vite + TS</td>
+<td>SPA UI, module registry, workspace UX</td>
+</tr>
+<tr>
+<td><code>gateway/</code></td>
+<td>Node</td>
+<td>Edge/proxy layer in front of the API</td>
+</tr>
+<tr>
+<td><code>agent/</code></td>
+<td>—</td>
+<td>QynSight host agent artifacts</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>—</td>
+<td>Documentation (this pack lives in <code>docs/quenyx-v1/</code>)</td>
+</tr>
+<tr>
+<td><code>scripts/</code></td>
+<td>—</td>
+<td>Operational scripts</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-backend-frontend-gateway">3. Backend / frontend / gateway</h2>
+<ul>
+<li><strong>Backend</strong> — <code>routes/api.php</code> is the single entry, requiring per‑domain route files
+(<code>compliance-corpus.php</code>, <code>compliance-graph.php</code>, <code>ai-orchestration.php</code>, <code>compliance-copilot.php</code>,
+<code>compliance-rag.php</code>, <code>compliance-executive.php</code>, <code>quenyx-ai.php</code>, …). Controllers are thin;
+business logic lives in <code>app/Services/**</code>.</li>
+<li><strong>Frontend</strong> — React SPA; module/route registry in <code>src/constants/platformRegistry.ts</code>; layout
+and sidebar in <code>src/layouts/AppLayout.tsx</code>.</li>
+<li><strong>Gateway</strong> — Node service in front of the API (edge concerns / proxy). Build &amp; run on the server
+(see Doc 10); not buildable in the audit sandbox (no Node).</li>
+</ul>
+<h2 id="4-workspace-project-model">4. Workspace / project model</h2>
+<p>The tenant boundary is the <strong>project</strong> (a.k.a. <strong>workspace</strong> — the two are API aliases pointing to
+the same controllers, see <code>routes/api.php</code>). Users belong to projects via <strong>memberships</strong> with
+roles; modules are entitled per project via <strong>subscriptions</strong> and <strong>module overrides</strong>.</p>
+<div class="mermaid">flowchart TD
+  W[User] --- M[Membership&lt;br/&gt;role]
+  M --- P[Project / Workspace]
+  P --- S[Project Subscription]
+  S --- MOD[Module Entitlements]
+  P --- AUD[Audit Logs]
+</div>
+<h2 id="5-rbac-and-entitlements">5. RBAC and entitlements</h2>
+<ul>
+<li><strong>Authentication:</strong> Laravel <strong>Sanctum</strong>; all tenant routes live under <code>auth:sanctum</code>.</li>
+<li><strong>Authorization:</strong> project membership enforced via <code>ProjectPolicy</code> (controllers call
+<code>authorize('view', $project)</code>).</li>
+<li><strong>Module entitlements:</strong> middleware gates feature areas:
+<ul>
+<li><code>project.module:qynsight</code> → QynSight <code>observe/*</code> routes.</li>
+<li><code>project.qynshield</code> → all QynShield/QCIF routes (corpus workspace, copilot, evidence, gap,
+recommendations, retrieval, RAG, executive).</li>
+</ul>
+</li>
+<li><strong>Overrides:</strong> <code>ProjectModuleOverrideController</code> allows per‑project module access overrides
+(audited).</li>
+</ul>
+<h2 id="6-module-registry">6. Module registry</h2>
+<p>The <strong>frontend</strong> registry (<code>platformRegistry.ts</code>) defines all module entries. The <strong>business
+modules</strong> are: QynSight, QynShield, QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA,
+QynSupport, and QynBalance. Sidebar <strong>visibility</strong> is a <strong>separate</strong> concern controlled by
+<code>HIDE_NON_QYNSIGHT_MODULES = true</code> + <code>ACTIVE_MODULE_KEYS = ['qynsight']</code> via
+<code>isModuleTemporarilyVisible()</code>. Hidden modules are <strong>registered platform modules disabled in the
+navigation by a sidebar flag</strong> — not removed; flipping the flag restores them. The <strong>backend</strong>
+additionally tracks module AI‑readiness in <code>config/quenyx_ai.php</code> + <code>QuenyxModuleCatalog</code>
+(production / reserved / planned), independent of UI.</p>
+<blockquote>
+<p><strong><code>QynCore</code> and <code>Integrations</code> are not business modules.</strong> <code>QynCore</code> is the <strong>platform core</strong> —
+the internal services layer through which modules communicate (see §6.1). <code>Integrations</code> is a
+<strong>platform page</strong> for <strong>external</strong> systems only (see §6.2). The registry/catalog still carry
+legacy <code>qyncore</code> / <code>qynintegrations</code> keys; these are slated to be reclassified and must not be
+presented as future business modules.</p>
+</blockquote>
+<h3 id="6-1-internal-communication-qyncore-platform-services">6.1 Internal communication — QynCore platform services</h3>
+<p>Modules <strong>never</strong> talk to each other over HTTP, webhooks, or the Integrations page. Internal
+communication is <strong>platform‑native</strong>, brokered by <strong>QynCore</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>QynCore service</th>
+<th>Responsibility</th>
+<th>Backed today by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Platform Event Bus</td>
+<td>Asynchronous in‑platform events between modules</td>
+<td>Laravel events + <code>jobs</code> queue</td>
+</tr>
+<tr>
+<td>Domain Events</td>
+<td>Module‑level domain notifications</td>
+<td>Eloquent/domain events</td>
+</tr>
+<tr>
+<td>Shared Services</td>
+<td>Cross‑module services (identity, billing/subscription, common AI)</td>
+<td><code>app/Services/**</code></td>
+</tr>
+<tr>
+<td>Module Registry</td>
+<td>Known modules + entitlement state</td>
+<td><code>platformRegistry.ts</code>, subscriptions/overrides</td>
+</tr>
+<tr>
+<td>Service Registry</td>
+<td>Discoverable platform services/capabilities</td>
+<td><code>QuenyxAiPlatform</code> capability catalog</td>
+</tr>
+<tr>
+<td>AI Context Broker</td>
+<td>Workspace‑scoped context handed to the AI platform</td>
+<td><code>AiContext</code> / <code>QuenyxAiPlatform</code></td>
+</tr>
+<tr>
+<td>Permission Broker</td>
+<td>Centralized authorization decisions</td>
+<td><code>ProjectPolicy</code> + entitlement middleware</td>
+</tr>
+<tr>
+<td>Audit Pipeline</td>
+<td>Structured, immutable audit of sensitive actions</td>
+<td><code>audit_logs</code> + audit loggers</td>
+</tr>
+<tr>
+<td>Notification Broker</td>
+<td>In‑platform notification fan‑out</td>
+<td>notification/event surfaces</td>
+</tr>
+<tr>
+<td>Workspace Context</td>
+<td>Tenant (project/workspace) resolution + isolation</td>
+<td>project↔workspace resolver</td>
+</tr>
+</tbody>
+</table>
+<p>Modules communicate <strong>automatically through the platform</strong>; there is no module‑to‑module HTTP,
+webhook, or integration dependency.</p>
+<h3 id="6-2-integrations-platform-page-external-only">6.2 Integrations (platform page, external only)</h3>
+<p>The <strong>Integrations</strong> page connects Quenyx to <strong>external</strong> systems — e.g. Microsoft, Azure, AWS,
+OCI, Google Cloud, GitHub, GitLab, ServiceNow, Jira, Fortinet, Cisco, VMware, Slack, Teams, Splunk,
+Elastic, Wazuh, REST APIs, Webhooks, LDAP, Active Directory, Entra ID, SMTP. It is <strong>not</strong> a module
+and carries <strong>no</strong> internal module‑to‑module traffic. (Legacy Nagios, where still in use, is one such
+optional external integration / migration source — never a platform dependency.)</p>
+<h2 id="7-qynsight-architecture-native-monitoring">7. QynSight architecture (native monitoring)</h2>
+<p>QynSight (&quot;observe&quot;) provides <strong>native</strong> monitoring — there is <strong>no external monitoring daemon and
+no Nagios dependency</strong>. It is composed of native engines:</p>
+<ul>
+<li><strong>Discovery Engine</strong> — target/host discovery and port scans.</li>
+<li><strong>Monitoring Engine</strong> — runs service checks (HTTP, TCP, Ping, and custom plugin scripts) in‑platform
+via the scheduled <code>observe:run-checks</code> command (<code>engine_key = 'native'</code>).</li>
+<li><strong>Metrics Engine</strong> — agent metrics ingestion (CPU, memory, disk, network, inventory, heartbeats).</li>
+<li><strong>Service Checks</strong> — per‑service check/retry intervals; standard 0/1/2/3 = OK/Warning/Critical/Unknown.</li>
+<li><strong>Alert Engine</strong> — rule evaluation and event generation via scheduled <code>observe:evaluate-alerts</code>,
+with channels and monitoring profiles.</li>
+<li><strong>Capacity Planning</strong> — trend/forecast over collected metrics.</li>
+<li><strong>Analytics</strong> — performance analytics and reporting.</li>
+<li><strong>Infrastructure Map</strong> — live topology of hosts/services.</li>
+</ul>
+<p>Agents authenticate with enrollment tokens / secrets and push <strong>metrics</strong>, <strong>inventory</strong>, and
+<strong>heartbeats</strong>; the backend exposes summaries, performance, capacity, alerts
+(rules/history/channels/profiles), service checks, instances, infra topology, and port scans. Tables
+are the <code>observe_*</code> and <code>agents*</code> groups (see Doc 09). Nagios may appear <strong>only</strong> as a legacy
+migration source or an optional external integration (via Integrations) — never as a platform
+dependency.</p>
+<h2 id="8-qynshield-architecture">8. QynShield architecture</h2>
+<p>QynShield is the QCIF compliance engine (see Doc 06 for depth). Layered services:
+corpus → graph → mapping → evidence → gap → recommendation → copilot → executive, all read‑only and
+<strong>deterministic</strong>, all UUID/provenance‑based, all behind <code>project.qynshield</code>.</p>
+<h2 id="9-quenyx-ai-platform-architecture">9. Quenyx AI Platform architecture</h2>
+<p>A shared runtime (see Doc 07) that any module consumes through an <strong>adapter</strong>.</p>
+<div class="mermaid">flowchart TD
+  REQ[AiModuleRequest] --&gt; PLATFORM[QuenyxAiPlatform]
+  PLATFORM --&gt; ADP{Module Adapter}
+  ADP --&gt;|qynshield| SHIELD[QynShieldAiAdapter]
+  ADP -. reserved .-&gt; SIGHT[QynSightAiAdapterInterface]
+  SHIELD --&gt; CTX[buildContext]
+  SHIELD --&gt; RSN[buildReasoning&lt;br/&gt;deterministic]
+  SHIELD --&gt; PMT[buildPrompt]
+  PMT --&gt; REG[AiProviderRegistry]
+  REG --&gt; MOCK[Mock]
+  REG --&gt; OAI[OpenAI]
+</div>
+<h2 id="10-api-layer">10. API layer</h2>
+<p>REST/JSON under <code>/api</code>. Conventions: sanctum auth, policy + entitlement middleware, per‑group
+throttles (<code>compliance-copilot</code>, <code>compliance-rag</code>, <code>compliance-executive</code>, <code>ai</code> chat/skills). Path
+params use <strong>codes</strong> (framework/release/control/requirement) and <strong>UUIDs</strong> for entities. See Doc 08.</p>
+<h2 id="11-service-layer">11. Service layer</h2>
+<p>All business logic is in <code>app/Services/**</code> (e.g. <code>Services/Compliance/**</code>, <code>Services/Ai/**</code>,
+<code>Services/QuenyxAI/**</code>). Controllers validate + delegate; services are deterministic and testable;
+AI access is funneled through the provider registry only.</p>
+<h2 id="12-database-layer">12. Database layer</h2>
+<p>MySQL via Eloquent; <strong>65 migrations</strong> across groups: identity/projects/plans/subscriptions/modules,
+integrations, audit, QynSight (<code>observe_*</code>, agents), jobs, and QCIF (corpus, evidence, gap,
+recommendation, RAG vectors, AI orchestration, mapping). UUIDs for domain entities; immutability and
+provenance enforced in corpus tables (see Doc 09).</p>
+<h2 id="13-cache">13. Cache</h2>
+<p>Laravel cache is used for resolver/scope caching and rate limiting (<code>RateLimiter</code> named limiters in
+<code>RouteServiceProvider</code>). Cache driver is environment‑configured.</p>
+<h2 id="14-queues">14. Queues</h2>
+<p><code>jobs</code> and <code>failed_jobs</code> tables exist. RAG indexing/deletion are <strong>queue jobs</strong>
+(<code>IndexCorpusRevisionForRag</code>, <code>IndexRetrievalChunk</code>, <code>DeleteVectorIndexForRevision</code>). A queue worker
+is required when RAG indexing is enabled (see Doc 10).</p>
+<h2 id="15-audit-logging">15. Audit logging</h2>
+<p><code>audit_logs</code> table + <code>AuditLogController</code>. Sensitive actions (module overrides, executive reads,
+copilot, etc.) write structured audit entries. Prompt content is <strong>not</strong> logged unless prompt
+logging is explicitly enabled.</p>
+<h2 id="16-security-boundaries">16. Security boundaries</h2>
+<div class="mermaid">flowchart LR
+  subgraph Public
+    H[/api/health/]
+    AGT[/agent token endpoints/]
+  end
+  subgraph Authed[auth:sanctum]
+    direction TB
+    PROJ[project policy]
+    QS[project.module:qynsight]
+    SH[project.qynshield]
+  end
+  H -.no auth.-&gt; Public
+  AGT -.token auth.-&gt; Public
+  PROJ --&gt; QS
+  PROJ --&gt; SH
+</div>
+<p>Boundaries: public health; token‑authed agent ingestion; everything else sanctum + project policy +
+module/QynShield entitlement. AI is an additional opt‑in layer behind feature flags.</p>
+<h2 id="17-deployment-architecture">17. Deployment architecture</h2>
+<p>Ubuntu host(s): Nginx terminates TLS and serves the React build + reverse‑proxies <code>/api</code> (optionally
+via the Node gateway) to PHP‑FPM (Laravel). MySQL, a cache store, a queue worker, and the Laravel
+scheduler run alongside. See Doc 10.</p>
+<h2 id="18-current-limitations">18. Current limitations</h2>
+<ul>
+<li>QynShield has rich backend/API but an <strong>earlier‑stage UI</strong> (executive/demo layer is the current
+surface).</li>
+<li>Real‑model AI and RAG are <strong>feature‑flagged</strong>, not GA.</li>
+<li>Audit‑sandbox could not run DB/tests/frontend/gateway builds (tooling gaps) — these run on
+CI/CloudQuenyx (see QA report).</li>
+<li>One low‑risk <strong>shadowed duplicate route</strong> (<code>/ai/chat</code>) noted in the QA report.</li>
+</ul>
+<h2 id="sprint-20-unified-ai-workspace-platform-layer">Sprint 20 — Unified AI Workspace (platform layer)</h2>
+<p>The <strong>Unified AI Workspace</strong> is a platform‑level capability (NOT a business module): a top‑level
+sidebar item beside Dashboard / Workspaces / Integrations. It does not touch <code>platformRegistry.ts</code>
+and the QynSight‑only sidebar flag is unchanged.</p>
+<ul>
+<li><strong>Backend</strong>: flat <code>/api/ai/*</code> routes (<code>routes/ai-workspace.php</code>), Sanctum + <code>throttle:ai-workspace</code>,
+scoped by a required <code>workspace</code> UUID via <code>AiWorkspaceContextResolver</code>. Controllers live in
+<code>App\Http\Controllers\Ai\Workspace</code>; services in <code>App\Services\Ai\Workspace</code>. The runtime is
+<strong>reused</strong> (provider registry, prompt orchestrator, <code>AiConversationRepository</code>, skills/capability
+catalog) — no QynShield logic is duplicated.</li>
+<li><strong>UUID‑only</strong>: <code>projects</code> gains an additive, backward‑compatible <code>uuid</code> (numeric <code>id</code> and existing
+<code>{project}</code> bindings unchanged); all AI resources expose UUIDs; audit‑derived feed items use
+deterministic UUIDv5.</li>
+<li><strong>New tables</strong>: <code>ai_prompt_templates</code>, <code>ai_provider_settings</code> (encrypted secrets), and
+<code>ai_workspace_permissions</code> (additive per‑role overrides over <code>ProjectPolicy</code>). <code>ai_conversations</code>
+/ <code>ai_conversation_messages</code> are reused.</li>
+<li><strong>RBAC</strong>: <code>ProjectPolicy::accessAi</code> / <code>administerAi</code> + a fine‑grained capability matrix.</li>
+<li><strong>Frontend</strong>: <code>AiWorkspaceLayout</code> + 15 lazy pages under <code>pages/ai/*</code>, <code>aiWorkspaceService</code>,
+<code>useAiWorkspace</code> hooks, full EN/AR i18n, real empty states; consumes backend APIs only.</li>
+</ul>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deployment Guide — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Deployment Guide"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Internal"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Internal</div>
+  <div class="tp-title">Deployment Guide</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Internal</td></tr>
+<tr><th>Owner</th><td>DevOps / SRE</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Deployment guide</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring scheduler (`observe:run-checks` / `observe:evaluate-alerts`).</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-prerequisites"><span class="toc-text">1. Prerequisites</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-ubuntu-deployment-single-node"><span class="toc-text">2. Ubuntu deployment (single node)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-laravel-backend"><span class="toc-text">3. Laravel backend</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-react-frontend"><span class="toc-text">4. React frontend</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-node-gateway"><span class="toc-text">5. Node gateway</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-nginx-ssl"><span class="toc-text">6. Nginx + SSL</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-environment-variables-key-ones"><span class="toc-text">7. Environment variables (key ones)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-queues"><span class="toc-text">8. Queues</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-scheduler"><span class="toc-text">9. Scheduler</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-cache"><span class="toc-text">10. Cache</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-ai-rag-copilot-environment-opt-in"><span class="toc-text">11. AI / RAG / Copilot environment (opt‑in)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-storage"><span class="toc-text">12. Storage</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#13-database-amp-migrations"><span class="toc-text">13. Database &amp;amp; migrations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#14-seeders-amp-corpus"><span class="toc-text">14. Seeders &amp;amp; corpus</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#15-backup-amp-restore"><span class="toc-text">15. Backup &amp;amp; restore</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#16-rollback"><span class="toc-text">16. Rollback</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#17-health-checks"><span class="toc-text">17. Health checks</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#18-production-checklist"><span class="toc-text">18. Production checklist</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>10 — Deployment Guide</h1>
+<p><strong>Audience:</strong> DevOps, implementation partners.
+<strong>Canonical source:</strong> This consolidates the repo‑root <a href="../../DEPLOYMENT.md"><code>DEPLOYMENT.md</code></a> and adds
+QCIF/AI specifics. Where the two differ, the root <code>DEPLOYMENT.md</code> and the actual <code>.env.example</code>
+prevail. <strong>Host‑specific values below are examples — substitute your own.</strong></p>
+<hr />
+<h2 id="1-prerequisites">1. Prerequisites</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PHP</td>
+<td><strong>8.3</strong> recommended (8.1+ supported); extensions: <code>mbstring, pdo_mysql, openssl, curl, fileinfo, bcmath</code></td>
+</tr>
+<tr>
+<td>Composer</td>
+<td>2.x</td>
+</tr>
+<tr>
+<td>Node.js / npm</td>
+<td>18+ LTS or 20+ / npm 9+ (<code>npm ci</code>)</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>8.0+</td>
+</tr>
+<tr>
+<td>Nginx</td>
+<td>reverse proxy + static frontend</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-ubuntu-deployment-single-node">2. Ubuntu deployment (single node)</h2>
+<p>Single host runs: Laravel backend (PHP‑FPM or <code>artisan serve</code>), Node gateway, Nginx (serves
+<code>frontend/dist</code>, proxies <code>/api/</code>), MySQL, queue worker, and the Laravel scheduler.</p>
+<pre><code class="language-bash">git clone &lt;repo-url&gt; &amp;&amp; cd quenyx-saas
+mysql -u root -p &lt; scripts/mysql-quenyx-setup.sql   # first-time DB setup
+</code></pre>
+<h2 id="3-laravel-backend">3. Laravel backend</h2>
+<pre><code class="language-bash">cd backend
+composer install --no-dev --optimize-autoloader
+cp .env.example .env
+# Edit DB_*, APP_URL, APP_KEY, SEED_ADMIN_PASSWORD, GATEWAY_INTERNAL_SECRET, AI/RAG vars (see §11)
+php artisan key:generate
+php artisan migrate --force
+php artisan db:seed --force
+php artisan config:cache &amp;&amp; php artisan route:cache &amp;&amp; php artisan view:cache
+</code></pre>
+<h2 id="4-react-frontend">4. React frontend</h2>
+<pre><code class="language-bash">cd ../frontend
+npm ci
+# set VITE_API_BASE_URL to your API base (same-origin /api recommended)
+npm run build      # output: frontend/dist
+</code></pre>
+<h2 id="5-node-gateway">5. Node gateway</h2>
+<pre><code class="language-bash">cd ../gateway
+npm ci
+npm run build      # rebuild + restart after every change
+# env: GATEWAY_PORT=4000, BACKEND_BASE_URL=http://127.0.0.1:8000, ENTITLEMENTS_CACHE_TTL_MS=30000,
+#      GATEWAY_INTERNAL_SECRET=&lt;strong shared secret, also set in backend&gt;
+</code></pre>
+<h2 id="6-nginx-ssl">6. Nginx + SSL</h2>
+<ul>
+<li>Document root → <code>frontend/dist</code>; SPA fallback <code>try_files $uri /index.html</code>.</li>
+<li><code>location /api/</code> → <code>proxy_pass http://127.0.0.1:4000</code> (gateway), forwarding <code>Authorization</code>.</li>
+<li><strong>SSL:</strong> terminate TLS at Nginx (or LB); redirect HTTP→HTTPS. (See root <code>DEPLOYMENT.md</code> for full
+server blocks, single‑node and multi‑node.)</li>
+</ul>
+<h2 id="7-environment-variables-key-ones">7. Environment variables (key ones)</h2>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>APP_ENV=production</code>, <code>APP_DEBUG=false</code>, <code>APP_KEY</code>, <code>APP_URL</code></td>
+<td>Core (debug <strong>must</strong> be false in prod)</td>
+</tr>
+<tr>
+<td><code>DB_DATABASE/USERNAME/PASSWORD</code></td>
+<td>MySQL</td>
+</tr>
+<tr>
+<td><code>QUEUE_CONNECTION=database</code></td>
+<td>Queue worker</td>
+</tr>
+<tr>
+<td><code>SANCTUM_STATEFUL_DOMAINS</code></td>
+<td>CORS/auth domains</td>
+</tr>
+<tr>
+<td><code>SEED_ADMIN_PASSWORD</code></td>
+<td>Required before seeding <code>UserSeeder</code></td>
+</tr>
+<tr>
+<td><code>GATEWAY_INTERNAL_SECRET</code></td>
+<td>Shared backend↔gateway secret</td>
+</tr>
+<tr>
+<td><code>GATEWAY_BASE_URL</code></td>
+<td>Public gateway URL for agent enrollment</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-queues">8. Queues</h2>
+<p>Port scans and <strong>RAG indexing jobs</strong> require a worker:</p>
+<pre><code class="language-ini"># /etc/systemd/system/quenyx-queue.service  (ExecStart)
+/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+</code></pre>
+<h2 id="9-scheduler">9. Scheduler</h2>
+<p>QynSight checks require cron running the Laravel scheduler:</p>
+<pre><code>* * * * * cd /path/backend &amp;&amp; php artisan schedule:run &gt;&gt; storage/logs/scheduler.log 2&gt;&amp;1
+</code></pre>
+<p>Without it, monitoring shows &quot;Last poll: never&quot;.</p>
+<h2 id="10-cache">10. Cache</h2>
+<p><code>config:cache</code>, <code>route:cache</code>, <code>view:cache</code> in production. Use Redis for cache/sessions in multi‑node
+(optional). Run <code>config:clear</code> after <code>.env</code> changes in dev.</p>
+<h2 id="11-ai-rag-copilot-environment-opt-in">11. AI / RAG / Copilot environment (opt‑in)</h2>
+<p>All AI is <strong>off by default</strong>. Enable deliberately:</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AI_PROVIDER</code></td>
+<td><code>mock</code></td>
+<td><code>openai</code> to use real models</td>
+</tr>
+<tr>
+<td><code>AI_ENABLED</code></td>
+<td><code>false</code></td>
+<td>master switch for real model calls</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code> / <code>OPENAI_MODEL</code> / <code>OPENAI_EMBEDDINGS_MODEL</code></td>
+<td>unset</td>
+<td>provider config (models from env only)</td>
+</tr>
+<tr>
+<td><code>COPILOT_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Copilot on (still mock unless <code>AI_ENABLED</code>)</td>
+</tr>
+<tr>
+<td><code>AI_PROMPT_LOGGING_ENABLED</code></td>
+<td><code>false</code></td>
+<td>store prompt content (keep off)</td>
+</tr>
+<tr>
+<td><code>AI_CONVERSATION_PERSISTENCE_ENABLED</code></td>
+<td><code>false</code></td>
+<td>persist conversations (keep off)</td>
+</tr>
+<tr>
+<td><code>AI_COPILOT_RAG_ENABLED</code> / <code>RAG_ENABLED</code> / <code>EMBEDDINGS_ENABLED</code></td>
+<td><code>false</code></td>
+<td>RAG runtime</td>
+</tr>
+<tr>
+<td><code>VECTOR_PROVIDER</code></td>
+<td>unset</td>
+<td><code>openai</code> (metadata‑only today)</td>
+</tr>
+<tr>
+<td><code>RAG_INDEX_TENANT_EVIDENCE</code></td>
+<td><code>false</code></td>
+<td><strong>keep off</strong> (privacy)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-storage">12. Storage</h2>
+<p>Ensure <code>backend/storage/app/agents</code> exists and is writable by the web user (agent binaries +
+on‑demand Go build). Standard Laravel <code>storage/</code> and <code>bootstrap/cache</code> permissions apply.</p>
+<h2 id="13-database-amp-migrations">13. Database &amp; migrations</h2>
+<pre><code class="language-bash">php artisan migrate --force
+php artisan migrate:status   # verify all applied
+</code></pre>
+<h2 id="14-seeders-amp-corpus">14. Seeders &amp; corpus</h2>
+<pre><code class="language-bash">php artisan db:seed --force                              # core seeders (set SEED_ADMIN_PASSWORD first)
+php artisan db:seed --class=ComplianceCorpusSeeder --force
+php artisan compliance:seed-source-documents \
+  database/corpus/nca/ecc-2-2024/source-documents.json \
+  --framework=nca-ecc --release=2:2024
+</code></pre>
+<p>Expected corpus: <strong>5 domains, 108 controls, 108 requirements</strong>, active <strong>Revision v1</strong>.</p>
+<h2 id="15-backup-amp-restore">15. Backup &amp; restore</h2>
+<ul>
+<li><strong>DB:</strong> <code>mysqldump</code> nightly; store offsite/encrypted. Restore: <code>mysql &lt; dump.sql</code>.</li>
+<li><strong>Storage:</strong> back up <code>backend/storage/</code> (uploaded artifacts, agent binaries).</li>
+<li><strong>Config:</strong> keep <code>.env</code> in a secrets manager (never in git).</li>
+</ul>
+<h2 id="16-rollback">16. Rollback</h2>
+<ul>
+<li><strong>App:</strong> <code>git checkout &lt;previous-tag&gt;</code> → rebuild backend/frontend/gateway → restart services.</li>
+<li><strong>DB:</strong> restore from the pre‑deploy dump. <strong>Do not</strong> rely on <code>migrate:rollback</code> for destructive
+changes in production; restore from backup.</li>
+<li><strong>Corpus:</strong> roll back to the prior active revision (deterministic snapshots; see Doc 18).</li>
+</ul>
+<h2 id="17-health-checks">17. Health checks</h2>
+<ul>
+<li>Backend: <code>GET /api/health</code>.</li>
+<li>Gateway: <code>GET /health</code> → <code>{&quot;status&quot;:&quot;ok&quot;,&quot;service&quot;:&quot;gateway&quot;}</code> (and <code>/ready</code>).</li>
+<li>Monitor ports 8000 (backend) and 4000 (gateway); alert on 502/503 and DB connectivity.</li>
+</ul>
+<h2 id="18-production-checklist">18. Production checklist</h2>
+<ul>
+<li><input disabled="" type="checkbox"> <code>APP_ENV=production</code>, <code>APP_DEBUG=false</code>, strong <code>APP_KEY</code>, HTTPS <code>APP_URL</code>.</li>
+<li><input disabled="" type="checkbox"> <code>config:cache</code> + <code>route:cache</code> after deploy.</li>
+<li><input disabled="" type="checkbox"> CORS restricted to frontend origin; <code>SANCTUM_STATEFUL_DOMAINS</code> set.</li>
+<li><input disabled="" type="checkbox"> <code>GATEWAY_INTERNAL_SECRET</code> set on both sides.</li>
+<li><input disabled="" type="checkbox"> <code>SEED_ADMIN_PASSWORD</code> set; seeded credentials rotated.</li>
+<li><input disabled="" type="checkbox"> Queue worker + scheduler running.</li>
+<li><input disabled="" type="checkbox"> AI/RAG flags reviewed (off unless intended; tenant‑evidence indexing off).</li>
+<li><input disabled="" type="checkbox"> Migrations applied; corpus counts verified.</li>
+<li><input disabled="" type="checkbox"> Backups scheduled.</li>
+</ul>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

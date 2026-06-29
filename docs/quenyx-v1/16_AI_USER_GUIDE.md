@@ -1,5 +1,25 @@
 # 16 — AI User Guide
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Product |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | User guide |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; Quenyx AI as a shared platform; Unified AI Workspace. |
+
 **Audience:** All users.
 **Principle:** Quenyx AI is **governable**, **deterministic‑first**, **cited**, and **off by
 default**.

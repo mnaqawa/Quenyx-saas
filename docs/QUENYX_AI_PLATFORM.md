@@ -144,11 +144,20 @@ platform is therefore aware of **every** module, independent of frontend sidebar
 - Each module reports a live AI readiness:
   - **production** — an adapter is registered (currently: QynShield).
   - **reserved** — an adapter contract exists, not implemented (currently: QynSight).
-  - **planned** — on the roadmap, no contract yet (QynAsset, QynRun, QynReact, QynNotify, QynKnow,
-    QynVA, QynSupport, QynBalance, QynCore, QynIntegrations).
+  - **planned** — a future AI adapter is on the roadmap, no contract yet (QynAsset, QynRun, QynReact,
+    QynNotify, QynKnow, QynVA, QynSupport, QynBalance).
 
-Known modules (UI-independent): QynShield, QynSight, QynAsset, QynRun, QynReact, QynNotify, QynKnow,
-QynVA, QynSupport, QynBalance (+ QynCore, QynIntegrations).
+Known business modules (UI-independent): QynShield, QynSight, QynAsset, QynRun, QynReact, QynNotify,
+QynKnow, QynVA, QynSupport, QynBalance.
+
+> **Architecture note.** **QynCore** is the **platform core**, not a business module and not an AI
+> adapter target — it provides the internal services (Platform Event Bus, Shared Services, Module
+> Registry, Service Registry, AI Context Broker, Permission Broker, Audit Pipeline, Notification
+> Broker, Workspace Context, Domain Events) through which modules communicate. **Integrations** is a
+> **platform page** for external systems only; there is no `QynIntegrations` business module. The
+> backend catalog key list in `config/quenyx_ai.php` still contains legacy `qyncore` / `qynintegrations`
+> entries — these are slated to be reclassified (QynCore → platform core, `qynintegrations` removed)
+> and should not be presented to customers as future business modules.
 
 ### UI visibility is separate
 

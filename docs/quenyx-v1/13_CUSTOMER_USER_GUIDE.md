@@ -1,5 +1,25 @@
 # 13 — Customer User Guide
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Product |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | User guide |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; modules disabled-in-navigation framing; QynCore vs Integrations clarified. |
+
 **Audience:** End users.
 **Scope:** What you can do in the product today. Modules not yet visible are clearly marked.
 
@@ -76,8 +96,14 @@ current UI. Full self‑service compliance UI is on the roadmap.
   loaded framework (NCA ECC‑2:2024).
 - **403 Unauthorized** → you're not a member of that workspace, or lack the module entitlement.
 
-## 10. Not‑yet‑visible modules
+## 10. Modules currently disabled in the navigation
 
-QynRun, QynAsset, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance, QynCore, and
-QynIntegrations are **on the roadmap** and intentionally **hidden** in the UI today. Only **QynSight**
-(and QynShield where entitled/via executive surface) is available.
+QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, and QynBalance are existing
+platform modules that are **intentionally disabled in the navigation** by a sidebar feature flag
+until their production rollout. They are not removed — they are switched off in the UI only. Today
+**QynSight** is the visible module (with **QynShield** available where entitled / via the executive
+surface).
+
+**QynCore** is not a module you navigate to — it is the platform core that lets modules work
+together behind the scenes. **Integrations** is a platform page for connecting Quenyx to **external**
+systems (for example Microsoft, Azure, AWS, Google Cloud, ServiceNow, Jira, Slack, Active Directory).

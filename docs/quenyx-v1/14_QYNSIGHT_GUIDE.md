@@ -1,5 +1,25 @@
 # 14 — QynSight Guide
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Product |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Module guide |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring engine (no Nagios dependency). |
+
 **Audience:** QynSight users and admins.
 **Status:** 🟢 Production‑ready, **feature‑frozen** at v1.0.
 
@@ -41,8 +61,10 @@ and exportable capacity data.
 
 ## 7. Service checks
 
-`observe/services`, `observe/service-definitions`, and `observe/run-checks` (Nagios‑style service
-checks with check/retry intervals). Reports: `observe/reports`, `reports/summary`.
+`observe/services`, `observe/service-definitions`, and `observe/run-checks` — **native** service
+checks (HTTP, TCP, Ping, and custom plugin scripts) executed by the QynSight Monitoring Engine on a
+per‑service check/retry interval. No external monitoring daemon is required. Reports:
+`observe/reports`, `reports/summary`.
 
 ## 8. Hosts
 

@@ -1,5 +1,25 @@
 # 04 — Executive Whitepaper
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Office of the CTO |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Whitepaper |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring; QynCore internal communication; shared platform AI. |
+
 **Audience:** CIO, CTO, CISO, board.
 **Purpose:** Explain the concept and governance model behind Quenyx vOPS HUB without unsupported
 claims.
@@ -71,11 +91,13 @@ every Copilot answer must cite the corpus. This:
 
 ## 8. Quenyx roadmap (executive view)
 
-- **Now (Phase I complete):** QynSight production; QynShield backend/API; shared AI platform;
-  deterministic reasoning; executive demonstration layer.
-- **Next (Sprint 20+):** close verification gaps; mature QynShield UI; graduate real‑model AI and
-  RAG from feature‑flagged to GA; build first‑class QynSight AI on the reserved adapter; expand the
-  compliance corpus to additional frameworks.
+- **Now (Phases 1–3 complete, v1.0.0 RC1):** QynSight production (native monitoring engines);
+  QynShield backend/API; shared platform AI; deterministic reasoning; executive demonstration layer;
+  Unified AI Workspace (Sprint 20) delivered.
+- **Phase 4 — Enterprise AI Platform:** Sprint 20 Unified AI Workspace (delivered), Sprint 21
+  Operations Intelligence, Sprint 22 Asset & Knowledge Intelligence, Sprint 23 Automation & Response
+  Intelligence, Sprint 24 Service/Notification/Cost Intelligence, Sprint 25 Enterprise Intelligence
+  Platform. No roadmap beyond Sprint 25.
 
 **Bottom line for the board:** Quenyx has built a governable foundation where AI is constrained by
 deterministic, provenance‑backed engines — the prerequisite for safe AI adoption in regulated

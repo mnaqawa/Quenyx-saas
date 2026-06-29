@@ -1,5 +1,25 @@
 # 09 — Database Reference
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal |
+> | Owner | Platform Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Database reference |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native QynSight check fields; Sprint 20 AI Workspace tables. |
+
 **Audience:** Engineers, DBAs, auditors.
 **Source:** Derived from `backend/database/migrations` (**65 migrations**) and models at Sprint 19.
 Engine: **MySQL** via Eloquent. Regenerate this doc when migrations change.
@@ -44,8 +64,9 @@ Engine: **MySQL** via Eloquent. Regenerate this doc when migrations change.
 
 ## 4. QynSight tables (`observe_*`, agents)
 
-- **observe_services / observe_service_definitions** — service‑check definitions and instances
-  (Nagios‑style fields, check/retry intervals).
+- **observe_services / observe_service_definitions** — native service‑check definitions and
+  instances (check/retry intervals, `engine_key = 'native'`). Exit‑code semantics follow the
+  standard 0/1/2/3 = OK/Warning/Critical/Unknown convention used by the QynSight Monitoring Engine.
 - **observe_targets / observe_targets_services / observe_targets_hosts** — monitored targets, their
   services, and hosts (with public IP).
 - **observe_alert tables** — alert rules, events, channels, monitoring profiles, evaluation.

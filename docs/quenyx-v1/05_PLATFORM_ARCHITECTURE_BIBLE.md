@@ -1,7 +1,27 @@
 # 05 — Quenyx Platform Architecture Bible
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Confidential — Architecture |
+> | Owner | Platform Architecture |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Architecture reference |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial architecture bible (through Sprint 19). |
+> | 2.0 | 2026-06-29 | RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI. |
+
 **Audience:** Architects, senior engineers, auditors.
-**Status basis:** Phase I, Sprint 19. Diagrams reflect the **current** code.
+**Status basis:** v1.0.0 RC1. Diagrams reflect the **current** production code.
 
 ---
 
@@ -75,19 +95,72 @@ flowchart TD
 
 ## 6. Module registry
 
-The **frontend** registry (`platformRegistry.ts`) defines **all 12 modules** (qynsight, qyncore,
-qynrun, qynbalance, qynsupport, qynintegrations, qynasset, qynknow, qynnotify, qynreact, qynshield,
-qynva). Sidebar **visibility** is a **separate** concern controlled by
+The **frontend** registry (`platformRegistry.ts`) defines all module entries. The **business
+modules** are: QynSight, QynShield, QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA,
+QynSupport, and QynBalance. Sidebar **visibility** is a **separate** concern controlled by
 `HIDE_NON_QYNSIGHT_MODULES = true` + `ACTIVE_MODULE_KEYS = ['qynsight']` via
-`isModuleTemporarilyVisible()`. The **backend** additionally tracks module AI‑readiness in
-`config/quenyx_ai.php` + `QuenyxModuleCatalog` (production / reserved / planned), independent of UI.
+`isModuleTemporarilyVisible()`. Hidden modules are **registered platform modules disabled in the
+navigation by a sidebar flag** — not removed; flipping the flag restores them. The **backend**
+additionally tracks module AI‑readiness in `config/quenyx_ai.php` + `QuenyxModuleCatalog`
+(production / reserved / planned), independent of UI.
 
-## 7. QynSight architecture
+> **`QynCore` and `Integrations` are not business modules.** `QynCore` is the **platform core** —
+> the internal services layer through which modules communicate (see §6.1). `Integrations` is a
+> **platform page** for **external** systems only (see §6.2). The registry/catalog still carry
+> legacy `qyncore` / `qynintegrations` keys; these are slated to be reclassified and must not be
+> presented as future business modules.
 
-QynSight ("observe") provides monitoring. Agents authenticate with enrollment tokens / secrets and
-push **metrics**, **inventory**, and **heartbeats**; the backend exposes summaries, performance,
-capacity, alerts (rules/history/channels/profiles), service checks, instances, infra topology, and
-port scans. Tables are the `observe_*` and `agents*` groups (see Doc 09).
+### 6.1 Internal communication — QynCore platform services
+
+Modules **never** talk to each other over HTTP, webhooks, or the Integrations page. Internal
+communication is **platform‑native**, brokered by **QynCore**:
+
+| QynCore service | Responsibility | Backed today by |
+|---|---|---|
+| Platform Event Bus | Asynchronous in‑platform events between modules | Laravel events + `jobs` queue |
+| Domain Events | Module‑level domain notifications | Eloquent/domain events |
+| Shared Services | Cross‑module services (identity, billing/subscription, common AI) | `app/Services/**` |
+| Module Registry | Known modules + entitlement state | `platformRegistry.ts`, subscriptions/overrides |
+| Service Registry | Discoverable platform services/capabilities | `QuenyxAiPlatform` capability catalog |
+| AI Context Broker | Workspace‑scoped context handed to the AI platform | `AiContext` / `QuenyxAiPlatform` |
+| Permission Broker | Centralized authorization decisions | `ProjectPolicy` + entitlement middleware |
+| Audit Pipeline | Structured, immutable audit of sensitive actions | `audit_logs` + audit loggers |
+| Notification Broker | In‑platform notification fan‑out | notification/event surfaces |
+| Workspace Context | Tenant (project/workspace) resolution + isolation | project↔workspace resolver |
+
+Modules communicate **automatically through the platform**; there is no module‑to‑module HTTP,
+webhook, or integration dependency.
+
+### 6.2 Integrations (platform page, external only)
+
+The **Integrations** page connects Quenyx to **external** systems — e.g. Microsoft, Azure, AWS,
+OCI, Google Cloud, GitHub, GitLab, ServiceNow, Jira, Fortinet, Cisco, VMware, Slack, Teams, Splunk,
+Elastic, Wazuh, REST APIs, Webhooks, LDAP, Active Directory, Entra ID, SMTP. It is **not** a module
+and carries **no** internal module‑to‑module traffic. (Legacy Nagios, where still in use, is one such
+optional external integration / migration source — never a platform dependency.)
+
+## 7. QynSight architecture (native monitoring)
+
+QynSight ("observe") provides **native** monitoring — there is **no external monitoring daemon and
+no Nagios dependency**. It is composed of native engines:
+
+- **Discovery Engine** — target/host discovery and port scans.
+- **Monitoring Engine** — runs service checks (HTTP, TCP, Ping, and custom plugin scripts) in‑platform
+  via the scheduled `observe:run-checks` command (`engine_key = 'native'`).
+- **Metrics Engine** — agent metrics ingestion (CPU, memory, disk, network, inventory, heartbeats).
+- **Service Checks** — per‑service check/retry intervals; standard 0/1/2/3 = OK/Warning/Critical/Unknown.
+- **Alert Engine** — rule evaluation and event generation via scheduled `observe:evaluate-alerts`,
+  with channels and monitoring profiles.
+- **Capacity Planning** — trend/forecast over collected metrics.
+- **Analytics** — performance analytics and reporting.
+- **Infrastructure Map** — live topology of hosts/services.
+
+Agents authenticate with enrollment tokens / secrets and push **metrics**, **inventory**, and
+**heartbeats**; the backend exposes summaries, performance, capacity, alerts
+(rules/history/channels/profiles), service checks, instances, infra topology, and port scans. Tables
+are the `observe_*` and `agents*` groups (see Doc 09). Nagios may appear **only** as a legacy
+migration source or an optional external integration (via Integrations) — never as a platform
+dependency.
 
 ## 8. QynShield architecture
 

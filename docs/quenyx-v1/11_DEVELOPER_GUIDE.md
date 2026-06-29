@@ -1,5 +1,25 @@
 # 11 — Developer Guide
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal |
+> | Owner | Platform Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Developer guide |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; QynCore internal communication; Unified AI Workspace patterns. |
+
 **Audience:** New engineers.
 **Goal:** Get productive in the Quenyx monorepo and ship changes that match platform conventions.
 

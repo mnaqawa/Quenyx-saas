@@ -1,5 +1,25 @@
 # 18 — Operations Runbook
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal — Operations |
+> | Owner | Operations / SRE |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Operations runbook |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring operations; Unified AI Workspace operations. See also `docs/OBSERVE_RUNBOOK.md`. |
+
 **Audience:** Ops / SRE.
 **Scope:** Run, monitor, and recover a Quenyx vOPS HUB deployment. Commands assume the backend dir
 and a Linux host (adjust paths).

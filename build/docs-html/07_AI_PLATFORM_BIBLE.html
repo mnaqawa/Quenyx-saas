@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quenyx AI Platform Bible — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Quenyx AI Platform Bible"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Confidential — Architecture"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Confidential — Architecture</div>
+  <div class="tp-title">Quenyx AI Platform Bible</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Confidential — Architecture</td></tr>
+<tr><th>Owner</th><td>AI Platform Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Architecture reference</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial AI platform bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: Quenyx AI documented as a shared platform layer (not &quot;QynShield AI&quot;); explicit future‑adapter list; Unified AI Workspace (Sprint 20).</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-ai-platform-vision"><span class="toc-text">1. AI Platform vision</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-provider-abstraction"><span class="toc-text">2. Provider abstraction</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-openai-provider"><span class="toc-text">3. OpenAI provider 🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-mock-provider"><span class="toc-text">4. Mock provider 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-provider-registry"><span class="toc-text">5. Provider registry</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-skill-registry"><span class="toc-text">6. Skill registry</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-skill-router"><span class="toc-text">7. Skill router</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-module-adapters"><span class="toc-text">8. Module adapters</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-qynshield-adapter"><span class="toc-text">9. QynShield adapter 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-qynsight-reserved-adapter"><span class="toc-text">10. QynSight reserved adapter 🔵</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-ai-contract-request-dto"><span class="toc-text">11. AI contract (request DTO)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-reasoning-engine"><span class="toc-text">12. Reasoning engine 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#13-retrieval-foundation"><span class="toc-text">13. Retrieval foundation 🟢/🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#14-rag-foundation"><span class="toc-text">14. RAG foundation 🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#15-copilot"><span class="toc-text">15. Copilot 🟢/🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#16-demo-mode"><span class="toc-text">16. Demo mode 🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#17-guardrails"><span class="toc-text">17. Guardrails</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#18-prompt-logging-policy"><span class="toc-text">18. Prompt logging policy</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19-conversation-persistence-policy"><span class="toc-text">19. Conversation persistence policy</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#20-future-module-adapters"><span class="toc-text">20. Future module adapters 🔵/⚪</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#21-no-direct-db-from-ai-core"><span class="toc-text">21. No direct DB from AI core</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#22-no-direct-provider-calls-outside-providers"><span class="toc-text">22. No direct provider calls outside providers</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#23-capability-catalog"><span class="toc-text">23. Capability catalog 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#unified-ai-workspace-sprint-20"><span class="toc-text">Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>07 — Quenyx AI Platform Bible</h1>
+<p><strong>Audience:</strong> Architects, AI engineers.
+<strong>Scope:</strong> The shared, platform‑wide Quenyx AI Platform (extracted in Sprint 19, surfaced
+platform‑wide by the Unified AI Workspace in Sprint 20), plus the QCIF AI runtime (Sprints 9–18) it
+consumes.</p>
+<hr />
+<h2 id="1-ai-platform-vision">1. AI Platform vision</h2>
+<p>Quenyx AI is a <strong>shared, governable AI runtime for the whole vOPS HUB</strong> — <strong>it is not &quot;QynShield
+AI&quot;</strong> and is not a feature of any single module. Modules plug in through a thin <strong>adapter</strong>; the
+platform owns provider abstraction, skill routing, prompt orchestration, retrieval/RAG, and the
+capability catalog. The platform is <strong>deterministic‑first</strong>: business logic decides <em>what</em>; AI only
+<em>renders</em>.</p>
+<p>Current platform‑wide capabilities: <strong>AI Provider Abstraction</strong>, <strong>AI Skills</strong>, <strong>AI Context</strong>,
+<strong>Retrieval</strong>, <strong>Reasoning</strong>, <strong>Knowledge Graph</strong>, <strong>Gap Engine</strong>, <strong>Evidence Engine</strong>,
+<strong>Recommendation Engine</strong>, <strong>Copilot</strong>, <strong>RAG Runtime</strong>, <strong>Executive Platform</strong>, provider
+abstraction, and <strong>workspace isolation</strong>.</p>
+<h2 id="2-provider-abstraction">2. Provider abstraction</h2>
+<p>All model access goes through a <strong>provider interface</strong> resolved by <code>AiProviderRegistry</code>. <strong>No model
+is hardcoded</strong> — names come from env (<code>OPENAI_MODEL</code>, <code>OPENAI_EMBEDDINGS_MODEL</code>). No code outside a
+provider class makes a direct model/HTTP call.</p>
+<h2 id="3-openai-provider">3. OpenAI provider 🟡</h2>
+<p><code>OpenAiProvider</code> implements the provider interface for OpenAI (chat + embeddings). Active only when
+<code>AI_PROVIDER=openai</code> and <code>AI_ENABLED=true</code>; otherwise it is never invoked.</p>
+<h2 id="4-mock-provider">4. Mock provider 🟢</h2>
+<p><code>MockAiProvider</code> is the <strong>default</strong> (<code>ai.default = mock</code>). It returns deterministic mock responses so
+the entire platform runs with <strong>zero external calls</strong> — ideal for demos, tests, and safe defaults.</p>
+<h2 id="5-provider-registry">5. Provider registry</h2>
+<p><code>AiProviderRegistry</code> maps a provider key → implementing class from <code>config/ai.php</code>. Selecting an
+unimplemented future provider (azure/claude/gemini/ollama/local — declared, not built) throws.</p>
+<h2 id="6-skill-registry">6. Skill registry</h2>
+<p><code>config/ai.skills.registered</code> maps skill keys to classes with priorities and per‑skill flags:
+<code>corpus_search</code>, <code>knowledge_graph</code>, <code>framework_mapping</code>, <code>evidence</code>, <code>gap_assessment</code>,
+<code>recommendation</code>. <strong>Skills make no AI calls</strong> — they reuse the deterministic compliance services and
+return AI‑context payloads.</p>
+<h2 id="7-skill-router">7. Skill router</h2>
+<p>The orchestrator auto‑routes a request to skills by priority (higher first) and supported context.
+Skills are individually feature‑flagged and can be disabled via env.</p>
+<h2 id="8-module-adapters">8. Module adapters</h2>
+<p><code>AiModuleAdapterInterface</code> defines the contract every module implements:</p>
+<pre><code class="language-php">moduleKey(): string
+supportedSkills(): array
+supportedContexts(): array
+buildContext(AiModuleRequest $request): array
+buildReasoning(AiModuleRequest $request, array $context): ReasoningOutput
+buildPrompt(AiModuleRequest $request, ReasoningOutput $reasoning): AiPrompt
+</code></pre>
+<p>The 3‑stage pipeline (<strong>context → reasoning → prompt</strong>) keeps deterministic work separate from
+model rendering.</p>
+<h2 id="9-qynshield-adapter">9. QynShield adapter 🟢</h2>
+<p><code>QynShieldAiAdapter</code> is the <strong>first live adapter</strong>. It wraps existing QynShield services (planner,
+retrieval, reasoning, prompt orchestrator, skills registry) — <strong>no business logic was duplicated or
+moved</strong>. Registered at boot with <code>QuenyxAiPlatform::registerAdapter(...)</code>.</p>
+<h2 id="10-qynsight-reserved-adapter">10. QynSight reserved adapter 🔵</h2>
+<p><code>QynSightAiAdapterInterface</code> exists as a <strong>reserved contract only</strong>. There is <strong>no QynSight AI
+implementation</strong> — no monitoring AI, RCA, incident AI, log analysis, or metrics AI. When built, its
+adapter registers with <strong>no platform change</strong> and its <code>module_catalog</code> status flips <code>reserved</code> →
+<code>production</code>.</p>
+<h2 id="11-ai-contract-request-dto">11. AI contract (request DTO)</h2>
+<p><code>AiModuleRequest</code> is the generic, module‑agnostic request DTO (module key, skill/context, payload).
+This is the single shape the platform understands, regardless of module.</p>
+<h2 id="12-reasoning-engine">12. Reasoning engine 🟢</h2>
+<p>The <strong>Compliance Reasoning Engine</strong> (Sprint 16) is deterministic and rule‑based
+(<code>ComplianceReasoningRuleSet</code>). It decides what to answer <strong>before</strong> any AI, producing a
+<code>ReasoningOutput</code> (findings, applied rule IDs, explanation). Disabling it falls back to legacy
+skill‑composed prompts. It makes <strong>no AI or DB calls</strong> itself.</p>
+<h2 id="13-retrieval-foundation">13. Retrieval foundation 🟢/🟡</h2>
+<p><code>ComplianceRetrievalService</code> provides deterministic retrieval over the corpus (Sprint 15). It exposes
+<code>queryDetailed()</code> for downstream RAG. Retrieval itself is deterministic; RAG adds optional vector
+recall on top.</p>
+<h2 id="14-rag-foundation">14. RAG foundation 🟡</h2>
+<p>Sprint 17 hybrid RAG:</p>
+<ul>
+<li><code>ComplianceHybridRetrievalService</code> merges deterministic + optional vector results, de‑duplicates,
+and ranks; <strong>falls back to deterministic</strong> if a vector provider fails.</li>
+<li><code>ComplianceRagContextBuilder</code> builds a <strong>bounded, cited</strong> context package (token budget, citations,
+guardrails). It makes <strong>no AI call</strong>.</li>
+<li><code>OpenAiVectorRetrievalProvider</code> runs <strong>metadata‑only</strong> (no fake similarity); off by default.</li>
+<li><strong>Tenant evidence is never indexed by default</strong> (<code>rag.index_tenant_evidence = false</code>).</li>
+</ul>
+<h2 id="15-copilot">15. Copilot 🟢/🟡</h2>
+<p><code>ComplianceCopilotService</code> orchestrates: scope resolve → retrieval → deterministic reasoning →
+(optional RAG context) → prompt orchestration → provider. <strong>Citation‑enforced</strong> (&quot;no source, no
+answer&quot;). Runs in <strong>mock mode</strong> unless <code>AI_ENABLED=true</code>.</p>
+<h2 id="16-demo-mode">16. Demo mode 🟡</h2>
+<p><code>AI_COPILOT_DEMO_MODE</code> adds a <code>demo</code> block exposing <strong>existing</strong> intelligence — reasoning trace,
+fired rules, citations, retrieved chunks, recommendation sources, evidence chain. It is <strong>not
+chain‑of‑thought</strong> and adds <strong>no new reasoning</strong>. Off by default.</p>
+<h2 id="17-guardrails">17. Guardrails</h2>
+<ul>
+<li>AI off by default; mock provider default.</li>
+<li>Deterministic reasoning gates the answer.</li>
+<li>Citations enforced; uncited chunks excluded.</li>
+<li>Token budget bounds context.</li>
+<li>No tenant‑evidence embeddings by default.</li>
+<li>Provider‑agnostic; no hardcoded models.</li>
+</ul>
+<h2 id="18-prompt-logging-policy">18. Prompt logging policy</h2>
+<p><code>prompt_logging</code> (and Copilot's <code>AI_PROMPT_LOGGING_ENABLED</code>) default <strong>false</strong> — user/assistant
+prompt <strong>content is never written to storage</strong> unless explicitly enabled.</p>
+<h2 id="19-conversation-persistence-policy">19. Conversation persistence policy</h2>
+<p><code>persist_conversations</code> (and <code>AI_CONVERSATION_PERSISTENCE_ENABLED</code>) default <strong>false</strong> — Copilot can
+operate without storing any message content.</p>
+<h2 id="20-future-module-adapters">20. Future module adapters 🔵/⚪</h2>
+<p>Each HUB module can become an AI consumer by implementing <code>AiModuleAdapterInterface</code> and registering
+— inheriting providers, skills, prompt orchestration, retrieval/RAG, reasoning, and the capability
+catalog automatically. <strong>Future AI adapters</strong> are planned for: <strong>QynSight, QynAsset, QynRun,
+QynNotify, QynReact, QynKnow, QynSupport, QynBalance, and QynVA</strong>. (<code>QynCore</code> is the platform core,
+not an adapter target; there is no <code>QynIntegrations</code> module.)</p>
+<h2 id="21-no-direct-db-from-ai-core">21. No direct DB from AI core</h2>
+<p>The AI core does not touch the database directly for business data; it consumes <strong>deterministic
+service outputs</strong> (via skills/adapters). DB access lives in the compliance/services layer, not in the
+AI orchestration core.</p>
+<h2 id="22-no-direct-provider-calls-outside-providers">22. No direct provider calls outside providers</h2>
+<p>Reaffirmed and <strong>verified by static scan</strong>: only provider classes (and the metadata‑only vector
+provider, via the registry) reference the model SDK. (The legacy QynSight knowledge‑base agent
+<code>Services/OpenAI/OpenAIService</code> predates the platform and is a separate, isolated service.)</p>
+<h2 id="23-capability-catalog">23. Capability catalog 🟢</h2>
+<p><code>GET /api/ai/platform/capabilities</code> (<code>QuenyxAiCapabilityCatalog</code>) dynamically returns registered
+<strong>modules</strong> (adapters), <strong>skills</strong>, <strong>providers</strong>, <strong>reasoning/retrieval/RAG</strong> status, supported
+contexts, and the HUB‑wide <strong><code>module_catalog</code></strong> (production/reserved/planned), independent of UI
+visibility.</p>
+<h2 id="unified-ai-workspace-sprint-20">Unified AI Workspace (Sprint 20)</h2>
+<p>A platform‑level surface that exposes the shared AI runtime to every workspace through flat
+<code>/api/ai/*</code> endpoints (see API Reference §17). It <strong>reuses</strong> the existing runtime rather than adding
+new AI logic:</p>
+<ul>
+<li><strong>Conversations / Chat / History</strong> reuse <code>AiConversation(Message)</code> + <code>AiConversationRepository</code>;
+message execution goes through <code>AiProviderRegistry</code> + <code>CompliancePromptOrchestrator</code> (mock provider
+until <code>ai.feature_flags.enabled</code>). Conversation <strong>metadata + token counts</strong> are always persisted for
+this surface; message <strong>content</strong> only when <code>prompt_logging</code> is enabled.</li>
+<li><strong>Skills / Capabilities</strong> read <code>QuenyxAiPlatform</code> / <code>QuenyxAiCapabilityCatalog</code> (Sprint 19) — no
+duplicated catalog.</li>
+<li><strong>Usage / Costs</strong> are <strong>derived</strong> from real token counts; costs multiply by an optional
+<code>config('ai.workspace.pricing')</code> table and never fabricate currency.</li>
+<li><strong>Prompt Templates</strong> (<code>ai_prompt_templates</code>), <strong>Provider Settings</strong> (<code>ai_provider_settings</code>,
+encrypted, write‑only secrets), and <strong>Permissions</strong> (<code>ai_workspace_permissions</code>) add the missing
+governance concepts only.</li>
+<li><strong>Audit</strong>: conversations, provider updates, template changes, and permission changes are logged via
+<code>AiAccessAuditLogger</code> / <code>AiWorkspaceAuditLogger</code> (never secrets or content).</li>
+<li><strong>Memory</strong>: no durable AI memory store exists yet, so the Memory surface honestly reports
+&quot;not enabled&quot; instead of fabricating data.</li>
+</ul>
+<p>Master switch: <code>ai.feature_flags.workspace_enabled</code> (env <code>AI_WORKSPACE_ENABLED</code>, default on; safe
+because chat falls back to the mock provider and metrics read 0 with no activity).</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

@@ -1,8 +1,28 @@
 # 01 — Executive Overview
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Public / External |
+> | Owner | Executive Office |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Executive brief |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI. |
+
 **Audience:** Investors, board, executives, strategic partners.
 **Tone:** Non‑technical, factual, investor‑ready.
-**Status basis:** Phase I, through Sprint 19.
+**Status basis:** v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprint 20 delivered).
 
 > This document describes **what exists today** in the Quenyx codebase and what is **planned**. It
 > contains **no fabricated customers, revenue, market sizing, benchmarks, or certifications**.
@@ -109,10 +129,12 @@ default**, **deterministic‑first**, and **citation‑enforced**.
 
 ## 11. Investor narrative
 
-Quenyx has completed a **disciplined Phase‑I foundation**: a production monitoring product, a
-provenance‑grounded compliance engine, and a governable shared AI platform — built with explicit
-safety rails rather than demo shortcuts. The next phase converts this foundation into broader
-module coverage and customer‑facing AI, from a base that is already architecturally sound.
+Quenyx has completed a **disciplined foundation across Phases 1–3**: a production monitoring product
+(native QynSight engines), a provenance‑grounded compliance engine, and a governable shared AI
+platform — built with explicit safety rails rather than demo shortcuts. **Phase 4 (Enterprise AI
+Platform)** is now underway, with the **Unified AI Workspace (Sprint 20)** already delivered in RC1,
+converting this foundation into broader module coverage and customer‑facing AI from a base that is
+already architecturally sound.
 
 ## 12. Customer value
 
@@ -129,9 +151,26 @@ module coverage and customer‑facing AI, from a base that is already architectu
 - **No production metrics, customers, or certifications are claimed** in this pack.
 - Several modules exist as registry entries only and are **hidden in the UI**.
 
-## 14. Next roadmap phase (Sprint 20+)
+## 14. Official roadmap
 
-- Close the Track‑B verification gaps (DB/corpus/tests/frontend builds on CI/CloudQuenyx).
-- Progress QynShield customer UI.
-- Plan first‑class **QynSight AI** via the reserved adapter (post‑foundation).
-- Expand the compliance corpus to additional frameworks.
+| Phase | Name | Status |
+|---|---|---|
+| Phase 1 | Platform Foundation | ✅ Completed |
+| Phase 2 | Operations Platform (QynSight) | ✅ Completed |
+| Phase 3 | Compliance & Enterprise AI Foundation (QCIF Sprints 1–19, AI Platform Foundation) | ✅ Completed |
+| Phase 4 | **Enterprise AI Platform** | 🟡 In progress |
+
+**Phase 4 — Enterprise AI Platform**
+
+| Sprint | Title | Status |
+|---|---|---|
+| Sprint 20 | Unified AI Workspace | ✅ Delivered in RC1 |
+| Sprint 21 | Operations Intelligence | Planned |
+| Sprint 22 | Asset & Knowledge Intelligence | Planned |
+| Sprint 23 | Automation & Response Intelligence | Planned |
+| Sprint 24 | Service, Notification & Cost Intelligence | Planned |
+| Sprint 25 | Enterprise Intelligence Platform | Planned |
+
+There is no roadmap content beyond Sprint 25 at this time. Hidden business modules (QynAsset, QynRun,
+QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance) already exist as registered platform
+modules and are **disabled in the navigation by a sidebar flag** until their production rollout.

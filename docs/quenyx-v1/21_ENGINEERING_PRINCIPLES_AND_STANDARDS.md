@@ -1,5 +1,25 @@
 # 21 — Engineering Principles & Standards
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal |
+> | Owner | Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | Engineering standards |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1 (Documentation Pack v2.0). |
+
 **Audience:** The engineering org.
 **Purpose:** The non‑negotiables that define how Quenyx is built. These are observed in the current
 codebase and are the bar for all future work.

@@ -1,7 +1,8 @@
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
-import { AiView, Card, formatNumber } from '../../components/ai/workspace/shared'
+import { AiView, Card } from '../../components/ai/workspace/shared'
+import { formatNumber } from '../../components/ai/workspace/format'
 
 /**
  * AI Cost Tracking — costs are derived from real token counts × configured pricing. When pricing is

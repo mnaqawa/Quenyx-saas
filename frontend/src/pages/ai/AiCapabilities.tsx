@@ -1,7 +1,8 @@
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
-import { AiView, Card, formatDateTime } from '../../components/ai/workspace/shared'
+import { AiView, Card } from '../../components/ai/workspace/shared'
+import { formatDateTime } from '../../components/ai/workspace/format'
 
 function Chips({ items }: { items: string[] }) {
   if (items.length === 0) return <span className="text-xs text-white/40">—</span>

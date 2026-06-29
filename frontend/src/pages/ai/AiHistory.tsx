@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
-import { AiView, Card, formatDateTime, formatNumber } from '../../components/ai/workspace/shared'
+import { AiView, Card } from '../../components/ai/workspace/shared'
+import { formatDateTime, formatNumber } from '../../components/ai/workspace/format'
 
 /**
  * AI History — read-only chronological log of every conversation in the workspace (same source as

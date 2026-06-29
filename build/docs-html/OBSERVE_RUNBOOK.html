@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QynSight Monitoring Runbook (Native Engine) — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "QynSight Monitoring Runbook (Native Engine)"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Internal — Operations"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Internal — Operations</div>
+  <div class="tp-title">QynSight Monitoring Runbook (Native Engine)</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Internal — Operations</td></tr>
+<tr><th>Owner</th><td>Operations / SRE</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Operations runbook</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>&quot;ShieldObserve / Approach 2&quot; Nagios integration runbook.</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Rewritten for the **native** QynSight monitoring engine. Nagios procedures moved to Appendix A (legacy migration / optional integration only).</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal — Operations. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-qynsight-monitoring-architecture"><span class="toc-text">1. QynSight monitoring architecture</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-prerequisites"><span class="toc-text">2. Prerequisites</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-collectors-and-check-types"><span class="toc-text">3. Collectors and check types</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-day-to-day-operations"><span class="toc-text">4. Day‑to‑day operations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#4-1-define-monitored-targets-discovery"><span class="toc-text">4.1 Define monitored targets (Discovery)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#4-2-run-checks-monitoring-engine"><span class="toc-text">4.2 Run checks (Monitoring Engine)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#4-3-evaluate-alerts-alert-engine"><span class="toc-text">4.3 Evaluate alerts (Alert Engine)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#4-4-read-monitoring-data-analytics-capacity-infra-map"><span class="toc-text">4.4 Read monitoring data (Analytics / Capacity / Infra Map)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-health-verification-end-to-end-workspace-84"><span class="toc-text">5. Health verification (end‑to‑end, workspace 84)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-troubleshooting"><span class="toc-text">6. Troubleshooting</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#quot-last-run-never-quot-stale-data"><span class="toc-text">&amp;quot;Last run: never&amp;quot; / stale data</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#port-scan-never-completes"><span class="toc-text">Port scan never completes</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#a-check-is-stuck-always-unknown"><span class="toc-text">A check is stuck / always Unknown</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#workspace-data-leakage"><span class="toc-text">Workspace data leakage</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#validation-errors-on-put-observe-targets-422"><span class="toc-text">Validation errors on PUT /observe/targets (422)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#where-to-look"><span class="toc-text">Where to look</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-database-reference"><span class="toc-text">7. Database reference</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#observe-services-schema-real-column-names"><span class="toc-text">observe_services schema (real column names)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-frontend-use-the-real-api"><span class="toc-text">8. Frontend (use the real API)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-build-test-verification"><span class="toc-text">9. Build / test verification</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#appendix-a-legacy-nagios-migration-optional-integration-only"><span class="toc-text">Appendix A — Legacy Nagios (migration / optional integration only)</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>QynSight Monitoring Runbook (Native Engine)</h1>
+<p>This runbook covers operating and troubleshooting <strong>QynSight</strong>, Quenyx's <strong>native</strong> monitoring stack.
+Monitoring runs <strong>inside the platform</strong> — there is <strong>no external monitoring daemon and no Nagios
+dependency</strong>. Service checks (HTTP, TCP, Ping, and custom plugin scripts) execute in PHP on the
+Laravel scheduler and write results directly to <code>observe_services</code> (<code>engine_key = 'native'</code>), which
+the Services / Targets / Infrastructure Map UI reads.</p>
+<blockquote>
+<p><strong>Nagios is not part of the runtime.</strong> It may appear <strong>only</strong> as a legacy migration source or as an
+optional third‑party integration (Integrations page). See <strong>Appendix A</strong> if you are operating a
+legacy Nagios deployment during migration.</p>
+</blockquote>
+<hr />
+<h2 id="1-qynsight-monitoring-architecture">1. QynSight monitoring architecture</h2>
+<p>QynSight is composed of native engines:</p>
+<table>
+<thead>
+<tr>
+<th>Engine</th>
+<th>Responsibility</th>
+<th>Operational surface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Discovery Engine</strong></td>
+<td>Find hosts/services; port scans</td>
+<td><code>observe/targets</code>, <code>targets/validate</code>, per‑host port scan (queue worker)</td>
+</tr>
+<tr>
+<td><strong>Monitoring Engine</strong></td>
+<td>Run due service checks in‑platform</td>
+<td><code>php artisan observe:run-checks</code> (scheduled)</td>
+</tr>
+<tr>
+<td><strong>Metrics Engine</strong></td>
+<td>Ingest agent metrics / inventory / heartbeats</td>
+<td>agent token endpoints → <code>agent_metrics</code>, summaries</td>
+</tr>
+<tr>
+<td><strong>Service Checks</strong></td>
+<td>Per‑service definitions + intervals</td>
+<td><code>observe/services</code>, <code>observe/service-definitions</code></td>
+</tr>
+<tr>
+<td><strong>Alert Engine</strong></td>
+<td>Evaluate rules → events → channels</td>
+<td><code>php artisan observe:evaluate-alerts</code> (scheduled), <code>alerts/*</code></td>
+</tr>
+<tr>
+<td><strong>Capacity Planning</strong></td>
+<td>Trend / forecast over metrics</td>
+<td><code>observe/reports</code>, capacity views</td>
+</tr>
+<tr>
+<td><strong>Analytics</strong></td>
+<td>Performance analytics &amp; reporting</td>
+<td><code>reports/summary</code>, performance views</td>
+</tr>
+<tr>
+<td><strong>Infrastructure Map</strong></td>
+<td>Live host/service topology</td>
+<td>infra topology endpoints</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Check result model:</strong> every check maps to the standard exit‑code convention —
+<code>0 = OK</code>, <code>1 = Warning</code>, <code>2 = Critical</code>, <code>3 = Unknown</code> — and upserts a row into <code>observe_services</code>
+with <code>state</code>, <code>last_check_at</code>, <code>next_check_at</code>, <code>output</code>, and <code>perfdata</code>.</p>
+<hr />
+<h2 id="2-prerequisites">2. Prerequisites</h2>
+<ol>
+<li>
+<p><strong>Run migrations</strong> (creates the <code>observe_*</code> and <code>agents*</code> tables):</p>
+<pre><code class="language-bash">cd backend
+php artisan migrate --force
+</code></pre>
+<p>Required tables include <code>observe_targets_hosts</code>, <code>observe_targets_services</code>, <code>observe_services</code>,
+<code>observe_meta</code>, plus the <code>observe_alert*</code> and monitoring‑profile tables. If you see
+&quot;Table doesn't exist&quot;, migrations have not been run.</p>
+</li>
+<li>
+<p><strong>Laravel scheduler running</strong> (this is what drives native monitoring):</p>
+<pre><code class="language-bash">* * * * * cd /var/www/quenyx/quenyx-saas/backend &amp;&amp; php artisan schedule:run &gt;&gt; /var/www/quenyx/quenyx-saas/backend/storage/logs/scheduler.log 2&gt;&amp;1
+</code></pre>
+<p>The scheduler runs <code>observe:run-checks</code> (every two minutes, due services only) and
+<code>observe:evaluate-alerts</code> (every minute). See <code>app/Console/Kernel.php</code>.</p>
+</li>
+<li>
+<p><strong>Queue worker running</strong> (used by port scans / discovery jobs):</p>
+<pre><code class="language-bash">cd backend &amp;&amp; php artisan queue:work --queue=default --sleep=1 --tries=3
+</code></pre>
+</li>
+<li>
+<p><strong>Plugins directory</strong> (only if you use custom plugin checks):</p>
+<pre><code class="language-bash">cd backend &amp;&amp; php artisan observe:install-plugins
+</code></pre>
+<p>Plugins live under <code>storage/app/observe_plugins</code> (override with <code>OBSERVE_PLUGINS_DIR</code>). Plugin
+execution timeout is <code>config('observe.plugin_timeout_seconds')</code>.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>No Docker/Nagios containers are required for native monitoring.</strong> Do <strong>not</strong> start a Nagios
+daemon for the native engine.</p>
+</blockquote>
+<hr />
+<h2 id="3-collectors-and-check-types">3. Collectors and check types</h2>
+<p>Native checks supported by the Monitoring Engine:</p>
+<ul>
+<li><strong>HTTP</strong> — PHP HTTP client to <code>host:port/path</code>; compares status to expected (e.g. 200).</li>
+<li><strong>TCP</strong> — PHP socket connect to <code>host:port</code>.</li>
+<li><strong>Ping</strong> — system <code>ping</code> (or socket); parses RTA / loss.</li>
+<li><strong>Plugin</strong> — custom PHP / Perl / shell script in the plugins dir, selected via a service of type
+<code>plugin</code> with <code>check_args.plugin = &lt;script&gt;</code>. The engine passes context as environment variables:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OBSERVE_HOST_ADDRESS</code></td>
+<td>Host IP / hostname of the monitored target</td>
+</tr>
+<tr>
+<td><code>OBSERVE_HOST_NAME</code></td>
+<td>Scoped host name (e.g. <code>ws84-MyHost</code>)</td>
+</tr>
+<tr>
+<td><code>OBSERVE_SERVICE_NAME</code></td>
+<td>Service name (e.g. <code>Disk /</code>)</td>
+</tr>
+<tr>
+<td><code>OBSERVE_WORKSPACE_ID</code></td>
+<td>Workspace ID</td>
+</tr>
+<tr>
+<td><code>OBSERVE_CHECK_ARGS</code></td>
+<td>JSON object of <code>check_args</code></td>
+</tr>
+</tbody>
+</table>
+<p>The plugin's <strong>exit code</strong> maps to state (0/1/2/3) and its <strong>stdout</strong> first line becomes the check
+output; append <code> | perfdata</code> for performance data. Only scripts inside the plugins dir run (path
+traversal is blocked). See <code>backend/docs/OBSERVE_NATIVE_CHECKS.md</code> for full plugin authoring detail.</p>
+<hr />
+<h2 id="4-day-to-day-operations">4. Day‑to‑day operations</h2>
+<h3 id="4-1-define-monitored-targets-discovery">4.1 Define monitored targets (Discovery)</h3>
+<p>Targets (hosts + their services) are managed per workspace via the API/UI. Host names are scoped with
+a <code>ws{id}-</code> prefix for tenant isolation.</p>
+<pre><code class="language-bash"># Auth (adjust credentials)
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;email&quot;:&quot;user@example.com&quot;,&quot;password&quot;:&quot;password&quot;}' | jq -r '.data.token')
+
+# Define hosts + services for workspace 84
+curl -s -X PUT http://127.0.0.1:8000/api/workspaces/84/observe/targets \
+  -H &quot;Authorization: Bearer $TOKEN&quot; -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;hosts&quot;:[{&quot;name&quot;:&quot;web-server-01&quot;,&quot;address&quot;:&quot;192.168.1.10&quot;,&quot;enabled&quot;:true,
+        &quot;services&quot;:[{&quot;name&quot;:&quot;HTTP&quot;,&quot;check_command&quot;:&quot;check_http&quot;,&quot;enabled&quot;:true},
+                    {&quot;name&quot;:&quot;Ping&quot;,&quot;check_command&quot;:&quot;check_ping&quot;,&quot;enabled&quot;:true}]}]}' | jq
+</code></pre>
+<h3 id="4-2-run-checks-monitoring-engine">4.2 Run checks (Monitoring Engine)</h3>
+<p>The scheduler runs checks automatically. To run on demand:</p>
+<pre><code class="language-bash">cd backend
+# Run all due checks for one workspace
+php artisan observe:run-checks --workspace_id=84
+# Run due checks across all workspaces (what the scheduler does)
+php artisan observe:run-checks
+</code></pre>
+<p>Verify results were written:</p>
+<pre><code class="language-bash">php artisan tinker --execute=&quot;echo \App\Models\ObserveService::where('workspace_id',84)-&gt;where('engine_key','native')-&gt;count();&quot;
+</code></pre>
+<h3 id="4-3-evaluate-alerts-alert-engine">4.3 Evaluate alerts (Alert Engine)</h3>
+<pre><code class="language-bash">cd backend
+php artisan observe:evaluate-alerts --workspace_id=84
+</code></pre>
+<p>Review alert events and channels via the API:</p>
+<pre><code class="language-bash">curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/alerts/summary&quot; | jq
+curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/alerts/history&quot; | jq
+</code></pre>
+<h3 id="4-4-read-monitoring-data-analytics-capacity-infra-map">4.4 Read monitoring data (Analytics / Capacity / Infra Map)</h3>
+<pre><code class="language-bash"># Service state (only this workspace's data)
+curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/observe/services?limit=50&quot; | jq '.data.items | length'
+# Summary / health
+curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/observe/summary&quot; | jq
+# Reports (analytics / capacity)
+curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/observe/reports&quot; | jq
+</code></pre>
+<hr />
+<h2 id="5-health-verification-end-to-end-workspace-84">5. Health verification (end‑to‑end, workspace 84)</h2>
+<pre><code class="language-bash"># 1. Targets defined
+php artisan tinker --execute=&quot;echo \App\Models\ObserveTargetHost::where('workspace_id',84)-&gt;count();&quot;
+
+# 2. Run checks
+php artisan observe:run-checks --workspace_id=84
+
+# 3. Native rows present
+php artisan tinker --execute=&quot;echo \App\Models\ObserveService::where('workspace_id',84)-&gt;where('host_name','like','ws84-%')-&gt;count();&quot;
+
+# 4. API returns scoped rows
+curl -s -H &quot;Authorization: Bearer $TOKEN&quot; &quot;http://127.0.0.1:8000/api/workspaces/84/observe/services?limit=50&quot; | jq '.data.items | length'
+
+# 5. Last run recorded
+php artisan tinker --execute=&quot;dump(\App\Models\ObserveMeta::where('workspace_id',84)-&gt;first(['updated_at']));&quot;
+
+# 6. UI: open /observe/services for workspace 84 and confirm rows render.
+</code></pre>
+<p><strong>Checklist</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> Scheduler cron active (<code>schedule:run</code> every minute) — drives <code>observe:run-checks</code>.</li>
+<li><input disabled="" type="checkbox"> Queue worker active (port scans / discovery jobs).</li>
+<li><input disabled="" type="checkbox"> Targets defined for the workspace (<code>ws{id}-</code> prefixed host names).</li>
+<li><input disabled="" type="checkbox"> <code>observe:run-checks</code> writes <code>observe_services</code> rows with <code>engine_key='native'</code>.</li>
+<li><input disabled="" type="checkbox"> <code>observe:evaluate-alerts</code> produces alert events when thresholds are crossed.</li>
+<li><input disabled="" type="checkbox"> API returns <strong>only</strong> the workspace's services (tenant isolation).</li>
+</ul>
+<hr />
+<h2 id="6-troubleshooting">6. Troubleshooting</h2>
+<h3 id="quot-last-run-never-quot-stale-data">&quot;Last run: never&quot; / stale data</h3>
+<p>The Laravel <strong>scheduler is not running</strong>. Confirm the cron entry for <code>php artisan schedule:run</code>
+exists and is firing; check <code>storage/logs/scheduler.log</code>. Run <code>php artisan observe:run-checks</code> once
+manually to confirm checks execute.</p>
+<h3 id="port-scan-never-completes">Port scan never completes</h3>
+<p>The <strong>queue worker</strong> is not running. Start <code>php artisan queue:work</code> and re‑trigger the scan.</p>
+<h3 id="a-check-is-stuck-always-unknown">A check is stuck / always Unknown</h3>
+<ul>
+<li>Confirm the target host <code>address</code> is reachable from the app host.</li>
+<li>For plugin checks: confirm the script exists in the plugins dir, is executable, and returns a valid
+exit code (0/1/2/3) within <code>observe.plugin_timeout_seconds</code>. Check <code>storage/logs/laravel.log</code> for
+the engine's stderr capture.</li>
+</ul>
+<h3 id="workspace-data-leakage">Workspace data leakage</h3>
+<p>All native host names must be <code>ws{id}-</code> prefixed and all queries are workspace‑scoped:</p>
+<pre><code class="language-bash">php artisan tinker --execute=&quot;dump(\App\Models\ObserveService::where('workspace_id',84)-&gt;pluck('host_name'));&quot;
+</code></pre>
+<p>Every value must start with <code>ws84-</code>.</p>
+<h3 id="validation-errors-on-put-observe-targets-422">Validation errors on <code>PUT /observe/targets</code> (422)</h3>
+<p>Names are sanitized to <code>[A-Za-z0-9_-]</code> (spaces → hyphens); check for duplicates after sanitization and
+ensure <code>check_command</code> is one the engine supports (HTTP/TCP/Ping/plugin).</p>
+<h3 id="where-to-look">Where to look</h3>
+<ul>
+<li><strong>Backend:</strong> <code>storage/logs/laravel.log</code> (check execution, alert evaluation), <code>storage/logs/scheduler.log</code>.</li>
+<li><strong>Audit:</strong> sensitive monitoring actions are recorded in <code>audit_logs</code>.</li>
+</ul>
+<hr />
+<h2 id="7-database-reference">7. Database reference</h2>
+<p>Observe tables use <strong>plural</strong> target table names:</p>
+<ul>
+<li><code>observe_targets_hosts</code> — workspace‑defined hosts (<code>ObserveTargetHost</code>)</li>
+<li><code>observe_targets_services</code> — workspace‑defined services on hosts (<code>ObserveTargetService</code>)</li>
+<li><code>observe_services</code> — check‑result state (<code>ObserveService</code>)</li>
+<li><code>observe_meta</code> — last run/state per workspace/engine (<code>ObserveMeta</code>)</li>
+<li><code>observe_alert*</code> / monitoring profile tables — alert rules, events, channels, profiles</li>
+</ul>
+<h3 id="observe-services-schema-real-column-names"><code>observe_services</code> schema (real column names)</h3>
+<p>The engine and API use <strong><code>service_name</code></strong> (not <code>service_description</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Null</th>
+<th>Key</th>
+<th>Default</th>
+<th>Extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>bigint unsigned</td>
+<td>NO</td>
+<td>PRI</td>
+<td>NULL</td>
+<td>auto_increment</td>
+</tr>
+<tr>
+<td>workspace_id</td>
+<td>bigint unsigned</td>
+<td>NO</td>
+<td>MUL</td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>engine_key</td>
+<td>varchar(50)</td>
+<td>NO</td>
+<td></td>
+<td>nagios</td>
+<td>(native checks write <code>native</code>)</td>
+</tr>
+<tr>
+<td>engine_service_key</td>
+<td>varchar(255)</td>
+<td>NO</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>host_name</td>
+<td>varchar(255)</td>
+<td>NO</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>service_name</strong></td>
+<td>varchar(255)</td>
+<td>NO</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>state</td>
+<td>varchar(20)</td>
+<td>NO</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>last_check_at</td>
+<td>datetime</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>duration_sec</td>
+<td>int</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>attempt</td>
+<td>varchar(255)</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>output</td>
+<td>text</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>perfdata</td>
+<td>text</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>timestamp</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+<tr>
+<td>updated_at</td>
+<td>timestamp</td>
+<td>YES</td>
+<td></td>
+<td>NULL</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note (implementation detail):</strong> the <code>engine_key</code> column default in the original migration is
+<code>nagios</code> for backward compatibility, but the <strong>native</strong> engine writes <code>engine_key = 'native'</code>. When
+both engines are present, native data is preferred/deduped in the UI.</p>
+</blockquote>
+<hr />
+<h2 id="8-frontend-use-the-real-api">8. Frontend (use the real API)</h2>
+<p>The Observe UI must call the real backend, not fixtures.</p>
+<pre><code class="language-bash">cd frontend
+# Ensure fixtures are off
+echo &quot;VITE_OBSERVE_USE_FIXTURES=false&quot; &gt;&gt; .env.production
+npm run build
+# Deploy dist/ to your static host / reverse proxy
+</code></pre>
+<p>After deploy, open <code>/app/workspaces/84/observe/services</code>; it should show real rows after
+<code>observe:run-checks</code> runs. If it shows &quot;No services found&quot; while the DB has rows, the build likely
+used <code>VITE_OBSERVE_USE_FIXTURES=true</code> or the backend is unreachable.</p>
+<hr />
+<h2 id="9-build-test-verification">9. Build / test verification</h2>
+<pre><code class="language-bash"># Backend
+cd backend &amp;&amp; php artisan test --filter=Observe
+
+# Frontend (real Observe API)
+cd frontend &amp;&amp; VITE_OBSERVE_USE_FIXTURES=false npm run build
+
+# Gateway (edge/proxy only; not required for native monitoring)
+cd gateway &amp;&amp; npm run build
+</code></pre>
+<hr />
+<h2 id="appendix-a-legacy-nagios-migration-optional-integration-only">Appendix A — Legacy Nagios (migration / optional integration only)</h2>
+<blockquote>
+<p><strong>Not a platform dependency.</strong> The platform monitors natively. This appendix is retained <strong>only</strong>
+for teams migrating from, or optionally integrating, an external Nagios deployment. New
+environments should not enable it.</p>
+</blockquote>
+<p>When a legacy Nagios deployment is in use, an optional gateway path can publish workspace configs to
+Nagios and poll its status:</p>
+<ul>
+<li><strong>Publish:</strong> <code>php artisan observe:nagios:publish --workspace_id=84</code> writes a workspace config
+(<code>ws{id}-</code> prefixed hosts) that Nagios loads via <code>cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces</code>
+in the main <code>nagios.cfg</code> (never via <code>cfg_file=.../quenyx.cfg</code>).</li>
+<li><strong>Reload:</strong> <code>POST {gateway}/internal/engines/nagios/reload</code> (or <code>docker exec nagios-core kill -HUP 1</code>).</li>
+<li><strong>Poll:</strong> the legacy <code>observe:poll</code> command reads Nagios status into <code>observe_services</code>
+(<code>engine_key='nagios'</code>). <strong>This command is disabled in the scheduler by default</strong> (see
+<code>app/Console/Kernel.php</code>); native checks are the production path.</li>
+<li><strong>Toggle:</strong> <code>OBSERVE_AUTO_PUBLISH_NAGIOS</code> and the gateway <code>NAGIOS_*</code> env vars (<code>NAGIOS_CONFIG_DIR</code>,
+<code>NAGIOS_CONTAINER_NAME</code>, <code>NAGIOS_BASE_URL</code>, <code>NAGIOS_USER</code>, <code>NAGIOS_PASS</code>) configure this optional
+path.</li>
+</ul>
+<p>If you are not migrating from Nagios, ignore this appendix entirely and rely on
+<code>observe:run-checks</code> + <code>observe:evaluate-alerts</code>.</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Executive Whitepaper — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Executive Whitepaper"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Public / External"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Public / External</div>
+  <div class="tp-title">Executive Whitepaper</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Public / External</td></tr>
+<tr><th>Owner</th><td>Office of the CTO</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Whitepaper</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring; QynCore internal communication; shared platform AI.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Public / External. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-the-virtual-operations-center-concept"><span class="toc-text">1. The Virtual Operations Center concept</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-why-operations-compliance-and-ai-converge"><span class="toc-text">2. Why operations, compliance, and AI converge</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-enterprise-pain-points"><span class="toc-text">3. Enterprise pain points</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-saudi-gcc-compliance-context"><span class="toc-text">4. Saudi / GCC compliance context</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-ai-governance-model"><span class="toc-text">5. AI governance model</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-why-deterministic-engines-matter"><span class="toc-text">6. Why deterministic engines matter</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-why-citations-and-provenance-matter"><span class="toc-text">7. Why citations and provenance matter</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-quenyx-roadmap-executive-view"><span class="toc-text">8. Quenyx roadmap (executive view)</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>04 — Executive Whitepaper</h1>
+<p><strong>Audience:</strong> CIO, CTO, CISO, board.
+<strong>Purpose:</strong> Explain the concept and governance model behind Quenyx vOPS HUB without unsupported
+claims.</p>
+<hr />
+<h2 id="1-the-virtual-operations-center-concept">1. The Virtual Operations Center concept</h2>
+<p>Enterprises run operations, compliance, and (increasingly) AI as separate disciplines with separate
+tools and separate data. A <strong>Virtual Operations Center (vOPS)</strong> collapses these into one platform
+with <strong>one source of truth</strong>, one identity and entitlement model, one audit trail, and one
+<strong>governable AI layer</strong>. Quenyx vOPS HUB is that center: monitoring (QynSight) and compliance
+(QynShield/QCIF) sharing a workspace model and a common AI platform.</p>
+<h2 id="2-why-operations-compliance-and-ai-converge">2. Why operations, compliance, and AI converge</h2>
+<ul>
+<li><strong>Operations produces the facts</strong> — what infrastructure exists and how it behaves.</li>
+<li><strong>Compliance interprets the facts</strong> against regulatory frameworks and evidence.</li>
+<li><strong>AI explains and accelerates</strong> — <em>if</em> it is grounded in those facts and constrained to cite them.</li>
+</ul>
+<p>Run separately, each is weaker: monitoring lacks governance context, compliance lacks live
+operational truth, and AI lacks trustworthy grounding. Converged, they compound.</p>
+<h2 id="3-enterprise-pain-points">3. Enterprise pain points</h2>
+<ul>
+<li>Fragmented monitoring → no single operational picture.</li>
+<li>Manual, spreadsheet‑driven compliance → slow, error‑prone, hard to audit.</li>
+<li>Generic LLM tools → hallucination, no provenance, unacceptable in regulated settings.</li>
+<li>Tool sprawl → duplicated identity, access, and audit surfaces, each a risk.</li>
+</ul>
+<h2 id="4-saudi-gcc-compliance-context">4. Saudi / GCC compliance context</h2>
+<p>Quenyx targets regulated enterprises in the Saudi/GCC market, where authorities such as the
+<strong>National Cybersecurity Authority (NCA)</strong> publish control frameworks. Quenyx ships the <strong>NCA
+ECC‑2:2024</strong> framework as <strong>Corpus Revision v1</strong> (5 domains, 108 controls, 108 requirements),
+modelled from official source documents.</p>
+<blockquote>
+<p><em>We make no claim of formal certification, endorsement, or accreditation by any authority. The
+corpus models official published controls; certification is the customer's responsibility.</em></p>
+</blockquote>
+<h2 id="5-ai-governance-model">5. AI governance model</h2>
+<p>Quenyx treats AI as a <strong>renderer over an expert platform</strong>, not as the expert:</p>
+<ul>
+<li><strong>Off by default.</strong> No real model is called unless explicitly enabled (<code>AI_ENABLED</code>).</li>
+<li><strong>Deterministic first.</strong> A rule‑based Reasoning Engine decides <em>what</em> is true and <em>what</em> to answer
+before any model is involved.</li>
+<li><strong>Cited or silent.</strong> The Copilot enforces citations — &quot;no source, no answer.&quot;</li>
+<li><strong>Provider‑agnostic.</strong> Models are selected via a provider registry; no model is hardcoded; a mock
+provider allows safe operation with zero external calls.</li>
+<li><strong>Privacy‑preserving.</strong> Prompt logging and conversation persistence are <strong>off by default</strong>; tenant
+evidence is <strong>never embedded</strong> by default.</li>
+</ul>
+<h2 id="6-why-deterministic-engines-matter">6. Why deterministic engines matter</h2>
+<p>Determinism makes outputs <strong>reproducible and auditable</strong>: the same inputs always yield the same
+reasoning and the same citations. In regulated environments, &quot;the model felt confident&quot; is not an
+acceptable basis for a control decision; &quot;rule R‑EVIDENCE‑MISSING fired because requirement X has no
+evidence&quot; is. Quenyx puts the deterministic engine in charge and uses AI only to phrase the result.</p>
+<h2 id="7-why-citations-and-provenance-matter">7. Why citations and provenance matter</h2>
+<p>Every compliance entity in Quenyx carries provenance back to an <strong>official source document</strong>, and
+every Copilot answer must cite the corpus. This:</p>
+<ul>
+<li>eliminates a whole class of AI hallucination risk,</li>
+<li>makes answers defensible to auditors,</li>
+<li>and lets customers verify, not just trust.</li>
+</ul>
+<h2 id="8-quenyx-roadmap-executive-view">8. Quenyx roadmap (executive view)</h2>
+<ul>
+<li><strong>Now (Phases 1–3 complete, v1.0.0 RC1):</strong> QynSight production (native monitoring engines);
+QynShield backend/API; shared platform AI; deterministic reasoning; executive demonstration layer;
+Unified AI Workspace (Sprint 20) delivered.</li>
+<li><strong>Phase 4 — Enterprise AI Platform:</strong> Sprint 20 Unified AI Workspace (delivered), Sprint 21
+Operations Intelligence, Sprint 22 Asset &amp; Knowledge Intelligence, Sprint 23 Automation &amp; Response
+Intelligence, Sprint 24 Service/Notification/Cost Intelligence, Sprint 25 Enterprise Intelligence
+Platform. No roadmap beyond Sprint 25.</li>
+</ul>
+<p><strong>Bottom line for the board:</strong> Quenyx has built a governable foundation where AI is constrained by
+deterministic, provenance‑backed engines — the prerequisite for safe AI adoption in regulated
+operations.</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

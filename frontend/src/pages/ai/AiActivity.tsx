@@ -1,7 +1,8 @@
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
-import { AiView, Card, formatDateTime } from '../../components/ai/workspace/shared'
+import { AiView, Card } from '../../components/ai/workspace/shared'
+import { formatDateTime } from '../../components/ai/workspace/format'
 
 export default function AiActivity() {
   const { t } = useLanguage()

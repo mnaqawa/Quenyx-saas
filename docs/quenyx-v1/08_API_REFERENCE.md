@@ -1,5 +1,25 @@
 # 08 — API Reference
 
+> **Quenyx vOPS HUB — Document Metadata**
+>
+> | Field | Value |
+> |---|---|
+> | Document Version | 2.0 |
+> | Software Version | v1.0.0 RC1 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Classification | Internal |
+> | Owner | Platform Engineering |
+> | Status | Released |
+> | Last Updated | 2026-06-29 |
+> | Document Type | API reference |
+>
+> **Revision History**
+>
+> | Version | Date | Notes |
+> |---|---|---|
+> | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints. |
+
 **Audience:** Engineers, integrators.
 **Source:** Derived from `php artisan route:list` (261 routes) and the `routes/*.php` files at
 Sprint 19. **No endpoints are invented.** Regenerate this doc when routes change.
