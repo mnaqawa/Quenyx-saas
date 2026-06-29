@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>API Reference — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "API Reference"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Internal"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Internal</div>
+  <div class="tp-title">API Reference</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Internal</td></tr>
+<tr><th>Owner</th><td>Platform Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>API reference</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-authentication"><span class="toc-text">1. Authentication</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-common-headers"><span class="toc-text">2. Common headers</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-error-format"><span class="toc-text">3. Error format</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-workspace-project-routes"><span class="toc-text">4. Workspace / project routes</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-qynsight-apis-summary-project-module-qynsight"><span class="toc-text">5. QynSight APIs (summary) — project.module:qynsight</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-compliance-corpus-apis"><span class="toc-text">6. Compliance corpus APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-ai-context-apis-consumption-contract-no-ai-execution"><span class="toc-text">7. AI context APIs (consumption contract, no AI execution)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-graph-apis"><span class="toc-text">8. Graph APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-mapping-apis"><span class="toc-text">9. Mapping APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-evidence-apis"><span class="toc-text">10. Evidence APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-gap-apis"><span class="toc-text">11. Gap APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-recommendation-apis"><span class="toc-text">12. Recommendation APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#13-copilot-apis-throttle-compliance-copilot"><span class="toc-text">13. Copilot APIs — throttle compliance-copilot</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#14-retrieval-rag-apis"><span class="toc-text">14. Retrieval / RAG APIs</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#15-executive-apis-read-only-throttle-compliance-executive"><span class="toc-text">15. Executive APIs (read‑only) — throttle compliance-executive</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#16-platform-ai-capability-endpoint"><span class="toc-text">16. Platform AI capability endpoint</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#17-unified-ai-workspace-sprint-20"><span class="toc-text">17. Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#18-notes-on-examples"><span class="toc-text">18. Notes on examples</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>08 — API Reference</h1>
+<p><strong>Audience:</strong> Engineers, integrators.
+<strong>Source:</strong> Derived from <code>php artisan route:list</code> (261 routes) and the <code>routes/*.php</code> files at
+Sprint 19. <strong>No endpoints are invented.</strong> Regenerate this doc when routes change.</p>
+<blockquote>
+<p><strong><code>projects</code> vs <code>workspaces</code>.</strong> Most tenant routes exist under <strong>both</strong> <code>/api/projects/{project}/…</code>
+and <code>/api/workspaces/{project}/…</code> — they are <strong>aliases to the same controllers</strong>. Below, paths are
+shown with <code>/workspaces/{project}</code> (the canonical form); swap <code>workspaces</code> → <code>projects</code> for the
+alias.</p>
+</blockquote>
+<hr />
+<h2 id="1-authentication">1. Authentication</h2>
+<ul>
+<li><strong>Scheme:</strong> Laravel <strong>Sanctum</strong> bearer tokens.</li>
+<li><strong>Obtain a token:</strong> <code>POST /api/auth/login</code> (<code>POST /api/auth/register</code> to create an account).</li>
+<li><strong>Use it:</strong> <code>Authorization: Bearer &lt;token&gt;</code> on every authenticated route.</li>
+<li><strong>Identity:</strong> <code>GET /api/auth/me</code>; logout <code>POST /api/auth/logout</code>.</li>
+<li><strong>Public (no user auth):</strong> <code>GET /api/health</code>, agent ingestion endpoints (token/secret auth).</li>
+</ul>
+<h2 id="2-common-headers">2. Common headers</h2>
+<pre><code>Authorization: Bearer &lt;token&gt;
+Accept: application/json
+Content-Type: application/json     # for POST/PUT/PATCH
+</code></pre>
+<h2 id="3-error-format">3. Error format</h2>
+<p>Standard Laravel JSON errors:</p>
+<pre><code class="language-json">{ &quot;message&quot;: &quot;Unauthenticated.&quot; }                       // 401
+{ &quot;message&quot;: &quot;This action is unauthorized.&quot; }           // 403
+{ &quot;message&quot;: &quot;Not Found&quot; }                               // 404
+{ &quot;message&quot;: &quot;The given data was invalid.&quot;,              // 422
+  &quot;errors&quot;: { &quot;field&quot;: [&quot;validation message&quot;] } }
+{ &quot;message&quot;: &quot;Too Many Attempts.&quot; }                      // 429 (throttled routes)
+</code></pre>
+<h2 id="4-workspace-project-routes">4. Workspace / project routes</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Controller</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET/POST</td>
+<td><code>/api/projects</code> · <code>/api/workspaces</code></td>
+<td><code>ProjectController@index/store</code></td>
+</tr>
+<tr>
+<td>GET/PUT/DELETE</td>
+<td><code>/api/workspaces/{project}</code></td>
+<td><code>ProjectController@show/update/destroy</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/workspaces/{project}/entitlements</code></td>
+<td><code>ProjectSubscriptionController@entitlements</code></td>
+</tr>
+<tr>
+<td>GET/PUT</td>
+<td><code>/api/workspaces/{project}/subscription</code></td>
+<td><code>ProjectSubscriptionController@show/update</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/workspaces/{project}/modules</code> · <code>/modules/access</code></td>
+<td><code>ProjectModuleController</code></td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/workspaces/{project}/modules/{moduleKey}/override</code></td>
+<td><code>ProjectModuleOverrideController@update</code></td>
+</tr>
+<tr>
+<td>GET..DELETE</td>
+<td><code>/api/workspaces/{project}/memberships…</code></td>
+<td><code>ProjectMembershipController</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/workspaces/{project}/audit-logs</code></td>
+<td><code>AuditLogController@index</code></td>
+</tr>
+<tr>
+<td>GET..PUT</td>
+<td><code>/api/workspaces/{project}/integrations…</code></td>
+<td><code>ProjectIntegrationController</code></td>
+</tr>
+<tr>
+<td>GET..POST</td>
+<td><code>/api/workspaces/{project}/billing/…</code></td>
+<td><code>BillingController</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/dashboard</code>, <code>/api/modules</code>, <code>/api/plans</code></td>
+<td>platform meta</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-qynsight-apis-summary-project-module-qynsight">5. QynSight APIs (summary) — <code>project.module:qynsight</code></h2>
+<p>Prefix: <code>/api/workspaces/{project}/observe/…</code></p>
+<ul>
+<li><strong>Summary / instances:</strong> <code>summary</code>, <code>instances</code>, <code>instances/summary</code>.</li>
+<li><strong>Services / checks:</strong> <code>services</code>, <code>service-definitions</code>, <code>run-checks</code>.</li>
+<li><strong>Performance:</strong> <code>performance/metrics</code>, <code>real-time/metrics</code>, <code>real-time/system-info</code>,
+<code>real-time/thresholds</code>.</li>
+<li><strong>Capacity:</strong> <code>capacity-planning</code>, <code>capacity-planning/export</code>, <code>capacity/metrics</code>.</li>
+<li><strong>Alerts:</strong> <code>alerts/rules</code> (GET/POST/PUT/DELETE/<code>toggle</code>), <code>alerts/summary</code>, <code>alerts/history</code>,
+<code>alerts/events/{event}/acknowledge</code>, <code>alerts/channels</code>, <code>monitoring-profile</code> (GET/PUT).</li>
+<li><strong>Infrastructure:</strong> <code>infrastructure/topology</code>, <code>infrastructure/connections</code>,
+<code>infrastructure/port-scans</code> (GET/POST <code>run</code>).</li>
+<li><strong>Reports / data sources:</strong> <code>reports</code>, <code>reports/summary</code>, <code>data-sources</code>, <code>data-sources/summary</code>.</li>
+<li><strong>Targets / hosts:</strong> <code>targets</code> (GET/PUT), <code>targets/validate</code>, <code>targets/{hostId}/port-scan</code>.</li>
+<li><strong>Agents:</strong> <code>/api/workspaces/{project}/agents…</code> (list, metadata, enrollment tokens, revoke,
+destroy).</li>
+</ul>
+<p><strong>Agent ingestion (token‑auth, no user):</strong> <code>GET /api/agents/download/{platform}</code>,
+<code>POST /api/agents/register</code>, <code>POST /api/agents/{agent}/heartbeat|metrics|inventory</code>.</p>
+<h2 id="6-compliance-corpus-apis">6. Compliance corpus APIs</h2>
+<p>Global (read): <code>/api/compliance/corpus/frameworks…</code>
+Workspace (entitled, <code>project.qynshield</code>): <code>/api/workspaces/{project}/compliance/corpus/frameworks…</code></p>
+<table>
+<thead>
+<tr>
+<th>Path (suffix under <code>…/corpus</code>)</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>frameworks</code></td>
+<td>frameworks list</td>
+</tr>
+<tr>
+<td><code>frameworks/{frameworkKey}/releases</code></td>
+<td>releases</td>
+</tr>
+<tr>
+<td><code>frameworks/{frameworkKey}/releases/{releaseCode}/summary</code></td>
+<td>release summary</td>
+</tr>
+<tr>
+<td><code>…/domains</code> · <code>…/domains/{domainCode}</code></td>
+<td>domains</td>
+</tr>
+<tr>
+<td><code>…/controls/{controlCode}</code></td>
+<td>control detail</td>
+</tr>
+<tr>
+<td><code>…/search</code></td>
+<td>corpus search</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-ai-context-apis-consumption-contract-no-ai-execution">7. AI context APIs (consumption contract, no AI execution)</h2>
+<p><code>/api/workspaces/{project}/compliance/ai-context/frameworks/{frameworkKey}/releases/{releaseCode}/…</code>
+→ <code>summary</code>, <code>domains/{domainCode}</code>, <code>controls/{controlCode}</code>, <code>search</code>. Returns deterministic
+AI‑ready context; <strong>makes no model call</strong>.</p>
+<h2 id="8-graph-apis">8. Graph APIs</h2>
+<p><code>/api/workspaces/{project}/compliance/graph/frameworks/{frameworkKey}/releases/{releaseCode}</code> and
+<code>…/domains/{domainCode}</code>, <code>…/controls/{controlCode}</code>, <code>…/requirements/{requirementCode}</code>.</p>
+<h2 id="9-mapping-apis">9. Mapping APIs</h2>
+<p><code>/api/workspaces/{project}/compliance/mappings/…</code> → <code>objectives</code>, <code>objectives/{objectiveCode}</code>,
+<code>controls/{controlCode}</code>, <code>frameworks/compare</code>, <code>frameworks/{frameworkKey}/coverage</code>.</p>
+<h2 id="10-evidence-apis">10. Evidence APIs</h2>
+<p><code>/api/workspaces/{project}/compliance/evidence/…</code> → <code>types</code>, <code>statuses</code>, <code>POST context</code>.</p>
+<h2 id="11-gap-apis">11. Gap APIs</h2>
+<p><code>/api/workspaces/{project}/compliance/gap/…</code> → <code>summary</code>, <code>domains</code>, <code>controls/{controlCode}</code>,
+<code>requirements/{requirementCode}</code>, <code>POST context</code>.</p>
+<h2 id="12-recommendation-apis">12. Recommendation APIs</h2>
+<p><code>/api/workspaces/{project}/compliance/recommendations/…</code> → <code>summary</code>, <code>controls/{controlCode}</code>,
+<code>requirements/{requirementCode}</code>, <code>POST generate</code>, <code>POST context</code>.</p>
+<h2 id="13-copilot-apis-throttle-compliance-copilot">13. Copilot APIs — throttle <code>compliance-copilot</code></h2>
+<ul>
+<li><code>POST /api/workspaces/{project}/compliance/copilot/message</code></li>
+<li><code>GET /api/workspaces/{project}/compliance/copilot/conversations</code></li>
+<li><code>GET /api/workspaces/{project}/compliance/copilot/conversations/{conversationUuid}</code></li>
+<li><code>POST /api/workspaces/{project}/compliance/copilot/conversations/{conversationUuid}/messages</code></li>
+</ul>
+<p><strong>Example (mock mode):</strong></p>
+<pre><code class="language-http">POST /api/workspaces/{project}/compliance/copilot/message
+{ &quot;message&quot;: &quot;Why is requirement 1-1-1 non-compliant?&quot; }
+</code></pre>
+<pre><code class="language-json">{
+  &quot;answer&quot;: &quot;…cited explanation…&quot;,
+  &quot;citations&quot;: [ { &quot;type&quot;: &quot;control&quot;, &quot;code&quot;: &quot;1-1-1&quot;, &quot;source_document_id&quot;: &quot;&lt;uuid&gt;&quot; } ],
+  &quot;mode&quot;: &quot;mock&quot;
+}
+</code></pre>
+<p>(With <code>AI_COPILOT_DEMO_MODE=true</code>, a <code>demo</code> block with reasoning trace/citations is added. With
+<code>AI_COPILOT_RAG_ENABLED=true</code> + <code>RAG_ENABLED=true</code>, a <code>rag_context</code> block may be added.)</p>
+<h2 id="14-retrieval-rag-apis">14. Retrieval / RAG APIs</h2>
+<ul>
+<li><strong>Retrieval (deterministic):</strong> <code>POST /api/workspaces/{project}/compliance/retrieval/query</code></li>
+<li><strong>RAG (feature‑flagged, returns RAG context only):</strong> <code>POST /api/workspaces/{project}/compliance/rag/query</code> — throttle <code>compliance-rag</code>.</li>
+</ul>
+<pre><code class="language-http">POST /api/workspaces/{project}/compliance/rag/query
+{ &quot;query&quot;: &quot;access control policy&quot; }
+</code></pre>
+<p>Returns a bounded, <strong>cited</strong> context package. With RAG disabled, falls back to deterministic
+retrieval context.</p>
+<h2 id="15-executive-apis-read-only-throttle-compliance-executive">15. Executive APIs (read‑only) — throttle <code>compliance-executive</code></h2>
+<p><code>/api/workspaces/{project}/compliance/executive/…</code> → <code>dashboard</code>, <code>scorecard</code>, <code>timeline</code>,
+<code>explainability</code>, <code>platform</code>. All derived from <strong>real engine data</strong>; no fabricated metrics.</p>
+<h2 id="16-platform-ai-capability-endpoint">16. Platform AI capability endpoint</h2>
+<p><code>GET /api/ai/platform/capabilities</code> → modules (adapters), skills, providers, reasoning/retrieval/RAG
+status, supported contexts, and HUB‑wide <code>module_catalog</code> (production/reserved/planned).</p>
+<h2 id="17-unified-ai-workspace-sprint-20">17. Unified AI Workspace (Sprint 20)</h2>
+<p>Platform‑level AI surface beside Dashboard / Workspaces / Integrations. All routes are flat under
+<code>/api/ai/*</code>, Sanctum‑protected, throttled by <code>ai-workspace</code>, and <strong>scoped by a required <code>workspace</code>
+UUID</strong> (query string for reads/deletes, request body for writes) — never a numeric id. Every resource
+id returned is a UUID. Authorization: <code>ProjectPolicy::accessAi</code> (any member) for reads,
+<code>administerAi</code> (owner/admin) for provider/permission changes, plus a fine‑grained capability check
+(<code>can_use_ai</code>, <code>can_manage_templates</code>, <code>can_manage_providers</code>, <code>can_view_costs</code>, <code>can_administer</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Capability</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/workspace/summary</code></td>
+<td>access</td>
+<td>counts, tokens, flags + caller permissions</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/conversations</code></td>
+<td>access</td>
+<td>list (metadata only)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ai/conversations</code></td>
+<td>use_ai</td>
+<td>start a conversation</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/conversations/{uuid}</code></td>
+<td>access</td>
+<td>conversation + messages</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ai/conversations/{uuid}/messages</code></td>
+<td>use_ai</td>
+<td>runs the shared AI runtime (mock until AI enabled)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/activity</code></td>
+<td>access</td>
+<td>AI audit timeline</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/notifications</code></td>
+<td>access</td>
+<td>governance events</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/usage</code></td>
+<td>view_costs</td>
+<td>token usage totals/by‑provider/daily</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/costs</code></td>
+<td>view_costs</td>
+<td>tokens × configured pricing; <code>pricing_configured</code> flag</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/skills</code></td>
+<td>access</td>
+<td>dynamic skill catalog (Sprint 19)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/capabilities</code></td>
+<td>access</td>
+<td>full platform capability catalog</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/prompt-templates</code></td>
+<td>access</td>
+<td>list</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ai/prompt-templates</code></td>
+<td>manage_templates</td>
+<td>create</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/ai/prompt-templates/{uuid}</code></td>
+<td>manage_templates</td>
+<td>update</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/ai/prompt-templates/{uuid}</code></td>
+<td>manage_templates</td>
+<td>delete</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/providers</code></td>
+<td>access</td>
+<td>provider prefs (secrets never returned)</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/ai/providers/{uuid}/settings</code></td>
+<td>manage_providers + admin</td>
+<td>encrypted secret write‑only</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ai/permissions</code></td>
+<td>admin</td>
+<td>effective per‑role matrix</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/ai/permissions</code></td>
+<td>admin</td>
+<td>upsert per‑role overrides</td>
+</tr>
+</tbody>
+</table>
+<p>Cost tracking is <strong>derived</strong> from real <code>ai_conversations</code> token counts and an optional
+<code>config('ai.workspace.pricing')</code> table; with no pricing configured, responses carry token totals and
+<code>pricing_configured=false</code> with <strong>no fabricated currency</strong>. Conversation message content is stored
+only when <code>ai.feature_flags.prompt_logging</code> is enabled (privacy‑preserving default). Provider settings
+addressing uses a deterministic UUIDv5 (workspace + provider key) so providers are UUID‑addressable
+even before a settings row exists. Provider id <code>uuid</code> is also added (additively) to the workspace list
+(<code>GET /api/workspaces</code>) and <code>ProjectResource</code> so the UI can pass the workspace UUID.</p>
+<h2 id="18-notes-on-examples">18. Notes on examples</h2>
+<p>Example request/response shapes are representative of the controllers' contracts. For exact current
+fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource
+in <code>app/Http/Controllers/**</code>. Do not assume undocumented fields.</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

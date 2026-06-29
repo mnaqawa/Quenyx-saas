@@ -11,9 +11,9 @@
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot\..\..").Path
 $htmlDir = Join-Path $repo 'build\docs-html'
-$pdfDirV1 = Join-Path $repo 'docs\quenyx-v1\pdf'
-$pdfDirRoot = Join-Path $repo 'docs\pdf'
-New-Item -ItemType Directory -Force -Path $htmlDir, $pdfDirV1, $pdfDirRoot | Out-Null
+# Single canonical output folder for ALL externally shareable PDFs.
+$pdfDir = Join-Path $repo 'docs\pdf'
+New-Item -ItemType Directory -Force -Path $htmlDir, $pdfDir | Out-Null
 
 # --- locate PHP ext dir (for mbstring, required by CommonMark) ---
 $php = (Get-Command php).Source
@@ -34,22 +34,29 @@ $browser = $edgeCandidates | Where-Object { Test-Path $_ } | Select-Object -Firs
 if (-not $browser) { throw "No headless Edge/Chrome found." }
 Write-Host "Browser: $browser"
 
-# --- documents to render (input md -> output pdf dir) ---
+# --- documents to render: every externally shareable doc (01-21) -> docs\pdf ---
 $docs = @(
-    @{ md = 'docs\quenyx-v1\01_EXECUTIVE_OVERVIEW.md';                 out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\02_PRODUCT_BROCHURE.md';                   out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\03_INVESTOR_DECK_OUTLINE.md';             out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\04_EXECUTIVE_WHITEPAPER.md';              out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\05_PLATFORM_ARCHITECTURE_BIBLE.md';       out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\06_QCIF_ARCHITECTURE_BIBLE.md';           out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\07_AI_PLATFORM_BIBLE.md';                 out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\10_DEPLOYMENT_GUIDE.md';                  out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\11_DEVELOPER_GUIDE.md';                   out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\12_ADMINISTRATOR_GUIDE.md';              out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\18_OPERATIONS_RUNBOOK.md';              out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\19_SECURITY_WHITEPAPER.md';             out = $pdfDirV1 },
-    @{ md = 'docs\quenyx-v1\20_COMPLIANCE_WHITEPAPER.md';           out = $pdfDirV1 },
-    @{ md = 'docs\OBSERVE_RUNBOOK.md';                               out = $pdfDirRoot }
+    @{ md = 'docs\quenyx-v1\01_EXECUTIVE_OVERVIEW.md';                  out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\02_PRODUCT_BROCHURE.md';                    out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\03_INVESTOR_DECK_OUTLINE.md';               out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\04_EXECUTIVE_WHITEPAPER.md';                out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\05_PLATFORM_ARCHITECTURE_BIBLE.md';         out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\06_QCIF_ARCHITECTURE_BIBLE.md';             out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\07_AI_PLATFORM_BIBLE.md';                   out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\08_API_REFERENCE.md';                       out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\09_DATABASE_REFERENCE.md';                  out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\10_DEPLOYMENT_GUIDE.md';                    out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\11_DEVELOPER_GUIDE.md';                     out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\12_ADMINISTRATOR_GUIDE.md';                 out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\13_CUSTOMER_USER_GUIDE.md';                 out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\14_QYNSIGHT_GUIDE.md';                      out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\15_QYNSHIELD_GUIDE.md';                     out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\16_AI_USER_GUIDE.md';                       out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\17_IMPLEMENTATION_GUIDE.md';                out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\18_OPERATIONS_RUNBOOK.md';                  out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\19_SECURITY_WHITEPAPER.md';                 out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\20_COMPLIANCE_WHITEPAPER.md';               out = $pdfDir },
+    @{ md = 'docs\quenyx-v1\21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md'; out = $pdfDir }
 )
 
 $results = @()
@@ -72,8 +79,15 @@ foreach ($d in $docs) {
     $stamp = [Guid]::NewGuid().ToString('N')
     $tmpPdf = Join-Path $env:TEMP "qpdf_$stamp.pdf"
     $tmpUd = Join-Path $env:TEMP "qprof_$stamp"
-    & $browser --headless=new --disable-gpu --user-data-dir="$tmpUd" --no-pdf-header-footer --virtual-time-budget=25000 --print-to-pdf="$tmpPdf" "$url" 2>$null
-    Start-Sleep -Milliseconds 300
+    # Headless Edge writes a benign startup line to stderr; under $ErrorActionPreference='Stop'
+    # that would abort the render. Run the browser with 'Continue' and merge stderr to stdout so it
+    # is harmless, then poll for the output file (renders can complete slightly after the process
+    # returns).
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & $browser --headless=new --disable-gpu --user-data-dir="$tmpUd" --no-pdf-header-footer --virtual-time-budget=25000 --print-to-pdf="$tmpPdf" "$url" 2>&1 | Out-Null
+    $ErrorActionPreference = $prevEAP
+    for ($w = 0; $w -lt 40 -and -not (Test-Path $tmpPdf); $w++) { Start-Sleep -Milliseconds 500 }
     if (Test-Path $tmpPdf) {
         Copy-Item $tmpPdf $pdfPath -Force
         Remove-Item $tmpPdf -Force -ErrorAction SilentlyContinue

@@ -57,31 +57,34 @@ features**. Where something is not yet built, it is labelled as roadmap.
 
 ## Document index
 
-| # | Document | Audience | Primary status focus |
-|---|---|---|---|
-| — | [README.md](./README.md) | Everyone | Index + legend |
-| 01 | [Executive Overview](./01_EXECUTIVE_OVERVIEW.md) | Investors, board, execs, partners | Vision + current status |
-| 02 | [Product Brochure](./02_PRODUCT_BROCHURE.md) | Customers, sales, pre‑sales | Modules + benefits |
-| 03 | [Investor Deck Outline](./03_INVESTOR_DECK_OUTLINE.md) | Investors | 25–35 slide outline |
-| 04 | [Executive Whitepaper](./04_EXECUTIVE_WHITEPAPER.md) | CIO/CTO/CISO/board | Concept + governance |
-| 05 | [Platform Architecture Bible](./05_PLATFORM_ARCHITECTURE_BIBLE.md) | Architects, seniors, auditors | Full architecture |
-| 06 | [QCIF Architecture Bible](./06_QCIF_ARCHITECTURE_BIBLE.md) | Architects, auditors | Compliance engine |
-| 07 | [AI Platform Bible](./07_AI_PLATFORM_BIBLE.md) | Architects, AI engineers | AI runtime |
-| 08 | [API Reference](./08_API_REFERENCE.md) | Engineers, integrators | Endpoints |
-| 09 | [Database Reference](./09_DATABASE_REFERENCE.md) | Engineers, DBAs, auditors | Schema |
-| 10 | [Deployment Guide](./10_DEPLOYMENT_GUIDE.md) | DevOps, implementation | Install + ops |
-| 11 | [Developer Guide](./11_DEVELOPER_GUIDE.md) | New engineers | Patterns + DoD |
-| 12 | [Administrator Guide](./12_ADMINISTRATOR_GUIDE.md) | Admins | Day‑to‑day admin |
-| 13 | [Customer User Guide](./13_CUSTOMER_USER_GUIDE.md) | End users | Using the product |
-| 14 | [QynSight Guide](./14_QYNSIGHT_GUIDE.md) | QynSight users | Monitoring module |
-| 15 | [QynShield Guide](./15_QYNSHIELD_GUIDE.md) | Compliance users | QCIF module |
-| 16 | [AI User Guide](./16_AI_USER_GUIDE.md) | All users | Using Quenyx AI |
-| 17 | [Implementation Guide](./17_IMPLEMENTATION_GUIDE.md) | Implementation partners | Onboarding |
-| 18 | [Operations Runbook](./18_OPERATIONS_RUNBOOK.md) | Ops/SRE | Run + recover |
-| 19 | [Security Whitepaper](./19_SECURITY_WHITEPAPER.md) | Security, vCISO, auditors | Security model |
-| 20 | [Compliance Whitepaper](./20_COMPLIANCE_WHITEPAPER.md) | Compliance, auditors | Determinism + provenance |
-| 21 | [Engineering Principles & Standards](./21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md) | Engineering org | How we build |
-| QA | [QA Audit Report](./QA_AUDIT_REPORT.md) | Eng leadership, auditors | Track‑B audit results |
+Each document has a Markdown source (editable source of truth) and a branded PDF under
+[`docs/pdf/`](../pdf/).
+
+| # | Document | PDF | Audience | Primary status focus |
+|---|---|---|---|---|
+| — | [README.md](./README.md) | — | Everyone | Index + legend |
+| 01 | [Executive Overview](./01_EXECUTIVE_OVERVIEW.md) | [PDF](../pdf/01_EXECUTIVE_OVERVIEW.pdf) | Investors, board, execs, partners | Vision + current status |
+| 02 | [Product Brochure](./02_PRODUCT_BROCHURE.md) | [PDF](../pdf/02_PRODUCT_BROCHURE.pdf) | Customers, sales, pre‑sales | Modules + benefits |
+| 03 | [Investor Deck Outline](./03_INVESTOR_DECK_OUTLINE.md) | [PDF](../pdf/03_INVESTOR_DECK_OUTLINE.pdf) | Investors | 25–35 slide outline |
+| 04 | [Executive Whitepaper](./04_EXECUTIVE_WHITEPAPER.md) | [PDF](../pdf/04_EXECUTIVE_WHITEPAPER.pdf) | CIO/CTO/CISO/board | Concept + governance |
+| 05 | [Platform Architecture Bible](./05_PLATFORM_ARCHITECTURE_BIBLE.md) | [PDF](../pdf/05_PLATFORM_ARCHITECTURE_BIBLE.pdf) | Architects, seniors, auditors | Full architecture |
+| 06 | [QCIF Architecture Bible](./06_QCIF_ARCHITECTURE_BIBLE.md) | [PDF](../pdf/06_QCIF_ARCHITECTURE_BIBLE.pdf) | Architects, auditors | Compliance engine |
+| 07 | [AI Platform Bible](./07_AI_PLATFORM_BIBLE.md) | [PDF](../pdf/07_AI_PLATFORM_BIBLE.pdf) | Architects, AI engineers | AI runtime |
+| 08 | [API Reference](./08_API_REFERENCE.md) | [PDF](../pdf/08_API_REFERENCE.pdf) | Engineers, integrators | Endpoints |
+| 09 | [Database Reference](./09_DATABASE_REFERENCE.md) | [PDF](../pdf/09_DATABASE_REFERENCE.pdf) | Engineers, DBAs, auditors | Schema |
+| 10 | [Deployment Guide](./10_DEPLOYMENT_GUIDE.md) | [PDF](../pdf/10_DEPLOYMENT_GUIDE.pdf) | DevOps, implementation | Install + ops |
+| 11 | [Developer Guide](./11_DEVELOPER_GUIDE.md) | [PDF](../pdf/11_DEVELOPER_GUIDE.pdf) | New engineers | Patterns + DoD |
+| 12 | [Administrator Guide](./12_ADMINISTRATOR_GUIDE.md) | [PDF](../pdf/12_ADMINISTRATOR_GUIDE.pdf) | Admins | Day‑to‑day admin |
+| 13 | [Customer User Guide](./13_CUSTOMER_USER_GUIDE.md) | [PDF](../pdf/13_CUSTOMER_USER_GUIDE.pdf) | End users | Using the product |
+| 14 | [QynSight Guide](./14_QYNSIGHT_GUIDE.md) | [PDF](../pdf/14_QYNSIGHT_GUIDE.pdf) | QynSight users | Monitoring module |
+| 15 | [QynShield Guide](./15_QYNSHIELD_GUIDE.md) | [PDF](../pdf/15_QYNSHIELD_GUIDE.pdf) | Compliance users | QCIF module |
+| 16 | [AI User Guide](./16_AI_USER_GUIDE.md) | [PDF](../pdf/16_AI_USER_GUIDE.pdf) | All users | Using Quenyx AI |
+| 17 | [Implementation Guide](./17_IMPLEMENTATION_GUIDE.md) | [PDF](../pdf/17_IMPLEMENTATION_GUIDE.pdf) | Implementation partners | Onboarding |
+| 18 | [Operations Runbook](./18_OPERATIONS_RUNBOOK.md) | [PDF](../pdf/18_OPERATIONS_RUNBOOK.pdf) | Ops/SRE | Run + recover |
+| 19 | [Security Whitepaper](./19_SECURITY_WHITEPAPER.md) | [PDF](../pdf/19_SECURITY_WHITEPAPER.pdf) | Security, vCISO, auditors | Security model |
+| 20 | [Compliance Whitepaper](./20_COMPLIANCE_WHITEPAPER.md) | [PDF](../pdf/20_COMPLIANCE_WHITEPAPER.pdf) | Compliance, auditors | Determinism + provenance |
+| 21 | [Engineering Principles & Standards](./21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md) | [PDF](../pdf/21_ENGINEERING_PRINCIPLES_AND_STANDARDS.pdf) | Engineering org | How we build |
+| QA | [QA Audit Report](./QA_AUDIT_REPORT.md) | — | Eng leadership, auditors | Track‑B audit results |
 
 ---
 
@@ -138,15 +141,17 @@ There is **no roadmap content beyond Sprint 25** at this time.
 
 ## PDF deliverables
 
-Branded, print-ready PDFs of the external-facing documents are generated into
-[`./pdf/`](./pdf/) (and `docs/pdf/` for the Observe runbook). They are built from the Markdown
-sources — Markdown remains the editable source of truth. Regenerate with:
+Branded, print-ready PDFs of **all 21** documents (01–21) are generated into the single canonical
+folder [`docs/pdf/`](../pdf/) (title page, auto TOC, page numbers, classification footer, rendered
+Mermaid diagrams). Markdown remains the editable source of truth; the PDFs are build artifacts.
+Regenerate all of them with:
 
 ```bash
 powershell -File scripts/docs/build-pdfs.ps1
 ```
 
-The full alignment summary is in [`../DOCUMENTATION_AUDIT_REPORT_v2.md`](../DOCUMENTATION_AUDIT_REPORT_v2.md).
+The script renders every Markdown source to `docs/pdf/<NN_NAME>.pdf`. The full alignment summary is in
+[`../DOCUMENTATION_AUDIT_REPORT_v2.md`](../DOCUMENTATION_AUDIT_REPORT_v2.md).
 
 ## How to keep these docs updated
 

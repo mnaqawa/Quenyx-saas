@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Database Reference — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Database Reference"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Internal"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Internal</div>
+  <div class="tp-title">Database Reference</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Internal</td></tr>
+<tr><th>Owner</th><td>Platform Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>Database reference</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native QynSight check fields; Sprint 20 AI Workspace tables.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-major-table-groups"><span class="toc-text">1. Major table groups</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-workspace-user-project-tables"><span class="toc-text">2. Workspace / user / project tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-module-subscription-tables"><span class="toc-text">3. Module / subscription tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-qynsight-tables-observe-agents"><span class="toc-text">4. QynSight tables (observe_*, agents)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-qcif-tables"><span class="toc-text">5. QCIF tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-ai-orchestration-tables"><span class="toc-text">6. AI orchestration tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-evidence-gap-recommendation-tables"><span class="toc-text">7. Evidence / gap / recommendation tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-rag-vector-metadata-tables"><span class="toc-text">8. RAG vector metadata tables</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-important-enums"><span class="toc-text">9. Important enums</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-key-relationships"><span class="toc-text">10. Key relationships</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-immutability-rules"><span class="toc-text">11. Immutability rules</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-uuid-rules"><span class="toc-text">12. UUID rules</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#13-migration-notes"><span class="toc-text">13. Migration notes</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>09 — Database Reference</h1>
+<p><strong>Audience:</strong> Engineers, DBAs, auditors.
+<strong>Source:</strong> Derived from <code>backend/database/migrations</code> (<strong>65 migrations</strong>) and models at Sprint 19.
+Engine: <strong>MySQL</strong> via Eloquent. Regenerate this doc when migrations change.</p>
+<blockquote>
+<p><strong>Conventions.</strong> Domain entities (corpus, AI, RAG) use <strong>UUID</strong> identifiers. Corpus content is
+<strong>immutable + provenance‑tracked</strong>. Timestamps are standard Laravel <code>created_at/updated_at</code>.</p>
+</blockquote>
+<hr />
+<h2 id="1-major-table-groups">1. Major table groups</h2>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Purpose</th>
+<th>Representative migrations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identity &amp; tenancy</td>
+<td>Users, projects/workspaces, memberships, invites</td>
+<td><code>create_users_table</code>, <code>create_projects_table</code>, <code>create_project_members_table</code> → <code>rename_project_members_to_memberships</code>, <code>create_project_invites_table</code></td>
+</tr>
+<tr>
+<td>Plans &amp; subscriptions</td>
+<td>Plans, module subscriptions, project subscriptions</td>
+<td><code>create_plans_table</code>, <code>create_module_subscriptions_table</code>, <code>create_project_subscriptions_table</code></td>
+</tr>
+<tr>
+<td>Modules &amp; overrides</td>
+<td>Module catalog, per‑project overrides</td>
+<td><code>create_modules_table</code>, <code>create_project_module_overrides_table</code>, <code>cleanup_non_shield_modules</code></td>
+</tr>
+<tr>
+<td>Integrations</td>
+<td>Integration defs + configurations</td>
+<td><code>create_integrations_table</code>, <code>create_integration_configurations_table</code>, <code>create_billing_integrations_table</code></td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>Audit log</td>
+<td><code>create_audit_logs_table</code>, <code>qcif_sprint_1_1_audit_hardening</code></td>
+</tr>
+<tr>
+<td>QynSight (observe)</td>
+<td>Services, targets, hosts, alerts, metrics, port scans</td>
+<td><code>create_observe_services_table</code>, <code>create_observe_targets_*</code>, <code>create_observe_alert_tables</code>, <code>create_observe_metrics_history_table</code>, <code>create_host_port_scans_tables</code></td>
+</tr>
+<tr>
+<td>Agents</td>
+<td>Agents + enrollment tokens</td>
+<td><code>create_agents_tables</code>, <code>enhance_agent_enrollment_tokens</code></td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Jobs</td>
+<td><code>create_jobs_table</code>, <code>create_failed_jobs_table</code></td>
+</tr>
+<tr>
+<td>QCIF corpus</td>
+<td>Authorities → frameworks → releases → domains/controls/requirements, revisions, source docs, import runs</td>
+<td><code>create_compliance_corpus_tables</code>, <code>harden_compliance_corpus_schema</code>, <code>qcif_sprint_2_corpus_provenance_preparation</code>, <code>qcif_sprint_2a_versioning_hierarchy</code></td>
+</tr>
+<tr>
+<td>QCIF mapping</td>
+<td>Cross‑framework mapping</td>
+<td><code>qcif_sprint_8_mapping_foundation</code></td>
+</tr>
+<tr>
+<td>QCIF evidence/gap/rec</td>
+<td>Evidence, gap assessment, recommendations</td>
+<td><code>create_compliance_evidence_tables</code>, <code>create_compliance_gap_tables</code>, <code>create_compliance_recommendation_tables</code></td>
+</tr>
+<tr>
+<td>AI orchestration</td>
+<td>Conversations/messages metadata</td>
+<td><code>create_ai_orchestration_tables</code></td>
+</tr>
+<tr>
+<td>RAG vectors</td>
+<td>Vector index metadata</td>
+<td><code>create_rag_vector_tables</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-workspace-user-project-tables">2. Workspace / user / project tables</h2>
+<ul>
+<li><strong>users</strong> — accounts (auth via Sanctum). Profile stats added later; role/preferences columns were
+added then removed (see <code>add_role_and_preferences…</code> + <code>remove_role_and_preferences…</code>).</li>
+<li><strong>projects</strong> — the tenant/workspace entity.</li>
+<li><strong>project memberships</strong> (renamed from <code>project_members</code>) — user↔project with role.</li>
+<li><strong>project_invites</strong> — pending invitations (token‑based accept).</li>
+</ul>
+<h2 id="3-module-subscription-tables">3. Module / subscription tables</h2>
+<ul>
+<li><strong>modules</strong> — module catalog (keys like <code>qynsight</code>, <code>qynshield</code>, …).</li>
+<li><strong>module_subscriptions / project_subscriptions</strong> — entitlement of modules to a project/plan.</li>
+<li><strong>project_module_overrides</strong> — explicit per‑project access overrides (audited).</li>
+<li><strong>plans</strong> — subscription plans.</li>
+</ul>
+<h2 id="4-qynsight-tables-observe-agents">4. QynSight tables (<code>observe_*</code>, agents)</h2>
+<ul>
+<li><strong>observe_services / observe_service_definitions</strong> — native service‑check definitions and
+instances (check/retry intervals, <code>engine_key = 'native'</code>). Exit‑code semantics follow the
+standard 0/1/2/3 = OK/Warning/Critical/Unknown convention used by the QynSight Monitoring Engine.</li>
+<li><strong>observe_targets / observe_targets_services / observe_targets_hosts</strong> — monitored targets, their
+services, and hosts (with public IP).</li>
+<li><strong>observe_alert tables</strong> — alert rules, events, channels, monitoring profiles, evaluation.</li>
+<li><strong>observe_metrics_history</strong> — historical metrics.</li>
+<li><strong>host_port_scans</strong> — port‑scan results.</li>
+<li><strong>agents / agent enrollment tokens</strong> — host agents and their enrollment credentials.</li>
+</ul>
+<h2 id="5-qcif-tables">5. QCIF tables</h2>
+<p>Hierarchy (UUID, immutable, provenance‑linked):</p>
+<ul>
+<li><strong>authorities</strong> → <strong>frameworks</strong> → <strong>framework_releases</strong> → <strong>domains</strong> → <strong>controls</strong> →
+<strong>requirements</strong>.</li>
+<li><strong>source_documents</strong> — official documents; imported entities carry <code>source_document_id</code>.</li>
+<li><strong>corpus_revisions</strong> — immutable approved snapshots; one <strong>active</strong> per release.</li>
+<li><strong>import_runs</strong> — record of each import (linked to source doc + entities).</li>
+</ul>
+<h2 id="6-ai-orchestration-tables">6. AI orchestration tables</h2>
+<ul>
+<li>Conversation/message <strong>metadata</strong> tables (<code>create_ai_orchestration_tables</code>). <strong>Prompt content is
+not stored</strong> unless prompt logging is explicitly enabled (default off), and conversations are not
+persisted unless persistence is enabled (default off).</li>
+</ul>
+<h2 id="7-evidence-gap-recommendation-tables">7. Evidence / gap / recommendation tables</h2>
+<ul>
+<li><strong>Evidence</strong> — evidence records, types, statuses tied to requirements/controls.</li>
+<li><strong>Gap</strong> — gap assessments correlating evidence to requirements (rule‑derived status).</li>
+<li><strong>Recommendation</strong> — rule‑based recommendations with source rule IDs.</li>
+</ul>
+<h2 id="8-rag-vector-metadata-tables">8. RAG vector metadata tables</h2>
+<p>From <code>create_rag_vector_tables</code>:</p>
+<ul>
+<li><strong>rag_vector_indexes</strong> — one row per indexed corpus revision (provider, model, status, provenance;
+UUID). <strong>No tenant evidence by default.</strong></li>
+<li><strong>rag_vector_chunks</strong> — chunk metadata (UUID, content hash, citation linkage). <strong>Metadata only</strong> —
+no fabricated vectors; real similarity requires a real vector backend.</li>
+</ul>
+<h2 id="9-important-enums">9. Important enums</h2>
+<ul>
+<li><strong>Alert event status</strong> (observe) — normalized via <code>fix_observe_alert_events_status_enum</code>.</li>
+<li><strong>Evidence status</strong> — e.g., compliant / partially‑compliant / no‑evidence / expired / rejected /
+pending (surfaced by the executive scorecard).</li>
+<li><strong>Corpus revision status</strong> — draft/active (immutability of active revisions).</li>
+<li><strong>Agent protocol</strong> — migrated <code>nrpe</code> → <code>psap</code> (<code>migrate_agent_protocol_nrpe_to_psap</code>).</li>
+</ul>
+<h2 id="10-key-relationships">10. Key relationships</h2>
+<div class="mermaid">erDiagram
+  USERS ||--o{ MEMBERSHIPS : has
+  PROJECTS ||--o{ MEMBERSHIPS : has
+  PROJECTS ||--o{ PROJECT_SUBSCRIPTIONS : has
+  PROJECT_SUBSCRIPTIONS ||--o{ MODULE_ENTITLEMENTS : grants
+  AUTHORITIES ||--o{ FRAMEWORKS : owns
+  FRAMEWORKS ||--o{ FRAMEWORK_RELEASES : has
+  FRAMEWORK_RELEASES ||--o{ DOMAINS : contains
+  DOMAINS ||--o{ CONTROLS : contains
+  CONTROLS ||--o{ REQUIREMENTS : contains
+  FRAMEWORK_RELEASES ||--o{ CORPUS_REVISIONS : snapshots
+  SOURCE_DOCUMENTS ||--o{ CONTROLS : provenance
+  REQUIREMENTS ||--o{ EVIDENCE : assessed_by
+  EVIDENCE ||--o{ GAP_ASSESSMENTS : feeds
+  GAP_ASSESSMENTS ||--o{ RECOMMENDATIONS : yields
+  CORPUS_REVISIONS ||--o{ RAG_VECTOR_INDEXES : indexed_by
+  RAG_VECTOR_INDEXES ||--o{ RAG_VECTOR_CHUNKS : has
+</div>
+<h2 id="11-immutability-rules">11. Immutability rules</h2>
+<ul>
+<li>Active <strong>corpus revisions</strong> are immutable snapshots; changes create new revisions, never in‑place
+edits.</li>
+<li>Imported corpus entities are validated against fake‑data markers before commit.</li>
+</ul>
+<h2 id="12-uuid-rules">12. UUID rules</h2>
+<ul>
+<li>All QCIF corpus entities, AI orchestration metadata, and RAG vector metadata are <strong>UUID‑keyed</strong>.</li>
+<li>API resources expose <strong>UUIDs / codes</strong>, not raw auto‑increment IDs, for domain entities.</li>
+</ul>
+<h2 id="13-migration-notes">13. Migration notes</h2>
+<ul>
+<li><strong>Never edit an already‑run migration</strong>; fix forward with a new migration (Track‑B rule).</li>
+<li>Several observe migrations are <strong>refactors</strong> (rename engine → native, fix interval units, refresh
+schemas) — apply in order.</li>
+<li>Run <code>php artisan migrate --force</code> and <code>migrate:status</code> on the server (see QA report). The audit
+sandbox could not run these (no <code>pdo_mysql</code>).</li>
+</ul>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

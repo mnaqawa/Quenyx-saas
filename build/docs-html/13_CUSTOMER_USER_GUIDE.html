@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Customer User Guide — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Customer User Guide"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Public / External"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Public / External</div>
+  <div class="tp-title">Customer User Guide</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Public / External</td></tr>
+<tr><th>Owner</th><td>Product</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Document Type</th><td>User guide</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; modules disabled-in-navigation framing; QynCore vs Integrations clarified.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Public / External. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-dashboard"><span class="toc-text">1. Dashboard</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-workspace-selection"><span class="toc-text">2. Workspace selection</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-qynsight-flows"><span class="toc-text">3. QynSight flows 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-ai-agent-expected-flows"><span class="toc-text">4. AI Agent expected flows 🟡</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-qynshield-future-user-flows"><span class="toc-text">5. QynShield future user flows 🔵</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-onboarding-workflow"><span class="toc-text">6. Onboarding workflow</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-navigation"><span class="toc-text">7. Navigation</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-common-tasks"><span class="toc-text">8. Common tasks</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-troubleshooting"><span class="toc-text">9. Troubleshooting</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-modules-currently-disabled-in-the-navigation"><span class="toc-text">10. Modules currently disabled in the navigation</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>13 — Customer User Guide</h1>
+<p><strong>Audience:</strong> End users.
+<strong>Scope:</strong> What you can do in the product today. Modules not yet visible are clearly marked.</p>
+<hr />
+<h2 id="1-dashboard">1. Dashboard</h2>
+<p>After signing in you land on your <strong>dashboard</strong>, scoped to your selected workspace. It summarizes
+the operational state surfaced by QynSight for that workspace.</p>
+<h2 id="2-workspace-selection">2. Workspace selection</h2>
+<p>Use the <strong>workspace selector</strong> (top of the app) to switch between workspaces you belong to (e.g.
+<strong>Production Env</strong>, <strong>Staging Env</strong>). All data — monitoring, compliance, members — is scoped to the
+active workspace.</p>
+<h2 id="3-qynsight-flows">3. QynSight flows 🟢</h2>
+<p>QynSight is the visible, production module:</p>
+<ul>
+<li><strong>Real‑time Monitoring</strong> — live host/service metrics. <em>(Requires the scheduler running; otherwise
+shows &quot;Last poll: never&quot;.)</em></li>
+<li><strong>Infrastructure Map</strong> — topology of hosts/connections; export as JSON/PNG.</li>
+<li><strong>Performance Analytics</strong> — performance metrics and thresholds.</li>
+<li><strong>Capacity Planning</strong> — capacity advisor + export.</li>
+<li><strong>Alert Management</strong> — alert rules, history, acknowledge events, channels, monitoring profiles.</li>
+<li><strong>Service Checks</strong> — run checks; service definitions and statuses.</li>
+<li><strong>Hosts / Targets</strong> — add and manage monitored targets; run port scans.</li>
+<li><strong>Agent enrollment</strong> — generate an enrollment token and install the agent on a host.</li>
+</ul>
+<h2 id="4-ai-agent-expected-flows">4. AI Agent expected flows 🟡</h2>
+<ul>
+<li>An <strong>AI Agent</strong> entry point exists in the UI (knowledge‑base agent for QynSight).</li>
+<li>The <strong>Compliance Copilot</strong> (QynShield) answers compliance questions with <strong>citations</strong>. By default
+it runs in <strong>mock mode</strong> (safe, deterministic) unless your operator has enabled real‑model AI.</li>
+<li>AI never invents answers: if it can't cite an official source, it won't answer.</li>
+</ul>
+<h2 id="5-qynshield-future-user-flows">5. QynShield future user flows 🔵</h2>
+<p>QynShield's compliance engine (corpus, evidence, gap, recommendations, executive dashboard,
+explainability, Copilot) is available via <strong>API today</strong>, with the <strong>executive/demo</strong> surface as the
+current UI. Full self‑service compliance UI is on the roadmap.</p>
+<h2 id="6-onboarding-workflow">6. Onboarding workflow</h2>
+<ol>
+<li>Accept your invite and sign in.</li>
+<li>Select your workspace.</li>
+<li>(QynSight) Add hosts/targets → install agents → watch monitoring populate.</li>
+<li>(QynShield, if entitled) Explore the executive dashboard and ask the Copilot a question.</li>
+</ol>
+<h2 id="7-navigation">7. Navigation</h2>
+<ul>
+<li><strong>Sidebar:</strong> modules you can access (today: <strong>QynSight</strong>). Other modules are <strong>not yet visible</strong>.</li>
+<li><strong>Workspace selector:</strong> switch tenant context.</li>
+<li><strong>Getting started:</strong> guided steps from the sidebar.</li>
+</ul>
+<h2 id="8-common-tasks">8. Common tasks</h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See system health</td>
+<td>Dashboard / Real‑time Monitoring</td>
+</tr>
+<tr>
+<td>Add a monitored host</td>
+<td>Monitored Targets</td>
+</tr>
+<tr>
+<td>Investigate an alert</td>
+<td>Alert Management → history</td>
+</tr>
+<tr>
+<td>Acknowledge an alert event</td>
+<td>Alert event → acknowledge</td>
+</tr>
+<tr>
+<td>Export the infra map</td>
+<td>Infrastructure Map → export</td>
+</tr>
+<tr>
+<td>Ask a compliance question</td>
+<td>Compliance Copilot (if entitled)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-troubleshooting">9. Troubleshooting</h2>
+<ul>
+<li><strong>&quot;Last poll: never&quot; / stale data</strong> → the scheduler/cron isn't running (contact your admin).</li>
+<li><strong>Port scan never completes</strong> → the queue worker isn't running (admin).</li>
+<li><strong>Can't see a module</strong> → it's hidden by design today, or your workspace isn't entitled.</li>
+<li><strong>Copilot says it can't answer</strong> → expected when there's no citable source; rephrase or scope to a
+loaded framework (NCA ECC‑2:2024).</li>
+<li><strong>403 Unauthorized</strong> → you're not a member of that workspace, or lack the module entitlement.</li>
+</ul>
+<h2 id="10-modules-currently-disabled-in-the-navigation">10. Modules currently disabled in the navigation</h2>
+<p>QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, and QynBalance are existing
+platform modules that are <strong>intentionally disabled in the navigation</strong> by a sidebar feature flag
+until their production rollout. They are not removed — they are switched off in the UI only. Today
+<strong>QynSight</strong> is the visible module (with <strong>QynShield</strong> available where entitled / via the executive
+surface).</p>
+<p><strong>QynCore</strong> is not a module you navigate to — it is the platform core that lets modules work
+together behind the scenes. <strong>Integrations</strong> is a platform page for connecting Quenyx to <strong>external</strong>
+systems (for example Microsoft, Azure, AWS, Google Cloud, ServiceNow, Jira, Slack, Active Directory).</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>
