@@ -94,17 +94,17 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Internal</div>
   <div class="tp-title">API Reference</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Internal</td></tr>
 <tr><th>Owner</th><td>Platform Engineering</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
-<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>API reference</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Added QynSight Operations Intelligence (Sprint 21) endpoints under `/api/qynsight/intelligence/*`.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -128,7 +128,8 @@ body{margin:0}
 <li class="toc-l2"><a href="#15-executive-apis-read-only-throttle-compliance-executive"><span class="toc-text">15. Executive APIs (read‑only) — throttle compliance-executive</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#16-platform-ai-capability-endpoint"><span class="toc-text">16. Platform AI capability endpoint</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#17-quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">17. Quenyx AI (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#18-notes-on-examples"><span class="toc-text">18. Notes on examples</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#18-qynsight-operations-intelligence-sprint-21"><span class="toc-text">18. QynSight Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19-notes-on-examples"><span class="toc-text">19. Notes on examples</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -508,7 +509,85 @@ outside <code>local</code>/<code>testing</code></strong> and is never the produc
 <code>AiProviderRegistry::defaultKey()</code>: an explicit <code>AI_PROVIDER</code> wins, otherwise OpenAI when its key is
 configured, otherwise <code>mock</code> only in local/testing, otherwise <code>''</code> (an honest <em>no provider
 configured</em> state, surfaced as <code>summary.has_provider=false</code>).</p>
-<h2 id="18-notes-on-examples">18. Notes on examples</h2>
+<h2 id="18-qynsight-operations-intelligence-sprint-21">18. QynSight Operations Intelligence (Sprint 21)</h2>
+<p>Workspace‑scoped, <strong>UUID‑only</strong> AI surface that turns QynSight monitoring data into explainable
+operational intelligence. All routes are flat under <code>/api/qynsight/intelligence/*</code>, Sanctum‑protected,
+throttled by <strong><code>ai-workspace</code></strong>, and <strong>scoped by a required <code>workspace</code> UUID</strong> (query string for
+reads, request body for writes) — never a numeric id. Every entity id in the path/response is a UUID
+(a deterministic UUIDv5 derived from internal monitoring ids; no schema change, no numeric ids
+exposed). These endpoints <strong>reuse the Sprint 20 Quenyx AI runtime</strong> (provider registry, prompt
+orchestration, conversation service, audit) — <strong>no AI logic is duplicated</strong>.</p>
+<p><strong>Authorization (every endpoint):</strong> <code>qynsight</code> module entitlement <strong>+</strong> monitoring RBAC
+(<code>ProjectPolicy::accessAi</code>) <strong>+</strong> the per‑workspace AI capability <strong><code>can_use_ai</code></strong>. Every AI call is
+audited, provider‑logged, and conversation‑logged.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/qynsight/intelligence/overview?workspace={uuid}</code></td>
+<td>Operations Intelligence dashboard: infrastructure health, open alerts, critical services, top operational risks, predicted capacity risks, recent recommendations, recent AI investigations</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/copilot</code></td>
+<td>Monitoring Copilot — grounded Q&amp;A; reuses a Quenyx AI conversation (<code>conversation</code> UUID optional to continue a thread)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/qynsight/intelligence/recommendations?workspace={uuid}</code></td>
+<td>Evidence‑based operational recommendations</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/alerts/{uuid}/explain</code></td>
+<td>Alert explanation: impact, most likely causes, evidence used, related alerts, suggested actions, confidence (evidence‑derived only)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/alerts/{uuid}/investigate</code></td>
+<td>Deeper alert investigation (explanation + root cause + timeline)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/qynsight/intelligence/incidents/{uuid}/timeline?workspace={uuid}</code></td>
+<td>Deterministic incident timeline from actual event timestamps</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/hosts/{uuid}/explain</code></td>
+<td>Host (✨ Explain) — health, performance, capacity narrative</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/services/{uuid}/analyze</code></td>
+<td>Service (✨ Analyze) — why/what changed/impact/action/related</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/capacity/{uuid}/predict</code></td>
+<td>Capacity (✨ Predict) — trend, forecast, exhaustion, action, risk</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/qynsight/intelligence/infrastructure/{uuid}/impact</code></td>
+<td>Infrastructure Map (✨ Impact Analysis) — dependencies, SPOF, blast radius</td>
+</tr>
+</tbody>
+</table>
+<p>All write endpoints accept <code>{ &quot;workspace&quot;: &quot;&lt;uuid&gt;&quot;, … }</code>. The copilot accepts
+<code>{ &quot;workspace&quot;: &quot;&lt;uuid&gt;&quot;, &quot;message&quot;: &quot;…&quot;, &quot;conversation&quot;: &quot;&lt;uuid?&gt;&quot; }</code> and returns
+<code>{ &quot;conversation_uuid&quot;, &quot;message_uuid&quot;, &quot;answer&quot;, &quot;evidence&quot; }</code>. AI narratives carry an <code>available</code>
+/<code>ai_enabled</code> flag; when AI is disabled, a clearly flagged mock narrative is returned while the
+underlying operational data stays real. <strong>No operational data is fabricated</strong>; when evidence is
+insufficient the response says so.</p>
+<h2 id="19-notes-on-examples">19. Notes on examples</h2>
 <p>Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource
 in <code>app/Http/Controllers/**</code>. Do not assume undocumented fields.</p>

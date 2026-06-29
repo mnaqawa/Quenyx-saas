@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { MonitoringSettingsModal } from '../../components/observe/MonitoringSettingsModal'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
@@ -820,6 +821,7 @@ export default function Targets() {
         subtitle={t('targets.subtitle')}
         actions={
           <>
+            <QuenyxAiButton size="md" label={t('ai.action.explain')} question={t('opsIntel.q.hosts')} />
             <ObservePageToolbar
               interval={interval}
               onIntervalChange={setInterval}

@@ -94,17 +94,17 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Public / External</div>
   <div class="tp-title">Product Brochure</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Public / External</td></tr>
 <tr><th>Owner</th><td>Product Marketing</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
-<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Product brochure</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring; QynCore vs Integrations clarified; shared platform AI.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring; QynCore vs Integrations clarified; shared platform AI.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Added QynSight Operations Intelligence (Sprint 21) — explainable, evidence‑grounded operations AI.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Public / External. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -115,6 +115,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#platform-overview"><span class="toc-text">Platform overview</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#modules"><span class="toc-text">Modules</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynsight-overview"><span class="toc-text">QynSight overview 🟢</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#operations-intelligence-sprint-21"><span class="toc-text">Operations Intelligence (Sprint 21) 🟢</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynshield-overview-backend-api"><span class="toc-text">QynShield overview 🟢 (backend/API)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#quenyx-ai-overview"><span class="toc-text">Quenyx AI overview 🟢 / 🟡</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#deployment-model"><span class="toc-text">Deployment model</span><span class="toc-dots"></span></a></li>
@@ -158,8 +159,8 @@ AI platform.</li>
 <tbody>
 <tr>
 <td><strong>QynSight</strong></td>
-<td>Operations monitoring &amp; observability</td>
-<td>🟢 Production‑ready (frozen)</td>
+<td>Operations monitoring &amp; observability <strong>+ Operations Intelligence</strong></td>
+<td>🟢 Production‑ready (core frozen; intelligence layer live)</td>
 </tr>
 <tr>
 <td><strong>QynShield</strong></td>
@@ -190,7 +191,23 @@ carry internal module‑to‑module traffic.</p>
 <p>Real‑time <strong>monitoring</strong>, <strong>infrastructure map</strong>, <strong>performance analytics</strong>, <strong>capacity planning</strong>,
 <strong>alert management</strong>, <strong>service checks</strong>, and <strong>host/agent enrollment</strong>. Agents report metrics,
 inventory, and heartbeats; alert rules and monitoring profiles are configurable per workspace.
-QynSight is <strong>production‑ready and feature‑frozen</strong> at v1.0.</p>
+QynSight's core monitoring engine is <strong>production‑ready and feature‑frozen</strong> at v1.0.</p>
+<h3 id="operations-intelligence-sprint-21">Operations Intelligence (Sprint 21) 🟢</h3>
+<p>QynSight now <strong>understands and explains</strong> your operations, not just charts them:</p>
+<ul>
+<li><strong>Monitoring Copilot</strong> — ask &quot;Which hosts are unhealthy?&quot;, &quot;Summarize today's alerts&quot;, &quot;What
+changed in the last 24 hours?&quot;, &quot;Which hosts will run out of storage first?&quot; — answered from your
+<strong>current</strong> hosts, services, alerts, capacity, metrics, and topology.</li>
+<li><strong>Alert Intelligence</strong> — ✨ Explain / ✨ Investigate on every alert: operational impact, most likely
+causes, the evidence used, related alerts, and suggested actions.</li>
+<li><strong>Deterministic Root‑Cause Analysis</strong> and <strong>auto‑generated Incident Timelines</strong> from real events.</li>
+<li><strong>Capacity, Performance, Infrastructure, and Service‑Health intelligence</strong> with <strong>evidence‑based
+recommendations</strong> — every recommendation references real metrics, alerts, capacity, or dependencies.</li>
+<li><strong>Contextual ✨ Quenyx AI actions</strong> on hosts, services, alerts, capacity, and the infrastructure map,
+plus a dedicated <strong>Operations Intelligence dashboard</strong>.</li>
+</ul>
+<p>It <strong>reuses the same governable Quenyx AI platform</strong> — explainable, deterministic‑first, and <strong>never
+fabricated</strong>: if the evidence is insufficient, it says so. Available in English and Arabic.</p>
 <h2 id="qynshield-overview-backend-api">QynShield overview 🟢 (backend/API)</h2>
 <p>Compliance built on the <strong>QCIF</strong> engine:</p>
 <ul>

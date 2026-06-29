@@ -14,6 +14,7 @@ import {
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { Tabs } from '../../components/observe/Tabs'
 import { CapacitySummaryCard } from '../../components/observe/capacity/CapacitySummaryCard'
@@ -241,6 +242,7 @@ export default function CapacityPlanning() {
       subtitle={t('cap.subtitle')}
       actions={
         <>
+          <QuenyxAiButton size="md" label={t('ai.action.predict')} question={t('opsIntel.q.capacity')} />
           {aiAvailable ? (
             <button
               type="button"

@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal — Operations |
 > | Owner | Operations / SRE |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Operations runbook |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring operations; Unified AI Workspace operations. See also `docs/OBSERVE_RUNBOOK.md`. |
+> | 2.1 | 2026-06-30 | Added Operations Intelligence (Sprint 21) operations — shares the Quenyx AI runtime; no new services to operate. |
 
 **Audience:** Ops / SRE.
 **Scope:** Run, monitor, and recover a Quenyx vOPS HUB deployment. Commands assume the backend dir
@@ -164,3 +165,31 @@ php artisan config:cache
 - **Auditing**: AI conversations, provider/template/permission changes are written to `audit_logs`
   (`action LIKE 'ai%'`); surface them via the Activity/Notifications tabs or query the table directly.
 - **Rate limiting**: `throttle:ai-workspace` (default 120/min, `AI_WORKSPACE_RATE_LIMIT`).
+
+## QynSight Operations Intelligence (Sprint 21) — operations
+
+Operations Intelligence is an **additive layer** that reuses the Quenyx AI runtime — there is **no new
+daemon, queue, or service to operate**. It ships with the same backend deploy (no new migrations; UUIDs
+are derived deterministically at runtime). After pulling:
+
+```bash
+cd backend
+composer dump-autoload -o
+php artisan route:list | grep qynsight/intelligence   # expect overview, copilot, alerts/.../explain, etc.
+php artisan config:cache
+```
+
+- **Prerequisites**: the workspace must have the **`qynsight`** entitlement and the
+  **`can_use_ai`** AI capability; the requesting member needs monitoring RBAC. Live operational data
+  still requires the **scheduler** (`observe:run-checks`, `observe:evaluate-alerts`) and the **queue
+  worker** (port scans) per §6/§7 — Operations Intelligence reads that data and never fabricates it.
+- **AI posture**: governed by the same flags as Quenyx AI. With `AI_ENABLED=false` the Copilot and
+  ✨ actions return a **clearly flagged mock narrative** over **real** evidence; the emergency
+  "disable AI" steps in §13 also apply here (no external model calls).
+- **Endpoints**: flat under `/api/qynsight/intelligence/*`, Sanctum + `throttle:ai-workspace`
+  (shares the same limiter/budget as Quenyx AI).
+- **Auditing**: alert investigations and other AI actions write to `audit_logs` (`action LIKE 'ai%'`);
+  recent investigations also surface on the Operations Intelligence dashboard.
+- **Troubleshooting**: a `403 Locked` means the `qynsight` entitlement or `can_use_ai` capability is
+  missing; an empty/limited narrative with "insufficient evidence" means monitoring has not yet
+  collected enough data (check scheduler/agents), **not** an AI failure.

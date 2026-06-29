@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { ServiceDetailsDrawer } from '../../components/observe/ServiceDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
@@ -286,22 +287,25 @@ export default function Services() {
         title={t('services.title')}
         subtitle={t('services.subtitle')}
         actions={
-          <ObservePageToolbar
-            interval={interval}
-            onIntervalChange={setInterval}
-            secondsAgo={freshnessSecondsAgo}
-            onRefresh={() => {
-              triggerRefresh()
-              refreshNow()
-            }}
-            refreshing={loading}
-            disabled={false}
-            onSettings={
-              selectedWorkspaceId
-                ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
-                : undefined
-            }
-          />
+          <>
+            <QuenyxAiButton size="md" label={t('ai.action.analyze')} question={t('opsIntel.q.services')} />
+            <ObservePageToolbar
+              interval={interval}
+              onIntervalChange={setInterval}
+              secondsAgo={freshnessSecondsAgo}
+              onRefresh={() => {
+                triggerRefresh()
+                refreshNow()
+              }}
+              refreshing={loading}
+              disabled={false}
+              onSettings={
+                selectedWorkspaceId
+                  ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)
+                  : undefined
+              }
+            />
+          </>
         }
       />
 

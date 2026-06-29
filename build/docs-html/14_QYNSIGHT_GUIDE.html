@@ -94,17 +94,17 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Public / External</div>
   <div class="tp-title">QynSight Guide</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Public / External</td></tr>
 <tr><th>Owner</th><td>Product</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
-<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Module guide</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring engine (no Nagios dependency).</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring engine (no Nagios dependency).</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Added Operations Intelligence (Sprint 21): Monitoring Copilot, Alert/Root‑Cause/Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, and the Operations Intelligence dashboard — all reusing the Quenyx AI Platform.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Public / External. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -126,13 +126,24 @@ body{margin:0}
 <li class="toc-l2"><a href="#13-port-scans"><span class="toc-text">13. Port scans</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#14-known-limitations"><span class="toc-text">14. Known limitations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#15-feature-freeze-status"><span class="toc-text">15. Feature‑freeze status</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#16-operations-intelligence-sprint-21"><span class="toc-text">16. Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-1-monitoring-copilot"><span class="toc-text">16.1 Monitoring Copilot</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-2-alert-intelligence-explain-investigate"><span class="toc-text">16.2 Alert Intelligence — ✨ Explain / ✨ Investigate</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-3-root-cause-analysis-deterministic"><span class="toc-text">16.3 Root Cause Analysis (deterministic)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-4-incident-timeline"><span class="toc-text">16.4 Incident Timeline</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-5-capacity-intelligence"><span class="toc-text">16.5 Capacity Intelligence</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-6-performance-intelligence"><span class="toc-text">16.6 Performance Intelligence</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-7-infrastructure-intelligence"><span class="toc-text">16.7 Infrastructure Intelligence</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-8-service-health-intelligence"><span class="toc-text">16.8 Service Health Intelligence</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-9-operational-recommendations"><span class="toc-text">16.9 Operational Recommendations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#16-10-contextual-actions-amp-dashboard"><span class="toc-text">16.10 Contextual ✨ actions &amp;amp; dashboard</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
 <main class="content">
 <h1>14 — QynSight Guide</h1>
 <p><strong>Audience:</strong> QynSight users and admins.
-<strong>Status:</strong> 🟢 Production‑ready, <strong>feature‑frozen</strong> at v1.0.</p>
+<strong>Status:</strong> 🟢 Production‑ready. Core monitoring is <strong>feature‑frozen</strong> at v1.0; <strong>Operations Intelligence</strong> (Sprint 21) is the active intelligence layer built on top of the frozen monitoring surface.</p>
 <hr />
 <h2 id="1-overview">1. Overview</h2>
 <p>QynSight is Quenyx's operations/observability module (&quot;observe&quot;). It monitors hosts and services,
@@ -191,8 +202,63 @@ to monitoring profiles per workspace.</p>
 <li>v1.0 is <strong>feature‑frozen</strong> — no functional changes pre‑Sprint 20.</li>
 </ul>
 <h2 id="15-feature-freeze-status">15. Feature‑freeze status</h2>
-<p>QynSight is <strong>frozen</strong> at v1.0. This documentation describes the frozen surface; changes are out of
-scope for the current phase.</p>
+<p>QynSight's <strong>core monitoring engine</strong> (checks, metrics, alerts, topology, capacity, agents) is
+<strong>frozen</strong> at v1.0. Section 16 (Operations Intelligence) is an additive intelligence layer that reads
+the frozen monitoring data — it does not change monitoring behavior.</p>
+<h2 id="16-operations-intelligence-sprint-21">16. Operations Intelligence (Sprint 21)</h2>
+<p>Operations Intelligence turns QynSight from a monitoring platform into an <strong>operations intelligence
+platform</strong>: the AI <em>understands and explains</em> your operational data rather than just answering free
+questions. It <strong>reuses the Quenyx AI Platform</strong> (Doc 07) end‑to‑end — the same provider abstraction,
+prompt orchestration, conversation service, and audit — with <strong>no duplicated AI logic</strong>. Every
+narrative is grounded in <strong>real</strong> monitoring evidence; when evidence is insufficient the system says
+so and never fabricates data.</p>
+<p><strong>Access &amp; scope.</strong> All Operations Intelligence endpoints are workspace‑scoped, require the
+<code>qynsight</code> module entitlement, monitoring RBAC, and the per‑workspace <strong><code>can_use_ai</code></strong> AI capability.
+Every AI request is audited, provider‑logged, conversation‑logged, and rate limited. All resource
+identifiers are <strong>UUIDs</strong> (a deterministic UUIDv5 is derived from internal monitoring IDs — no schema
+change and no numeric IDs are exposed).</p>
+<h3 id="16-1-monitoring-copilot">16.1 Monitoring Copilot</h3>
+<p>Ask grounded operational questions — &quot;Which hosts are unhealthy?&quot;, &quot;Summarize today's alerts&quot;, &quot;What
+changed in the last 24 hours?&quot;, &quot;Which hosts will run out of storage first?&quot;. Answers use current
+hosts, services, alerts, capacity, metrics, and topology. Each thread is a <strong>real Quenyx AI
+conversation</strong> that can be opened in the AI Workspace.</p>
+<h3 id="16-2-alert-intelligence-explain-investigate">16.2 Alert Intelligence — ✨ Explain / ✨ Investigate</h3>
+<p>Every alert gains <strong>Explain</strong> and <strong>Investigate</strong> actions that return: operational impact, most
+likely causes, the <strong>evidence used</strong>, related alerts, suggested actions, and a <strong>confidence score
+only when derived from real evidence</strong>.</p>
+<h3 id="16-3-root-cause-analysis-deterministic">16.3 Root Cause Analysis (deterministic)</h3>
+<p>A deterministic analyzer scores resource layers (CPU → memory → storage → database → application)
+from real alert history, metrics, dependencies, and topology, then identifies the most probable root
+cause and <strong>explains why</strong>. Causal chains are never invented.</p>
+<h3 id="16-4-incident-timeline">16.4 Incident Timeline</h3>
+<p>Auto‑generated timelines built from <strong>actual event timestamps</strong> (alert lifecycle and service state
+changes), e.g. alert opened → AI investigation → recovery.</p>
+<h3 id="16-5-capacity-intelligence">16.5 Capacity Intelligence</h3>
+<p>Reuses Capacity Planning and adds per‑host forecasting with an AI explanation of growth trend,
+forecast, estimated exhaustion, operational impact, recommended action, and business risk — from
+available historical metrics only.</p>
+<h3 id="16-6-performance-intelligence">16.6 Performance Intelligence</h3>
+<p>Explains performance degradation, trend changes, resource hotspots, slow services, infrastructure
+bottlenecks, and anomalies, with recommendations, from real metric history.</p>
+<h3 id="16-7-infrastructure-intelligence">16.7 Infrastructure Intelligence</h3>
+<p>Reuses the Infrastructure Map topology to answer &quot;which systems depend on this host?&quot;, blast radius
+if a host fails, critical paths, downstream services, single points of failure, and potential
+cascading failures.</p>
+<h3 id="16-8-service-health-intelligence">16.8 Service Health Intelligence</h3>
+<p>Beyond Healthy/Warning/Critical, the AI explains <strong>why</strong> a service is in its state, what changed, the
+expected impact, suggested action, and related systems.</p>
+<h3 id="16-9-operational-recommendations">16.9 Operational Recommendations</h3>
+<p>Evidence‑based recommendations (e.g. increase RAM, restart service, investigate database, check
+storage, review thresholds). Every recommendation references real metrics, alerts, capacity, or
+dependencies — never produced without evidence.</p>
+<h3 id="16-10-contextual-actions-amp-dashboard">16.10 Contextual ✨ actions &amp; dashboard</h3>
+<p>Existing QynSight pages get a single, uncluttered <strong>✨ Quenyx AI</strong> action: Host → Explain,
+Service → Analyze, Alert → Investigate, Capacity → Predict, Infrastructure Map → Impact Analysis. A
+new <strong>Operations Intelligence dashboard</strong> (<code>/observe/operations-intelligence</code>) shows only real data:
+infrastructure health summary, open alerts, critical services, top operational risks, predicted
+capacity risks, recent recommendations, and recent AI investigations.</p>
+<p>See Doc 08 (API Reference) §Operations Intelligence for the full endpoint contract and Doc 07 (AI
+Platform Bible) for how these features reuse the shared AI runtime.</p>
 
 </main>
 

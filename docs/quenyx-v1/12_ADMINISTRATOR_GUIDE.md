@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
 > | Owner | Operations |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Administrator guide |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring administration; Unified AI Workspace administration. |
+> | 2.1 | 2026-06-30 | Added administration of QynSight Operations Intelligence (Sprint 21): entitlement + `can_use_ai` capability, audit, and rate limits. |
 
 **Audience:** Platform administrators.
 **Scope:** Admin tasks supported by the current product at v1.0.0 RC1 (including the Unified AI
@@ -136,3 +137,25 @@ grouped into **Workspace** (Overview, Chat, Conversations, History, Activity), *
 - **Audit**: provider/template/permission changes and conversations are recorded in the audit log and
   surfaced under Activity / Notifications.
 - **Disable**: set `AI_WORKSPACE_ENABLED=false` to hide the surface (returns 404 from the API).
+
+## QynSight Operations Intelligence administration (Sprint 21)
+
+Operations Intelligence adds an explainable AI layer to QynSight (Monitoring Copilot, Alert/Root‑Cause/
+Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, and an
+Operations Intelligence dashboard). It **reuses the Quenyx AI runtime** — there is nothing new to
+provision, no new provider to configure, and no new secret to manage.
+
+- **Entitlement & capability**: a workspace must have the **`qynsight`** module entitlement *and* the
+  **`can_use_ai`** AI capability (manage it in Quenyx AI → Administration → Permissions per role). A
+  member also needs monitoring RBAC. Without these, the endpoints return `403 Locked`.
+- **AI posture**: governed by the **same** AI flags as Quenyx AI (§9 and Doc 10 §11). With AI disabled,
+  the Copilot/✨ actions return a **clearly flagged mock narrative** over **real** monitoring evidence —
+  no external model calls and no fabricated operational data.
+- **Where admins see it**: the Operations Intelligence dashboard lives under QynSight
+  (`/observe/operations-intelligence`); contextual **✨ Quenyx AI** actions appear on the Hosts,
+  Services, Alerts, Capacity Planning, and Infrastructure Map pages.
+- **Audit & limits**: every AI action is audited (`audit_logs`, `action LIKE 'ai%'`), provider‑logged,
+  conversation‑logged, and rate limited via `throttle:ai-workspace`. Copilot threads are real Quenyx AI
+  conversations and appear in the AI Activity/History surfaces.
+- **Data prerequisites**: insights are only as rich as the monitoring data — ensure the scheduler and
+  agents are healthy so hosts/services/alerts/metrics/capacity are current.

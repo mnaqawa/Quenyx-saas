@@ -61,6 +61,7 @@ const CapacityPlanning = lazy(() => import('./pages/observe/CapacityPlanning'))
 const AlertManagement = lazy(() => import('./pages/observe/AlertManagement'))
 const Services = lazy(() => import('./pages/observe/Services'))
 const Targets = lazy(() => import('./pages/observe/Targets'))
+const OperationsIntelligence = lazy(() => import('./pages/observe/OperationsIntelligence'))
 
 function ObserveSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
@@ -137,6 +138,16 @@ function App() {
                   element={
                     <ObserveSuspense>
                       <Overview />
+                    </ObserveSuspense>
+                  }
+                />
+              )}
+              {observeRoutes.find((r) => r.key === 'operations-intelligence') && (
+                <Route
+                  path="operations-intelligence"
+                  element={
+                    <ObserveSuspense>
+                      <OperationsIntelligence />
                     </ObserveSuspense>
                   }
                 />

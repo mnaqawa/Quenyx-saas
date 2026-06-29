@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Public / External |
 > | Owner | Product |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Module guide |
 >
 > **Revision History**
@@ -19,9 +19,10 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring engine (no Nagios dependency). |
+> | 2.1 | 2026-06-30 | Added Operations Intelligence (Sprint 21): Monitoring Copilot, Alert/Root‑Cause/Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, and the Operations Intelligence dashboard — all reusing the Quenyx AI Platform. |
 
 **Audience:** QynSight users and admins.
-**Status:** 🟢 Production‑ready, **feature‑frozen** at v1.0.
+**Status:** 🟢 Production‑ready. Core monitoring is **feature‑frozen** at v1.0; **Operations Intelligence** (Sprint 21) is the active intelligence layer built on top of the frozen monitoring surface.
 
 ---
 
@@ -105,5 +106,74 @@ On‑demand and scheduled port scans run as **background jobs** — a **queue wo
 
 ## 15. Feature‑freeze status
 
-QynSight is **frozen** at v1.0. This documentation describes the frozen surface; changes are out of
-scope for the current phase.
+QynSight's **core monitoring engine** (checks, metrics, alerts, topology, capacity, agents) is
+**frozen** at v1.0. Section 16 (Operations Intelligence) is an additive intelligence layer that reads
+the frozen monitoring data — it does not change monitoring behavior.
+
+## 16. Operations Intelligence (Sprint 21)
+
+Operations Intelligence turns QynSight from a monitoring platform into an **operations intelligence
+platform**: the AI *understands and explains* your operational data rather than just answering free
+questions. It **reuses the Quenyx AI Platform** (Doc 07) end‑to‑end — the same provider abstraction,
+prompt orchestration, conversation service, and audit — with **no duplicated AI logic**. Every
+narrative is grounded in **real** monitoring evidence; when evidence is insufficient the system says
+so and never fabricates data.
+
+**Access & scope.** All Operations Intelligence endpoints are workspace‑scoped, require the
+`qynsight` module entitlement, monitoring RBAC, and the per‑workspace **`can_use_ai`** AI capability.
+Every AI request is audited, provider‑logged, conversation‑logged, and rate limited. All resource
+identifiers are **UUIDs** (a deterministic UUIDv5 is derived from internal monitoring IDs — no schema
+change and no numeric IDs are exposed).
+
+### 16.1 Monitoring Copilot
+Ask grounded operational questions — "Which hosts are unhealthy?", "Summarize today's alerts", "What
+changed in the last 24 hours?", "Which hosts will run out of storage first?". Answers use current
+hosts, services, alerts, capacity, metrics, and topology. Each thread is a **real Quenyx AI
+conversation** that can be opened in the AI Workspace.
+
+### 16.2 Alert Intelligence — ✨ Explain / ✨ Investigate
+Every alert gains **Explain** and **Investigate** actions that return: operational impact, most
+likely causes, the **evidence used**, related alerts, suggested actions, and a **confidence score
+only when derived from real evidence**.
+
+### 16.3 Root Cause Analysis (deterministic)
+A deterministic analyzer scores resource layers (CPU → memory → storage → database → application)
+from real alert history, metrics, dependencies, and topology, then identifies the most probable root
+cause and **explains why**. Causal chains are never invented.
+
+### 16.4 Incident Timeline
+Auto‑generated timelines built from **actual event timestamps** (alert lifecycle and service state
+changes), e.g. alert opened → AI investigation → recovery.
+
+### 16.5 Capacity Intelligence
+Reuses Capacity Planning and adds per‑host forecasting with an AI explanation of growth trend,
+forecast, estimated exhaustion, operational impact, recommended action, and business risk — from
+available historical metrics only.
+
+### 16.6 Performance Intelligence
+Explains performance degradation, trend changes, resource hotspots, slow services, infrastructure
+bottlenecks, and anomalies, with recommendations, from real metric history.
+
+### 16.7 Infrastructure Intelligence
+Reuses the Infrastructure Map topology to answer "which systems depend on this host?", blast radius
+if a host fails, critical paths, downstream services, single points of failure, and potential
+cascading failures.
+
+### 16.8 Service Health Intelligence
+Beyond Healthy/Warning/Critical, the AI explains **why** a service is in its state, what changed, the
+expected impact, suggested action, and related systems.
+
+### 16.9 Operational Recommendations
+Evidence‑based recommendations (e.g. increase RAM, restart service, investigate database, check
+storage, review thresholds). Every recommendation references real metrics, alerts, capacity, or
+dependencies — never produced without evidence.
+
+### 16.10 Contextual ✨ actions & dashboard
+Existing QynSight pages get a single, uncluttered **✨ Quenyx AI** action: Host → Explain,
+Service → Analyze, Alert → Investigate, Capacity → Predict, Infrastructure Map → Impact Analysis. A
+new **Operations Intelligence dashboard** (`/observe/operations-intelligence`) shows only real data:
+infrastructure health summary, open alerts, critical services, top operational risks, predicted
+capacity risks, recent recommendations, and recent AI investigations.
+
+See Doc 08 (API Reference) §Operations Intelligence for the full endpoint contract and Doc 07 (AI
+Platform Bible) for how these features reuse the shared AI runtime.

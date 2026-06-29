@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Public / External |
 > | Owner | Executive Office |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Executive brief |
 >
 > **Revision History**
@@ -19,10 +19,11 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI. |
+> | 2.1 | 2026-06-30 | Sprint 21 (Operations Intelligence) delivered: QynSight becomes a live AI consumer on the shared platform. |
 
 **Audience:** Investors, board, executives, strategic partners.
 **Tone:** Non‑technical, factual, investor‑ready.
-**Status basis:** v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprint 20 delivered).
+**Status basis:** v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprints 20–21 delivered).
 
 > This document describes **what exists today** in the Quenyx codebase and what is **planned**. It
 > contains **no fabricated customers, revenue, market sizing, benchmarks, or certifications**.
@@ -83,7 +84,11 @@ corpus) and the governance model (provenance + citations + determinism) reinforc
   and platform‑metrics endpoints driven by **real engine data** (no fabricated numbers).
 - **Quenyx AI Platform Foundation** — provider registry (mock + OpenAI), skill registry/router,
   module‑adapter contract, and a dynamic capability catalog. **QynShield is the first live AI
-  adapter.**
+  adapter; QynSight is now a live AI consumer via Operations Intelligence (Sprint 21).**
+- **QynSight Operations Intelligence (Sprint 21)** — a Monitoring Copilot, alert explanation and
+  investigation, deterministic root‑cause analysis, incident timelines, and capacity/performance/
+  infrastructure/service‑health intelligence with evidence‑based recommendations. It **reuses** the
+  shared AI platform (no duplicated AI) and grounds every answer in **real** monitoring data.
 
 🟡 **Built but feature‑flagged (off by default)**
 - **Compliance Copilot v0** runs in **mock mode** by default; real‑model mode is env‑gated.
@@ -91,13 +96,14 @@ corpus) and the governance model (provenance + citations + determinism) reinforc
   fallback; off by default and never indexes tenant evidence by default.
 
 🔵 **Architecture‑ready (contract only)**
-- **QynSight AI adapter** — interface reserved; **no monitoring AI implemented**.
-- Other HUB modules are **registered internally** but **hidden from the sidebar** by a frontend flag.
+- Other HUB modules are **registered internally** but **hidden from the sidebar** by a frontend flag,
+  with **reserved** AI‑adapter contracts until each is built.
 
 ## 6. QynSight status
 
-Production‑ready and **feature‑frozen** at v1.0. It is the platform's anchor module and the
-default‑visible product in the UI.
+Production‑ready, with the **core monitoring engine feature‑frozen** at v1.0. With **Operations
+Intelligence (Sprint 21)** it now adds an explainable AI layer on top of that frozen engine — the
+platform's anchor module and the default‑visible product in the UI.
 
 ## 7. QynShield / QCIF status
 
@@ -107,17 +113,18 @@ beyond the executive/demo layer is part of the forward roadmap.
 
 ## 8. Quenyx AI Platform status
 
-The AI runtime has been **extracted into a shared platform** that any module can consume through a
-thin adapter. QynShield is live on it; QynSight has a **reserved** adapter contract. AI is **off by
+The AI runtime has been **extracted into a shared platform** that any module can consume. QynShield is
+live on it, and **QynSight is now live too** via Operations Intelligence (Sprint 21) — reusing the same
+providers, prompt orchestration, conversations, and audit with **no duplicated AI**. AI is **off by
 default**, **deterministic‑first**, and **citation‑enforced**.
 
 ## 9. What exists today vs roadmap
 
 | Area | Today | Roadmap |
 |---|---|---|
-| Monitoring | QynSight v1.0 (frozen) | Deeper integrations |
+| Monitoring | QynSight v1.0 (frozen) + Operations Intelligence (Sprint 21) | Deeper integrations |
 | Compliance | QCIF + NCA ECC‑2:2024 v1, full backend/API | More frameworks; richer UI |
-| AI | Shared platform, mock default, deterministic + citations | Real‑model GA, RAG GA, QynSight AI |
+| AI | Shared platform, mock default, deterministic + citations; live on QynShield **and** QynSight | Real‑model GA, RAG GA, more module intelligence |
 | Modules | QynSight visible; QynShield backend; others hidden | Progressive module enablement |
 
 ## 10. Defensible architecture (the moat)
@@ -132,9 +139,11 @@ default**, **deterministic‑first**, and **citation‑enforced**.
 Quenyx has completed a **disciplined foundation across Phases 1–3**: a production monitoring product
 (native QynSight engines), a provenance‑grounded compliance engine, and a governable shared AI
 platform — built with explicit safety rails rather than demo shortcuts. **Phase 4 (Enterprise AI
-Platform)** is now underway, with the **Unified AI Workspace (Sprint 20, presented as "Quenyx AI")** already delivered in RC1,
-converting this foundation into broader module coverage and customer‑facing AI from a base that is
-already architecturally sound.
+Platform)** is now underway, with the **Unified AI Workspace (Sprint 20, presented as "Quenyx AI")**
+and **Operations Intelligence (Sprint 21)** already delivered in RC1 — the latter turning QynSight from
+a monitoring product into an operations *intelligence* product on the shared AI platform — converting
+this foundation into broader module coverage and customer‑facing AI from a base that is already
+architecturally sound.
 
 ## 12. Customer value
 
@@ -165,7 +174,7 @@ already architecturally sound.
 | Sprint | Title | Status |
 |---|---|---|
 | Sprint 20 | Unified AI Workspace ("Quenyx AI") | ✅ Delivered in RC1 |
-| Sprint 21 | Operations Intelligence | Planned |
+| Sprint 21 | Operations Intelligence | ✅ Delivered in RC1 |
 | Sprint 22 | Asset & Knowledge Intelligence | Planned |
 | Sprint 23 | Automation & Response Intelligence | Planned |
 | Sprint 24 | Service, Notification & Cost Intelligence | Planned |

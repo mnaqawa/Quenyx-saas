@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Public / External |
 > | Owner | Product Marketing |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Product brochure |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring; QynCore vs Integrations clarified; shared platform AI. |
+> | 2.1 | 2026-06-30 | Added QynSight Operations Intelligence (Sprint 21) — explainable, evidence‑grounded operations AI. |
 
 **Audience:** Customers, sales, pre‑sales.
 **Tone:** Sales‑friendly, but factual.
@@ -45,7 +46,7 @@ your teams stop stitching together disconnected tools.
 
 | Module | What it does | Status |
 |---|---|---|
-| **QynSight** | Operations monitoring & observability | 🟢 Production‑ready (frozen) |
+| **QynSight** | Operations monitoring & observability **+ Operations Intelligence** | 🟢 Production‑ready (core frozen; intelligence layer live) |
 | **QynShield** | Compliance intelligence (QCIF) | 🟢 Backend/API built |
 | **Quenyx AI** | Shared, platform‑wide governable AI layer | 🟢 Foundation built |
 | QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance | Platform modules | 🔵 Registered internally, **currently disabled in the navigation** until production rollout |
@@ -62,7 +63,25 @@ your teams stop stitching together disconnected tools.
 Real‑time **monitoring**, **infrastructure map**, **performance analytics**, **capacity planning**,
 **alert management**, **service checks**, and **host/agent enrollment**. Agents report metrics,
 inventory, and heartbeats; alert rules and monitoring profiles are configurable per workspace.
-QynSight is **production‑ready and feature‑frozen** at v1.0.
+QynSight's core monitoring engine is **production‑ready and feature‑frozen** at v1.0.
+
+### Operations Intelligence (Sprint 21) 🟢
+
+QynSight now **understands and explains** your operations, not just charts them:
+
+- **Monitoring Copilot** — ask "Which hosts are unhealthy?", "Summarize today's alerts", "What
+  changed in the last 24 hours?", "Which hosts will run out of storage first?" — answered from your
+  **current** hosts, services, alerts, capacity, metrics, and topology.
+- **Alert Intelligence** — ✨ Explain / ✨ Investigate on every alert: operational impact, most likely
+  causes, the evidence used, related alerts, and suggested actions.
+- **Deterministic Root‑Cause Analysis** and **auto‑generated Incident Timelines** from real events.
+- **Capacity, Performance, Infrastructure, and Service‑Health intelligence** with **evidence‑based
+  recommendations** — every recommendation references real metrics, alerts, capacity, or dependencies.
+- **Contextual ✨ Quenyx AI actions** on hosts, services, alerts, capacity, and the infrastructure map,
+  plus a dedicated **Operations Intelligence dashboard**.
+
+It **reuses the same governable Quenyx AI platform** — explainable, deterministic‑first, and **never
+fabricated**: if the evidence is insufficient, it says so. Available in English and Arabic.
 
 ## QynShield overview 🟢 (backend/API)
 

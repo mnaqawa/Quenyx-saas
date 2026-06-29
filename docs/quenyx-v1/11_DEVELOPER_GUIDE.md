@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Developer guide |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; QynCore internal communication; Unified AI Workspace patterns. |
+> | 2.1 | 2026-06-30 | Added the Operations Intelligence (Sprint 21) pattern: consuming the shared AI runtime from a module without duplicating AI logic. |
 
 **Audience:** New engineers.
 **Goal:** Get productive in the Quenyx monorepo and ship changes that match platform conventions.
@@ -160,3 +161,32 @@ quenyx-saas/
   the `en` and `ar` blocks of `i18n/translations.ts`.
 - **Validate**: `php artisan route:list | grep ai`, `php artisan migrate --force`, `php artisan test`,
   `npm run build` (+ `npm run lint`).
+
+## Consuming the AI runtime from a module — Operations Intelligence (Sprint 21)
+
+Sprint 21 (QynSight Operations Intelligence) is the reference pattern for making a module a **live AI
+consumer without duplicating AI logic**. Follow it when adding intelligence to any module.
+
+- **One integration point.** Route *all* model access through a single module service that wraps the
+  shared runtime — here `App\Services\Observe\Intelligence\OperationsAiAnalyst`, which uses
+  `AiProviderRegistry` (providers), `CompliancePromptOrchestrator` (grounded prompt + citations),
+  `AiConversation(Message)` / `AiConversationRepository` (conversations), and `AiAccessAuditLogger`
+  (audit). **Do not** add a new provider registry, prompt/reasoning/RAG engine.
+- **Deterministic evidence first.** Build deterministic, real‑data evidence in plain services
+  (`OperationsEvidenceCollector`, `RootCauseService`, `IncidentTimelineService`,
+  `CapacityAdvisorService`, `InfrastructureImpactService`, `PerformanceAdvisorService`,
+  `AlertExplanationService`, `OperationsIntelligenceService`) and pass it to the analyst to *render*.
+  Never let the model invent facts; surface "insufficient evidence" explicitly.
+- **UUID‑only over numeric ids.** When a module stores numeric ids, derive a deterministic **UUIDv5**
+  (`App\Support\Observe\OperationsEntityId`, namespaced by type + workspace + id) and resolve it back
+  with a workspace‑scoped resolver (`OperationsEntityResolver`). No schema change; never expose numeric
+  ids.
+- **Security per request.** Use a base controller (`OperationsIntelligenceBaseController`) that resolves
+  the workspace by UUID and enforces module entitlement (`qynsight`) + monitoring RBAC
+  (`ProjectPolicy::accessAi`) + the `can_use_ai` capability, then audits. Routes go in their own file
+  (`routes/qynsight-intelligence.php`) under `auth:sanctum` + `throttle:ai-workspace`.
+- **Frontend.** Reuse `apiClient` + the `useAiWorkspaceUuid`/`useAiResource` hooks, a typed service
+  (`operationsIntelligenceService`), and a contextual `QuenyxAiButton` that opens a copilot drawer
+  backed by a real Quenyx AI conversation. Add **both** `en` and `ar` keys in `i18n/translations.ts`.
+- **Validate**: `php -l` the new PHP files, `php artisan route:list | grep qynsight/intelligence`,
+  `php artisan test --filter=OperationsIntelligence`, and `npm run build` / `npm run lint`.

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type ComponentProps, type Re
 import { useAlertRules, useAlertSummary } from '../../hooks/useObserveData'
 import { StatCard } from '../../components/observe/StatCard'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { Tabs } from '../../components/observe/Tabs'
 import { StatusBadge } from '../../components/observe/StatusBadge'
@@ -204,6 +205,7 @@ export default function AlertManagement() {
         subtitle={t('alerts.subtitle')}
         actions={
           <>
+            <QuenyxAiButton size="md" label={t('ai.action.investigate')} question={t('opsIntel.q.alerts')} />
             <ObservePageToolbar
               interval={interval}
               onIntervalChange={setInterval}

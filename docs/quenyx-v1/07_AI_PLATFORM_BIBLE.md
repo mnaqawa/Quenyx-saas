@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Confidential — Architecture |
 > | Owner | AI Platform Engineering |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Architecture reference |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial AI platform bible (through Sprint 19). |
 > | 2.0 | 2026-06-29 | RC1 alignment: Quenyx AI documented as a shared platform layer (not "QynShield AI"); explicit future‑adapter list; Unified AI Workspace (Sprint 20). |
+> | 2.1 | 2026-06-30 | QynSight becomes a live AI consumer: Operations Intelligence (Sprint 21) reuses the shared runtime (provider abstraction, prompt orchestration, conversation service, audit) with no duplicated AI logic. |
 
 **Audience:** Architects, AI engineers.
 **Scope:** The shared, platform‑wide Quenyx AI Platform (extracted in Sprint 19, surfaced
@@ -95,12 +96,19 @@ model rendering.
 retrieval, reasoning, prompt orchestrator, skills registry) — **no business logic was duplicated or
 moved**. Registered at boot with `QuenyxAiPlatform::registerAdapter(...)`.
 
-## 10. QynSight reserved adapter 🔵
+## 10. QynSight — live AI consumer (Operations Intelligence, Sprint 21) 🟢
 
-`QynSightAiAdapterInterface` exists as a **reserved contract only**. There is **no QynSight AI
-implementation** — no monitoring AI, RCA, incident AI, log analysis, or metrics AI. When built, its
-adapter registers with **no platform change** and its `module_catalog` status flips `reserved` →
-`production`.
+As of Sprint 21, QynSight is a **live AI consumer**. Operations Intelligence (deterministic RCA,
+alert explanation, incident timeline, capacity/performance/infrastructure/service‑health intelligence,
+and the Monitoring Copilot) **reuses the shared Quenyx AI runtime** — `AiProviderRegistry`,
+`CompliancePromptOrchestrator`, the `AiConversation(Message)` surface, and `AiAccessAuditLogger` — via
+a single integration point, `OperationsAiAnalyst`. **No AI logic is duplicated**: there is no new
+provider registry, prompt engine, reasoning engine, or RAG engine. The Operations Intelligence
+services generate **deterministic, real‑data evidence** and hand it to `OperationsAiAnalyst` for
+narration; when AI is disabled the mock provider answers (clearly flagged) while the evidence stays
+real. See §24. The reserved `AiModuleAdapterInterface`‑style integration remains available for a
+future fully‑routed adapter; the Sprint 21 implementation consumes the runtime directly through the
+Operations Intelligence services.
 
 ## 11. AI contract (request DTO)
 
@@ -165,9 +173,10 @@ operate without storing any message content.
 
 Each HUB module can become an AI consumer by implementing `AiModuleAdapterInterface` and registering
 — inheriting providers, skills, prompt orchestration, retrieval/RAG, reasoning, and the capability
-catalog automatically. **Future AI adapters** are planned for: **QynSight, QynAsset, QynRun,
-QynNotify, QynReact, QynKnow, QynSupport, QynBalance, and QynVA**. (`QynCore` is the platform core,
-not an adapter target; there is no `QynIntegrations` module.)
+catalog automatically. **QynShield** (compliance) and **QynSight** (Operations Intelligence, Sprint 21)
+are live AI consumers today. **Future AI adapters** are planned for: **QynAsset, QynRun, QynNotify,
+QynReact, QynKnow, QynSupport, QynBalance, and QynVA**. (`QynCore` is the platform core, not an adapter
+target; there is no `QynIntegrations` module.)
 
 ## 21. No direct DB from AI core
 
@@ -227,3 +236,37 @@ new AI logic:
 
 Master switch: `ai.feature_flags.workspace_enabled` (env `AI_WORKSPACE_ENABLED`, default on; safe
 because chat falls back to the mock provider and metrics read 0 with no activity).
+
+## 24. QynSight Operations Intelligence (Sprint 21)
+
+Operations Intelligence transforms QynSight from a monitoring platform into an **operations
+intelligence platform**: the AI *understands and explains* operational data instead of merely
+answering free‑form questions. It is an **additive intelligence layer** over the frozen monitoring
+engine and **reuses the shared AI Platform** end‑to‑end.
+
+**Reuse, not duplication.** A single service, `App\Services\Observe\Intelligence\OperationsAiAnalyst`,
+is the *only* integration point with the AI runtime. It uses the existing `AiProviderRegistry` (same
+provider abstraction), `CompliancePromptOrchestrator` (same grounded‑prompt assembly with
+citations/guardrails), the Sprint 20 `AiConversation`/`AiConversationRepository` (so every Copilot
+thread is a real Quenyx AI conversation), and `AiAccessAuditLogger` (same audit). No new provider
+registry, prompt engine, reasoning engine, or RAG engine was created.
+
+**Deterministic evidence first.** Every narrative is grounded in real, deterministic evidence:
+
+- `OperationsEvidenceCollector` — reads current hosts, services, alerts, capacity, metrics, topology.
+- `RootCauseService` — deterministic layered scoring (CPU → memory → storage → database →
+  application) over real signals; never invents causal chains.
+- `IncidentTimelineService` — builds timelines from **actual event timestamps**.
+- `CapacityAdvisorService` — reuses Capacity Planning + per‑host forecasting from historical metrics.
+- `InfrastructureImpactService` — dependencies, SPOF, and blast radius from existing topology.
+- `PerformanceAdvisorService` — hotspots, trends, anomalies, slow services from real metric history.
+- `AlertExplanationService` / `OperationsIntelligenceService` — compose evidence, then narrate.
+
+**UUID‑only & deterministic ids.** QynSight stores numeric ids internally; the AI surface is
+UUID‑only. `OperationsEntityId` derives a deterministic **UUIDv5** per entity (type + workspace + id)
+and `OperationsEntityResolver` maps it back within a workspace — **no schema change, no numeric ids
+exposed**.
+
+**Governance.** Every request is workspace‑scoped, gated by the `qynsight` entitlement, monitoring
+RBAC, and the `can_use_ai` capability, and is audited, provider‑logged, conversation‑logged, and rate
+limited (`throttle:ai-workspace`). Endpoints: see API Reference §18.

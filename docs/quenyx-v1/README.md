@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.3 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Documentation index |
 >
 > **Revision History**
@@ -21,6 +21,7 @@
 > | 2.0 | 2026-06-29 | RC1 alignment: native QynSight monitoring (Nagios removed as platform dependency), QynCore internal communication, Integrations = external systems only, Quenyx AI as a shared platform layer, roadmap Phases 1–4 / Sprints 20–25, document metadata headers. |
 > | 2.1 | 2026-06-29 | RC1.1 cleanup: code aligned to docs — removed stale gateway Nagios config, normalized native engine_key, reclassified QynIntegrations (entitlement key only) and QynCore (platform core) in code catalogs, banner-marked legacy ShieldObserve docs. |
 > | 2.2 | 2026-06-29 | RC1.1 AI polish: Sprint 20 surface branded **Quenyx AI** (routes unchanged; `/quenyx-ai/*` alias); enterprise provider catalog (14 providers, only OpenAI executable); mock provider removed from production default/UI; real Test‑connection endpoint; enriched overview. Affected PDFs (01,05,07,08,11,12,16,18) should be regenerated on a build host (see Audit Report RC1.1 AI addendum). |
+> | 2.3 | 2026-06-30 | Sprint 21 — **QynSight Operations Intelligence**: QynSight becomes a live AI consumer (Monitoring Copilot, Alert/Root‑Cause/Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, OI dashboard) reusing the shared Quenyx AI platform; new UUID‑only `/api/qynsight/intelligence/*` APIs. Docs 01, 02, 05, 07, 08, 11, 12, 14, 18 updated and PDFs regenerated (deterministic CDP builder). |
 
 This pack is the **canonical, definitive documentation set** for Quenyx vOPS HUB at **v1.0.0 RC1**.
 Every statement here is grounded in the **current production codebase and actually delivered
@@ -103,7 +104,7 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | Retrieval / RAG Foundation | 🟡 Feature‑flagged (metadata‑only; deterministic fallback) |
 | Quenyx AI Platform (shared, platform‑wide: provider abstraction, skills, context, retrieval, reasoning, knowledge graph, gap/evidence/recommendation engines, copilot, RAG runtime, executive platform, capability catalog) | 🟢 Built · QynShield adapter live |
 | Unified AI Workspace (Sprint 20) — top‑level platform AI surface, workspace‑scoped, UUID‑only APIs | 🟢 Built · 🟡 master switch (`AI_WORKSPACE_ENABLED`) |
-| QynSight AI adapter | 🔵 Architecture‑ready (interface only) |
+| QynSight Operations Intelligence (Sprint 21) — Monitoring Copilot, alert/root‑cause/capacity/performance/infrastructure/service‑health intelligence, evidence‑based recommendations, OI dashboard; reuses the shared AI platform; UUID‑only `/api/qynsight/intelligence/*` | 🟢 Built · live AI consumer · 🟡 same AI flags |
 | Other HUB modules (QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance) | 🔵 Registered internally · **disabled in the navigation by sidebar flag** until production rollout |
 | QynCore (platform core: internal communication services) | 🟢 Platform layer (not a navigable module) |
 | Integrations (platform page, **external** systems only) | 🟢 Platform page (not a module) |
@@ -123,14 +124,14 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | **Phase 1** | Platform Foundation | ✅ Completed |
 | **Phase 2** | Operations Platform (QynSight) | ✅ Completed |
 | **Phase 3** | Compliance & Enterprise AI Foundation (QCIF Sprints 1–19, AI Platform Foundation) | ✅ Completed |
-| **Phase 4** | **Enterprise AI Platform** | 🟡 In progress (Sprint 20 delivered) |
+| **Phase 4** | **Enterprise AI Platform** | 🟡 In progress (Sprints 20–21 delivered) |
 
 **Phase 4 — Enterprise AI Platform**
 
 | Sprint | Title | Status |
 |---|---|---|
 | Sprint 20 | Unified AI Workspace | ✅ Delivered in RC1 |
-| Sprint 21 | Operations Intelligence | Planned |
+| Sprint 21 | Operations Intelligence | ✅ Delivered in RC1 |
 | Sprint 22 | Asset & Knowledge Intelligence | Planned |
 | Sprint 23 | Automation & Response Intelligence | Planned |
 | Sprint 24 | Service, Notification & Cost Intelligence | Planned |
@@ -145,10 +146,12 @@ There is **no roadmap content beyond Sprint 25** at this time.
 Branded, print-ready PDFs of **all 21** documents (01–21) are generated into the single canonical
 folder [`docs/pdf/`](../pdf/) (title page, auto TOC, page numbers, classification footer, rendered
 Mermaid diagrams). Markdown remains the editable source of truth; the PDFs are build artifacts.
-Regenerate all of them with:
+Regenerate all of them with the **deterministic CDP builder** (waits for Paged.js/Mermaid pagination
+to settle, so long documents are never truncated):
 
 ```bash
-powershell -File scripts/docs/build-pdfs.ps1
+powershell -File scripts/docs/build-pdfs-cdp.ps1            # all docs
+powershell -File scripts/docs/build-pdfs-cdp.ps1 07_AI_PLATFORM_BIBLE 08_API_REFERENCE   # subset
 ```
 
 The script renders every Markdown source to `docs/pdf/<NN_NAME>.pdf`. The full alignment summary is in

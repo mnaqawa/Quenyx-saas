@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | API reference |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints. |
+> | 2.1 | 2026-06-30 | Added QynSight Operations Intelligence (Sprint 21) endpoints under `/api/qynsight/intelligence/*`. |
 
 **Audience:** Engineers, integrators.
 **Source:** Derived from `php artisan route:list` (261 routes) and the `routes/*.php` files at
@@ -249,7 +250,41 @@ outside `local`/`testing`** and is never the production default. The default pro
 configured, otherwise `mock` only in local/testing, otherwise `''` (an honest *no provider
 configured* state, surfaced as `summary.has_provider=false`).
 
-## 18. Notes on examples
+## 18. QynSight Operations Intelligence (Sprint 21)
+
+Workspace‑scoped, **UUID‑only** AI surface that turns QynSight monitoring data into explainable
+operational intelligence. All routes are flat under `/api/qynsight/intelligence/*`, Sanctum‑protected,
+throttled by **`ai-workspace`**, and **scoped by a required `workspace` UUID** (query string for
+reads, request body for writes) — never a numeric id. Every entity id in the path/response is a UUID
+(a deterministic UUIDv5 derived from internal monitoring ids; no schema change, no numeric ids
+exposed). These endpoints **reuse the Sprint 20 Quenyx AI runtime** (provider registry, prompt
+orchestration, conversation service, audit) — **no AI logic is duplicated**.
+
+**Authorization (every endpoint):** `qynsight` module entitlement **+** monitoring RBAC
+(`ProjectPolicy::accessAi`) **+** the per‑workspace AI capability **`can_use_ai`**. Every AI call is
+audited, provider‑logged, and conversation‑logged.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/qynsight/intelligence/overview?workspace={uuid}` | Operations Intelligence dashboard: infrastructure health, open alerts, critical services, top operational risks, predicted capacity risks, recent recommendations, recent AI investigations |
+| POST | `/api/qynsight/intelligence/copilot` | Monitoring Copilot — grounded Q&A; reuses a Quenyx AI conversation (`conversation` UUID optional to continue a thread) |
+| GET | `/api/qynsight/intelligence/recommendations?workspace={uuid}` | Evidence‑based operational recommendations |
+| POST | `/api/qynsight/intelligence/alerts/{uuid}/explain` | Alert explanation: impact, most likely causes, evidence used, related alerts, suggested actions, confidence (evidence‑derived only) |
+| POST | `/api/qynsight/intelligence/alerts/{uuid}/investigate` | Deeper alert investigation (explanation + root cause + timeline) |
+| GET | `/api/qynsight/intelligence/incidents/{uuid}/timeline?workspace={uuid}` | Deterministic incident timeline from actual event timestamps |
+| POST | `/api/qynsight/intelligence/hosts/{uuid}/explain` | Host (✨ Explain) — health, performance, capacity narrative |
+| POST | `/api/qynsight/intelligence/services/{uuid}/analyze` | Service (✨ Analyze) — why/what changed/impact/action/related |
+| POST | `/api/qynsight/intelligence/capacity/{uuid}/predict` | Capacity (✨ Predict) — trend, forecast, exhaustion, action, risk |
+| POST | `/api/qynsight/intelligence/infrastructure/{uuid}/impact` | Infrastructure Map (✨ Impact Analysis) — dependencies, SPOF, blast radius |
+
+All write endpoints accept `{ "workspace": "<uuid>", … }`. The copilot accepts
+`{ "workspace": "<uuid>", "message": "…", "conversation": "<uuid?>" }` and returns
+`{ "conversation_uuid", "message_uuid", "answer", "evidence" }`. AI narratives carry an `available`
+/`ai_enabled` flag; when AI is disabled, a clearly flagged mock narrative is returned while the
+underlying operational data stays real. **No operational data is fabricated**; when evidence is
+insufficient the response says so.
+
+## 19. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource

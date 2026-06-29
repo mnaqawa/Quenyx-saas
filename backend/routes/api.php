@@ -261,4 +261,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sprint 20 — Unified AI Workspace (platform-level AI surface; workspace-scoped by UUID) — see routes/ai-workspace.php
     require base_path('routes/ai-workspace.php');
+
+    // Sprint 21 — QynSight Operations Intelligence (reuses the Quenyx AI runtime; workspace-scoped by UUID) — see routes/qynsight-intelligence.php
+    require base_path('routes/qynsight-intelligence.php');
 });

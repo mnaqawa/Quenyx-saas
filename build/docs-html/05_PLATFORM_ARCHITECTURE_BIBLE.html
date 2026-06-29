@@ -94,17 +94,17 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Confidential — Architecture</div>
   <div class="tp-title">Quenyx Platform Architecture Bible</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Confidential — Architecture</td></tr>
 <tr><th>Owner</th><td>Platform Architecture</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
-<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Architecture reference</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial architecture bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial architecture bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Sprint 21 — QynSight Operations Intelligence: QynSight becomes a live AI consumer reusing the shared runtime; UUID‑only `/api/qynsight/intelligence/*` surface.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -132,6 +132,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#17-deployment-architecture"><span class="toc-text">17. Deployment architecture</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#18-current-limitations"><span class="toc-text">18. Current limitations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (RC1.1)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-21-qynsight-operations-intelligence-additive-intelligence-layer"><span class="toc-text">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -356,7 +357,8 @@ corpus → graph → mapping → evidence → gap → recommendation → copilot
   REQ[AiModuleRequest] --&gt; PLATFORM[QuenyxAiPlatform]
   PLATFORM --&gt; ADP{Module Adapter}
   ADP --&gt;|qynshield| SHIELD[QynShieldAiAdapter]
-  ADP -. reserved .-&gt; SIGHT[QynSightAiAdapterInterface]
+  ADP --&gt;|qynsight| SIGHT[Operations Intelligence&lt;br/&gt;OperationsAiAnalyst]
+  SIGHT --&gt; REG
   SHIELD --&gt; CTX[buildContext]
   SHIELD --&gt; RSN[buildReasoning&lt;br/&gt;deterministic]
   SHIELD --&gt; PMT[buildPrompt]
@@ -447,6 +449,33 @@ deterministic UUIDv5.</li>
 <li><strong>RBAC</strong>: <code>ProjectPolicy::accessAi</code> / <code>administerAi</code> + a fine‑grained capability matrix.</li>
 <li><strong>Frontend</strong>: <code>AiWorkspaceLayout</code> + 15 lazy pages under <code>pages/ai/*</code>, <code>aiWorkspaceService</code>,
 <code>useAiWorkspace</code> hooks, full EN/AR i18n, real empty states; consumes backend APIs only.</li>
+</ul>
+<h2 id="sprint-21-qynsight-operations-intelligence-additive-intelligence-layer">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</h2>
+<p>Operations Intelligence makes QynSight a <strong>live AI consumer</strong> of the shared runtime, turning
+monitoring data into explainable operational intelligence. It is <strong>additive</strong> over the frozen
+monitoring engine (§7) and introduces <strong>no new AI services</strong> — all narration goes through the Sprint 20
+runtime.</p>
+<ul>
+<li><strong>Reuse, not duplication.</strong> A single integration point,
+<code>App\Services\Observe\Intelligence\OperationsAiAnalyst</code>, calls the existing <code>AiProviderRegistry</code>,
+<code>CompliancePromptOrchestrator</code>, the <code>AiConversation</code>/<code>AiConversationRepository</code> surface, and
+<code>AiAccessAuditLogger</code>. No new provider registry, prompt/reasoning/RAG engine was created.</li>
+<li><strong>Deterministic evidence services</strong> (<code>OperationsEvidenceCollector</code>, <code>RootCauseService</code>,
+<code>IncidentTimelineService</code>, <code>CapacityAdvisorService</code>, <code>InfrastructureImpactService</code>,
+<code>PerformanceAdvisorService</code>, <code>AlertExplanationService</code>, <code>OperationsIntelligenceService</code>) read <strong>real</strong>
+QynSight data and produce evidence; the AI only renders it. Insufficient evidence is stated, never
+fabricated.</li>
+<li><strong>UUID‑only.</strong> <code>OperationsEntityId</code> derives a deterministic UUIDv5 (type + workspace + numeric id)
+and <code>OperationsEntityResolver</code> resolves it back within a workspace — <strong>no schema change</strong>, no numeric
+ids exposed.</li>
+<li><strong>API.</strong> Flat, workspace‑scoped routes in <code>routes/qynsight-intelligence.php</code> under
+<code>/api/qynsight/intelligence/*</code> (controllers in <code>App\Http\Controllers\Observe\Intelligence</code>),
+Sanctum + <code>throttle:ai-workspace</code>, gated by the <code>qynsight</code> entitlement, monitoring RBAC, and the
+<code>can_use_ai</code> capability; audited and provider‑logged. See Doc 08 §18.</li>
+<li><strong>Frontend.</strong> <code>pages/observe/OperationsIntelligence.tsx</code> dashboard (real data only), reusable
+<code>OperationsCopilotDrawer</code> / <code>OperationsAlertDrawer</code> / <code>QuenyxAiButton</code> (contextual ✨ actions on host,
+service, alert, capacity, and infrastructure‑map pages), <code>operationsIntelligenceService</code>, and full
+EN/AR i18n. Copilot threads are real Quenyx AI conversations.</li>
 </ul>
 
 </main>

@@ -94,17 +94,17 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Public / External</div>
   <div class="tp-title">Executive Overview</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.0</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.0</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Public / External</td></tr>
 <tr><th>Owner</th><td>Executive Office</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
-<tr><th>Last Updated</th><td>2026-06-29</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Executive brief</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Sprint 21 (Operations Intelligence) delivered: QynSight becomes a live AI consumer on the shared platform.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Public / External. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -132,7 +132,7 @@ body{margin:0}
 <h1>01 — Executive Overview</h1>
 <p><strong>Audience:</strong> Investors, board, executives, strategic partners.
 <strong>Tone:</strong> Non‑technical, factual, investor‑ready.
-<strong>Status basis:</strong> v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprint 20 delivered).</p>
+<strong>Status basis:</strong> v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprints 20–21 delivered).</p>
 <blockquote>
 <p>This document describes <strong>what exists today</strong> in the Quenyx codebase and what is <strong>planned</strong>. It
 contains <strong>no fabricated customers, revenue, market sizing, benchmarks, or certifications</strong>.</p>
@@ -186,7 +186,11 @@ AI is involved.</li>
 and platform‑metrics endpoints driven by <strong>real engine data</strong> (no fabricated numbers).</li>
 <li><strong>Quenyx AI Platform Foundation</strong> — provider registry (mock + OpenAI), skill registry/router,
 module‑adapter contract, and a dynamic capability catalog. <strong>QynShield is the first live AI
-adapter.</strong></li>
+adapter; QynSight is now a live AI consumer via Operations Intelligence (Sprint 21).</strong></li>
+<li><strong>QynSight Operations Intelligence (Sprint 21)</strong> — a Monitoring Copilot, alert explanation and
+investigation, deterministic root‑cause analysis, incident timelines, and capacity/performance/
+infrastructure/service‑health intelligence with evidence‑based recommendations. It <strong>reuses</strong> the
+shared AI platform (no duplicated AI) and grounds every answer in <strong>real</strong> monitoring data.</li>
 </ul>
 <p>🟡 <strong>Built but feature‑flagged (off by default)</strong></p>
 <ul>
@@ -196,19 +200,21 @@ fallback; off by default and never indexes tenant evidence by default.</li>
 </ul>
 <p>🔵 <strong>Architecture‑ready (contract only)</strong></p>
 <ul>
-<li><strong>QynSight AI adapter</strong> — interface reserved; <strong>no monitoring AI implemented</strong>.</li>
-<li>Other HUB modules are <strong>registered internally</strong> but <strong>hidden from the sidebar</strong> by a frontend flag.</li>
+<li>Other HUB modules are <strong>registered internally</strong> but <strong>hidden from the sidebar</strong> by a frontend flag,
+with <strong>reserved</strong> AI‑adapter contracts until each is built.</li>
 </ul>
 <h2 id="6-qynsight-status">6. QynSight status</h2>
-<p>Production‑ready and <strong>feature‑frozen</strong> at v1.0. It is the platform's anchor module and the
-default‑visible product in the UI.</p>
+<p>Production‑ready, with the <strong>core monitoring engine feature‑frozen</strong> at v1.0. With <strong>Operations
+Intelligence (Sprint 21)</strong> it now adds an explainable AI layer on top of that frozen engine — the
+platform's anchor module and the default‑visible product in the UI.</p>
 <h2 id="7-qynshield-qcif-status">7. QynShield / QCIF status</h2>
 <p>Backend and APIs are <strong>built and exercised</strong> (corpus, graph, mapping, evidence, gap, recommendation,
 copilot, executive). It is the <strong>first production consumer of the Quenyx AI Platform</strong>. UI surfacing
 beyond the executive/demo layer is part of the forward roadmap.</p>
 <h2 id="8-quenyx-ai-platform-status">8. Quenyx AI Platform status</h2>
-<p>The AI runtime has been <strong>extracted into a shared platform</strong> that any module can consume through a
-thin adapter. QynShield is live on it; QynSight has a <strong>reserved</strong> adapter contract. AI is <strong>off by
+<p>The AI runtime has been <strong>extracted into a shared platform</strong> that any module can consume. QynShield is
+live on it, and <strong>QynSight is now live too</strong> via Operations Intelligence (Sprint 21) — reusing the same
+providers, prompt orchestration, conversations, and audit with <strong>no duplicated AI</strong>. AI is <strong>off by
 default</strong>, <strong>deterministic‑first</strong>, and <strong>citation‑enforced</strong>.</p>
 <h2 id="9-what-exists-today-vs-roadmap">9. What exists today vs roadmap</h2>
 <table>
@@ -222,7 +228,7 @@ default</strong>, <strong>deterministic‑first</strong>, and <strong>citation�
 <tbody>
 <tr>
 <td>Monitoring</td>
-<td>QynSight v1.0 (frozen)</td>
+<td>QynSight v1.0 (frozen) + Operations Intelligence (Sprint 21)</td>
 <td>Deeper integrations</td>
 </tr>
 <tr>
@@ -232,8 +238,8 @@ default</strong>, <strong>deterministic‑first</strong>, and <strong>citation�
 </tr>
 <tr>
 <td>AI</td>
-<td>Shared platform, mock default, deterministic + citations</td>
-<td>Real‑model GA, RAG GA, QynSight AI</td>
+<td>Shared platform, mock default, deterministic + citations; live on QynShield <strong>and</strong> QynSight</td>
+<td>Real‑model GA, RAG GA, more module intelligence</td>
 </tr>
 <tr>
 <td>Modules</td>
@@ -253,9 +259,11 @@ modules inherit safe AI without rebuilding it.</li>
 <p>Quenyx has completed a <strong>disciplined foundation across Phases 1–3</strong>: a production monitoring product
 (native QynSight engines), a provenance‑grounded compliance engine, and a governable shared AI
 platform — built with explicit safety rails rather than demo shortcuts. <strong>Phase 4 (Enterprise AI
-Platform)</strong> is now underway, with the <strong>Unified AI Workspace (Sprint 20, presented as &quot;Quenyx AI&quot;)</strong> already delivered in RC1,
-converting this foundation into broader module coverage and customer‑facing AI from a base that is
-already architecturally sound.</p>
+Platform)</strong> is now underway, with the <strong>Unified AI Workspace (Sprint 20, presented as &quot;Quenyx AI&quot;)</strong>
+and <strong>Operations Intelligence (Sprint 21)</strong> already delivered in RC1 — the latter turning QynSight from
+a monitoring product into an operations <em>intelligence</em> product on the shared AI platform — converting
+this foundation into broader module coverage and customer‑facing AI from a base that is already
+architecturally sound.</p>
 <h2 id="12-customer-value">12. Customer value</h2>
 <ul>
 <li>One platform for operations + compliance instead of a tool sprawl.</li>
@@ -321,7 +329,7 @@ executive/demo layer + APIs.</li>
 <tr>
 <td>Sprint 21</td>
 <td>Operations Intelligence</td>
-<td>Planned</td>
+<td>✅ Delivered in RC1</td>
 </tr>
 <tr>
 <td>Sprint 22</td>

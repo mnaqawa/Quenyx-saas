@@ -10,6 +10,7 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
+import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { HostDetailsDrawer, type HostDetailsHost } from '../../components/observe/HostDetailsDrawer'
@@ -912,6 +913,7 @@ export default function InfrastructureMap() {
         titleNoWrap
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <QuenyxAiButton size="md" label={t('ai.action.impact')} question={t('opsIntel.q.infrastructure')} />
             {aiAvailable ? (
               <button
                 type="button"

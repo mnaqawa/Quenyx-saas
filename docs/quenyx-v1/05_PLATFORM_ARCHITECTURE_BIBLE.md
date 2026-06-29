@@ -4,13 +4,13 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.0 |
+> | Document Version | 2.1 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Confidential — Architecture |
 > | Owner | Platform Architecture |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-06-30 |
 > | Document Type | Architecture reference |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial architecture bible (through Sprint 19). |
 > | 2.0 | 2026-06-29 | RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI. |
+> | 2.1 | 2026-06-30 | Sprint 21 — QynSight Operations Intelligence: QynSight becomes a live AI consumer reusing the shared runtime; UUID‑only `/api/qynsight/intelligence/*` surface. |
 
 **Audience:** Architects, senior engineers, auditors.
 **Status basis:** v1.0.0 RC1. Diagrams reflect the **current** production code.
@@ -180,7 +181,8 @@ flowchart TD
   REQ[AiModuleRequest] --> PLATFORM[QuenyxAiPlatform]
   PLATFORM --> ADP{Module Adapter}
   ADP -->|qynshield| SHIELD[QynShieldAiAdapter]
-  ADP -. reserved .-> SIGHT[QynSightAiAdapterInterface]
+  ADP -->|qynsight| SIGHT[Operations Intelligence<br/>OperationsAiAnalyst]
+  SIGHT --> REG
   SHIELD --> CTX[buildContext]
   SHIELD --> RSN[buildReasoning<br/>deterministic]
   SHIELD --> PMT[buildPrompt]
@@ -290,3 +292,31 @@ and the QynSight‑only sidebar flag is unchanged.
 - **RBAC**: `ProjectPolicy::accessAi` / `administerAi` + a fine‑grained capability matrix.
 - **Frontend**: `AiWorkspaceLayout` + 15 lazy pages under `pages/ai/*`, `aiWorkspaceService`,
   `useAiWorkspace` hooks, full EN/AR i18n, real empty states; consumes backend APIs only.
+
+## Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)
+
+Operations Intelligence makes QynSight a **live AI consumer** of the shared runtime, turning
+monitoring data into explainable operational intelligence. It is **additive** over the frozen
+monitoring engine (§7) and introduces **no new AI services** — all narration goes through the Sprint 20
+runtime.
+
+- **Reuse, not duplication.** A single integration point,
+  `App\Services\Observe\Intelligence\OperationsAiAnalyst`, calls the existing `AiProviderRegistry`,
+  `CompliancePromptOrchestrator`, the `AiConversation`/`AiConversationRepository` surface, and
+  `AiAccessAuditLogger`. No new provider registry, prompt/reasoning/RAG engine was created.
+- **Deterministic evidence services** (`OperationsEvidenceCollector`, `RootCauseService`,
+  `IncidentTimelineService`, `CapacityAdvisorService`, `InfrastructureImpactService`,
+  `PerformanceAdvisorService`, `AlertExplanationService`, `OperationsIntelligenceService`) read **real**
+  QynSight data and produce evidence; the AI only renders it. Insufficient evidence is stated, never
+  fabricated.
+- **UUID‑only.** `OperationsEntityId` derives a deterministic UUIDv5 (type + workspace + numeric id)
+  and `OperationsEntityResolver` resolves it back within a workspace — **no schema change**, no numeric
+  ids exposed.
+- **API.** Flat, workspace‑scoped routes in `routes/qynsight-intelligence.php` under
+  `/api/qynsight/intelligence/*` (controllers in `App\Http\Controllers\Observe\Intelligence`),
+  Sanctum + `throttle:ai-workspace`, gated by the `qynsight` entitlement, monitoring RBAC, and the
+  `can_use_ai` capability; audited and provider‑logged. See Doc 08 §18.
+- **Frontend.** `pages/observe/OperationsIntelligence.tsx` dashboard (real data only), reusable
+  `OperationsCopilotDrawer` / `OperationsAlertDrawer` / `QuenyxAiButton` (contextual ✨ actions on host,
+  service, alert, capacity, and infrastructure‑map pages), `operationsIntelligenceService`, and full
+  EN/AR i18n. Copilot threads are real Quenyx AI conversations.
