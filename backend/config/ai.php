@@ -22,10 +22,14 @@ use App\Services\Ai\Skills\RecommendationSkill;
 return [
 
     /*
-    | Default provider key. Resolved by AiProviderRegistry. Defaults to the mock
-    | provider so nothing reaches a real model unless explicitly configured.
+    | Default provider key. Resolved by AiProviderRegistry::defaultKey(). When AI_PROVIDER is unset
+    | the registry derives the default safely: it prefers a real configured provider (OpenAI when its
+    | key is present) and only falls back to the dev-only `mock` provider in local/testing. In
+    | production with nothing configured the default resolves to '' (an honest "no provider
+    | configured" state) — the mock provider is NEVER the production default. Setting AI_PROVIDER
+    | explicitly always overrides this resolution.
     */
-    'default' => env('AI_PROVIDER', 'mock'),
+    'default' => env('AI_PROVIDER'),
 
     /*
     | Feature flags. Until 'enabled' is true, the orchestration API returns mocked
@@ -166,10 +170,13 @@ return [
     ],
 
     /*
-    | Provider registry. Each entry maps a provider key to its implementing class
-    | plus provider-specific config. Implemented today: mock, openai. The remaining
-    | keys are FUTURE providers — declared here for discovery but intentionally not
-    | implemented; selecting one throws until a class is provided.
+    | EXECUTABLE provider registry. Each entry maps a provider key to its implementing adapter class
+    | plus provider-specific config. A class here means the provider can make LIVE calls. Implemented
+    | today: openai (production execution adapter) and mock (dev-only fallback used when AI execution
+    | is disabled). The broader, customer-visible provider CATALOG (OpenAI, Anthropic, Gemini, Azure
+    | OpenAI, OpenRouter, Mistral, Cohere, xAI, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom
+    | OpenAI-compatible) lives in App\Services\Ai\AiProviderCatalog and is "configurable but not
+    | executable" until an adapter is added here — nothing fabricates connectivity.
     */
     'providers' => [
 

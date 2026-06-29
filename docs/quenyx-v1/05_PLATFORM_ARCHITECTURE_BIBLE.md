@@ -263,11 +263,18 @@ scheduler run alongside. See Doc 10.
   CI/CloudQuenyx (see QA report).
 - One low‑risk **shadowed duplicate route** (`/ai/chat`) noted in the QA report.
 
-## Sprint 20 — Unified AI Workspace (platform layer)
+## Sprint 20 — Unified AI Workspace (platform layer) — branded "Quenyx AI" (RC1.1)
 
 The **Unified AI Workspace** is a platform‑level capability (NOT a business module): a top‑level
 sidebar item beside Dashboard / Workspaces / Integrations. It does not touch `platformRegistry.ts`
 and the QynSight‑only sidebar flag is unchanged.
+
+> **RC1.1:** the surface is presented as **Quenyx AI** (enterprise AI control center). Routes are
+> unchanged for backward compatibility (`/api/ai/*`, SPA `/ai-workspace/*`); a branded `/quenyx-ai/*`
+> alias in `App.tsx` redirects to the canonical routes. The provider list is catalog‑driven
+> (`App\Services\Ai\AiProviderCatalog`): a declarative catalog of 14 providers where only those with a
+> real adapter are `executable` (today OpenAI) and the dev‑only `mock` provider is hidden outside
+> local/testing. `AiProviderRegistry::defaultKey()` never selects `mock` as the production default.
 
 - **Backend**: flat `/api/ai/*` routes (`routes/ai-workspace.php`), Sanctum + `throttle:ai-workspace`,
   scoped by a required `workspace` UUID via `AiWorkspaceContextResolver`. Controllers live in

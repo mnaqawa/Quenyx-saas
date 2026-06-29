@@ -13,14 +13,21 @@ export interface AiWorkspacePermissions {
 export interface AiWorkspaceSummary {
   ai_enabled: boolean
   workspace_enabled: boolean
-  default_provider: string
+  has_provider: boolean
+  default_provider: string | null
   conversation_count: number
   message_count: number
   prompt_tokens: number
   completion_tokens: number
   total_tokens: number
   template_count: number
+  catalog_provider_count: number
+  executable_provider_count: number
   configured_provider_count: number
+  enabled_provider_count: number
+  skills_loaded: number
+  capabilities_loaded: number
+  pricing_configured: boolean
   last_activity_at: string | null
 }
 
@@ -146,10 +153,20 @@ export interface AiPromptTemplateInput {
   is_shared?: boolean
 }
 
+export type AiProviderType = 'hosted' | 'gateway' | 'self_hosted' | 'custom' | 'dev'
+
 export interface AiProvider {
   uuid: string
   provider: string
+  label: string
+  type: AiProviderType
+  capabilities: string[]
+  endpoint: string | null
+  docs_url: string | null
   is_default: boolean
+  executable: boolean
+  platform_configured: boolean
+  /** @deprecated kept for backward compatibility; equals `executable`. */
   implemented: boolean
   enabled: boolean
   model: string | null
@@ -164,6 +181,14 @@ export interface AiProviderSettingsInput {
   api_key?: string
   organization?: string
   clear_secrets?: boolean
+}
+
+export interface AiProviderTestResult {
+  provider: string
+  ok: boolean
+  status: string
+  message: string | null
+  tested_at: string
 }
 
 export interface AiPermissionRule {

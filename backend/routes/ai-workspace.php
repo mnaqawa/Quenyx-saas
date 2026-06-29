@@ -51,6 +51,8 @@ Route::prefix('ai')
         // Provider settings (secrets are write-only + encrypted; admin only to update).
         Route::get('/providers', [AiProviderController::class, 'index']);
         Route::put('/providers/{uuid}/settings', [AiProviderController::class, 'updateSettings']);
+        // Real readiness probe (executable providers run health(); others report not_executable).
+        Route::post('/providers/{uuid}/test', [AiProviderController::class, 'test']);
 
         // AI permission matrix (admin only).
         Route::get('/permissions', [AiPermissionController::class, 'index']);

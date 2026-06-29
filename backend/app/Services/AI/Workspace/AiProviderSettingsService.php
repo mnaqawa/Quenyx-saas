@@ -5,11 +5,20 @@ namespace App\Services\Ai\Workspace;
 use App\Models\Ai\AiProviderSetting;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Ai\AiProviderCatalog;
 use App\Services\Ai\AiProviderRegistry;
 use Ramsey\Uuid\Uuid;
 
 /**
- * Sprint 20 — per-workspace provider preferences over the config-driven AiProviderRegistry.
+ * RC1.1 — per-workspace provider preferences over the declarative AiProviderCatalog and the
+ * config-driven AiProviderRegistry.
+ *
+ * The catalog defines WHICH providers exist (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter,
+ * Mistral, Cohere, xAI, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom OpenAI-compatible).
+ * The registry decides which of those are EXECUTABLE (have a real adapter) and which are configured
+ * at the platform level. This service merges those facts with each workspace's saved preferences —
+ * it NEVER fabricates connectivity: an entry stays "unconfigured / not executable" until both an
+ * adapter and credentials exist. The dev-only `mock` provider is excluded outside local/testing.
  *
  * Providers are addressed by a DETERMINISTIC UUIDv5 derived from (workspace uuid + provider key),
  * so every provider is UUID-addressable whether or not a settings row exists yet — numeric IDs are
@@ -22,6 +31,7 @@ class AiProviderSettingsService
 
     public function __construct(
         private readonly AiProviderRegistry $registry,
+        private readonly AiProviderCatalog $catalog,
         private readonly AiWorkspaceAuditLogger $audit,
     ) {}
 
@@ -32,10 +42,11 @@ class AiProviderSettingsService
 
     /**
      * Resolve a provider key from its deterministic UUID for this workspace, or null if unknown.
+     * Only environment-visible providers are addressable (mock is not addressable in production).
      */
     public function resolveProviderKey(Project $project, string $uuid): ?string
     {
-        foreach ($this->registry->available() as $key) {
+        foreach ($this->catalog->visibleKeys() as $key) {
             if (hash_equals($this->providerUuid($project, $key), $uuid)) {
                 return $key;
             }
@@ -45,7 +56,7 @@ class AiProviderSettingsService
     }
 
     /**
-     * List all known providers merged with this workspace's saved preferences (no secrets).
+     * List all catalog providers merged with this workspace's saved preferences (no secrets).
      *
      * @return list<array<string, mixed>>
      */
@@ -59,21 +70,11 @@ class AiProviderSettingsService
             ->keyBy('provider');
 
         $out = [];
-        foreach ($this->registry->available() as $key) {
+        foreach ($this->catalog->visibleKeys() as $key) {
             /** @var AiProviderSetting|null $setting */
             $setting = $saved->get($key);
 
-            $out[] = [
-                'uuid' => $this->providerUuid($project, $key),
-                'provider' => $key,
-                'is_default' => $key === $defaultKey,
-                'implemented' => $this->registry->has($key),
-                'enabled' => $setting?->enabled ?? $this->registry->has($key),
-                'model' => $setting?->model,
-                'secret_configured' => $setting?->hasSecret() ?? false,
-                'configured' => $setting !== null,
-                'updated_at' => $setting?->updated_at?->toIso8601String(),
-            ];
+            $out[] = $this->present($project, $key, $setting, $defaultKey);
         }
 
         return $out;
@@ -126,18 +127,87 @@ class AiProviderSettingsService
             'enabled' => $setting->enabled,
             'model' => $setting->model,
             'secret_configured' => $setting->hasSecret(),
+            'secrets_cleared' => ! empty($data['clear_secrets']),
         ]);
 
-        return [
-            'uuid' => $this->providerUuid($project, $providerKey),
+        return $this->present($project, $providerKey, $setting, $this->registry->defaultKey());
+    }
+
+    /**
+     * Run a real readiness probe for a provider. EXECUTABLE providers (those with an adapter) return
+     * the adapter's genuine health() result; everything else honestly reports that no adapter exists
+     * yet (status "not_executable") — connectivity is never fabricated. The probe is audited.
+     *
+     * @return array<string, mixed>
+     */
+    public function test(Project $project, User $user, string $providerKey): array
+    {
+        $executable = $this->registry->has($providerKey);
+
+        if (! $executable) {
+            $result = [
+                'provider' => $providerKey,
+                'ok' => false,
+                'status' => 'not_executable',
+                'message' => 'No execution adapter is implemented for this provider yet. It can be configured but cannot make live calls.',
+                'tested_at' => now()->toIso8601String(),
+            ];
+        } else {
+            $health = $this->registry->get($providerKey)->health();
+            $result = [
+                'provider' => $providerKey,
+                'ok' => $health->ok,
+                'status' => $health->status,
+                'message' => $health->detail,
+                'tested_at' => now()->toIso8601String(),
+            ];
+        }
+
+        $this->audit->record($user, $project, 'ai_provider_connection_tested', [
             'provider' => $providerKey,
-            'is_default' => $providerKey === $this->registry->defaultKey(),
-            'implemented' => $this->registry->has($providerKey),
-            'enabled' => $setting->enabled,
-            'model' => $setting->model,
-            'secret_configured' => $setting->hasSecret(),
-            'configured' => true,
-            'updated_at' => $setting->updated_at?->toIso8601String(),
+            'ok' => $result['ok'],
+            'status' => $result['status'],
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Build the public, secret-free representation of a provider for this workspace.
+     *
+     * @return array<string, mixed>
+     */
+    private function present(Project $project, string $key, ?AiProviderSetting $setting, string $defaultKey): array
+    {
+        $meta = $this->catalog->meta($key) ?? [
+            'label' => $key,
+            'type' => 'custom',
+            'capabilities' => [],
+            'endpoint' => null,
+            'docs_url' => null,
+        ];
+
+        $executable = $this->registry->has($key);
+
+        return [
+            'uuid' => $this->providerUuid($project, $key),
+            'provider' => $key,
+            'label' => $meta['label'],
+            'type' => $meta['type'],
+            'capabilities' => array_values($meta['capabilities']),
+            'endpoint' => $meta['endpoint'],
+            'docs_url' => $meta['docs_url'] ?? null,
+            'is_default' => $key === $defaultKey,
+            // True only when a real adapter exists AND credentials are present at platform level.
+            'executable' => $executable,
+            'platform_configured' => $this->registry->isConfigured($key),
+            // Legacy field kept for backward compatibility (== executable).
+            'implemented' => $executable,
+            'enabled' => $setting?->enabled ?? false,
+            'model' => $setting?->model,
+            'secret_configured' => $setting?->hasSecret() ?? false,
+            'configured' => $setting !== null,
+            'updated_at' => $setting?->updated_at?->toIso8601String(),
         ];
     }
 }

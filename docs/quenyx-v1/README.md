@@ -20,6 +20,7 @@
 > | 1.0 | 2026 | Initial canonical pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | RC1 alignment: native QynSight monitoring (Nagios removed as platform dependency), QynCore internal communication, Integrations = external systems only, Quenyx AI as a shared platform layer, roadmap Phases 1–4 / Sprints 20–25, document metadata headers. |
 > | 2.1 | 2026-06-29 | RC1.1 cleanup: code aligned to docs — removed stale gateway Nagios config, normalized native engine_key, reclassified QynIntegrations (entitlement key only) and QynCore (platform core) in code catalogs, banner-marked legacy ShieldObserve docs. |
+> | 2.2 | 2026-06-29 | RC1.1 AI polish: Sprint 20 surface branded **Quenyx AI** (routes unchanged; `/quenyx-ai/*` alias); enterprise provider catalog (14 providers, only OpenAI executable); mock provider removed from production default/UI; real Test‑connection endpoint; enriched overview. Affected PDFs (01,05,07,08,11,12,16,18) should be regenerated on a build host (see Audit Report RC1.1 AI addendum). |
 
 This pack is the **canonical, definitive documentation set** for Quenyx vOPS HUB at **v1.0.0 RC1**.
 Every statement here is grounded in the **current production codebase and actually delivered

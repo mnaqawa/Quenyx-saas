@@ -132,7 +132,7 @@ default**, **deterministic‑first**, and **citation‑enforced**.
 Quenyx has completed a **disciplined foundation across Phases 1–3**: a production monitoring product
 (native QynSight engines), a provenance‑grounded compliance engine, and a governable shared AI
 platform — built with explicit safety rails rather than demo shortcuts. **Phase 4 (Enterprise AI
-Platform)** is now underway, with the **Unified AI Workspace (Sprint 20)** already delivered in RC1,
+Platform)** is now underway, with the **Unified AI Workspace (Sprint 20, presented as "Quenyx AI")** already delivered in RC1,
 converting this foundation into broader module coverage and customer‑facing AI from a base that is
 already architecturally sound.
 
@@ -164,7 +164,7 @@ already architecturally sound.
 
 | Sprint | Title | Status |
 |---|---|---|
-| Sprint 20 | Unified AI Workspace | ✅ Delivered in RC1 |
+| Sprint 20 | Unified AI Workspace ("Quenyx AI") | ✅ Delivered in RC1 |
 | Sprint 21 | Operations Intelligence | Planned |
 | Sprint 22 | Asset & Knowledge Intelligence | Planned |
 | Sprint 23 | Automation & Response Intelligence | Planned |

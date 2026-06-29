@@ -32,6 +32,15 @@ A **shared AI platform** behind the HUB that explains compliance and operational
 free‑form chatbot. Business logic (deterministic engines) decides *what* is true; AI only helps
 *phrase* it, always with citations.
 
+> **RC1.1:** the workspace AI control center (Sprint 20's *Unified AI Workspace*) is now branded
+> **Quenyx AI** and opens from the top‑level sidebar (beside Integrations). It is distinct from
+> **Workspaces** (tenant/project management). Tabs are grouped into Workspace, Intelligence,
+> Operations, and Administration. Under **Operations → Providers** you can browse the provider catalog
+> (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter, Mistral, Cohere, xAI Grok, Ollama, LM Studio,
+> vLLM, LiteLLM, Hugging Face, Custom), configure credentials (write‑only/encrypted), enable/disable,
+> and run a real **Test connection**. Providers without a live adapter are clearly marked "catalog
+> only"; only **OpenAI** executes today.
+
 ## 2. What it can do today 🟢/🟡
 
 - **Compliance Copilot** — answers questions about the loaded framework (NCA ECC‑2:2024) with

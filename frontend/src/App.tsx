@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import AppLayout from './layouts/AppLayout'
 import Dashboard from './pages/Dashboard'
@@ -23,6 +23,18 @@ import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
 
 const BillingPage = lazy(() => import('./pages/Billing'))
+
+/**
+ * RC1.1 — backward-compatible alias. "AI Workspace" is surfaced as "Quenyx AI"; the preferred
+ * /quenyx-ai/* path redirects (preserving sub-path + query) to the canonical /ai-workspace/* routes
+ * so existing links keep working and the new branded URL also resolves.
+ */
+function QuenyxAiRedirect() {
+  const location = useLocation()
+  const target = `${location.pathname.replace(/^\/quenyx-ai/, '/ai-workspace')}${location.search}`
+  return <Navigate to={target} replace />
+}
+
 // Sprint 20 — Unified AI Workspace (platform-level)
 const AiWorkspaceLayout = lazy(() => import('./layouts/AiWorkspaceLayout'))
 const AiOverview = lazy(() => import('./pages/ai/AiOverview'))
@@ -113,6 +125,8 @@ function App() {
               <Route path="administration" element={<ObserveSuspense><AiAdministration /></ObserveSuspense>} />
               <Route path="notifications" element={<ObserveSuspense><AiNotifications /></ObserveSuspense>} />
             </Route>
+            {/* RC1.1 — preferred branded alias; redirects to the canonical /ai-workspace/* routes. */}
+            <Route path="quenyx-ai/*" element={<QuenyxAiRedirect />} />
             <Route path="getting-started" element={<GettingStarted />} />
             <Route path="help" element={<Navigate to="/getting-started" replace />} />
             <Route path="profile" element={<Profile />} />

@@ -26,9 +26,39 @@ class AiProviderRegistry
         return array_keys((array) config('ai.providers', []));
     }
 
+    /**
+     * Resolve the platform default provider key.
+     *
+     * RC1.1 — the mock provider must NEVER be the production default. Resolution order:
+     *   1. An explicit AI_PROVIDER (config('ai.default')) always wins.
+     *   2. Otherwise prefer a real, configured provider (currently OpenAI when its key is set).
+     *   3. Otherwise fall back to `mock` ONLY in local/testing.
+     *   4. Otherwise return '' — the honest "no provider configured" state.
+     */
     public function defaultKey(): string
     {
-        return (string) config('ai.default', 'mock');
+        $explicit = config('ai.default');
+        if (is_string($explicit) && $explicit !== '') {
+            return $explicit;
+        }
+
+        if ($this->isConfigured('openai')) {
+            return 'openai';
+        }
+
+        if (app()->environment(['local', 'testing'])) {
+            return 'mock';
+        }
+
+        return '';
+    }
+
+    /**
+     * Whether a real default provider is resolvable (i.e. not the empty "none configured" state).
+     */
+    public function hasDefault(): bool
+    {
+        return $this->defaultKey() !== '';
     }
 
     public function has(string $key): bool
@@ -36,6 +66,23 @@ class AiProviderRegistry
         $providers = (array) config('ai.providers', []);
 
         return isset($providers[$key]) && ! empty($providers[$key]['class']);
+    }
+
+    /**
+     * Whether the provider has real platform-level credentials configured (from config/env).
+     * Used to decide the default provider and to surface an honest configured/unconfigured state.
+     * Never throws and never inspects per-workspace secrets.
+     */
+    public function isConfigured(string $key): bool
+    {
+        $providers = (array) config('ai.providers', []);
+        $config = (array) ($providers[$key] ?? []);
+
+        return match ($key) {
+            'openai' => ! empty($config['api_key']),
+            'mock' => app()->environment(['local', 'testing']),
+            default => ! empty($config['api_key']) || ! empty($config['base_url']),
+        };
     }
 
     public function default(): AiProviderInterface

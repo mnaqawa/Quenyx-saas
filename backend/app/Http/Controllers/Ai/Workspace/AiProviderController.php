@@ -49,4 +49,21 @@ class AiProviderController extends AiWorkspaceBaseController
 
         return $this->ok($result);
     }
+
+    /**
+     * Run a real readiness probe for a provider. Executable providers return their adapter's genuine
+     * health(); non-executable catalog providers honestly report "not_executable". Audited.
+     */
+    public function test(Request $request, string $uuid): JsonResponse
+    {
+        $project = $this->workspace($request, 'administerAi');
+        $this->requireCapability($project, $request, 'can_manage_providers');
+
+        $providerKey = $this->service->resolveProviderKey($project, $uuid);
+        abort_if($providerKey === null, 404, 'Provider not found.');
+
+        $request->validate(['workspace' => ['required', 'string']]);
+
+        return $this->ok($this->service->test($project, $request->user(), $providerKey));
+    }
 }

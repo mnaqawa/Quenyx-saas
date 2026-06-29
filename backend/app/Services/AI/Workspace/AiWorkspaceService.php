@@ -2,12 +2,14 @@
 
 namespace App\Services\Ai\Workspace;
 
+use App\Enums\Ai\AiCapability;
 use App\Models\Ai\AiConversation;
 use App\Models\Ai\AiPromptTemplate;
 use App\Models\Ai\AiProviderSetting;
 use App\Models\AuditLog;
 use App\Models\Project;
-use Illuminate\Support\Facades\DB;
+use App\Services\Ai\AiProviderCatalog;
+use App\Services\Ai\AiProviderRegistry;
 use Illuminate\Support\Facades\Schema;
 use Ramsey\Uuid\Uuid;
 
@@ -22,10 +24,18 @@ class AiWorkspaceService
     /** Stable namespace for deriving UUIDs for audit-derived feed items (no numeric IDs exposed). */
     private const FEED_NAMESPACE = '6f9619ff-8b86-d011-b42d-00cf4fc964ff';
 
-    public function __construct(private readonly AiCostCalculator $costs) {}
+    public function __construct(
+        private readonly AiCostCalculator $costs,
+        private readonly AiProviderRegistry $registry,
+        private readonly AiProviderCatalog $catalog,
+    ) {}
 
     /**
-     * High-level workspace AI summary card data.
+     * High-level workspace AI summary card data — enterprise operational metrics derived ONLY from
+     * real data (token counts, audit events) and real platform configuration (provider registry +
+     * catalog, loaded skills/capabilities). Nothing here is fabricated; when no provider is
+     * configured `default_provider` is null and `has_provider` is false so the UI shows an honest
+     * "no provider configured" state.
      *
      * @return array<string, mixed>
      */
@@ -43,19 +53,59 @@ class AiWorkspaceService
 
         $lastActivity = (clone $conversations)->max('updated_at');
 
+        $defaultKey = $this->registry->defaultKey();
+        $savedSettings = AiProviderSetting::query()->where('project_id', $project->id)->get();
+
         return [
             'ai_enabled' => (bool) config('ai.feature_flags.enabled', false),
             'workspace_enabled' => (bool) config('ai.feature_flags.workspace_enabled', true),
-            'default_provider' => (string) config('ai.default', 'mock'),
+            'has_provider' => $defaultKey !== '',
+            'default_provider' => $defaultKey !== '' ? $defaultKey : null,
             'conversation_count' => (int) ($totals->conversation_count ?? 0),
             'message_count' => (int) ($totals->message_count ?? 0),
             'prompt_tokens' => (int) ($totals->prompt_tokens ?? 0),
             'completion_tokens' => (int) ($totals->completion_tokens ?? 0),
             'total_tokens' => (int) ($totals->total_tokens ?? 0),
             'template_count' => AiPromptTemplate::query()->where('project_id', $project->id)->count(),
-            'configured_provider_count' => AiProviderSetting::query()->where('project_id', $project->id)->where('enabled', true)->count(),
+            // Provider governance counts (real config + workspace state, never fabricated).
+            'catalog_provider_count' => count($this->catalog->visibleKeys()),
+            'executable_provider_count' => count(array_filter($this->catalog->visibleKeys(), fn (string $k) => $this->registry->has($k))),
+            'configured_provider_count' => $savedSettings->filter(fn ($s) => $s->hasSecret())->count(),
+            'enabled_provider_count' => $savedSettings->where('enabled', true)->count(),
+            // Loaded intelligence (from config — the AI runtime catalog).
+            'skills_loaded' => $this->loadedSkillCount(),
+            'capabilities_loaded' => count(AiCapability::cases()),
+            'pricing_configured' => $this->hasAnyPricing(),
             'last_activity_at' => $lastActivity ? \Illuminate\Support\Carbon::parse($lastActivity)->toIso8601String() : null,
         ];
+    }
+
+    /**
+     * Count enabled skills registered in the AI runtime config.
+     */
+    private function loadedSkillCount(): int
+    {
+        if (! (bool) config('ai.skills.enabled', true)) {
+            return 0;
+        }
+
+        $registered = (array) config('ai.skills.registered', []);
+
+        return count(array_filter($registered, fn ($s) => (bool) ($s['enabled'] ?? false)));
+    }
+
+    /**
+     * Whether any provider pricing is configured (drives honest cost display vs token-only mode).
+     */
+    private function hasAnyPricing(): bool
+    {
+        foreach ((array) config('ai.workspace.pricing', []) as $pair) {
+            if (! empty($pair['prompt']) || ! empty($pair['completion'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

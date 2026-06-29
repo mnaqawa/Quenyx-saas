@@ -135,7 +135,13 @@ quenyx-saas/
 - [ ] Docs updated; status badges correct.
 - [ ] No fake/sample data; corpus validator passes.
 
-## Working on the Unified AI Workspace (Sprint 20)
+## Working on Quenyx AI (Unified AI Workspace — Sprint 20)
+
+> **RC1.1:** the UI label is **Quenyx AI**. The canonical SPA base stays `/ai-workspace/*` (a
+> `/quenyx-ai/*` alias in `App.tsx` redirects to it). The provider catalog is declared in
+> `App\Services\Ai\AiProviderCatalog`; `AiProviderRegistry` decides which entries are executable
+> (have an adapter) and which are platform‑configured. Keep new catalog entries non‑executable until a
+> real adapter is added — never fabricate connectivity.
 
 - **Backend** lives in `App\Http\Controllers\Ai\Workspace`, `App\Services\Ai\Workspace`,
   `App\Models\Ai\*`, `app/Http/Resources/Ai/*`, and `routes/ai-workspace.php`. Resolve + authorize a

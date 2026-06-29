@@ -11,6 +11,7 @@ import type {
   AiPromptTemplateInput,
   AiProvider,
   AiProviderSettingsInput,
+  AiProviderTestResult,
   AiSendMessageResponse,
   AiSkillDescriptor,
   AiUsage,
@@ -101,6 +102,9 @@ export const aiWorkspaceService = {
   },
   updateProviderSettings(workspaceUuid: string, uuid: string, body: AiProviderSettingsInput): Promise<AiProvider> {
     return apiClient.put<AiProvider>(`${BASE}/providers/${uuid}/settings`, { workspace: workspaceUuid, ...body })
+  },
+  testProvider(workspaceUuid: string, uuid: string): Promise<AiProviderTestResult> {
+    return apiClient.post<AiProviderTestResult>(`${BASE}/providers/${uuid}/test`, { workspace: workspaceUuid })
   },
 
   // --- Permissions ---

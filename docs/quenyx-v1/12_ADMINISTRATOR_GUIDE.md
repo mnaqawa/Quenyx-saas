@@ -101,16 +101,33 @@ Workspace, Sprint 20).
 - Hidden modules cannot be enabled in the sidebar without changing the frontend flag (out of scope
   pre‑Sprint 20).
 
-## Unified AI Workspace administration (Sprint 20)
+## Quenyx AI administration (Unified AI Workspace — Sprint 20)
 
-Open **AI Workspace** from the top‑level sidebar (beside Integrations), then select a workspace. Tabs:
-Overview, Chat, Conversations, History, Activity, Memory, Prompt Templates, Skills, Capabilities,
-Usage, Costs, Providers, Permissions, Administration, Notifications.
+> **RC1.1:** this surface is now branded **Quenyx AI** in the UI (sidebar, header, breadcrumbs). The
+> canonical SPA route stays `/ai-workspace/*` for backward compatibility; the branded `/quenyx-ai/*`
+> path redirects to it. Do not confuse Quenyx AI (the AI control center) with **Workspaces**
+> (tenant/project management).
 
-- **Access**: any workspace member can open the AI Workspace; **owner/admin** can administer.
-- **Providers** (Administration → Providers): set the per‑workspace model and (optionally) an
-  encrypted API key. Secrets are write‑only — they are stored encrypted and never shown again; the UI
-  only indicates whether a secret is configured. AI execution still requires the platform AI flags.
+Open **Quenyx AI** from the top‑level sidebar (beside Integrations), then select a workspace. Tabs are
+grouped into **Workspace** (Overview, Chat, Conversations, History, Activity), **Intelligence**
+(Skills, Capabilities, Memory, Prompt Templates), **Operations** (Usage, Costs, Providers), and
+**Administration** (Permissions, Administration, Notifications).
+
+- **Access**: any workspace member can open Quenyx AI; **owner/admin** can administer.
+- **Providers** (Operations → Providers): an enterprise provider catalog rendered as cards. Each card
+  shows the provider label, type (hosted / gateway / self‑hosted / custom), declared capabilities,
+  endpoint, default indicator, whether a live execution adapter exists (`executable`), whether
+  platform credentials are present, the per‑workspace enabled/disabled and configured/secret state,
+  and last‑updated. Actions: **Configure/Edit**, **Enable/Disable**, **Test connection** (a real
+  readiness probe — executable providers run a health check, others report "catalog only"), and
+  **Clear secret**. Set the per‑workspace model and (optionally) an encrypted API key. Secrets are
+  write‑only — stored encrypted and never shown again; the UI only indicates whether a secret is
+  configured. The **default provider** is set by platform configuration (`AI_PROVIDER`, or OpenAI
+  credentials), not per‑workspace. The catalog lists OpenAI, Anthropic, Gemini, Azure OpenAI,
+  OpenRouter, Mistral, Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, and a Custom
+  OpenAI‑compatible API; today **only OpenAI is executable** — others are configurable but not yet
+  executable, and the **mock** provider is hidden outside local/testing. AI execution still requires
+  the platform AI flags.
 - **Permissions** (Administration → Permissions): per‑role matrix (`Use AI`, `Manage templates`,
   `Manage providers`, `View costs`, `Administer`). Rows are additive overrides on top of role
   defaults; the `owner` row is always full and locked.

@@ -188,7 +188,11 @@ provider, via the registry) reference the model SDK. (The legacy QynSight knowle
 contexts, and the HUB‑wide **`module_catalog`** (production/reserved/planned), independent of UI
 visibility.
 
-## Unified AI Workspace (Sprint 20)
+## Quenyx AI — Unified AI Workspace (Sprint 20)
+
+> **RC1.1:** surfaced in the UI as **Quenyx AI** (the enterprise AI control center). Internal/codename
+> remains *Unified AI Workspace*; API (`/api/ai/*`) and SPA (`/ai-workspace/*`) paths are unchanged
+> and a branded `/quenyx-ai/*` alias redirects to them.
 
 A platform‑level surface that exposes the shared AI runtime to every workspace through flat
 `/api/ai/*` endpoints (see API Reference §17). It **reuses** the existing runtime rather than adding
@@ -205,6 +209,17 @@ new AI logic:
 - **Prompt Templates** (`ai_prompt_templates`), **Provider Settings** (`ai_provider_settings`,
   encrypted, write‑only secrets), and **Permissions** (`ai_workspace_permissions`) add the missing
   governance concepts only.
+- **Provider catalog & governance (RC1.1)**: `App\Services\Ai\AiProviderCatalog` declares the
+  customer‑visible provider catalog (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter, Mistral,
+  Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom OpenAI‑compatible). The
+  catalog is **metadata only** — a provider is `executable` only when a real adapter exists in
+  `config('ai.providers')` (today: **OpenAI**; plus the dev‑only **mock**), and `platform_configured`
+  only when real credentials are present. `AiProviderRegistry::defaultKey()` never returns `mock` in
+  production: it prefers an explicit `AI_PROVIDER`, then OpenAI when configured, then `mock` only in
+  local/testing, otherwise `''` (an honest "no provider configured" state). A real **test‑connection**
+  probe (`POST /api/ai/providers/{uuid}/test`) runs the adapter's `health()` for executable providers
+  and reports `not_executable` for the rest — connectivity is never fabricated. Mock is excluded from
+  the provider list outside local/testing.
 - **Audit**: conversations, provider updates, template changes, and permission changes are logged via
   `AiAccessAuditLogger` / `AiWorkspaceAuditLogger` (never secrets or content).
 - **Memory**: no durable AI memory store exists yet, so the Memory surface honestly reports

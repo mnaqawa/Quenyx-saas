@@ -189,7 +189,12 @@ retrieval context.
 `GET /api/ai/platform/capabilities` → modules (adapters), skills, providers, reasoning/retrieval/RAG
 status, supported contexts, and HUB‑wide `module_catalog` (production/reserved/planned).
 
-## 17. Unified AI Workspace (Sprint 20)
+## 17. Quenyx AI (Unified AI Workspace — Sprint 20)
+
+> **RC1.1 naming:** this surface is presented in the UI as **Quenyx AI** (the internal/codename
+> remains *Unified AI Workspace*). API paths are unchanged: routes stay under `/api/ai/*` and the SPA
+> routes stay under `/ai-workspace/*` (the branded `/quenyx-ai/*` path redirects to them). No API
+> contract changed in the rename.
 
 Platform‑level AI surface beside Dashboard / Workspaces / Integrations. All routes are flat under
 `/api/ai/*`, Sanctum‑protected, throttled by `ai-workspace`, and **scoped by a required `workspace`
@@ -215,8 +220,9 @@ id returned is a UUID. Authorization: `ProjectPolicy::accessAi` (any member) for
 | POST | `/api/ai/prompt-templates` | manage_templates | create |
 | PUT | `/api/ai/prompt-templates/{uuid}` | manage_templates | update |
 | DELETE | `/api/ai/prompt-templates/{uuid}` | manage_templates | delete |
-| GET | `/api/ai/providers` | access | provider prefs (secrets never returned) |
-| PUT | `/api/ai/providers/{uuid}/settings` | manage_providers + admin | encrypted secret write‑only |
+| GET | `/api/ai/providers` | access | provider catalog + prefs (secrets never returned) |
+| PUT | `/api/ai/providers/{uuid}/settings` | manage_providers + admin | encrypted secret write‑only; supports `clear_secrets` |
+| POST | `/api/ai/providers/{uuid}/test` | manage_providers + admin | real readiness probe (audited); executable providers run `health()`, others return `status: not_executable` |
 | GET | `/api/ai/permissions` | admin | effective per‑role matrix |
 | PUT | `/api/ai/permissions` | admin | upsert per‑role overrides |
 
@@ -227,6 +233,21 @@ only when `ai.feature_flags.prompt_logging` is enabled (privacy‑preserving def
 addressing uses a deterministic UUIDv5 (workspace + provider key) so providers are UUID‑addressable
 even before a settings row exists. Provider id `uuid` is also added (additively) to the workspace list
 (`GET /api/workspaces`) and `ProjectResource` so the UI can pass the workspace UUID.
+
+**Provider catalog & execution (RC1.1).** `GET /api/ai/providers` returns the declarative provider
+**catalog** (`App\Services\Ai\AiProviderCatalog`) merged with each workspace's saved preferences.
+Each entry exposes `label`, `type` (`hosted` / `gateway` / `self_hosted` / `custom` / `dev`),
+declared `capabilities`, `endpoint`, `docs_url`, `is_default`, `executable`, `platform_configured`,
+`enabled`, `model`, `secret_configured`, `configured`, and `updated_at`. The catalog covers OpenAI,
+Anthropic Claude, Google Gemini, Azure OpenAI, OpenRouter, Mistral AI, Cohere, xAI Grok, Ollama,
+LM Studio, vLLM, LiteLLM Gateway, Hugging Face Inference, and a Custom OpenAI‑compatible API. A
+catalogued provider is **configurable but not executable** until a real adapter exists — today only
+**OpenAI** has a live execution adapter (`executable: true`); all other catalog entries report
+`executable: false` and **never fabricate connectivity**. The dev‑only `mock` provider is **excluded
+outside `local`/`testing`** and is never the production default. The default provider resolves via
+`AiProviderRegistry::defaultKey()`: an explicit `AI_PROVIDER` wins, otherwise OpenAI when its key is
+configured, otherwise `mock` only in local/testing, otherwise `''` (an honest *no provider
+configured* state, surfaced as `summary.has_provider=false`).
 
 ## 18. Notes on examples
 

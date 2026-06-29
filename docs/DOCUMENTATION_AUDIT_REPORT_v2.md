@@ -227,6 +227,44 @@ Applied after Documentation Pack v2.0 to make code match the documented architec
 
 ---
 
+## RC1.1 addendum — Quenyx AI control center & provider governance
+
+Applied as the final AI Platform polish before Sprint 21 (no new AI behavior; APIs preserved):
+
+- **Rename:** the Sprint 20 surface is presented in the UI as **Quenyx AI** (sidebar, header,
+  breadcrumbs, EN/AR i18n). Routes are unchanged for backward compatibility (`/api/ai/*`, SPA
+  `/ai-workspace/*`); a new `/quenyx-ai/*` alias redirects to the canonical SPA routes. Distinct from
+  **Workspaces** (tenant management). Docs updated: Architecture Bible (05), AI Platform Bible (07),
+  Administrator Guide (12), Developer Guide (11), Operations Runbook (18), API Reference (08), AI User
+  Guide (16), Executive Overview (01).
+- **Mock provider removed from production:** `AiProviderRegistry::defaultKey()` never returns `mock`
+  in production (prefers an explicit `AI_PROVIDER`, then OpenAI when configured, then `mock` only in
+  local/testing, otherwise an honest empty "no provider configured" state). `AiProviderCatalog`
+  hides the dev‑only `mock` provider outside `local`/`testing`. The internal mock chat fallback
+  (driven by `AI_ENABLED=false`) is unchanged.
+- **Provider catalog:** new `App\Services\Ai\AiProviderCatalog` declares 14 providers (OpenAI,
+  Anthropic, Gemini, Azure OpenAI, OpenRouter, Mistral, Cohere, xAI Grok, Ollama, LM Studio, vLLM,
+  LiteLLM, Hugging Face, Custom OpenAI‑compatible). Catalog entries are **configurable but not
+  executable** until a real adapter exists — **only OpenAI executes today**; this is documented
+  honestly and no connectivity is fabricated.
+- **Provider management UI:** enterprise provider cards (label, type, capabilities, endpoint, default,
+  executable/platform‑configured/enabled/secret status, last‑updated) with Edit, Enable/Disable, Clear
+  secret, and a real **Test connection** action backed by a new audited endpoint
+  `POST /api/ai/providers/{uuid}/test`.
+- **Overview:** the dashboard now shows real operational metrics only (provider counts, skills,
+  capabilities, tokens, last activity, recent activity timeline, mode/health) with honest empty/no‑
+  provider states; estimated cost appears only when pricing is configured.
+
+> **PDF status (content‑complete check):** the v1 numbered PDFs already in `docs/pdf/` carry full body
+> content. PDFs for the documents changed in this addendum **should be regenerated** so the printed
+> copies match the Markdown. PDF regeneration could **not be executed in this environment** (no Node;
+> Laravel/headless‑browser boot is blocked locally — see Validation in the change report). Treat the
+> following PDFs as **stale (not content‑incomplete)** until regenerated on a build host:
+> `05_PLATFORM_ARCHITECTURE_BIBLE`, `07_AI_PLATFORM_BIBLE`, `08_API_REFERENCE`, `11_DEVELOPER_GUIDE`,
+> `12_ADMINISTRATOR_GUIDE`, `16_AI_USER_GUIDE`, `18_OPERATIONS_RUNBOOK`, `01_EXECUTIVE_OVERVIEW`.
+
+---
+
 ### Quality checklist
 
 - [x] Reflects v1.0.0 RC1.
