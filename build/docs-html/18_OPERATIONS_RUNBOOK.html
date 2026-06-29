@@ -126,7 +126,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#13-emergency-disable-ai"><span class="toc-text">13. Emergency: disable AI</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#14-emergency-disable-a-module"><span class="toc-text">14. Emergency: disable a module</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#15-troubleshooting-commands"><span class="toc-text">15. Troubleshooting commands</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#unified-ai-workspace-sprint-20-operations"><span class="toc-text">Unified AI Workspace (Sprint 20) — operations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#quenyx-ai-unified-ai-workspace-sprint-20-operations"><span class="toc-text">Quenyx AI (Unified AI Workspace — Sprint 20) — operations</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -234,7 +234,13 @@ php artisan optimize:clear        # clear caches
 tail -f backend/storage/logs/laravel.log
 journalctl -u quenyx-gateway -f
 </code></pre>
-<h2 id="unified-ai-workspace-sprint-20-operations">Unified AI Workspace (Sprint 20) — operations</h2>
+<h2 id="quenyx-ai-unified-ai-workspace-sprint-20-operations">Quenyx AI (Unified AI Workspace — Sprint 20) — operations</h2>
+<blockquote>
+<p><strong>RC1.1:</strong> UI label is <strong>Quenyx AI</strong>. Routes unchanged (<code>/api/ai/*</code>, <code>/ai-workspace/*</code>; <code>/quenyx-ai/*</code>
+redirects). The provider list is now catalog‑driven and the dev‑only <strong>mock</strong> provider is hidden
+outside <code>local</code>/<code>testing</code>; the production default provider is <strong>OpenAI</strong> when configured, otherwise
+an honest &quot;no provider configured&quot; state (never mock).</p>
+</blockquote>
 <p>Deploy (after pulling):</p>
 <pre><code class="language-bash">cd backend
 composer install --no-dev --optimize-autoloader   # or: composer dump-autoload -o
@@ -249,6 +255,10 @@ php artisan config:cache
 <li><strong>Safe by default</strong>: with <code>AI_ENABLED=false</code> (default), chat uses the mock provider; nothing reaches
 an external model. No raw provider secrets are stored — <code>ai_provider_settings.settings</code> is encrypted
 (depends on a valid <code>APP_KEY</code>; rotating <code>APP_KEY</code> invalidates stored secrets, which must be re‑entered).</li>
+<li><strong>Default provider (RC1.1)</strong>: leave <code>AI_PROVIDER</code> unset to let the registry resolve it safely
+(OpenAI when <code>OPENAI_API_KEY</code> is set; <code>mock</code> only in local/testing; otherwise none). Set
+<code>AI_PROVIDER</code> explicitly to override. The provider <strong>catalog</strong> is informational; only providers with
+a real adapter (today OpenAI) are executable. The <strong>Test connection</strong> action / <code>POST /api/ai/providers/{uuid}/test</code> runs a genuine <code>health()</code> for executable providers and is audited.</li>
 <li><strong>Cost tracking</strong> shows currency only when <code>ai.workspace.pricing</code> is configured; otherwise it is
 token‑only by design (no fabricated amounts).</li>
 <li><strong>Auditing</strong>: AI conversations, provider/template/permission changes are written to <code>audit_logs</code>

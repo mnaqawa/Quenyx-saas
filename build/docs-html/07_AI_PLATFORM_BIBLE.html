@@ -134,7 +134,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#21-no-direct-db-from-ai-core"><span class="toc-text">21. No direct DB from AI core</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#22-no-direct-provider-calls-outside-providers"><span class="toc-text">22. No direct provider calls outside providers</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#23-capability-catalog"><span class="toc-text">23. Capability catalog 🟢</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#unified-ai-workspace-sprint-20"><span class="toc-text">Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">Quenyx AI — Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -260,7 +260,12 @@ provider, via the registry) reference the model SDK. (The legacy QynSight knowle
 <strong>modules</strong> (adapters), <strong>skills</strong>, <strong>providers</strong>, <strong>reasoning/retrieval/RAG</strong> status, supported
 contexts, and the HUB‑wide <strong><code>module_catalog</code></strong> (production/reserved/planned), independent of UI
 visibility.</p>
-<h2 id="unified-ai-workspace-sprint-20">Unified AI Workspace (Sprint 20)</h2>
+<h2 id="quenyx-ai-unified-ai-workspace-sprint-20">Quenyx AI — Unified AI Workspace (Sprint 20)</h2>
+<blockquote>
+<p><strong>RC1.1:</strong> surfaced in the UI as <strong>Quenyx AI</strong> (the enterprise AI control center). Internal/codename
+remains <em>Unified AI Workspace</em>; API (<code>/api/ai/*</code>) and SPA (<code>/ai-workspace/*</code>) paths are unchanged
+and a branded <code>/quenyx-ai/*</code> alias redirects to them.</p>
+</blockquote>
 <p>A platform‑level surface that exposes the shared AI runtime to every workspace through flat
 <code>/api/ai/*</code> endpoints (see API Reference §17). It <strong>reuses</strong> the existing runtime rather than adding
 new AI logic:</p>
@@ -276,6 +281,17 @@ duplicated catalog.</li>
 <li><strong>Prompt Templates</strong> (<code>ai_prompt_templates</code>), <strong>Provider Settings</strong> (<code>ai_provider_settings</code>,
 encrypted, write‑only secrets), and <strong>Permissions</strong> (<code>ai_workspace_permissions</code>) add the missing
 governance concepts only.</li>
+<li><strong>Provider catalog &amp; governance (RC1.1)</strong>: <code>App\Services\Ai\AiProviderCatalog</code> declares the
+customer‑visible provider catalog (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter, Mistral,
+Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom OpenAI‑compatible). The
+catalog is <strong>metadata only</strong> — a provider is <code>executable</code> only when a real adapter exists in
+<code>config('ai.providers')</code> (today: <strong>OpenAI</strong>; plus the dev‑only <strong>mock</strong>), and <code>platform_configured</code>
+only when real credentials are present. <code>AiProviderRegistry::defaultKey()</code> never returns <code>mock</code> in
+production: it prefers an explicit <code>AI_PROVIDER</code>, then OpenAI when configured, then <code>mock</code> only in
+local/testing, otherwise <code>''</code> (an honest &quot;no provider configured&quot; state). A real <strong>test‑connection</strong>
+probe (<code>POST /api/ai/providers/{uuid}/test</code>) runs the adapter's <code>health()</code> for executable providers
+and reports <code>not_executable</code> for the rest — connectivity is never fabricated. Mock is excluded from
+the provider list outside local/testing.</li>
 <li><strong>Audit</strong>: conversations, provider updates, template changes, and permission changes are logged via
 <code>AiAccessAuditLogger</code> / <code>AiWorkspaceAuditLogger</code> (never secrets or content).</li>
 <li><strong>Memory</strong>: no durable AI memory store exists yet, so the Memory surface honestly reports

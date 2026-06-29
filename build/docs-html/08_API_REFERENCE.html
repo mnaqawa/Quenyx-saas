@@ -127,7 +127,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#14-retrieval-rag-apis"><span class="toc-text">14. Retrieval / RAG APIs</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#15-executive-apis-read-only-throttle-compliance-executive"><span class="toc-text">15. Executive APIs (read‑only) — throttle compliance-executive</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#16-platform-ai-capability-endpoint"><span class="toc-text">16. Platform AI capability endpoint</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#17-unified-ai-workspace-sprint-20"><span class="toc-text">17. Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#17-quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">17. Quenyx AI (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#18-notes-on-examples"><span class="toc-text">18. Notes on examples</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
@@ -342,7 +342,13 @@ retrieval context.</p>
 <h2 id="16-platform-ai-capability-endpoint">16. Platform AI capability endpoint</h2>
 <p><code>GET /api/ai/platform/capabilities</code> → modules (adapters), skills, providers, reasoning/retrieval/RAG
 status, supported contexts, and HUB‑wide <code>module_catalog</code> (production/reserved/planned).</p>
-<h2 id="17-unified-ai-workspace-sprint-20">17. Unified AI Workspace (Sprint 20)</h2>
+<h2 id="17-quenyx-ai-unified-ai-workspace-sprint-20">17. Quenyx AI (Unified AI Workspace — Sprint 20)</h2>
+<blockquote>
+<p><strong>RC1.1 naming:</strong> this surface is presented in the UI as <strong>Quenyx AI</strong> (the internal/codename
+remains <em>Unified AI Workspace</em>). API paths are unchanged: routes stay under <code>/api/ai/*</code> and the SPA
+routes stay under <code>/ai-workspace/*</code> (the branded <code>/quenyx-ai/*</code> path redirects to them). No API
+contract changed in the rename.</p>
+</blockquote>
 <p>Platform‑level AI surface beside Dashboard / Workspaces / Integrations. All routes are flat under
 <code>/api/ai/*</code>, Sanctum‑protected, throttled by <code>ai-workspace</code>, and <strong>scoped by a required <code>workspace</code>
 UUID</strong> (query string for reads/deletes, request body for writes) — never a numeric id. Every resource
@@ -453,13 +459,19 @@ id returned is a UUID. Authorization: <code>ProjectPolicy::accessAi</code> (any 
 <td>GET</td>
 <td><code>/api/ai/providers</code></td>
 <td>access</td>
-<td>provider prefs (secrets never returned)</td>
+<td>provider catalog + prefs (secrets never returned)</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/ai/providers/{uuid}/settings</code></td>
 <td>manage_providers + admin</td>
-<td>encrypted secret write‑only</td>
+<td>encrypted secret write‑only; supports <code>clear_secrets</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ai/providers/{uuid}/test</code></td>
+<td>manage_providers + admin</td>
+<td>real readiness probe (audited); executable providers run <code>health()</code>, others return <code>status: not_executable</code></td>
 </tr>
 <tr>
 <td>GET</td>
@@ -482,6 +494,20 @@ only when <code>ai.feature_flags.prompt_logging</code> is enabled (privacy‑pre
 addressing uses a deterministic UUIDv5 (workspace + provider key) so providers are UUID‑addressable
 even before a settings row exists. Provider id <code>uuid</code> is also added (additively) to the workspace list
 (<code>GET /api/workspaces</code>) and <code>ProjectResource</code> so the UI can pass the workspace UUID.</p>
+<p><strong>Provider catalog &amp; execution (RC1.1).</strong> <code>GET /api/ai/providers</code> returns the declarative provider
+<strong>catalog</strong> (<code>App\Services\Ai\AiProviderCatalog</code>) merged with each workspace's saved preferences.
+Each entry exposes <code>label</code>, <code>type</code> (<code>hosted</code> / <code>gateway</code> / <code>self_hosted</code> / <code>custom</code> / <code>dev</code>),
+declared <code>capabilities</code>, <code>endpoint</code>, <code>docs_url</code>, <code>is_default</code>, <code>executable</code>, <code>platform_configured</code>,
+<code>enabled</code>, <code>model</code>, <code>secret_configured</code>, <code>configured</code>, and <code>updated_at</code>. The catalog covers OpenAI,
+Anthropic Claude, Google Gemini, Azure OpenAI, OpenRouter, Mistral AI, Cohere, xAI Grok, Ollama,
+LM Studio, vLLM, LiteLLM Gateway, Hugging Face Inference, and a Custom OpenAI‑compatible API. A
+catalogued provider is <strong>configurable but not executable</strong> until a real adapter exists — today only
+<strong>OpenAI</strong> has a live execution adapter (<code>executable: true</code>); all other catalog entries report
+<code>executable: false</code> and <strong>never fabricate connectivity</strong>. The dev‑only <code>mock</code> provider is <strong>excluded
+outside <code>local</code>/<code>testing</code></strong> and is never the production default. The default provider resolves via
+<code>AiProviderRegistry::defaultKey()</code>: an explicit <code>AI_PROVIDER</code> wins, otherwise OpenAI when its key is
+configured, otherwise <code>mock</code> only in local/testing, otherwise <code>''</code> (an honest <em>no provider
+configured</em> state, surfaced as <code>summary.has_provider=false</code>).</p>
 <h2 id="18-notes-on-examples">18. Notes on examples</h2>
 <p>Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource

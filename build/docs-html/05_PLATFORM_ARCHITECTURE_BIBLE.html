@@ -131,7 +131,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#16-security-boundaries"><span class="toc-text">16. Security boundaries</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#17-deployment-architecture"><span class="toc-text">17. Deployment architecture</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#18-current-limitations"><span class="toc-text">18. Current limitations</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (RC1.1)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -420,10 +420,18 @@ surface).</li>
 CI/CloudQuenyx (see QA report).</li>
 <li>One low‑risk <strong>shadowed duplicate route</strong> (<code>/ai/chat</code>) noted in the QA report.</li>
 </ul>
-<h2 id="sprint-20-unified-ai-workspace-platform-layer">Sprint 20 — Unified AI Workspace (platform layer)</h2>
+<h2 id="sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1">Sprint 20 — Unified AI Workspace (platform layer) — branded &quot;Quenyx AI&quot; (RC1.1)</h2>
 <p>The <strong>Unified AI Workspace</strong> is a platform‑level capability (NOT a business module): a top‑level
 sidebar item beside Dashboard / Workspaces / Integrations. It does not touch <code>platformRegistry.ts</code>
 and the QynSight‑only sidebar flag is unchanged.</p>
+<blockquote>
+<p><strong>RC1.1:</strong> the surface is presented as <strong>Quenyx AI</strong> (enterprise AI control center). Routes are
+unchanged for backward compatibility (<code>/api/ai/*</code>, SPA <code>/ai-workspace/*</code>); a branded <code>/quenyx-ai/*</code>
+alias in <code>App.tsx</code> redirects to the canonical routes. The provider list is catalog‑driven
+(<code>App\Services\Ai\AiProviderCatalog</code>): a declarative catalog of 14 providers where only those with a
+real adapter are <code>executable</code> (today OpenAI) and the dev‑only <code>mock</code> provider is hidden outside
+local/testing. <code>AiProviderRegistry::defaultKey()</code> never selects <code>mock</code> as the production default.</p>
+</blockquote>
 <ul>
 <li><strong>Backend</strong>: flat <code>/api/ai/*</code> routes (<code>routes/ai-workspace.php</code>), Sanctum + <code>throttle:ai-workspace</code>,
 scoped by a required <code>workspace</code> UUID via <code>AiWorkspaceContextResolver</code>. Controllers live in

@@ -5,6 +5,12 @@
   Produces professional, branded PDFs (title page, TOC, page numbers, classification footer,
   rendered Mermaid diagrams) for the external-facing documents in Documentation Pack v2.0.
 
+  NOTE: This CLI (`--print-to-pdf`) variant captures on a virtual-time heuristic that RACES
+  Paged.js pagination and can silently truncate longer documents (non-deterministically). Prefer
+  the deterministic, DevTools-Protocol builder for releases:
+
+      pwsh -File scripts/docs/build-pdfs-cdp.ps1
+
   Usage:  pwsh -File scripts/docs/build-pdfs.ps1
 #>
 
@@ -56,7 +62,8 @@ $docs = @(
     @{ md = 'docs\quenyx-v1\18_OPERATIONS_RUNBOOK.md';                  out = $pdfDir },
     @{ md = 'docs\quenyx-v1\19_SECURITY_WHITEPAPER.md';                 out = $pdfDir },
     @{ md = 'docs\quenyx-v1\20_COMPLIANCE_WHITEPAPER.md';               out = $pdfDir },
-    @{ md = 'docs\quenyx-v1\21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md'; out = $pdfDir }
+    @{ md = 'docs\quenyx-v1\21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md'; out = $pdfDir },
+    @{ md = 'docs\OBSERVE_RUNBOOK.md';                                  out = $pdfDir }
 )
 
 $results = @()
@@ -85,9 +92,13 @@ foreach ($d in $docs) {
     # returns).
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    & $browser --headless=new --disable-gpu --user-data-dir="$tmpUd" --no-pdf-header-footer --virtual-time-budget=25000 --print-to-pdf="$tmpPdf" "$url" 2>&1 | Out-Null
+    # The virtual-time-budget must be large enough for Paged.js (+ Mermaid) to FINISH paginating
+    # the entire document before the PDF is captured. A small budget (e.g. 25s) silently truncates
+    # longer docs to 1-2 pages. 180s of virtual time is fast-forwarded by Edge (negligible extra
+    # wall-clock) and produces complete, stable multi-page output for every document.
+    & $browser --headless=new --disable-gpu --run-all-compositor-stages-before-draw --user-data-dir="$tmpUd" --no-pdf-header-footer --virtual-time-budget=180000 --print-to-pdf="$tmpPdf" "$url" 2>&1 | Out-Null
     $ErrorActionPreference = $prevEAP
-    for ($w = 0; $w -lt 40 -and -not (Test-Path $tmpPdf); $w++) { Start-Sleep -Milliseconds 500 }
+    for ($w = 0; $w -lt 120 -and -not (Test-Path $tmpPdf); $w++) { Start-Sleep -Milliseconds 500 }
     if (Test-Path $tmpPdf) {
         Copy-Item $tmpPdf $pdfPath -Force
         Remove-Item $tmpPdf -Force -ErrorAction SilentlyContinue

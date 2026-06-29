@@ -125,7 +125,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#12-how-to-add-api-endpoints"><span class="toc-text">12. How to add API endpoints</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#13-how-to-write-documentation"><span class="toc-text">13. How to write documentation</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#14-definition-of-done"><span class="toc-text">14. Definition of Done</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#working-on-the-unified-ai-workspace-sprint-20"><span class="toc-text">Working on the Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#working-on-quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">Working on Quenyx AI (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -241,7 +241,14 @@ service</strong> and make <strong>no AI call</strong>.</li>
 <li><input disabled="" type="checkbox"> Docs updated; status badges correct.</li>
 <li><input disabled="" type="checkbox"> No fake/sample data; corpus validator passes.</li>
 </ul>
-<h2 id="working-on-the-unified-ai-workspace-sprint-20">Working on the Unified AI Workspace (Sprint 20)</h2>
+<h2 id="working-on-quenyx-ai-unified-ai-workspace-sprint-20">Working on Quenyx AI (Unified AI Workspace — Sprint 20)</h2>
+<blockquote>
+<p><strong>RC1.1:</strong> the UI label is <strong>Quenyx AI</strong>. The canonical SPA base stays <code>/ai-workspace/*</code> (a
+<code>/quenyx-ai/*</code> alias in <code>App.tsx</code> redirects to it). The provider catalog is declared in
+<code>App\Services\Ai\AiProviderCatalog</code>; <code>AiProviderRegistry</code> decides which entries are executable
+(have an adapter) and which are platform‑configured. Keep new catalog entries non‑executable until a
+real adapter is added — never fabricate connectivity.</p>
+</blockquote>
 <ul>
 <li><strong>Backend</strong> lives in <code>App\Http\Controllers\Ai\Workspace</code>, <code>App\Services\Ai\Workspace</code>,
 <code>App\Models\Ai\*</code>, <code>app/Http/Resources/Ai/*</code>, and <code>routes/ai-workspace.php</code>. Resolve + authorize a

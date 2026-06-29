@@ -123,7 +123,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#10-audit-logs"><span class="toc-text">10. Audit logs</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#11-integrations"><span class="toc-text">11. Integrations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#12-limitations"><span class="toc-text">12. Limitations</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#unified-ai-workspace-administration-sprint-20"><span class="toc-text">Unified AI Workspace administration (Sprint 20)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#quenyx-ai-administration-unified-ai-workspace-sprint-20"><span class="toc-text">Quenyx AI administration (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -208,15 +208,33 @@ Configure per‑workspace settings; secrets are stored as configuration, not in 
 <li>Hidden modules cannot be enabled in the sidebar without changing the frontend flag (out of scope
 pre‑Sprint 20).</li>
 </ul>
-<h2 id="unified-ai-workspace-administration-sprint-20">Unified AI Workspace administration (Sprint 20)</h2>
-<p>Open <strong>AI Workspace</strong> from the top‑level sidebar (beside Integrations), then select a workspace. Tabs:
-Overview, Chat, Conversations, History, Activity, Memory, Prompt Templates, Skills, Capabilities,
-Usage, Costs, Providers, Permissions, Administration, Notifications.</p>
+<h2 id="quenyx-ai-administration-unified-ai-workspace-sprint-20">Quenyx AI administration (Unified AI Workspace — Sprint 20)</h2>
+<blockquote>
+<p><strong>RC1.1:</strong> this surface is now branded <strong>Quenyx AI</strong> in the UI (sidebar, header, breadcrumbs). The
+canonical SPA route stays <code>/ai-workspace/*</code> for backward compatibility; the branded <code>/quenyx-ai/*</code>
+path redirects to it. Do not confuse Quenyx AI (the AI control center) with <strong>Workspaces</strong>
+(tenant/project management).</p>
+</blockquote>
+<p>Open <strong>Quenyx AI</strong> from the top‑level sidebar (beside Integrations), then select a workspace. Tabs are
+grouped into <strong>Workspace</strong> (Overview, Chat, Conversations, History, Activity), <strong>Intelligence</strong>
+(Skills, Capabilities, Memory, Prompt Templates), <strong>Operations</strong> (Usage, Costs, Providers), and
+<strong>Administration</strong> (Permissions, Administration, Notifications).</p>
 <ul>
-<li><strong>Access</strong>: any workspace member can open the AI Workspace; <strong>owner/admin</strong> can administer.</li>
-<li><strong>Providers</strong> (Administration → Providers): set the per‑workspace model and (optionally) an
-encrypted API key. Secrets are write‑only — they are stored encrypted and never shown again; the UI
-only indicates whether a secret is configured. AI execution still requires the platform AI flags.</li>
+<li><strong>Access</strong>: any workspace member can open Quenyx AI; <strong>owner/admin</strong> can administer.</li>
+<li><strong>Providers</strong> (Operations → Providers): an enterprise provider catalog rendered as cards. Each card
+shows the provider label, type (hosted / gateway / self‑hosted / custom), declared capabilities,
+endpoint, default indicator, whether a live execution adapter exists (<code>executable</code>), whether
+platform credentials are present, the per‑workspace enabled/disabled and configured/secret state,
+and last‑updated. Actions: <strong>Configure/Edit</strong>, <strong>Enable/Disable</strong>, <strong>Test connection</strong> (a real
+readiness probe — executable providers run a health check, others report &quot;catalog only&quot;), and
+<strong>Clear secret</strong>. Set the per‑workspace model and (optionally) an encrypted API key. Secrets are
+write‑only — stored encrypted and never shown again; the UI only indicates whether a secret is
+configured. The <strong>default provider</strong> is set by platform configuration (<code>AI_PROVIDER</code>, or OpenAI
+credentials), not per‑workspace. The catalog lists OpenAI, Anthropic, Gemini, Azure OpenAI,
+OpenRouter, Mistral, Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, and a Custom
+OpenAI‑compatible API; today <strong>only OpenAI is executable</strong> — others are configurable but not yet
+executable, and the <strong>mock</strong> provider is hidden outside local/testing. AI execution still requires
+the platform AI flags.</li>
 <li><strong>Permissions</strong> (Administration → Permissions): per‑role matrix (<code>Use AI</code>, <code>Manage templates</code>,
 <code>Manage providers</code>, <code>View costs</code>, <code>Administer</code>). Rows are additive overrides on top of role
 defaults; the <code>owner</code> row is always full and locked.</li>
