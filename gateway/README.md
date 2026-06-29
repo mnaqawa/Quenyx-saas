@@ -21,24 +21,19 @@ BACKEND_BASE_URL=http://127.0.0.1:8000  # Laravel backend URL
 ENTITLEMENTS_CACHE_TTL_MS=30000      # Cache TTL in milliseconds (default: 30s)
 ```
 
-### Observe / Nagios (QynSight)
+### Observe (QynSight native monitoring)
 
-The gateway resolves the Nagios binary **inside the Nagios container** automatically:
+QynSight monitoring is **native**: checks are executed by the Laravel scheduler command
+`observe:run-checks` in the backend. There is **no Nagios runtime** and the gateway does not
+resolve a Nagios binary or container.
 
-- **Env:** `NAGIOS_BIN` or `NAGIOS_BINARY_PATH` (default: `nagios`, which uses the container PATH, e.g. `/usr/local/bin/nagios`).
-- **Fallbacks:** If the env candidate fails (e.g. "no such file"), the gateway tries `/usr/local/bin/nagios` then `/opt/nagios/bin/nagios`.
-- **Validation:** Runs `<nagiosBin> -v <nagiosCfgPath>` in the container. If no binary is found, the API returns: `Nagios binary not found. Attempted: nagios, /usr/local/bin/nagios, /opt/nagios/bin/nagios`.
-- **Readiness:** `GET /ready` includes `checks.nagios_binary.path` with the resolved path.
+- **Engine status:** `GET /internal/engines/native/status` reports the native engine (owned by the backend scheduler).
+- **Legacy guard:** any `/internal/engines/nagios*` request returns `410 Gone` (`code: nagios_removed`).
+- **Readiness:** `GET /ready` reports `checks.observe_engine.engine = "native"` and does not depend on Docker/Nagios.
 
-Optional env:
-
-```bash
-NAGIOS_BIN=nagios                                    # or exact path, e.g. /opt/nagios/bin/nagios
-NAGIOS_CONFIG_DIR=./nagios/config                    # host path for generated configs
-NAGIOS_CONTAINER_NAME=nagios-core                    # Docker container name for validation/reload
-```
-
-Rebuild and restart the gateway after changing these.
+Nagios may still appear only as a **legacy migration** path or an **optional third‑party
+integration** (e.g. the disabled `check_nagios` plugin that reads a remote Nagios status file);
+it is never the primary monitoring engine.
 
 ## Installation
 
@@ -79,7 +74,11 @@ Restarting without rebuilding will keep running the old compiled code.
 ## Enforced Routes
 
 Currently enforced:
-- `/api/projects/:projectId/integrations*` → requires `shieldintegrations` module
+- `/api/projects/:projectId/integrations*` (and the `/api/workspaces/:projectId/integrations*` alias) → requires the `qynintegrations` entitlement key
+
+Integrations is a **platform capability** for connecting to **external** systems, not a Quenyx
+business module. `qynintegrations` is retained purely as the entitlement key that gates this
+platform page (legacy alias: `shieldintegrations`).
 
 ## Nginx Configuration
 
@@ -127,8 +126,8 @@ Returns: `{"status":"ok","service":"gateway"}`
 
 ## Module Keys
 
-The gateway enforces module access based on keys returned by the backend entitlements endpoint. Current module key for integrations:
-- **`shieldintegrations`** - Required for accessing project integrations
+The gateway enforces access based on entitlement keys returned by the backend entitlements endpoint. Current key for the Integrations platform capability:
+- **`qynintegrations`** - Required for accessing project/workspace integrations (legacy alias: `shieldintegrations`)
 
 ## Caching
 

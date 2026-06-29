@@ -1,5 +1,11 @@
 # Overrides Persistence + Engine Unreachable – Root Cause and Fixes
 
+> **⚠️ PARTIALLY SUPERSEDED / LEGACY (pre‑RC1.1).** Part A (overrides persistence) remains accurate.
+> The "engine unreachable" analysis refers to the former **Nagios‑based** poll path (`observe:poll`
+> calling the gateway `/internal/engines/nagios/*`), which has been **removed**: monitoring is now
+> **native** (`observe:run-checks`) and that gateway path returns `410 Gone`. See
+> **[`docs/OBSERVE_RUNBOOK.md`](./OBSERVE_RUNBOOK.md)** for the current native runbook.
+
 ## Part A — Why overrides were being dropped
 
 **Root cause:** The request body is decoded by Laravel from JSON. When the frontend sends `overrides: { "port": 8081 }`, PHP’s `json_decode()` can return that value as a **stdClass** object (not an array) if the payload was decoded without the “associative” flag. The previous `normalizeIncomingOverrides()` only handled arrays:

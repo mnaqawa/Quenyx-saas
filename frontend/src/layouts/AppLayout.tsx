@@ -199,6 +199,12 @@ function AppLayoutInner() {
           >
             {t('nav.projects')}
           </Link>
+          {/*
+            Platform-level capabilities (NOT business modules and unaffected by
+            HIDE_NON_QYNSIGHT_MODULES): Integrations is the platform page for EXTERNAL systems only,
+            and AI Workspace is the shared, platform-wide Quenyx AI surface. Internal module-to-module
+            communication is handled by QynCore platform services, never via Integrations.
+          */}
           <Link
             to="/integrations"
             className={[

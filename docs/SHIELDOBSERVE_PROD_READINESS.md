@@ -1,5 +1,12 @@
 # ShieldObserve Production Readiness
 
+> **⚠️ SUPERSEDED / LEGACY (pre‑RC1.1).** This document describes the former **Nagios‑based**
+> ShieldObserve runtime (gateway‑published configs, `observe:poll`, `NAGIOS_*` env, Nagios binary
+> resolution). That runtime has been **removed**: QynSight monitoring is now **native**
+> (`observe:run-checks`), and any `/internal/engines/nagios*` request returns `410 Gone`. This file is
+> retained for historical/migration context only. For the current procedures, see
+> **[`docs/OBSERVE_RUNBOOK.md`](./OBSERVE_RUNBOOK.md)**.
+
 This document describes how to validate persistence and services data, and lists known limitations.
 
 ## 1. Validating Monitored Targets (Overrides) Persistence

@@ -3,7 +3,8 @@
 namespace App\Services;
 
 /**
- * Parses Nagios-style performance data / plugin output into normalized metric
+ * Parses standard plugin performance data (the de-facto `key=value` perfdata
+ * format emitted by monitoring plugins) and plugin output into normalized metric
  * percentages (cpu, memory, disk, network). PHP port of the frontend
  * utils/perfData.ts logic so stored history matches what the UI derives live.
  */

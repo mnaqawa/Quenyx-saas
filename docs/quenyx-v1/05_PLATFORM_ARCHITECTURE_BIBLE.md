@@ -106,9 +106,12 @@ additionally tracks module AI‑readiness in `config/quenyx_ai.php` + `QuenyxMod
 
 > **`QynCore` and `Integrations` are not business modules.** `QynCore` is the **platform core** —
 > the internal services layer through which modules communicate (see §6.1). `Integrations` is a
-> **platform page** for **external** systems only (see §6.2). The registry/catalog still carry
-> legacy `qyncore` / `qynintegrations` keys; these are slated to be reclassified and must not be
-> presented as future business modules.
+> **platform page** for **external** systems only (see §6.2). As of **RC1.1**, the frontend business
+> catalog (`platformRegistry.ts`) and the AI module universe (`config/quenyx_ai.php`) no longer list
+> `qynintegrations` as a business module, and `qyncore` is documented there as the platform core. The
+> `qyncore` / `qynintegrations` keys are **retained only as entitlement keys** (plans, subscriptions,
+> and the gateway gate for `/integrations*`) for backward compatibility — never presented as business
+> modules.
 
 ### 6.1 Internal communication — QynCore platform services
 

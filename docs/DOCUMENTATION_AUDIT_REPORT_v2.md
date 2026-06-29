@@ -180,25 +180,50 @@ cleanly; no markdown artifacts). Regenerate with: `powershell -File scripts/docs
 
 ## 10. Inconsistencies discovered in the actual implementation
 
-These are **code/documentation mismatches** flagged for follow-up. No source code was changed.
+These were **code/documentation mismatches** flagged in Documentation Pack v2.0. Items 1–3 were
+**resolved in the RC1.1 cleanup** (see the RC1.1 addendum below); item 4 remains an honest
+"not-enabled" surface.
 
-1. **Legacy Nagios path still present in code.** The gateway `/internal/engines/nagios/*` routes,
-   the `observe:poll` and `observe:nagios:publish` commands, `gateway/src/engines/nagiosConfig.ts`,
-   and `docker-compose.nagios.yml` remain in the repository. The native engine is the production
-   path (the `observe:poll` schedule is commented out in `app/Console/Kernel.php`). **Recommendation:**
-   formally deprecate or remove the legacy path; docs now treat it as legacy/optional only.
-2. **`observe_services.engine_key` default = `nagios`.** The original migration defaults this column
-   to `nagios`, although native checks write `native`. **Recommendation:** change the default to
-   `native` (non-breaking) for clarity. Documented as an implementation note in the Database
-   Reference and OBSERVE_RUNBOOK.
-3. **Module catalog still lists `qyncore` / `qynintegrations` as modules.** `config/quenyx_ai.php`
-   (`QuenyxModuleCatalog`) and `frontend/src/constants/platformRegistry.ts` register `qyncore` and
-   `qynintegrations` as module keys. Per the corrected architecture, **QynCore is the platform core**
-   (not a business module) and **there is no QynIntegrations module**. **Recommendation:** reclassify
-   `qyncore` and remove `qynintegrations` from the catalog. `platformRegistry.ts` was left untouched
-   per instructions; documentation reflects the corrected architecture and flags the discrepancy.
+1. **Legacy Nagios path in code.** *(Resolved in RC1.1.)* On inspection the runtime had already been
+   cut over to native in a prior sprint: the gateway returns `410 Gone` for `/internal/engines/nagios*`,
+   `observe:poll` is a deprecated alias that forwards to `observe:run-checks`, and there is **no**
+   `observe:nagios:publish` command, `gateway/src/engines/nagiosConfig.ts`, or
+   `docker-compose.nagios.yml` in the repo (those were aspirational/already gone). RC1.1 removed the
+   remaining stale artifacts: gateway `.env.example`/`README` Nagios binary/container config, and the
+   misleading `engine => 'nagios'` literals in `ObserveServiceDefinitionReadyPluginsSeeder` (the seeder
+   already forced `native` at runtime).
+2. **`observe_services.engine_key` default.** *(Resolved.)* The current `create_observe_services_table`
+   migration already defaults the column to **`native`**, and migration
+   `2026_06_04_190001_rename_observe_runtime_engine_to_native` migrates any legacy `nagios` rows to
+   `native`. The stale "default = nagios" note in `OBSERVE_RUNBOOK.md` was corrected.
+3. **Module catalog listed `qyncore` / `qynintegrations` as modules.** *(Resolved in RC1.1.)*
+   `qynintegrations` was removed as a business module from `frontend/src/constants/platformRegistry.ts`
+   and from the AI module universe in `config/quenyx_ai.php`; `qyncore` is now documented as the
+   platform core in both. Both keys are **retained as entitlement keys** (plans, subscriptions, gateway
+   gate for `/integrations*`) for backward compatibility — verified load-bearing by
+   `tests/Feature/WorkspacesAliasTest.php`.
 4. **No durable AI memory store.** The Unified AI Workspace "Memory" surface honestly reports
    "not enabled" because no persistent memory store exists yet — already documented truthfully.
+
+---
+
+## RC1.1 addendum — native monitoring & platform-capability cleanup
+
+Applied after Documentation Pack v2.0 to make code match the documented architecture:
+
+- **Nagios runtime artifacts:** removed stale gateway `.env.example`/`README` Nagios binary/container
+  config (the gateway is native-only and 410s the Nagios path); normalized 43 `engine => 'nagios'`
+  literals to `native` in the ready-plugins seeder; reworded the perfdata comment to a format
+  reference. The disabled `check_nagios` plugin remains **only** as an optional third-party
+  integration. Legacy `SHIELDOBSERVE_*` engineering docs were banner-marked **SUPERSEDED**.
+- **engine_key:** confirmed default is already `native`; legacy rows migrated by the existing rename
+  migration. No new/destructive migration required.
+- **Integrations / QynCore:** reclassified as platform capability / platform core in the frontend
+  catalog, the AI catalog, and the architecture/AI bibles; entitlement keys preserved for billing and
+  the gateway gate. No business module created or removed at the entitlement layer.
+- **Navigation:** QynSight remains the only visible business module; AI Workspace and Integrations stay
+  as platform-level items; the `HIDE_NON_QYNSIGHT_MODULES` flag is intact with expanded comments
+  explaining how hidden modules return.
 
 ---
 

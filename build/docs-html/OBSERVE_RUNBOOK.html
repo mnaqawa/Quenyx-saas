@@ -428,8 +428,8 @@ ensure <code>check_command</code> is one the engine supports (HTTP/TCP/Ping/plug
 <td>varchar(50)</td>
 <td>NO</td>
 <td></td>
-<td>nagios</td>
-<td>(native checks write <code>native</code>)</td>
+<td>native</td>
+<td>(native engine writes/reads <code>native</code>)</td>
 </tr>
 <tr>
 <td>engine_service_key</td>
@@ -522,9 +522,10 @@ ensure <code>check_command</code> is one the engine supports (HTTP/TCP/Ping/plug
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note (implementation detail):</strong> the <code>engine_key</code> column default in the original migration is
-<code>nagios</code> for backward compatibility, but the <strong>native</strong> engine writes <code>engine_key = 'native'</code>. When
-both engines are present, native data is preferred/deduped in the UI.</p>
+<p><strong>Note (implementation detail):</strong> the <code>engine_key</code> column default is <strong><code>native</code></strong> (see migration
+<code>create_observe_services_table</code>). Any legacy rows that still carried <code>engine_key = 'nagios'</code> are
+migrated to <code>native</code> by migration <code>2026_06_04_190001_rename_observe_runtime_engine_to_native</code>
+(duplicates collapsed safely). The native engine reads and writes <code>engine_key = 'native'</code> only.</p>
 </blockquote>
 <hr />
 <h2 id="8-frontend-use-the-real-api">8. Frontend (use the real API)</h2>
@@ -556,19 +557,19 @@ cd gateway &amp;&amp; npm run build
 for teams migrating from, or optionally integrating, an external Nagios deployment. New
 environments should not enable it.</p>
 </blockquote>
-<p>When a legacy Nagios deployment is in use, an optional gateway path can publish workspace configs to
-Nagios and poll its status:</p>
+<p>As of v1.0.0 RC1 the Nagios <strong>runtime path has been removed</strong>; only the following remnants exist, and
+only for migration/optional integration:</p>
 <ul>
-<li><strong>Publish:</strong> <code>php artisan observe:nagios:publish --workspace_id=84</code> writes a workspace config
-(<code>ws{id}-</code> prefixed hosts) that Nagios loads via <code>cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces</code>
-in the main <code>nagios.cfg</code> (never via <code>cfg_file=.../quenyx.cfg</code>).</li>
-<li><strong>Reload:</strong> <code>POST {gateway}/internal/engines/nagios/reload</code> (or <code>docker exec nagios-core kill -HUP 1</code>).</li>
-<li><strong>Poll:</strong> the legacy <code>observe:poll</code> command reads Nagios status into <code>observe_services</code>
-(<code>engine_key='nagios'</code>). <strong>This command is disabled in the scheduler by default</strong> (see
-<code>app/Console/Kernel.php</code>); native checks are the production path.</li>
-<li><strong>Toggle:</strong> <code>OBSERVE_AUTO_PUBLISH_NAGIOS</code> and the gateway <code>NAGIOS_*</code> env vars (<code>NAGIOS_CONFIG_DIR</code>,
-<code>NAGIOS_CONTAINER_NAME</code>, <code>NAGIOS_BASE_URL</code>, <code>NAGIOS_USER</code>, <code>NAGIOS_PASS</code>) configure this optional
-path.</li>
+<li><strong>No publish command.</strong> The former <code>observe:nagios:publish</code> Artisan command no longer exists. The
+native engine owns all checks; there is nothing to publish to an external Nagios.</li>
+<li><strong>Gateway path returns 410.</strong> Any request to <code>/internal/engines/nagios*</code> on the gateway returns
+<code>410 Gone</code> (<code>code: nagios_removed</code>). Use <code>GET /internal/engines/native/status</code> instead.</li>
+<li><strong><code>observe:poll</code> is a deprecated alias.</strong> It no longer reads Nagios; it prints a deprecation warning
+and forwards to <code>observe:run-checks</code> (native). Retained only for backward compatibility with existing
+cron entries — prefer <code>observe:run-checks</code> directly.</li>
+<li><strong>Optional third-party integration only.</strong> If you must read an existing remote Nagios, enable the
+disabled <code>check_nagios</code> service definition (plugin <code>check_nagios</code> reading a remote <code>status.dat</code>). It
+runs under the <strong>native</strong> engine as an ordinary plugin; Nagios is never the Quenyx monitoring engine.</li>
 </ul>
 <p>If you are not migrating from Nagios, ignore this appendix entirely and rely on
 <code>observe:run-checks</code> + <code>observe:evaluate-alerts</code>.</p>

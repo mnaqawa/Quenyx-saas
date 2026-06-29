@@ -1,5 +1,12 @@
 # ShieldObserve Engine Architecture
 
+> **⚠️ SUPERSEDED / LEGACY (pre‑RC1.1).** This describes the former **Nagios‑based** observe engine
+> accessed via the gateway. That runtime has been **removed**: QynSight monitoring is **native** and
+> owned by the Laravel scheduler (`observe:run-checks`), writing directly to `observe_services`
+> (`engine_key = 'native'`). The gateway no longer proxies a Nagios engine and returns `410 Gone` for
+> `/internal/engines/nagios*`. Retained for historical/migration context only — see
+> **[`docs/OBSERVE_RUNBOOK.md`](./OBSERVE_RUNBOOK.md)** and **`docs/quenyx-v1/14_QYNSIGHT_GUIDE.md`**.
+
 ## Overview
 
 **ShieldObserve** is the monitoring module and **observe engine** for Quenyx. It provides all monitoring features (host/service checks, plugins, scheduling, services UI) and is designed as a **microservice**: it must be accessed **only via the gateway**. No other module or service should call the observe engine directly (e.g. by hitting the backend URL); they must go through the gateway.

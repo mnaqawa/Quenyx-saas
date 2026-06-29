@@ -9,6 +9,9 @@ export type ModuleKey =
   | 'qynrun'
   | 'qynbalance'
   | 'qynsupport'
+  // 'qynintegrations' is intentionally NOT a business module. Integrations is a platform
+  // capability/page for EXTERNAL systems only. The key is retained here (and as a backend
+  // entitlement key) purely for backward compatibility with existing plans/subscriptions.
   | 'qynintegrations'
   | 'qynasset'
   | 'qynknow'
@@ -57,8 +60,13 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 
-// TEMPORARY: while QynSight is the only module under active development, hide every
-// other module across navigation, subscriptions, and workspace settings.
+// TEMPORARY (RC1.1): while QynSight is the only visible BUSINESS module, hide every other
+// business module across navigation, subscriptions, and workspace settings.
+//
+// To bring the hidden business modules back later, flip HIDE_NON_QYNSIGHT_MODULES to false (or add
+// their keys to ACTIVE_MODULE_KEYS for a staged rollout). This flag does NOT affect the platform-level
+// items (AI Workspace, Integrations) or the platform core (QynCore billing), which are wired
+// separately and remain available.
 export const HIDE_NON_QYNSIGHT_MODULES = true
 export const ACTIVE_MODULE_KEYS = ['qynsight']
 
@@ -77,12 +85,16 @@ export const modules: ModuleConfig[] = [
     sidebar: { order: 1, children: qynSightRoutes },
   },
   {
+    // QynCore is the PLATFORM CORE (billing, subscriptions, configuration and governance), not a
+    // customer-facing business module. It is retained here only to back the platform-core surfaces
+    // that already depend on the `qyncore` key (e.g. the /qyncore/billing route and the Subscriptions
+    // page). It stays hidden from the business-module navigation via HIDE_NON_QYNSIGHT_MODULES.
     key: 'qyncore',
     displayName: 'QynCore',
     status: 'comingSoon',
     requiresWorkspace: true,
     baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Central configuration and governance hub for platform control and policy management.',
+    description: 'Platform core: billing, subscriptions, configuration, and governance (not a navigable business module).',
     sidebar: { order: 2 },
   },
   {
@@ -112,15 +124,11 @@ export const modules: ModuleConfig[] = [
     description: 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
     sidebar: { order: 5 },
   },
-  {
-    key: 'qynintegrations',
-    displayName: 'QynIntegrations',
-    status: 'comingSoon',
-    requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Third-party integrations and API connections for external services.',
-    sidebar: { order: 6 },
-  },
+  // NOTE (RC1.1): QynIntegrations has been removed as a business module. Integrations is a
+  // platform capability/page for EXTERNAL systems only (top-level `/integrations` route), NOT a
+  // Quenyx business module and NOT used for internal module-to-module communication (that is handled
+  // by QynCore platform services). The `qynintegrations` entitlement key still exists on the backend
+  // (plans + gateway gate for /integrations*) for backward compatibility — see EntitlementService.
   {
     key: 'qynasset',
     displayName: 'QynAsset',

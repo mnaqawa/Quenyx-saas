@@ -12,8 +12,13 @@ class ModuleSeeder extends Seeder
      * Authoritative list of Quenyx modules (Qyn*).
      * This is the source of truth - only these modules should exist.
      */
+    // NOTE (RC1.1): 'qyncore' and 'qynintegrations' are NOT customer-facing business modules.
+    // 'qyncore' is the platform core (billing/subscriptions/governance) and 'qynintegrations' is the
+    // entitlement key for the Integrations platform capability (external systems only). Both are kept
+    // in this table for backward compatibility with existing plans, subscriptions, overrides, and the
+    // gateway entitlement gate. Do not surface them as navigable business modules.
     private const QUENYX_MODULES = [
-        ['key' => 'qyncore', 'name' => 'QynCore', 'description' => 'Central configuration and governance hub for platform control and policy management.', 'status' => 'active'],
+        ['key' => 'qyncore', 'name' => 'QynCore', 'description' => 'Platform core: billing, subscriptions, configuration, and governance (not a navigable business module).', 'status' => 'active'],
         ['key' => 'qynsight', 'name' => 'QynSight', 'description' => 'Real-time infrastructure monitoring and performance insights across your environment.', 'status' => 'active'],
         ['key' => 'qynasset', 'name' => 'QynAsset', 'description' => 'Comprehensive asset discovery, inventory management, and automated health tracking.', 'status' => 'maintenance'],
         ['key' => 'qynreact', 'name' => 'QynReact', 'description' => 'Automated incident response and orchestration for rapid recovery and resolution.', 'status' => 'active'],
@@ -24,7 +29,9 @@ class ModuleSeeder extends Seeder
         ['key' => 'qynrun', 'name' => 'QynRun', 'description' => 'Workflow automation and process orchestration across systems and teams.', 'status' => 'active'],
         ['key' => 'qynbalance', 'name' => 'QynBalance', 'description' => 'Load balancing and traffic management for optimal resource distribution.', 'status' => 'active'],
         ['key' => 'qynsupport', 'name' => 'QynSupport', 'description' => 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.', 'status' => 'active'],
-        ['key' => 'qynintegrations', 'name' => 'QynIntegrations', 'description' => 'Third-party integrations and API connections for external services.', 'status' => 'active'],
+        // Entitlement key for the Integrations platform capability (external systems only) — gates
+        // /api/{projects|workspaces}/{id}/integrations* at the gateway. Not a business module.
+        ['key' => 'qynintegrations', 'name' => 'QynIntegrations', 'description' => 'Entitlement key for the Integrations platform capability (external systems only); not a business module.', 'status' => 'active'],
     ];
 
     public function run(): void

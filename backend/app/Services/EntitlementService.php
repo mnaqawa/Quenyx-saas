@@ -11,7 +11,11 @@ use App\Models\ProjectSubscription;
 class EntitlementService
 {
     /**
-     * Legacy -> canonical module key aliases.
+     * Legacy -> canonical module/entitlement key aliases.
+     *
+     * Note: 'qyncore' is the platform core (billing/governance) and 'qynintegrations' is the
+     * Integrations platform capability key (external systems only). Neither is a business module,
+     * but both remain valid entitlement keys for backward compatibility.
      *
      * @var array<string, string>
      */

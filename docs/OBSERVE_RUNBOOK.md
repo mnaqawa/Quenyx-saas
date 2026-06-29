@@ -261,7 +261,7 @@ The engine and API use **`service_name`** (not `service_description`).
 |---|---|---|---|---|---|
 | id | bigint unsigned | NO | PRI | NULL | auto_increment |
 | workspace_id | bigint unsigned | NO | MUL | NULL | |
-| engine_key | varchar(50) | NO | | nagios | (native checks write `native`) |
+| engine_key | varchar(50) | NO | | native | (native engine writes/reads `native`) |
 | engine_service_key | varchar(255) | NO | | NULL | |
 | host_name | varchar(255) | NO | | NULL | |
 | **service_name** | varchar(255) | NO | | NULL | |
@@ -274,9 +274,10 @@ The engine and API use **`service_name`** (not `service_description`).
 | created_at | timestamp | YES | | NULL | |
 | updated_at | timestamp | YES | | NULL | |
 
-> **Note (implementation detail):** the `engine_key` column default in the original migration is
-> `nagios` for backward compatibility, but the **native** engine writes `engine_key = 'native'`. When
-> both engines are present, native data is preferred/deduped in the UI.
+> **Note (implementation detail):** the `engine_key` column default is **`native`** (see migration
+> `create_observe_services_table`). Any legacy rows that still carried `engine_key = 'nagios'` are
+> migrated to `native` by migration `2026_06_04_190001_rename_observe_runtime_engine_to_native`
+> (duplicates collapsed safely). The native engine reads and writes `engine_key = 'native'` only.
 
 ---
 
@@ -319,19 +320,19 @@ cd gateway && npm run build
 > for teams migrating from, or optionally integrating, an external Nagios deployment. New
 > environments should not enable it.
 
-When a legacy Nagios deployment is in use, an optional gateway path can publish workspace configs to
-Nagios and poll its status:
+As of v1.0.0 RC1 the Nagios **runtime path has been removed**; only the following remnants exist, and
+only for migration/optional integration:
 
-- **Publish:** `php artisan observe:nagios:publish --workspace_id=84` writes a workspace config
-  (`ws{id}-` prefixed hosts) that Nagios loads via `cfg_dir=/opt/nagios/etc/objects/quenyx/workspaces`
-  in the main `nagios.cfg` (never via `cfg_file=.../quenyx.cfg`).
-- **Reload:** `POST {gateway}/internal/engines/nagios/reload` (or `docker exec nagios-core kill -HUP 1`).
-- **Poll:** the legacy `observe:poll` command reads Nagios status into `observe_services`
-  (`engine_key='nagios'`). **This command is disabled in the scheduler by default** (see
-  `app/Console/Kernel.php`); native checks are the production path.
-- **Toggle:** `OBSERVE_AUTO_PUBLISH_NAGIOS` and the gateway `NAGIOS_*` env vars (`NAGIOS_CONFIG_DIR`,
-  `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, `NAGIOS_USER`, `NAGIOS_PASS`) configure this optional
-  path.
+- **No publish command.** The former `observe:nagios:publish` Artisan command no longer exists. The
+  native engine owns all checks; there is nothing to publish to an external Nagios.
+- **Gateway path returns 410.** Any request to `/internal/engines/nagios*` on the gateway returns
+  `410 Gone` (`code: nagios_removed`). Use `GET /internal/engines/native/status` instead.
+- **`observe:poll` is a deprecated alias.** It no longer reads Nagios; it prints a deprecation warning
+  and forwards to `observe:run-checks` (native). Retained only for backward compatibility with existing
+  cron entries — prefer `observe:run-checks` directly.
+- **Optional third-party integration only.** If you must read an existing remote Nagios, enable the
+  disabled `check_nagios` service definition (plugin `check_nagios` reading a remote `status.dat`). It
+  runs under the **native** engine as an ordinary plugin; Nagios is never the Quenyx monitoring engine.
 
 If you are not migrating from Nagios, ignore this appendix entirely and rely on
 `observe:run-checks` + `observe:evaluate-alerts`.

@@ -18,6 +18,11 @@
 
 return [
 
+    // Business-module universe the AI platform is aware of (UI-independent). This list intentionally
+    // EXCLUDES QynCore and Integrations: QynCore is the platform core (billing/governance) and
+    // Integrations is a platform capability for external systems — neither is a business module nor a
+    // future AI adapter target. (The `qyncore`/`qynintegrations` entitlement keys still live in the
+    // entitlement layer; see ModuleSeeder/PlanSeeder/EntitlementService.)
     'modules' => [
         ['key' => 'qynshield',      'name' => 'QynShield',      'ai_candidate' => true],
         ['key' => 'qynsight',       'name' => 'QynSight',       'ai_candidate' => true],
@@ -29,8 +34,6 @@ return [
         ['key' => 'qynva',          'name' => 'QynVA',          'ai_candidate' => false],
         ['key' => 'qynsupport',     'name' => 'QynSupport',     'ai_candidate' => false],
         ['key' => 'qynbalance',     'name' => 'QynBalance',     'ai_candidate' => false],
-        ['key' => 'qyncore',        'name' => 'QynCore',        'ai_candidate' => false],
-        ['key' => 'qynintegrations', 'name' => 'QynIntegrations', 'ai_candidate' => false],
     ],
 
     /*
