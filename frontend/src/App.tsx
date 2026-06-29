@@ -23,6 +23,24 @@ import { routesByModule } from './constants/platformRegistry'
 import { validateRegistryInDevelopment } from './constants/registrySanity'
 
 const BillingPage = lazy(() => import('./pages/Billing'))
+// Sprint 20 — Unified AI Workspace (platform-level)
+const AiWorkspaceLayout = lazy(() => import('./layouts/AiWorkspaceLayout'))
+const AiOverview = lazy(() => import('./pages/ai/AiOverview'))
+const AiChat = lazy(() => import('./pages/ai/AiChat'))
+const AiConversations = lazy(() => import('./pages/ai/AiConversations'))
+const AiConversationDetail = lazy(() => import('./pages/ai/AiConversationDetail'))
+const AiHistory = lazy(() => import('./pages/ai/AiHistory'))
+const AiActivity = lazy(() => import('./pages/ai/AiActivity'))
+const AiMemory = lazy(() => import('./pages/ai/AiMemory'))
+const AiPromptTemplates = lazy(() => import('./pages/ai/AiPromptTemplates'))
+const AiSkills = lazy(() => import('./pages/ai/AiSkills'))
+const AiCapabilities = lazy(() => import('./pages/ai/AiCapabilities'))
+const AiUsage = lazy(() => import('./pages/ai/AiUsage'))
+const AiCosts = lazy(() => import('./pages/ai/AiCosts'))
+const AiProviders = lazy(() => import('./pages/ai/AiProviders'))
+const AiPermissions = lazy(() => import('./pages/ai/AiPermissions'))
+const AiAdministration = lazy(() => import('./pages/ai/AiAdministration'))
+const AiNotifications = lazy(() => import('./pages/ai/AiNotifications'))
 const Overview = lazy(() => import('./pages/observe/Overview'))
 const RealTimeMonitoring = lazy(() => import('./pages/observe/RealTimeMonitoring'))
 const InfrastructureMap = lazy(() => import('./pages/observe/InfrastructureMap'))
@@ -69,6 +87,32 @@ function App() {
             <Route path="settings/access" element={<WorkspaceAccessSettings />} />
             <Route path="settings/members" element={<WorkspaceMembers />} />
             <Route path="integrations" element={<Integrations />} />
+            <Route
+              path="ai-workspace"
+              element={
+                <Suspense fallback={<ObservePageSkeleton />}>
+                  <AiWorkspaceLayout />
+                </Suspense>
+              }
+            >
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<ObserveSuspense><AiOverview /></ObserveSuspense>} />
+              <Route path="chat" element={<ObserveSuspense><AiChat /></ObserveSuspense>} />
+              <Route path="conversations" element={<ObserveSuspense><AiConversations /></ObserveSuspense>} />
+              <Route path="conversations/:uuid" element={<ObserveSuspense><AiConversationDetail /></ObserveSuspense>} />
+              <Route path="history" element={<ObserveSuspense><AiHistory /></ObserveSuspense>} />
+              <Route path="activity" element={<ObserveSuspense><AiActivity /></ObserveSuspense>} />
+              <Route path="memory" element={<ObserveSuspense><AiMemory /></ObserveSuspense>} />
+              <Route path="prompt-templates" element={<ObserveSuspense><AiPromptTemplates /></ObserveSuspense>} />
+              <Route path="skills" element={<ObserveSuspense><AiSkills /></ObserveSuspense>} />
+              <Route path="capabilities" element={<ObserveSuspense><AiCapabilities /></ObserveSuspense>} />
+              <Route path="usage" element={<ObserveSuspense><AiUsage /></ObserveSuspense>} />
+              <Route path="costs" element={<ObserveSuspense><AiCosts /></ObserveSuspense>} />
+              <Route path="providers" element={<ObserveSuspense><AiProviders /></ObserveSuspense>} />
+              <Route path="permissions" element={<ObserveSuspense><AiPermissions /></ObserveSuspense>} />
+              <Route path="administration" element={<ObserveSuspense><AiAdministration /></ObserveSuspense>} />
+              <Route path="notifications" element={<ObserveSuspense><AiNotifications /></ObserveSuspense>} />
+            </Route>
             <Route path="getting-started" element={<GettingStarted />} />
             <Route path="help" element={<Navigate to="/getting-started" replace />} />
             <Route path="profile" element={<Profile />} />

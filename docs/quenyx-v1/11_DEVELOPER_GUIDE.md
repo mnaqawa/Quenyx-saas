@@ -114,3 +114,23 @@ quenyx-saas/
 - [ ] AI stays off‑by‑default; no direct provider calls outside provider classes.
 - [ ] Docs updated; status badges correct.
 - [ ] No fake/sample data; corpus validator passes.
+
+## Working on the Unified AI Workspace (Sprint 20)
+
+- **Backend** lives in `App\Http\Controllers\Ai\Workspace`, `App\Services\Ai\Workspace`,
+  `App\Models\Ai\*`, `app/Http/Resources/Ai/*`, and `routes/ai-workspace.php`. Resolve + authorize a
+  workspace through `AiWorkspaceBaseController::workspace()` (which calls `AiWorkspaceContextResolver`
+  and `ProjectPolicy::accessAi|administerAi`), then gate fine‑grained actions with
+  `requireCapability(...)`. Return data via the `{ success, data }` envelope (`ok()`); expose **UUIDs
+  only**.
+- **Reuse, don't duplicate**: conversations via `AiConversationRepository`; execution via
+  `AiProviderRegistry` + `CompliancePromptOrchestrator`; skills/capabilities via `QuenyxAiPlatform`.
+  New AI logic does not belong here.
+- **Secrets**: store on `AiProviderSetting.settings` (the `encrypted:array` cast) and never return
+  raw values — only `secret_configured`. Audit via `AiWorkspaceAuditLogger` (it strips secrets).
+- **Frontend**: add a tab in `layouts/AiWorkspaceLayout.tsx`, a lazy route in `App.tsx`, a page under
+  `pages/ai/*` using `useAiResource` + `AiView` (handles no‑workspace/loading/error/empty), a method
+  on `services/aiWorkspaceService.ts`, types in `types/aiWorkspace.ts`, and matching keys in **both**
+  the `en` and `ar` blocks of `i18n/translations.ts`.
+- **Validate**: `php artisan route:list | grep ai`, `php artisan migrate --force`, `php artisan test`,
+  `npm run build` (+ `npm run lint`).

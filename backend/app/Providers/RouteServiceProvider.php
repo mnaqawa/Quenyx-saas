@@ -77,6 +77,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('ai-workspace', function (Request $request) {
+            $max = (int) config('ai.rate_limits.workspace.max_attempts', 120);
+
+            return Limit::perMinute($max)->by($request->user()?->id ?: $request->ip());
+        });
+
         RateLimiter::for('compliance-evidence-read', function (Request $request) {
             $max = (int) config('compliance.evidence.rate_limits.read.max_attempts', 120);
 

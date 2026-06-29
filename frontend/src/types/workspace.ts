@@ -4,6 +4,7 @@ export type Role = 'owner' | 'admin' | 'member' | 'viewer'
 
 export interface ProjectSummary {
   id: number
+  uuid?: string
   name: string
   status: string
   created_at: string

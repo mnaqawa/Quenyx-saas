@@ -186,3 +186,24 @@ scheduler run alongside. See Doc 10.
 - Audit‑sandbox could not run DB/tests/frontend/gateway builds (tooling gaps) — these run on
   CI/CloudQuenyx (see QA report).
 - One low‑risk **shadowed duplicate route** (`/ai/chat`) noted in the QA report.
+
+## Sprint 20 — Unified AI Workspace (platform layer)
+
+The **Unified AI Workspace** is a platform‑level capability (NOT a business module): a top‑level
+sidebar item beside Dashboard / Workspaces / Integrations. It does not touch `platformRegistry.ts`
+and the QynSight‑only sidebar flag is unchanged.
+
+- **Backend**: flat `/api/ai/*` routes (`routes/ai-workspace.php`), Sanctum + `throttle:ai-workspace`,
+  scoped by a required `workspace` UUID via `AiWorkspaceContextResolver`. Controllers live in
+  `App\Http\Controllers\Ai\Workspace`; services in `App\Services\Ai\Workspace`. The runtime is
+  **reused** (provider registry, prompt orchestrator, `AiConversationRepository`, skills/capability
+  catalog) — no QynShield logic is duplicated.
+- **UUID‑only**: `projects` gains an additive, backward‑compatible `uuid` (numeric `id` and existing
+  `{project}` bindings unchanged); all AI resources expose UUIDs; audit‑derived feed items use
+  deterministic UUIDv5.
+- **New tables**: `ai_prompt_templates`, `ai_provider_settings` (encrypted secrets), and
+  `ai_workspace_permissions` (additive per‑role overrides over `ProjectPolicy`). `ai_conversations`
+  / `ai_conversation_messages` are reused.
+- **RBAC**: `ProjectPolicy::accessAi` / `administerAi` + a fine‑grained capability matrix.
+- **Frontend**: `AiWorkspaceLayout` + 15 lazy pages under `pages/ai/*`, `aiWorkspaceService`,
+  `useAiWorkspace` hooks, full EN/AR i18n, real empty states; consumes backend APIs only.

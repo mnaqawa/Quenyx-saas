@@ -76,4 +76,27 @@ class ProjectPolicy
 
         return $membership && in_array($membership->role, ['owner', 'admin', 'member']);
     }
+
+    /**
+     * Access the Unified AI Workspace (Sprint 20). Any workspace member (owner/admin/member/viewer)
+     * may access; identical to `view`. AI execution remains gated by feature flags + provider config.
+     */
+    public function accessAi(User $user, Project $project): bool
+    {
+        return $this->view($user, $project);
+    }
+
+    /**
+     * Administer AI for a workspace (provider settings, permission matrix). Owner and admin only.
+     */
+    public function administerAi(User $user, Project $project): bool
+    {
+        if ($user->id === $project->owner_id) {
+            return true;
+        }
+
+        $membership = $project->memberships()->where('user_id', $user->id)->first();
+
+        return $membership && in_array($membership->role, ['owner', 'admin']);
+    }
 }

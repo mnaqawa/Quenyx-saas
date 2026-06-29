@@ -110,3 +110,27 @@ php artisan optimize:clear        # clear caches
 tail -f backend/storage/logs/laravel.log
 journalctl -u quenyx-gateway -f
 ```
+
+## Unified AI Workspace (Sprint 20) — operations
+
+Deploy (after pulling):
+
+```bash
+cd backend
+composer install --no-dev --optimize-autoloader   # or: composer dump-autoload -o
+php artisan migrate --force                        # adds projects.uuid (backfilled),
+                                                   # ai_prompt_templates, ai_provider_settings, ai_workspace_permissions
+php artisan route:list | grep ai                   # expect /api/ai/workspace/summary, conversations, etc.
+php artisan config:cache
+```
+
+- **Enable/disable** the surface: `AI_WORKSPACE_ENABLED` (default `true`). When `false`, all
+  `/api/ai/*` workspace endpoints return 404 and the sidebar item leads to an empty surface.
+- **Safe by default**: with `AI_ENABLED=false` (default), chat uses the mock provider; nothing reaches
+  an external model. No raw provider secrets are stored — `ai_provider_settings.settings` is encrypted
+  (depends on a valid `APP_KEY`; rotating `APP_KEY` invalidates stored secrets, which must be re‑entered).
+- **Cost tracking** shows currency only when `ai.workspace.pricing` is configured; otherwise it is
+  token‑only by design (no fabricated amounts).
+- **Auditing**: AI conversations, provider/template/permission changes are written to `audit_logs`
+  (`action LIKE 'ai%'`); surface them via the Activity/Notifications tabs or query the table directly.
+- **Rate limiting**: `throttle:ai-workspace` (default 120/min, `AI_WORKSPACE_RATE_LIMIT`).

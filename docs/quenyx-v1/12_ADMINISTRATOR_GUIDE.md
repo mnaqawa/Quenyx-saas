@@ -79,3 +79,22 @@
 - QynShield UI beyond executive/demo is roadmap.
 - Hidden modules cannot be enabled in the sidebar without changing the frontend flag (out of scope
   pre‑Sprint 20).
+
+## Unified AI Workspace administration (Sprint 20)
+
+Open **AI Workspace** from the top‑level sidebar (beside Integrations), then select a workspace. Tabs:
+Overview, Chat, Conversations, History, Activity, Memory, Prompt Templates, Skills, Capabilities,
+Usage, Costs, Providers, Permissions, Administration, Notifications.
+
+- **Access**: any workspace member can open the AI Workspace; **owner/admin** can administer.
+- **Providers** (Administration → Providers): set the per‑workspace model and (optionally) an
+  encrypted API key. Secrets are write‑only — they are stored encrypted and never shown again; the UI
+  only indicates whether a secret is configured. AI execution still requires the platform AI flags.
+- **Permissions** (Administration → Permissions): per‑role matrix (`Use AI`, `Manage templates`,
+  `Manage providers`, `View costs`, `Administer`). Rows are additive overrides on top of role
+  defaults; the `owner` row is always full and locked.
+- **Cost tracking**: amounts appear only when pricing is configured in `config/ai.php`
+  (`ai.workspace.pricing`); otherwise token usage is shown without monetary values.
+- **Audit**: provider/template/permission changes and conversations are recorded in the audit log and
+  surfaced under Activity / Notifications.
+- **Disable**: set `AI_WORKSPACE_ENABLED=false` to hide the surface (returns 404 from the API).

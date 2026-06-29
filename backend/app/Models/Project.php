@@ -7,16 +7,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Project extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'uuid',
         'owner_id',
         'name',
         'status',
     ];
+
+    /**
+     * Auto-generate the public UUID on create. Existing rows are backfilled by migration. Route
+     * model binding still resolves by numeric `id` (unchanged) — `uuid` is an additive, public
+     * identifier used by platform-level (non-nested) APIs such as the Unified AI Workspace.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $model): void {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     public function owner(): BelongsTo
     {

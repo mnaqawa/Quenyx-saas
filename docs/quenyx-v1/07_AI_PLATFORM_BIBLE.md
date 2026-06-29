@@ -158,3 +158,28 @@ provider, via the registry) reference the model SDK. (The legacy QynSight knowle
 **modules** (adapters), **skills**, **providers**, **reasoning/retrieval/RAG** status, supported
 contexts, and the HUB‑wide **`module_catalog`** (production/reserved/planned), independent of UI
 visibility.
+
+## Unified AI Workspace (Sprint 20)
+
+A platform‑level surface that exposes the shared AI runtime to every workspace through flat
+`/api/ai/*` endpoints (see API Reference §17). It **reuses** the existing runtime rather than adding
+new AI logic:
+
+- **Conversations / Chat / History** reuse `AiConversation(Message)` + `AiConversationRepository`;
+  message execution goes through `AiProviderRegistry` + `CompliancePromptOrchestrator` (mock provider
+  until `ai.feature_flags.enabled`). Conversation **metadata + token counts** are always persisted for
+  this surface; message **content** only when `prompt_logging` is enabled.
+- **Skills / Capabilities** read `QuenyxAiPlatform` / `QuenyxAiCapabilityCatalog` (Sprint 19) — no
+  duplicated catalog.
+- **Usage / Costs** are **derived** from real token counts; costs multiply by an optional
+  `config('ai.workspace.pricing')` table and never fabricate currency.
+- **Prompt Templates** (`ai_prompt_templates`), **Provider Settings** (`ai_provider_settings`,
+  encrypted, write‑only secrets), and **Permissions** (`ai_workspace_permissions`) add the missing
+  governance concepts only.
+- **Audit**: conversations, provider updates, template changes, and permission changes are logged via
+  `AiAccessAuditLogger` / `AiWorkspaceAuditLogger` (never secrets or content).
+- **Memory**: no durable AI memory store exists yet, so the Memory surface honestly reports
+  "not enabled" instead of fabricating data.
+
+Master switch: `ai.feature_flags.workspace_enabled` (env `AI_WORKSPACE_ENABLED`, default on; safe
+because chat falls back to the mock provider and metrics read 0 with no activity).

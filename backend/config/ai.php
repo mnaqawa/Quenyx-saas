@@ -37,6 +37,38 @@ return [
         'persist_conversations' => (bool) env('AI_PERSIST_CONVERSATIONS', false),
         // When false, user/assistant prompt CONTENT is never written to storage.
         'prompt_logging' => (bool) env('AI_PROMPT_LOGGING', false),
+
+        // Sprint 20 — Unified AI Workspace. Master switch for the platform-level AI Workspace
+        // surface (read APIs + admin). ON by default: the surface is safe with no real provider
+        // configured (chat falls back to the mock provider; usage/costs are derived from real data
+        // and simply read 0 when nothing has been recorded).
+        'workspace_enabled' => (bool) env('AI_WORKSPACE_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sprint 20 — Unified AI Workspace
+    |--------------------------------------------------------------------------
+    | Platform-level workspace AI surface. Cost tracking is DERIVED from the real
+    | token counts already stored on ai_conversations — never fabricated. A price
+    | per 1K tokens may be configured per provider/model; when no price is
+    | configured the cost APIs return token totals with pricing_configured=false
+    | and NO currency amounts (so the UI shows an honest "pricing not configured"
+    | state rather than a fake number).
+    */
+    'workspace' => [
+        'currency' => env('AI_COST_CURRENCY', 'USD'),
+
+        // Conversation list / activity page size caps.
+        'max_conversations' => (int) env('AI_WORKSPACE_MAX_CONVERSATIONS', 50),
+        'max_activity' => (int) env('AI_WORKSPACE_MAX_ACTIVITY', 50),
+
+        // Optional pricing per 1,000 tokens. Keys are provider keys; each maps to a
+        // [prompt, completion] price pair (floats). Leave empty for token-only mode.
+        // Example: 'openai' => ['prompt' => 0.005, 'completion' => 0.015].
+        'pricing' => [
+            // 'openai' => ['prompt' => (float) env('AI_PRICE_OPENAI_PROMPT', 0), 'completion' => (float) env('AI_PRICE_OPENAI_COMPLETION', 0)],
+        ],
     ],
 
     /*
@@ -216,6 +248,11 @@ return [
         ],
         'skills' => [
             'max_attempts' => (int) env('AI_SKILLS_RATE_LIMIT', 60),
+            'decay_minutes' => 1,
+        ],
+        // Sprint 20 — Unified AI Workspace read/admin endpoints.
+        'workspace' => [
+            'max_attempts' => (int) env('AI_WORKSPACE_RATE_LIMIT', 120),
             'decay_minutes' => 1,
         ],
     ],

@@ -48,6 +48,12 @@ function WorkspaceGuard() {
     return <Outlet />
   }
 
+  // Unified AI Workspace (Sprint 20) handles the no-workspace state itself (renders a
+  // "select a workspace" empty state), so let it through without bouncing.
+  if (location.pathname.startsWith('/ai-workspace')) {
+    return <Outlet />
+  }
+
   // If no workspace selected, redirect to workspaces page
   if (!selectedWorkspaceId) {
     return <Navigate to="/app/workspaces" replace />

@@ -258,4 +258,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // QCIF Sprint 19 — Quenyx AI Platform Foundation (shared AI runtime capability catalog) — see routes/quenyx-ai.php
     require base_path('routes/quenyx-ai.php');
+
+    // Sprint 20 — Unified AI Workspace (platform-level AI surface; workspace-scoped by UUID) — see routes/ai-workspace.php
+    require base_path('routes/ai-workspace.php');
 });

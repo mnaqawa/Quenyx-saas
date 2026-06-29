@@ -76,6 +76,7 @@ class ProjectController extends Controller
                     return [
                         'project' => [
                             'id' => $project->id,
+                            'uuid' => $project->uuid,
                             'name' => $project->name ?? '',
                             'status' => $project->status ?? 'active',
                             'created_at' => $project->created_at ? $project->created_at->toISOString() : null,

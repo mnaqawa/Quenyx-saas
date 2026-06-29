@@ -169,7 +169,46 @@ retrieval context.
 `GET /api/ai/platform/capabilities` → modules (adapters), skills, providers, reasoning/retrieval/RAG
 status, supported contexts, and HUB‑wide `module_catalog` (production/reserved/planned).
 
-## 17. Notes on examples
+## 17. Unified AI Workspace (Sprint 20)
+
+Platform‑level AI surface beside Dashboard / Workspaces / Integrations. All routes are flat under
+`/api/ai/*`, Sanctum‑protected, throttled by `ai-workspace`, and **scoped by a required `workspace`
+UUID** (query string for reads/deletes, request body for writes) — never a numeric id. Every resource
+id returned is a UUID. Authorization: `ProjectPolicy::accessAi` (any member) for reads,
+`administerAi` (owner/admin) for provider/permission changes, plus a fine‑grained capability check
+(`can_use_ai`, `can_manage_templates`, `can_manage_providers`, `can_view_costs`, `can_administer`).
+
+| Method | Endpoint | Capability | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/ai/workspace/summary` | access | counts, tokens, flags + caller permissions |
+| GET | `/api/ai/conversations` | access | list (metadata only) |
+| POST | `/api/ai/conversations` | use_ai | start a conversation |
+| GET | `/api/ai/conversations/{uuid}` | access | conversation + messages |
+| POST | `/api/ai/conversations/{uuid}/messages` | use_ai | runs the shared AI runtime (mock until AI enabled) |
+| GET | `/api/ai/activity` | access | AI audit timeline |
+| GET | `/api/ai/notifications` | access | governance events |
+| GET | `/api/ai/usage` | view_costs | token usage totals/by‑provider/daily |
+| GET | `/api/ai/costs` | view_costs | tokens × configured pricing; `pricing_configured` flag |
+| GET | `/api/ai/skills` | access | dynamic skill catalog (Sprint 19) |
+| GET | `/api/ai/capabilities` | access | full platform capability catalog |
+| GET | `/api/ai/prompt-templates` | access | list |
+| POST | `/api/ai/prompt-templates` | manage_templates | create |
+| PUT | `/api/ai/prompt-templates/{uuid}` | manage_templates | update |
+| DELETE | `/api/ai/prompt-templates/{uuid}` | manage_templates | delete |
+| GET | `/api/ai/providers` | access | provider prefs (secrets never returned) |
+| PUT | `/api/ai/providers/{uuid}/settings` | manage_providers + admin | encrypted secret write‑only |
+| GET | `/api/ai/permissions` | admin | effective per‑role matrix |
+| PUT | `/api/ai/permissions` | admin | upsert per‑role overrides |
+
+Cost tracking is **derived** from real `ai_conversations` token counts and an optional
+`config('ai.workspace.pricing')` table; with no pricing configured, responses carry token totals and
+`pricing_configured=false` with **no fabricated currency**. Conversation message content is stored
+only when `ai.feature_flags.prompt_logging` is enabled (privacy‑preserving default). Provider settings
+addressing uses a deterministic UUIDv5 (workspace + provider key) so providers are UUID‑addressable
+even before a settings row exists. Provider id `uuid` is also added (additively) to the workspace list
+(`GET /api/workspaces`) and `ProjectResource` so the UI can pass the workspace UUID.
+
+## 18. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource
