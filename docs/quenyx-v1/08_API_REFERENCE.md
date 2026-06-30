@@ -4,7 +4,7 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.1 |
+> | Document Version | 2.2 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
@@ -20,6 +20,7 @@
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints. |
 > | 2.1 | 2026-06-30 | Added QynSight Operations Intelligence (Sprint 21) endpoints under `/api/qynsight/intelligence/*`. |
+> | 2.2 | 2026-06-30 | Added the AI Adapter discovery API (`/api/ai/adapters`, `/api/ai/actions`) and QynAsset Asset Intelligence (`/api/qynasset/intelligence/*`) — Sprint 22. |
 
 **Audience:** Engineers, integrators.
 **Source:** Derived from `php artisan route:list` (261 routes) and the `routes/*.php` files at
@@ -284,7 +285,40 @@ All write endpoints accept `{ "workspace": "<uuid>", … }`. The copilot accepts
 underlying operational data stays real. **No operational data is fabricated**; when evidence is
 insufficient the response says so.
 
-## 19. Notes on examples
+## 19. QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)
+
+**AI Adapter discovery** (flat under `/api/ai/*`, Sanctum + `throttle:ai-workspace`, required
+`workspace` UUID, RBAC `accessAi`, audited, **entitlement-filtered** per workspace):
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/ai/adapters?workspace={uuid}` | Every AI module adapter the workspace is entitled to (metadata, capabilities, entities, skills, providers, actions) |
+| GET | `/api/ai/adapters/{module}?workspace={uuid}` | One adapter descriptor |
+| GET | `/api/ai/adapters/capabilities?workspace={uuid}` | Aggregated capabilities across entitled adapters |
+| GET | `/api/ai/actions?workspace={uuid}` | Aggregated contextual actions across entitled adapters |
+
+The AI Workspace builds navigation/actions from these — there is **no hard-coded module list**.
+
+**QynAsset Asset Intelligence** (flat under `/api/qynasset/intelligence/*`, Sanctum +
+`throttle:ai-workspace`, `qynasset` entitlement, RBAC `accessAi`, `can_use_ai` for AI actions,
+UUID-only):
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/qynasset/intelligence/overview?workspace={uuid}` | Asset Intelligence dashboard: inventory summary, discovery, capacity, recommendations, recent AI investigations |
+| POST | `/api/qynasset/intelligence/copilot` | Asset Copilot — grounded Q&A; reuses a Quenyx AI conversation |
+| GET | `/api/qynasset/intelligence/recommendations?workspace={uuid}` | Evidence-based asset recommendations |
+| POST | `/api/qynasset/intelligence/assets/{uuid}/explain` | Asset (✨ Explain) — discovery, activity, hardware, gaps |
+| POST | `/api/qynasset/intelligence/assets/{uuid}/dependencies` | Dependency (✨ Analyze) — depends on / serves, neighbors |
+| POST | `/api/qynasset/intelligence/assets/{uuid}/lifecycle` | Lifecycle (✨ Forecast) — replacement priority, business impact (warranty/EOL **not collected**) |
+| POST | `/api/qynasset/intelligence/assets/{uuid}/impact` | Relationship (✨ Impact) — blast radius / SPOF |
+| POST | `/api/qynasset/intelligence/licenses/review` | License (✨ Review) — honest "not collected" until an inventory/license integration exists |
+
+Asset UUIDs are deterministic UUIDv5 (`AssetEntityId`) over the discovered host; **no numeric ids are
+exposed**. Inventory, hardware, lifecycle, and license facts are **real or honestly absent** — never
+fabricated.
+
+## 20. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource

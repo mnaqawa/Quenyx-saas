@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Adapter Developer Guide — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "AI Adapter Developer Guide"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Confidential — Engineering"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Confidential — Engineering</div>
+  <div class="tp-title">AI Adapter Developer Guide</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v1.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>1.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Confidential — Engineering</td></tr>
+<tr><th>Owner</th><td>AI Platform Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
+<tr><th>Document Type</th><td>Developer guide</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026-06-30</td><td>Initial guide for the AI Adapter Platform (Sprint 22): adapter lifecycle, registration, capabilities, actions, context, best practices, and a worked example for adding a new module.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Engineering. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-mental-model"><span class="toc-text">1. Mental model</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-the-contract"><span class="toc-text">2. The contract</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#2-1-backward-compatibility"><span class="toc-text">2.1 Backward compatibility</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-lifecycle"><span class="toc-text">3. Lifecycle</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-capabilities"><span class="toc-text">4. Capabilities</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-actions"><span class="toc-text">5. Actions</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-context"><span class="toc-text">6. Context</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-uuid-only-entity-ids"><span class="toc-text">7. UUID-only entity ids</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-narrating-with-the-shared-runtime"><span class="toc-text">8. Narrating with the shared runtime</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#9-security-checklist"><span class="toc-text">9. Security checklist</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#10-best-practices"><span class="toc-text">10. Best practices</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#11-worked-example-adding-quot-qynrun-quot-ai-sketch"><span class="toc-text">11. Worked example — adding &amp;quot;QynRun&amp;quot; AI (sketch)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-reference-files"><span class="toc-text">12. Reference files</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>23 — AI Adapter Developer Guide</h1>
+<p><strong>Audience:</strong> Module engineers adding AI to a Quenyx module.
+<strong>Scope:</strong> How to make any module (QynRun, QynNotify, QynReact, QynKnow, QynSupport, QynBalance,
+QynVA, …) an AI consumer using the shared <strong>AI Adapter Platform</strong> — without duplicating any AI logic.</p>
+<hr />
+<h2 id="1-mental-model">1. Mental model</h2>
+<p>Quenyx AI never branches on module names. Every module exposes its AI surface through an <strong>adapter</strong>;
+the <strong>registry</strong> discovers it; the <strong>shared narrator</strong> does the one and only provider call.</p>
+<pre><code>Quenyx AI
+  → AI Adapter Registry          (discovery: modules, capabilities, actions, entities)
+    → Your Module Adapter        (metadata + capabilities + actions + buildContext)
+      → Your domain services     (deterministic, real-data evidence)
+        → ModuleAiNarrator       (the SINGLE provider-calling point)
+          → Shared AI Platform   (provider registry, prompt orchestrator, audit, conversations)
+</code></pre>
+<p>Two production adapters ship today: <strong>QynSight</strong> (Operations Intelligence, Sprint 21) and <strong>QynAsset</strong>
+(Asset Intelligence, Sprint 22). Use them as references (<code>app/Services/QuenyxAI/Adapters/</code>).</p>
+<h2 id="2-the-contract">2. The contract</h2>
+<p><code>App\Contracts\QuenyxAI\AiModuleAdapter</code> is the coarse, discovery-oriented contract:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>moduleKey(): string</code></td>
+<td>Stable id, equal to the entitlement key (e.g. <code>qynrun</code>).</td>
+</tr>
+<tr>
+<td><code>moduleName(): string</code></td>
+<td>Human-readable name.</td>
+</tr>
+<tr>
+<td><code>moduleDescription(): string</code></td>
+<td>One-line description of the AI surface.</td>
+</tr>
+<tr>
+<td><code>moduleCategory(): string</code></td>
+<td>Functional category (e.g. <code>Operations</code>, <code>Asset Management</code>).</td>
+</tr>
+<tr>
+<td><code>moduleVersion(): string</code></td>
+<td>Adapter semantic version.</td>
+</tr>
+<tr>
+<td><code>moduleIcon(): string</code></td>
+<td>Renderer-agnostic icon key.</td>
+</tr>
+<tr>
+<td><code>capabilities(): string[]</code></td>
+<td>Machine-readable capability keys.</td>
+</tr>
+<tr>
+<td><code>supportedEntities(): string[]</code></td>
+<td>Entity types your actions operate on.</td>
+</tr>
+<tr>
+<td><code>supportedSkills(): string[]</code></td>
+<td>Shared skills you rely on (<code>[]</code> = use all).</td>
+</tr>
+<tr>
+<td><code>supportedProviders(): string[]</code></td>
+<td>Providers you pin (<code>[]</code> = platform default — the norm).</td>
+</tr>
+<tr>
+<td><code>availableActions(): array[]</code></td>
+<td>Contextual actions → UUID-only endpoints.</td>
+</tr>
+<tr>
+<td><code>buildContext(Project, options): array</code></td>
+<td>Deterministic, real-data context (no provider call).</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> this is the companion to the fine-grained <code>AiModuleAdapterInterface</code> (the 3-stage
+context → reasoning → prompt pipeline). The coarse contract answers <em>&quot;what intelligence does this
+module expose&quot;</em>; the fine-grained one answers <em>&quot;how is one request turned into a prompt&quot;</em>. Most new
+modules only need the coarse contract plus <code>ModuleAiNarrator</code>.</p>
+</blockquote>
+<h3 id="2-1-backward-compatibility">2.1 Backward compatibility</h3>
+<p>Extend <code>App\Services\QuenyxAI\Adapters\AbstractAiModuleAdapter</code>. It supplies safe defaults for the
+metadata + <code>supportedEntities/Skills/Providers</code> methods, so you implement only what you need and the
+contract can grow without breaking existing adapters. (This is exactly how Sprint 21's
+<code>QynSightAiAdapter</code> gained metadata in Sprint 22 with <strong>no behavior change</strong>.)</p>
+<h2 id="3-lifecycle">3. Lifecycle</h2>
+<ol>
+<li><strong>Implement</strong> an adapter extending <code>AbstractAiModuleAdapter</code>.</li>
+<li><strong>Register</strong> it once in <code>App\Providers\AppServiceProvider::boot()</code>:
+<pre><code class="language-php">$registry = $this-&gt;app-&gt;make(AiModuleAdapterRegistry::class);
+$registry-&gt;register($this-&gt;app-&gt;make(QynRunAiAdapter::class));
+</code></pre>
+</li>
+<li><strong>Done.</strong> Discovery APIs, capability/action aggregation, and the AI Workspace pick it up
+automatically. No platform code changes.</li>
+</ol>
+<h2 id="4-capabilities">4. Capabilities</h2>
+<p><code>capabilities()</code> returns stable, snake_case keys (e.g. <code>asset_discovery_intelligence</code>). They are
+machine-readable identifiers used to group actions and drive navigation. Keep them stable once
+published; add new ones rather than renaming.</p>
+<h2 id="5-actions">5. Actions</h2>
+<p><code>availableActions()</code> returns contextual &quot;✨ Quenyx AI&quot; actions. Each action declares:</p>
+<pre><code class="language-php">[
+  'key' =&gt; 'explain_asset',                 // unique within the module
+  'capability' =&gt; 'asset_discovery_intelligence',
+  'target' =&gt; 'asset',                      // entity type (see supportedEntities)
+  'label' =&gt; 'Explain',                     // short verb for the UI
+  'method' =&gt; 'POST',
+  'endpoint' =&gt; '/api/qynasset/intelligence/assets/{uuid}/explain', // UUID-only, workspace-scoped
+],
+</code></pre>
+<p>Rules: endpoints are <strong>workspace-scoped</strong> (<code>?workspace=</code> / body) and <strong>UUID-only</strong> — never expose a
+numeric id. If your entity has numeric keys, derive a deterministic UUIDv5 (see §7).</p>
+<h2 id="6-context">6. Context</h2>
+<p><code>buildContext(Project $project, array $options = [])</code> returns a deterministic snapshot built from
+<strong>real domain data only</strong>, plus grounding guardrails. It <strong>must not</strong> call a provider. When evidence
+is missing, say so in the context (e.g. <code>available =&gt; false</code>) — never fabricate. The shared narrator
+turns this context into prose.</p>
+<h2 id="7-uuid-only-entity-ids">7. UUID-only entity ids</h2>
+<p>Reuse the deterministic UUIDv5 pattern (<code>Ramsey\Uuid::uuid5</code>):</p>
+<pre><code class="language-php">Uuid::uuid5(Uuid::NAMESPACE_URL, &quot;quenyx://{$module}/{$type}/{$workspaceId}/{$id}&quot;)-&gt;toString();
+</code></pre>
+<p>Provide a resolver that scans the small, workspace-scoped candidate set to map a UUID back to the
+row. See <code>App\Support\Asset\AssetEntityId</code> + <code>AssetEntityResolver</code> (and the QynSight equivalents).</p>
+<h2 id="8-narrating-with-the-shared-runtime">8. Narrating with the shared runtime</h2>
+<p>Never call a provider directly. Inject <code>App\Services\Ai\ModuleAiNarrator</code> and call <code>narrate()</code>:</p>
+<pre><code class="language-php">$ai = $this-&gt;narrator-&gt;narrate(
+    $project, $user,
+    'my_context_type',
+    $evidence,                       // real, deterministic data
+    $question,                       // grounded instruction
+    self::ROLE_PREAMBLE,             // &quot;Use ONLY the evidence; never fabricate…&quot;
+    'mymodule_intelligence_explain', // fully-qualified audit action
+    'mymodule.intelligence.explain', // endpoint label for audit
+    ModuleAiNarrator::DEFAULT_GUARDRAILS,
+    'text',
+    $citations,                      // evidence references the model must cite
+);
+</code></pre>
+<p>The narrator handles provider resolution (mock when AI is disabled, so the surface is always
+production-safe), grounded prompt assembly, audit, and a stable response envelope. For chat-style
+features, also reuse <code>AiConversationRepository</code> so threads appear in Quenyx AI conversations (see
+<code>AssetIntelligenceService::copilot</code>).</p>
+<h2 id="9-security-checklist">9. Security checklist</h2>
+<p>Every module AI endpoint must be: workspace-aware (required <code>workspace</code> UUID), entitlement-gated
+(your <code>moduleKey</code>), RBAC-gated (<code>ProjectPolicy::accessAi</code>), capability-gated (<code>can_use_ai</code> for AI
+actions), audited, provider-logged, conversation-logged (for chat), rate-limited
+(<code>throttle:ai-workspace</code>), and UUID-only. Use a base controller (see
+<code>AssetIntelligenceBaseController</code>) to centralise this envelope.</p>
+<h2 id="10-best-practices">10. Best practices</h2>
+<ul>
+<li><strong>Reuse, don't duplicate.</strong> No new provider registry, prompt engine, reasoning engine, RAG engine,
+or chat UI. Reuse platform services and your own module's domain services.</li>
+<li><strong>Evidence first.</strong> Business logic decides <em>what</em> (deterministic); AI only <em>renders</em>. Every
+recommendation cites evidence.</li>
+<li><strong>Be honest about gaps.</strong> If a capability has no data source, expose it but report
+<code>available =&gt; false</code> with the integration required — never fabricate.</li>
+<li><strong>Stable ids &amp; keys.</strong> UUID-only entities; stable capability/action keys.</li>
+<li><strong>i18n.</strong> Provide EN + AR for any new UI strings.</li>
+</ul>
+<h2 id="11-worked-example-adding-quot-qynrun-quot-ai-sketch">11. Worked example — adding &quot;QynRun&quot; AI (sketch)</h2>
+<ol>
+<li><code>app/Services/QuenyxAI/Adapters/QynRunAiAdapter.php</code> extends <code>AbstractAiModuleAdapter</code>; declares
+<code>moduleKey() = 'qynrun'</code>, capabilities (e.g. <code>job_intelligence</code>, <code>pipeline_health</code>), actions, and
+<code>buildContext()</code> from QynRun's real job/run data.</li>
+<li><code>app/Services/Run/Intelligence/RunEvidenceCollector.php</code> + feature services build deterministic
+evidence; <code>RunIntelligenceService</code> narrates via <code>ModuleAiNarrator</code>.</li>
+<li><code>app/Http/Controllers/Run/Intelligence/*</code> + <code>routes/qynrun-intelligence.php</code> expose UUID-only,
+workspace-scoped endpoints behind the standard envelope; include the route file from <code>api.php</code>.</li>
+<li>Register <code>QynRunAiAdapter</code> in <code>AppServiceProvider::boot()</code>.</li>
+<li>Frontend: a <code>runIntelligenceService.ts</code>, a dashboard page, and contextual buttons reusing the
+generic <code>AiCopilotDrawer</code>. Add EN/AR strings.</li>
+</ol>
+<p>That's it — the discovery APIs, capability aggregation, and AI Workspace surface QynRun
+automatically, with no platform changes.</p>
+<h2 id="12-reference-files">12. Reference files</h2>
+<ul>
+<li>Contract: <code>app/Contracts/QuenyxAI/AiModuleAdapter.php</code></li>
+<li>Base: <code>app/Services/QuenyxAI/Adapters/AbstractAiModuleAdapter.php</code></li>
+<li>Registry: <code>app/Services/QuenyxAI/AiModuleAdapterRegistry.php</code></li>
+<li>Shared narrator: <code>app/Services/Ai/ModuleAiNarrator.php</code></li>
+<li>Discovery API: <code>app/Http/Controllers/Ai/Workspace/AiAdapterController.php</code></li>
+<li>Example adapters: <code>QynSightAiAdapter</code>, <code>QynAssetAiAdapter</code></li>
+<li>Example module: <code>app/Services/Asset/Intelligence/*</code>, <code>routes/qynasset-intelligence.php</code></li>
+</ul>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

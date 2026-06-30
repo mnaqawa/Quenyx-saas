@@ -264,4 +264,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sprint 21 — QynSight Operations Intelligence (reuses the Quenyx AI runtime; workspace-scoped by UUID) — see routes/qynsight-intelligence.php
     require base_path('routes/qynsight-intelligence.php');
+
+    // Sprint 22 — QynAsset Asset Intelligence (second production AI adapter; reuses the Quenyx AI runtime) — see routes/qynasset-intelligence.php
+    require base_path('routes/qynasset-intelligence.php');
 });

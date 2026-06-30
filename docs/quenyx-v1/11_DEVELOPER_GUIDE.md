@@ -190,3 +190,23 @@ consumer without duplicating AI logic**. Follow it when adding intelligence to a
   backed by a real Quenyx AI conversation. Add **both** `en` and `ar` keys in `i18n/translations.ts`.
 - **Validate**: `php -l` the new PHP files, `php artisan route:list | grep qynsight/intelligence`,
   `php artisan test --filter=OperationsIntelligence`, and `npm run build` / `npm run lint`.
+
+### Adding AI to a module (the AI Adapter Platform — Sprint 22)
+
+Module AI is now a **plug‑in**. To make any module an AI consumer:
+
+1. **Implement** an `App\Contracts\QuenyxAI\AiModuleAdapter` by extending
+   `AbstractAiModuleAdapter` (declare `moduleKey`, metadata, `capabilities()`, `availableActions()`
+   with UUID‑only endpoints, and `buildContext()` from your **real** domain data).
+2. **Build evidence + narrate.** Put deterministic evidence in module services and narrate via the
+   shared `App\Services\Ai\ModuleAiNarrator` — **never call a provider directly** and never duplicate
+   provider/prompt/reasoning/RAG logic.
+3. **Register** the adapter once in `AppServiceProvider::boot()`:
+   `$registry->register($this->app->make(MyModuleAiAdapter::class));`
+4. **Expose** UUID‑only, workspace‑scoped routes behind the standard envelope (copy
+   `AssetIntelligenceBaseController`), and reuse the generic `AiCopilotDrawer` on the frontend.
+
+That's it — the discovery APIs (`/api/ai/adapters`, `/api/ai/actions`), capability aggregation, and
+the AI Workspace surface your module automatically. Reference implementation: **QynAsset**
+(`app/Services/Asset/Intelligence/*`, `QynAssetAiAdapter`, `routes/qynasset-intelligence.php`). Full
+walkthrough in the **AI Adapter Developer Guide (Doc 23)**.

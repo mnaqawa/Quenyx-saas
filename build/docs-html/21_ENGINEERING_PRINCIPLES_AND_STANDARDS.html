@@ -125,6 +125,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#12-documentation-standards"><span class="toc-text">12. Documentation standards</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#13-release-standards"><span class="toc-text">13. Release standards</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#14-security-by-design"><span class="toc-text">14. Security‑by‑design</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#ai-adapter-platform-principles-sprint-22"><span class="toc-text">AI Adapter Platform principles (Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -198,6 +199,22 @@ into the AI core.</p>
 <li>Audit sensitive actions.</li>
 <li>Prompt logging, conversation persistence, RAG, and tenant‑evidence embeddings <strong>off by default</strong>.</li>
 <li>Secrets in env/secrets manager; <code>.env</code> never committed.</li>
+</ul>
+<hr />
+<h2 id="ai-adapter-platform-principles-sprint-22">AI Adapter Platform principles (Sprint 22)</h2>
+<ul>
+<li><strong>One way to add module AI.</strong> Modules expose AI through an <code>AiModuleAdapter</code> registered with the
+<code>AiModuleAdapterRegistry</code>. There is <strong>no per‑module branching</strong> (<code>if module == …</code>) anywhere in the
+platform; capabilities, actions, and navigation are <strong>discovered</strong> dynamically.</li>
+<li><strong>One provider‑calling point.</strong> All module intelligence narrates through the shared
+<code>ModuleAiNarrator</code>. Adapters and services <strong>never</strong> call a provider directly and <strong>never</strong> duplicate
+provider, prompt, reasoning, retrieval/RAG, or orchestration logic.</li>
+<li><strong>Backward‑compatible contracts.</strong> Contract growth (e.g. new metadata methods) ships with safe
+defaults (<code>AbstractAiModuleAdapter</code>) so existing adapters keep working unchanged.</li>
+<li><strong>Evidence or honesty.</strong> Adapters ground every answer in <strong>real</strong> domain data; capabilities without
+a data source are exposed but reported as <em>not collected</em> — never fabricated.</li>
+<li><strong>Same governance for every adapter.</strong> Workspace‑scoped, entitlement‑gated, RBAC‑gated,
+capability‑gated, audited, provider/conversation‑logged, rate‑limited, and UUID‑only.</li>
 </ul>
 <hr />
 <blockquote>

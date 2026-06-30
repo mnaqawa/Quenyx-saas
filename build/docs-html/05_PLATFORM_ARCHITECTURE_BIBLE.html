@@ -133,6 +133,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#18-current-limitations"><span class="toc-text">18. Current limitations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (RC1.1)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-21-qynsight-operations-intelligence-additive-intelligence-layer"><span class="toc-text">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#ai-adapter-platform-qynasset-asset-intelligence-sprint-22"><span class="toc-text">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -476,6 +477,29 @@ Sanctum + <code>throttle:ai-workspace</code>, gated by the <code>qynsight</code>
 <code>OperationsCopilotDrawer</code> / <code>OperationsAlertDrawer</code> / <code>QuenyxAiButton</code> (contextual ✨ actions on host,
 service, alert, capacity, and infrastructure‑map pages), <code>operationsIntelligenceService</code>, and full
 EN/AR i18n. Copilot threads are real Quenyx AI conversations.</li>
+</ul>
+<h2 id="ai-adapter-platform-qynasset-asset-intelligence-sprint-22">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</h2>
+<p>Sprint 22 generalised module AI into a <strong>reusable adapter framework</strong> and added QynAsset as the
+<strong>second production AI adapter</strong> — with no per‑module branching anywhere.</p>
+<ul>
+<li><strong>Adapter framework.</strong> <code>App\Contracts\QuenyxAI\AiModuleAdapter</code> (coarse capability/action contract)
+<ul>
+<li><code>AbstractAiModuleAdapter</code> (backward‑compatible metadata defaults) +
+<code>App\Services\QuenyxAI\AiModuleAdapterRegistry</code> (singleton discovery/registration/resolution).
+Modules register one line in <code>AppServiceProvider::boot()</code>; the platform discovers them dynamically.</li>
+</ul>
+</li>
+<li><strong>Single provider‑calling point.</strong> <code>App\Services\Ai\ModuleAiNarrator</code> is the only place module
+intelligence talks to a provider (reusing <code>AiProviderRegistry</code>, <code>CompliancePromptOrchestrator</code>,
+<code>AiAccessAuditLogger</code>). Sprint 21's <code>OperationsAiAnalyst</code> now <strong>delegates</strong> to it (behavior
+preserved). No duplicated provider/prompt/reasoning/RAG/orchestration.</li>
+<li><strong>Discovery API.</strong> <code>/api/ai/adapters</code>, <code>/api/ai/adapters/{module}</code>, <code>/api/ai/adapters/capabilities</code>,
+<code>/api/ai/actions</code> — entitlement‑filtered, RBAC‑gated, audited (Doc 08 §19).</li>
+<li><strong>QynAsset.</strong> An asset is a <strong>discovered host</strong> (<code>observe_targets_hosts</code> + <code>agents</code> +
+<code>agent_inventories</code>); hardware reuses Capacity Planning, dependencies reuse the Infrastructure Map.
+Services in <code>App\Services\Asset\Intelligence\*</code>; UUID‑only via <code>AssetEntityId</code>; API in
+<code>routes/qynasset-intelligence.php</code>. License/lifecycle‑date facts have no source and are reported as
+<strong>not collected</strong> — never fabricated. See Docs 22 and 23.</li>
 </ul>
 
 </main>

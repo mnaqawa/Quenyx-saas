@@ -175,11 +175,19 @@ architecturally sound.
 |---|---|---|
 | Sprint 20 | Unified AI Workspace ("Quenyx AI") | ✅ Delivered in RC1 |
 | Sprint 21 | Operations Intelligence | ✅ Delivered in RC1 |
-| Sprint 22 | Asset & Knowledge Intelligence | Planned |
+| Sprint 22 | Asset Intelligence + AI Adapter Platform | ✅ Delivered in RC1 |
 | Sprint 23 | Automation & Response Intelligence | Planned |
 | Sprint 24 | Service, Notification & Cost Intelligence | Planned |
 | Sprint 25 | Enterprise Intelligence Platform | Planned |
 
-There is no roadmap content beyond Sprint 25 at this time. Hidden business modules (QynAsset, QynRun,
+There is no roadmap content beyond Sprint 25 at this time. Hidden business modules (QynRun,
 QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance) already exist as registered platform
 modules and are **disabled in the navigation by a sidebar flag** until their production rollout.
+
+**Sprint 22 — Asset Intelligence + AI Adapter Platform.** Quenyx AI became a true **platform**: module
+AI is now a discoverable **adapter** (registry + shared narrator) with **no per‑module branching**, so
+every future module plugs in the same way. **QynAsset** is the second production AI consumer (after
+QynSight), turning the **real discovered inventory** into explainable Asset Intelligence — discovery,
+CMDB questions, dependencies, hardware/capacity, lifecycle, and evidence‑based recommendations. Facts
+with no data source (software licenses, warranty/EOL dates) are reported honestly as *not collected*,
+never fabricated. See Docs 22 (QynAsset Guide) and 23 (AI Adapter Developer Guide).

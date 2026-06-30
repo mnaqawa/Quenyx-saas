@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Ai\Workspace\AiAdapterController;
 use App\Http\Controllers\Ai\Workspace\AiCapabilityController;
 use App\Http\Controllers\Ai\Workspace\AiConversationController;
 use App\Http\Controllers\Ai\Workspace\AiPermissionController;
@@ -41,6 +42,14 @@ Route::prefix('ai')
         // Capability explorer + skills browser (dynamic Quenyx AI Platform catalog).
         Route::get('/capabilities', [AiCapabilityController::class, 'capabilities']);
         Route::get('/skills', [AiCapabilityController::class, 'skills']);
+
+        // Sprint 22 — AI Adapter Platform discovery (dynamic; no per-module branching). Entitlement-
+        // filtered, RBAC-gated, audited. `/adapters/capabilities` is the aggregated adapter capability
+        // view (distinct from the platform catalog at `/capabilities` above).
+        Route::get('/adapters', [AiAdapterController::class, 'index']);
+        Route::get('/adapters/capabilities', [AiAdapterController::class, 'capabilities']);
+        Route::get('/adapters/{module}', [AiAdapterController::class, 'show']);
+        Route::get('/actions', [AiAdapterController::class, 'actions']);
 
         // Prompt templates (CRUD).
         Route::get('/prompt-templates', [AiPromptTemplateController::class, 'index']);

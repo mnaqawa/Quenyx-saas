@@ -86,6 +86,8 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | 19 | [Security Whitepaper](./19_SECURITY_WHITEPAPER.md) | [PDF](../pdf/19_SECURITY_WHITEPAPER.pdf) | Security, vCISO, auditors | Security model |
 | 20 | [Compliance Whitepaper](./20_COMPLIANCE_WHITEPAPER.md) | [PDF](../pdf/20_COMPLIANCE_WHITEPAPER.pdf) | Compliance, auditors | Determinism + provenance |
 | 21 | [Engineering Principles & Standards](./21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md) | [PDF](../pdf/21_ENGINEERING_PRINCIPLES_AND_STANDARDS.pdf) | Engineering org | How we build |
+| 22 | [QynAsset Guide](./22_QYNASSET_GUIDE.md) | [PDF](../pdf/22_QYNASSET_GUIDE.pdf) | QynAsset users | Asset Intelligence module |
+| 23 | [AI Adapter Developer Guide](./23_AI_ADAPTER_DEVELOPER_GUIDE.md) | [PDF](../pdf/23_AI_ADAPTER_DEVELOPER_GUIDE.pdf) | Module engineers | Add AI to any module |
 | QA | [QA Audit Report](./QA_AUDIT_REPORT.md) | — | Eng leadership, auditors | Track‑B audit results |
 
 ---

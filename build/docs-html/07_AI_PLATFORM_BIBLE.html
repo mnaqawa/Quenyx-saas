@@ -94,8 +94,8 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Confidential — Architecture</div>
   <div class="tp-title">Quenyx AI Platform Bible</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
-  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.2</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.2</td></tr>
 <tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
 <tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
 <tr><th>Classification</th><td>Confidential — Architecture</td></tr>
@@ -104,7 +104,7 @@ body{margin:0}
 <tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Architecture reference</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial AI platform bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: Quenyx AI documented as a shared platform layer (not &quot;QynShield AI&quot;); explicit future‑adapter list; Unified AI Workspace (Sprint 20).</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>QynSight becomes a live AI consumer: Operations Intelligence (Sprint 21) reuses the shared runtime (provider abstraction, prompt orchestration, conversation service, audit) with no duplicated AI logic.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial AI platform bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: Quenyx AI documented as a shared platform layer (not &quot;QynShield AI&quot;); explicit future‑adapter list; Unified AI Workspace (Sprint 20).</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>QynSight becomes a live AI consumer: Operations Intelligence (Sprint 21) reuses the shared runtime (provider abstraction, prompt orchestration, conversation service, audit) with no duplicated AI logic.</td></tr><tr><td>2.2</td><td>2026-06-30</td><td>AI Adapter Platform (Sprint 22): generalised module AI into a discoverable `AiModuleAdapter` + `AiModuleAdapterRegistry`; shared `ModuleAiNarrator` (single provider-calling point); QynAsset becomes the second production adapter (Asset Intelligence). No per-module branching.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
   <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
 </section>
@@ -136,6 +136,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#23-capability-catalog"><span class="toc-text">23. Capability catalog 🟢</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">Quenyx AI — Unified AI Workspace (Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#24-qynsight-operations-intelligence-sprint-21"><span class="toc-text">24. QynSight Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#25-ai-adapter-platform-sprint-22"><span class="toc-text">25. AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -337,6 +338,37 @@ exposed</strong>.</p>
 <p><strong>Governance.</strong> Every request is workspace‑scoped, gated by the <code>qynsight</code> entitlement, monitoring
 RBAC, and the <code>can_use_ai</code> capability, and is audited, provider‑logged, conversation‑logged, and rate
 limited (<code>throttle:ai-workspace</code>). Endpoints: see API Reference §18.</p>
+<h2 id="25-ai-adapter-platform-sprint-22">25. AI Adapter Platform (Sprint 22)</h2>
+<p>Sprint 22 generalised module AI into a <strong>reusable adapter framework</strong> so every future module
+(QynRun, QynNotify, QynReact, QynKnow, QynSupport, QynBalance, QynVA) plugs in the same way, with
+<strong>zero per‑module branching</strong> in the platform. The flow is:</p>
+<pre><code>Quenyx AI → AI Adapter Registry → {QynSight, QynAsset, …} → Capabilities → Actions → Shared AI Platform
+</code></pre>
+<p><strong>The contract — <code>App\Contracts\QuenyxAI\AiModuleAdapter</code>.</strong> A coarse, discovery‑oriented contract
+(companion to the fine‑grained <code>AiModuleAdapterInterface</code> 3‑stage pipeline). It exposes module
+metadata (<code>moduleKey/Name/Description/Category/Version/Icon</code>), <code>capabilities()</code>,
+<code>supportedEntities()</code>, <code>supportedSkills()</code>, <code>supportedProviders()</code>, <code>availableActions()</code>, and
+<code>buildContext()</code>. The metadata methods were added <strong>backward‑compatibly</strong> via
+<code>AbstractAiModuleAdapter</code>, which supplies defaults so existing adapters keep working and new adapters
+override only what they need (Sprint 21's <code>QynSightAiAdapter</code> was upgraded with metadata and <strong>no
+behavior change</strong>).</p>
+<p><strong>The registry — <code>App\Services\QuenyxAI\AiModuleAdapterRegistry</code>.</strong> A process‑wide singleton that
+discovers, registers, and resolves adapters, and aggregates their metadata, capabilities, actions,
+and entities. Modules register one line each in <code>AppServiceProvider::boot()</code>. It holds <strong>no business
+logic</strong> and <strong>calls no provider</strong> — it is pure discovery.</p>
+<p><strong>Single provider‑calling point — <code>App\Services\Ai\ModuleAiNarrator</code>.</strong> The shared narration service
+that every module uses to narrate deterministic evidence. It reuses <code>AiProviderRegistry</code>,
+<code>CompliancePromptOrchestrator</code> (grounding guardrails + citations), and <code>AiAccessAuditLogger</code>. There is
+now <strong>exactly one</strong> place in the codebase that talks to a provider for module intelligence; Sprint
+21's <code>OperationsAiAnalyst</code> was refactored to <strong>delegate</strong> to it (behavior preserved).</p>
+<p><strong>Discovery API (entitlement‑filtered, RBAC‑gated, audited).</strong> <code>GET /api/ai/adapters</code>,
+<code>GET /api/ai/adapters/{module}</code>, <code>GET /api/ai/adapters/capabilities</code>, <code>GET /api/ai/actions</code> — every
+response is scoped by a required <code>workspace</code> UUID and filtered to the adapters the workspace is
+entitled to (no data leakage). The AI Workspace builds navigation/actions from these, never from a
+hard‑coded module list.</p>
+<p><strong>Adding a module = two steps:</strong> implement an <code>AiModuleAdapter</code> (reusing the module's domain services
+and <code>ModuleAiNarrator</code>), then register it. Nothing else in the platform changes. See the <strong>AI Adapter
+Developer Guide (doc 23)</strong>.</p>
 
 </main>
 

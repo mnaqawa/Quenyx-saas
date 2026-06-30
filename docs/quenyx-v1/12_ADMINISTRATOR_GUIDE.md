@@ -159,3 +159,18 @@ provision, no new provider to configure, and no new secret to manage.
   conversations and appear in the AI Activity/History surfaces.
 - **Data prerequisites**: insights are only as rich as the monitoring data — ensure the scheduler and
   agents are healthy so hosts/services/alerts/metrics/capacity are current.
+
+### QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)
+
+- **Entitlement**: Asset Intelligence requires the `qynasset` module entitlement for the workspace, on
+  top of the same RBAC (`accessAi`) and `can_use_ai` capability used by all AI actions.
+- **Where**: the **Asset Intelligence** dashboard lives at
+  `/app/workspaces/:id/qynasset/intelligence`; contextual **✨** actions (Explain / Analyze / Forecast
+  / Impact / Review) open the Asset Copilot, which reuses Quenyx AI conversations.
+- **Data prerequisites**: an asset is a **discovered host** — enroll agents and define monitored hosts
+  so inventory, agent status, and hardware facts are present. Software‑license and warranty/EOL data
+  are **not collected** until an inventory/license integration is connected; until then those
+  capabilities honestly report "not collected" rather than fabricating values.
+- **Adapter discovery**: administrators/integrators can inspect which AI modules a workspace can use
+  via `GET /api/ai/adapters` (entitlement‑filtered). Every AI action remains audited, provider‑logged,
+  conversation‑logged, and rate‑limited.

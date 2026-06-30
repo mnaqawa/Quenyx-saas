@@ -2,7 +2,6 @@
 
 namespace App\Services\QuenyxAI\Adapters;
 
-use App\Contracts\QuenyxAI\AiModuleAdapter;
 use App\Models\Project;
 use App\Services\Observe\Intelligence\OperationsEvidenceCollector;
 
@@ -17,9 +16,13 @@ use App\Services\Observe\Intelligence\OperationsEvidenceCollector;
  * It moves NO business logic, duplicates NO AI logic, calls NO provider directly, and fabricates NO
  * operational data — when evidence is insufficient the context says so.
  *
+ * Sprint 22: this adapter now registers with the {@see \App\Services\QuenyxAI\AiModuleAdapterRegistry}
+ * and extends {@see AbstractAiModuleAdapter} so it gains module metadata without any behavior change —
+ * its capabilities, actions, and context are exactly as shipped in Sprint 21.
+ *
  * All action endpoints are workspace-scoped and UUID-only (see {@see \App\Support\Observe\OperationsEntityId}).
  */
-class QynSightAiAdapter implements AiModuleAdapter
+class QynSightAiAdapter extends AbstractAiModuleAdapter
 {
     public function __construct(
         private readonly OperationsEvidenceCollector $evidence,
@@ -28,6 +31,35 @@ class QynSightAiAdapter implements AiModuleAdapter
     public function moduleKey(): string
     {
         return 'qynsight';
+    }
+
+    public function moduleName(): string
+    {
+        return 'QynSight';
+    }
+
+    public function moduleDescription(): string
+    {
+        return 'Operations Intelligence — explains real monitoring data: alerts, root cause, '
+            .'incident timelines, capacity, performance, infrastructure impact, and service health.';
+    }
+
+    public function moduleCategory(): string
+    {
+        return 'Operations';
+    }
+
+    public function moduleIcon(): string
+    {
+        return 'activity';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function supportedEntities(): array
+    {
+        return ['workspace', 'host', 'service', 'alert', 'incident', 'capacity', 'infrastructure'];
     }
 
     /**

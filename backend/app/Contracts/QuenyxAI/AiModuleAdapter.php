@@ -13,25 +13,92 @@ use App\Models\Project;
  * this module expose, what contextual actions can a user take, and what deterministic operational
  * context grounds them".
  *
- * It exists so the platform (and UI) can DISCOVER a module's AI capabilities and contextual actions
- * without hard-coding them, and so a module can hand the shared Quenyx AI runtime a single, real,
- * workspace-scoped evidence context. Implementations REUSE the module's existing domain services and
+ * Sprint 22 generalised this into the foundation of the AI Adapter Platform: every module (QynSight,
+ * QynAsset, and every future module) implements this contract and registers with the
+ * {@see \App\Services\QuenyxAI\AiModuleAdapterRegistry}. Quenyx AI then DISCOVERS modules,
+ * capabilities, actions, entities, skills and providers dynamically — there is no per-module
+ * branching anywhere in the platform.
+ *
+ * Implementations REUSE the module's existing domain services and the shared Quenyx AI runtime; they
  * never call an AI provider directly, never duplicate business logic, and never fabricate data.
+ *
+ * The metadata methods (moduleName/Description/Category/Version/Icon, supportedEntities/Skills/
+ * Providers) were added in Sprint 22 in a BACKWARD-COMPATIBLE way: {@see AbstractAiModuleAdapter}
+ * supplies sensible defaults so existing adapters keep working and new adapters override only what
+ * they need.
  */
 interface AiModuleAdapter
 {
     /**
-     * Stable module identifier (e.g. "qynsight").
+     * Stable module identifier (e.g. "qynsight", "qynasset").
      */
     public function moduleKey(): string;
 
     /**
+     * Human-readable module name (e.g. "QynSight").
+     */
+    public function moduleName(): string;
+
+    /**
+     * Short description of the module's AI surface.
+     */
+    public function moduleDescription(): string;
+
+    /**
+     * Functional category (e.g. "Operations", "Asset Management").
+     */
+    public function moduleCategory(): string;
+
+    /**
+     * Adapter version (semantic, e.g. "1.0.0").
+     */
+    public function moduleVersion(): string;
+
+    /**
+     * UI icon key for the module (renderer-agnostic).
+     */
+    public function moduleIcon(): string;
+
+    /**
      * The intelligence capabilities this module exposes (stable, machine-readable keys, e.g.
-     * "monitoring_copilot", "root_cause_analysis").
+     * "monitoring_copilot", "asset_discovery_intelligence").
      *
      * @return list<string>
      */
     public function capabilities(): array;
+
+    /**
+     * The entity types this module's actions operate on (e.g. "host", "service", "asset",
+     * "dependency"). Used to route contextual actions to the right entity.
+     *
+     * @return list<string>
+     */
+    public function supportedEntities(): array;
+
+    /**
+     * The shared Quenyx AI skill keys this module relies on. An empty list means the module uses the
+     * shared platform skills without restriction.
+     *
+     * @return list<string>
+     */
+    public function supportedSkills(): array;
+
+    /**
+     * The provider keys this module supports. An empty list means the module uses whatever provider
+     * the shared platform resolves (the standard case — no module pins a provider).
+     *
+     * @return list<string>
+     */
+    public function supportedProviders(): array;
+
+    /**
+     * The contextual AI actions a user can invoke for this module (capability key, the entity it
+     * targets, label, and the workspace-scoped, UUID-only endpoint that serves it). Used to render
+     * contextual "✨ Quenyx AI" actions and to drive dynamic navigation without hard-coding them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function availableActions(): array;
 
     /**
      * Build the deterministic, workspace-scoped AI context for this module from REAL domain data.
@@ -42,13 +109,4 @@ interface AiModuleAdapter
      * @return array<string, mixed>
      */
     public function buildContext(Project $project, array $options = []): array;
-
-    /**
-     * The contextual AI actions a user can invoke for this module (capability key, the entity it
-     * targets, label, and the workspace-scoped, UUID-only endpoint that serves it). Used to render
-     * contextual "✨ Quenyx AI" actions without hard-coding them in the UI.
-     *
-     * @return list<array<string, mixed>>
-     */
-    public function availableActions(): array;
 }

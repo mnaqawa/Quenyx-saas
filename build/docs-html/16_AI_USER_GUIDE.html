@@ -122,6 +122,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#9-privacy-security"><span class="toc-text">9. Privacy / security</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#10-safe-usage-guidance"><span class="toc-text">10. Safe usage guidance</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#11-demo-prompts"><span class="toc-text">11. Demo prompts</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#12-asset-copilot-qynasset-sprint-22"><span class="toc-text">12. Asset Copilot (QynAsset — Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -228,6 +229,24 @@ result. AI renders this output; it does not invent it.</p>
 <li>&quot;What do you recommend for the open gaps in domain 2?&quot;</li>
 <li>&quot;Show the capability catalog for the AI platform.&quot; <em>(→ <code>GET /api/ai/platform/capabilities</code>)</em></li>
 </ul>
+<h2 id="12-asset-copilot-qynasset-sprint-22">12. Asset Copilot (QynAsset — Sprint 22)</h2>
+<p>When a workspace has <strong>QynAsset</strong> enabled, the <strong>Asset Intelligence</strong> dashboard adds an <strong>Asset
+Copilot</strong> and contextual <strong>✨</strong> actions (Explain / Analyze / Forecast / Impact / Review). Answers are
+grounded in the <strong>real discovered inventory</strong> only; the Copilot reuses Quenyx AI conversations (your
+threads appear in AI Activity/History). It will tell you plainly when something isn't collected (e.g.
+license or warranty data) instead of guessing.</p>
+<p>Demo prompts:</p>
+<ul>
+<li>&quot;Which assets are inactive or haven't reported recently?&quot;</li>
+<li>&quot;Are there duplicate assets in this workspace?&quot;</li>
+<li>&quot;Which monitored hosts have no enrolled agent?&quot;</li>
+<li>&quot;Explain the dependencies and blast radius of asset <em>app‑01</em>.&quot;</li>
+<li>&quot;What asset risks should I act on, and what's the evidence?&quot;</li>
+</ul>
+<blockquote>
+<p>The Asset Copilot is one of several module copilots discovered dynamically via the <strong>AI Adapter
+Platform</strong> (<code>GET /api/ai/adapters</code>) — no module is hard‑coded into Quenyx AI.</p>
+</blockquote>
 
 </main>
 

@@ -136,9 +136,18 @@ A **shared AI platform**, not a bolt‑on chatbot:
 **Book a guided demo** of QynSight monitoring and the QynShield compliance engine on your own
 workspace. Start with monitoring today; layer in compliance and AI as you grow.
 
+## Asset Intelligence + AI Adapter Platform (Sprint 22)
+
+Quenyx AI is now a true **platform**: every module plugs in through a shared, discoverable **AI
+adapter** — no per‑module AI silos. **QynAsset Asset Intelligence** is the newest AI experience: it
+explains your **real discovered inventory** (new/changed/inactive/duplicate assets, dependencies,
+hardware/capacity, lifecycle) and gives **evidence‑based** recommendations. Where data isn't collected
+(e.g. software licenses or warranty dates), Quenyx AI says so plainly instead of inventing it — the
+same trust‑first principle behind every Quenyx AI answer.
+
 ## Disclaimers about roadmap modules
 
-Modules other than QynSight (and the QynShield surfaces noted above) are **on the roadmap** and are
-**intentionally hidden in the UI** today. Real‑model AI and RAG are **feature‑flagged** and disabled
-by default. Only **NCA ECC‑2:2024** is currently loaded. No performance benchmarks, certifications,
-or customer claims are made in this brochure.
+Modules other than QynSight and **QynAsset** (and the QynShield surfaces noted above) are **on the
+roadmap** and are **intentionally hidden in the UI** today. Real‑model AI and RAG are
+**feature‑flagged** and disabled by default. Only **NCA ECC‑2:2024** is currently loaded. No
+performance benchmarks, certifications, or customer claims are made in this brochure.

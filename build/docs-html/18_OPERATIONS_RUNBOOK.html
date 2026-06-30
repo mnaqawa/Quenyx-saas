@@ -128,6 +128,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#15-troubleshooting-commands"><span class="toc-text">15. Troubleshooting commands</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#quenyx-ai-unified-ai-workspace-sprint-20-operations"><span class="toc-text">Quenyx AI (Unified AI Workspace — Sprint 20) — operations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-sprint-21-operations"><span class="toc-text">QynSight Operations Intelligence (Sprint 21) — operations</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -290,6 +291,22 @@ recent investigations also surface on the Operations Intelligence dashboard.</li
 <li><strong>Troubleshooting</strong>: a <code>403 Locked</code> means the <code>qynsight</code> entitlement or <code>can_use_ai</code> capability is
 missing; an empty/limited narrative with &quot;insufficient evidence&quot; means monitoring has not yet
 collected enough data (check scheduler/agents), <strong>not</strong> an AI failure.</li>
+</ul>
+<h2 id="qynasset-asset-intelligence-ai-adapter-platform-sprint-22">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</h2>
+<ul>
+<li><strong>Endpoints</strong>: flat under <code>/api/qynasset/intelligence/*</code>, Sanctum + <code>throttle:ai-workspace</code> (shares
+the Quenyx AI limiter/budget); adapter discovery under <code>/api/ai/adapters</code> + <code>/api/ai/actions</code>.</li>
+<li><strong>Entitlement/RBAC</strong>: a <code>403</code> means the <code>qynasset</code> entitlement, <code>accessAi</code> RBAC, or <code>can_use_ai</code>
+capability is missing. UUID‑only — a <code>404 Asset not found</code> means the asset UUID does not resolve to a
+host in this workspace.</li>
+<li><strong>Empty/honest output</strong>: an asset overview with <code>total: 0</code> means no hosts/agents are discovered yet
+(enroll agents / define hosts) — not an AI failure. License/lifecycle‑date sections returning
+<code>available: false</code> is <strong>expected</strong> (no inventory/license integration configured), <strong>not</strong> an error;
+Quenyx AI never fabricates those facts.</li>
+<li><strong>Auditing</strong>: asset AI actions write to <code>audit_logs</code> (<code>action LIKE 'asset_intelligence_%'</code> and
+<code>ai_adapter_discovery_%</code>); recent investigations also surface on the Asset Intelligence dashboard.</li>
+<li><strong>No duplicated AI</strong>: QynAsset reuses the shared <code>ModuleAiNarrator</code>/provider runtime; there is no
+separate provider, prompt, reasoning, or RAG engine to operate.</li>
 </ul>
 
 </main>

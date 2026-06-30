@@ -125,6 +125,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#12-limitations"><span class="toc-text">12. Limitations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#quenyx-ai-administration-unified-ai-workspace-sprint-20"><span class="toc-text">Quenyx AI administration (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-administration-sprint-21"><span class="toc-text">QynSight Operations Intelligence administration (Sprint 21)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -265,6 +266,21 @@ conversation‑logged, and rate limited via <code>throttle:ai-workspace</code>. 
 conversations and appear in the AI Activity/History surfaces.</li>
 <li><strong>Data prerequisites</strong>: insights are only as rich as the monitoring data — ensure the scheduler and
 agents are healthy so hosts/services/alerts/metrics/capacity are current.</li>
+</ul>
+<h3 id="qynasset-asset-intelligence-ai-adapter-platform-sprint-22">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</h3>
+<ul>
+<li><strong>Entitlement</strong>: Asset Intelligence requires the <code>qynasset</code> module entitlement for the workspace, on
+top of the same RBAC (<code>accessAi</code>) and <code>can_use_ai</code> capability used by all AI actions.</li>
+<li><strong>Where</strong>: the <strong>Asset Intelligence</strong> dashboard lives at
+<code>/app/workspaces/:id/qynasset/intelligence</code>; contextual <strong>✨</strong> actions (Explain / Analyze / Forecast
+/ Impact / Review) open the Asset Copilot, which reuses Quenyx AI conversations.</li>
+<li><strong>Data prerequisites</strong>: an asset is a <strong>discovered host</strong> — enroll agents and define monitored hosts
+so inventory, agent status, and hardware facts are present. Software‑license and warranty/EOL data
+are <strong>not collected</strong> until an inventory/license integration is connected; until then those
+capabilities honestly report &quot;not collected&quot; rather than fabricating values.</li>
+<li><strong>Adapter discovery</strong>: administrators/integrators can inspect which AI modules a workspace can use
+via <code>GET /api/ai/adapters</code> (entitlement‑filtered). Every AI action remains audited, provider‑logged,
+conversation‑logged, and rate‑limited.</li>
 </ul>
 
 </main>

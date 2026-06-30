@@ -109,5 +109,22 @@ into the AI core.
 
 ---
 
+## AI Adapter Platform principles (Sprint 22)
+
+- **One way to add module AI.** Modules expose AI through an `AiModuleAdapter` registered with the
+  `AiModuleAdapterRegistry`. There is **no per‑module branching** (`if module == …`) anywhere in the
+  platform; capabilities, actions, and navigation are **discovered** dynamically.
+- **One provider‑calling point.** All module intelligence narrates through the shared
+  `ModuleAiNarrator`. Adapters and services **never** call a provider directly and **never** duplicate
+  provider, prompt, reasoning, retrieval/RAG, or orchestration logic.
+- **Backward‑compatible contracts.** Contract growth (e.g. new metadata methods) ships with safe
+  defaults (`AbstractAiModuleAdapter`) so existing adapters keep working unchanged.
+- **Evidence or honesty.** Adapters ground every answer in **real** domain data; capabilities without
+  a data source are exposed but reported as *not collected* — never fabricated.
+- **Same governance for every adapter.** Workspace‑scoped, entitlement‑gated, RBAC‑gated,
+  capability‑gated, audited, provider/conversation‑logged, rate‑limited, and UUID‑only.
+
+---
+
 > **The standard, in one line:** *Deterministic, provenance‑backed, fail‑closed, UUID‑first,
 > AI‑as‑renderer — with no fake data and no fabricated claims, ever.*

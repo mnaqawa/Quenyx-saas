@@ -4,7 +4,7 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.1 |
+> | Document Version | 2.2 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Confidential — Architecture |
@@ -20,6 +20,7 @@
 > | 1.0 | 2026 | Initial AI platform bible (through Sprint 19). |
 > | 2.0 | 2026-06-29 | RC1 alignment: Quenyx AI documented as a shared platform layer (not "QynShield AI"); explicit future‑adapter list; Unified AI Workspace (Sprint 20). |
 > | 2.1 | 2026-06-30 | QynSight becomes a live AI consumer: Operations Intelligence (Sprint 21) reuses the shared runtime (provider abstraction, prompt orchestration, conversation service, audit) with no duplicated AI logic. |
+> | 2.2 | 2026-06-30 | AI Adapter Platform (Sprint 22): generalised module AI into a discoverable `AiModuleAdapter` + `AiModuleAdapterRegistry`; shared `ModuleAiNarrator` (single provider-calling point); QynAsset becomes the second production adapter (Asset Intelligence). No per-module branching. |
 
 **Audience:** Architects, AI engineers.
 **Scope:** The shared, platform‑wide Quenyx AI Platform (extracted in Sprint 19, surfaced
@@ -270,3 +271,43 @@ exposed**.
 **Governance.** Every request is workspace‑scoped, gated by the `qynsight` entitlement, monitoring
 RBAC, and the `can_use_ai` capability, and is audited, provider‑logged, conversation‑logged, and rate
 limited (`throttle:ai-workspace`). Endpoints: see API Reference §18.
+
+## 25. AI Adapter Platform (Sprint 22)
+
+Sprint 22 generalised module AI into a **reusable adapter framework** so every future module
+(QynRun, QynNotify, QynReact, QynKnow, QynSupport, QynBalance, QynVA) plugs in the same way, with
+**zero per‑module branching** in the platform. The flow is:
+
+```
+Quenyx AI → AI Adapter Registry → {QynSight, QynAsset, …} → Capabilities → Actions → Shared AI Platform
+```
+
+**The contract — `App\Contracts\QuenyxAI\AiModuleAdapter`.** A coarse, discovery‑oriented contract
+(companion to the fine‑grained `AiModuleAdapterInterface` 3‑stage pipeline). It exposes module
+metadata (`moduleKey/Name/Description/Category/Version/Icon`), `capabilities()`,
+`supportedEntities()`, `supportedSkills()`, `supportedProviders()`, `availableActions()`, and
+`buildContext()`. The metadata methods were added **backward‑compatibly** via
+`AbstractAiModuleAdapter`, which supplies defaults so existing adapters keep working and new adapters
+override only what they need (Sprint 21's `QynSightAiAdapter` was upgraded with metadata and **no
+behavior change**).
+
+**The registry — `App\Services\QuenyxAI\AiModuleAdapterRegistry`.** A process‑wide singleton that
+discovers, registers, and resolves adapters, and aggregates their metadata, capabilities, actions,
+and entities. Modules register one line each in `AppServiceProvider::boot()`. It holds **no business
+logic** and **calls no provider** — it is pure discovery.
+
+**Single provider‑calling point — `App\Services\Ai\ModuleAiNarrator`.** The shared narration service
+that every module uses to narrate deterministic evidence. It reuses `AiProviderRegistry`,
+`CompliancePromptOrchestrator` (grounding guardrails + citations), and `AiAccessAuditLogger`. There is
+now **exactly one** place in the codebase that talks to a provider for module intelligence; Sprint
+21's `OperationsAiAnalyst` was refactored to **delegate** to it (behavior preserved).
+
+**Discovery API (entitlement‑filtered, RBAC‑gated, audited).** `GET /api/ai/adapters`,
+`GET /api/ai/adapters/{module}`, `GET /api/ai/adapters/capabilities`, `GET /api/ai/actions` — every
+response is scoped by a required `workspace` UUID and filtered to the adapters the workspace is
+entitled to (no data leakage). The AI Workspace builds navigation/actions from these, never from a
+hard‑coded module list.
+
+**Adding a module = two steps:** implement an `AiModuleAdapter` (reusing the module's domain services
+and `ModuleAiNarrator`), then register it. Nothing else in the platform changes. See the **AI Adapter
+Developer Guide (doc 23)**.

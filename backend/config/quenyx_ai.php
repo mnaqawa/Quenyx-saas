@@ -26,7 +26,7 @@ return [
     'modules' => [
         ['key' => 'qynshield',      'name' => 'QynShield',      'ai_candidate' => true],
         ['key' => 'qynsight',       'name' => 'QynSight',       'ai_candidate' => true],
-        ['key' => 'qynasset',       'name' => 'QynAsset',       'ai_candidate' => false],
+        ['key' => 'qynasset',       'name' => 'QynAsset',       'ai_candidate' => true],
         ['key' => 'qynrun',         'name' => 'QynRun',         'ai_candidate' => false],
         ['key' => 'qynreact',       'name' => 'QynReact',       'ai_candidate' => false],
         ['key' => 'qynnotify',      'name' => 'QynNotify',      'ai_candidate' => false],

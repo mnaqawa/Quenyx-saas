@@ -320,3 +320,24 @@ runtime.
   `OperationsCopilotDrawer` / `OperationsAlertDrawer` / `QuenyxAiButton` (contextual ✨ actions on host,
   service, alert, capacity, and infrastructure‑map pages), `operationsIntelligenceService`, and full
   EN/AR i18n. Copilot threads are real Quenyx AI conversations.
+
+## AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)
+
+Sprint 22 generalised module AI into a **reusable adapter framework** and added QynAsset as the
+**second production AI adapter** — with no per‑module branching anywhere.
+
+- **Adapter framework.** `App\Contracts\QuenyxAI\AiModuleAdapter` (coarse capability/action contract)
+  + `AbstractAiModuleAdapter` (backward‑compatible metadata defaults) +
+  `App\Services\QuenyxAI\AiModuleAdapterRegistry` (singleton discovery/registration/resolution).
+  Modules register one line in `AppServiceProvider::boot()`; the platform discovers them dynamically.
+- **Single provider‑calling point.** `App\Services\Ai\ModuleAiNarrator` is the only place module
+  intelligence talks to a provider (reusing `AiProviderRegistry`, `CompliancePromptOrchestrator`,
+  `AiAccessAuditLogger`). Sprint 21's `OperationsAiAnalyst` now **delegates** to it (behavior
+  preserved). No duplicated provider/prompt/reasoning/RAG/orchestration.
+- **Discovery API.** `/api/ai/adapters`, `/api/ai/adapters/{module}`, `/api/ai/adapters/capabilities`,
+  `/api/ai/actions` — entitlement‑filtered, RBAC‑gated, audited (Doc 08 §19).
+- **QynAsset.** An asset is a **discovered host** (`observe_targets_hosts` + `agents` +
+  `agent_inventories`); hardware reuses Capacity Planning, dependencies reuse the Infrastructure Map.
+  Services in `App\Services\Asset\Intelligence\*`; UUID‑only via `AssetEntityId`; API in
+  `routes/qynasset-intelligence.php`. License/lifecycle‑date facts have no source and are reported as
+  **not collected** — never fabricated. See Docs 22 and 23.

@@ -193,3 +193,19 @@ php artisan config:cache
 - **Troubleshooting**: a `403 Locked` means the `qynsight` entitlement or `can_use_ai` capability is
   missing; an empty/limited narrative with "insufficient evidence" means monitoring has not yet
   collected enough data (check scheduler/agents), **not** an AI failure.
+
+## QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)
+
+- **Endpoints**: flat under `/api/qynasset/intelligence/*`, Sanctum + `throttle:ai-workspace` (shares
+  the Quenyx AI limiter/budget); adapter discovery under `/api/ai/adapters` + `/api/ai/actions`.
+- **Entitlement/RBAC**: a `403` means the `qynasset` entitlement, `accessAi` RBAC, or `can_use_ai`
+  capability is missing. UUID‑only — a `404 Asset not found` means the asset UUID does not resolve to a
+  host in this workspace.
+- **Empty/honest output**: an asset overview with `total: 0` means no hosts/agents are discovered yet
+  (enroll agents / define hosts) — not an AI failure. License/lifecycle‑date sections returning
+  `available: false` is **expected** (no inventory/license integration configured), **not** an error;
+  Quenyx AI never fabricates those facts.
+- **Auditing**: asset AI actions write to `audit_logs` (`action LIKE 'asset_intelligence_%'` and
+  `ai_adapter_discovery_%`); recent investigations also surface on the Asset Intelligence dashboard.
+- **No duplicated AI**: QynAsset reuses the shared `ModuleAiNarrator`/provider runtime; there is no
+  separate provider, prompt, reasoning, or RAG engine to operate.

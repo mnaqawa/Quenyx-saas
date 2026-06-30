@@ -111,3 +111,22 @@ Mock mode is safe for demos and produces real, cited structure without contactin
 - "What evidence is missing for control 2‑1‑1?"
 - "What do you recommend for the open gaps in domain 2?"
 - "Show the capability catalog for the AI platform." *(→ `GET /api/ai/platform/capabilities`)*
+
+## 12. Asset Copilot (QynAsset — Sprint 22)
+
+When a workspace has **QynAsset** enabled, the **Asset Intelligence** dashboard adds an **Asset
+Copilot** and contextual **✨** actions (Explain / Analyze / Forecast / Impact / Review). Answers are
+grounded in the **real discovered inventory** only; the Copilot reuses Quenyx AI conversations (your
+threads appear in AI Activity/History). It will tell you plainly when something isn't collected (e.g.
+license or warranty data) instead of guessing.
+
+Demo prompts:
+
+- "Which assets are inactive or haven't reported recently?"
+- "Are there duplicate assets in this workspace?"
+- "Which monitored hosts have no enrolled agent?"
+- "Explain the dependencies and blast radius of asset *app‑01*."
+- "What asset risks should I act on, and what's the evidence?"
+
+> The Asset Copilot is one of several module copilots discovered dynamically via the **AI Adapter
+> Platform** (`GET /api/ai/adapters`) — no module is hard‑coded into Quenyx AI.

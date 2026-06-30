@@ -62,6 +62,7 @@ const AlertManagement = lazy(() => import('./pages/observe/AlertManagement'))
 const Services = lazy(() => import('./pages/observe/Services'))
 const Targets = lazy(() => import('./pages/observe/Targets'))
 const OperationsIntelligence = lazy(() => import('./pages/observe/OperationsIntelligence'))
+const AssetIntelligence = lazy(() => import('./pages/asset/AssetIntelligence'))
 
 function ObserveSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
@@ -228,6 +229,15 @@ function App() {
               )}
               <Route index element={<Navigate to="overview" replace />} />
             </Route>
+            {/* Sprint 22 — QynAsset Asset Intelligence dashboard (second production AI adapter). */}
+            <Route
+              path="app/workspaces/:id/qynasset/intelligence"
+              element={
+                <ObserveSuspense>
+                  <AssetIntelligence />
+                </ObserveSuspense>
+              }
+            />
             <Route path="app/workspaces/:id/modules/:moduleKey" element={<ComingSoon />} />
           </Route>
         </Route>
