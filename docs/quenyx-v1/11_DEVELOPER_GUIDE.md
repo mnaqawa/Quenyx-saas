@@ -255,3 +255,25 @@ any entity: call `CollaborationService` server-side (addressed by `entity_type` 
 the reusable `CollaborationPanel` React component into the page with `{ workspaceUuid, entityType,
 entityUuid }`. Do **not** build a per-module comment system. New AI surfaces must narrate only through
 `ModuleAiNarrator` and register an `AiModuleAdapter`. See Docs 28–32.
+
+---
+
+## Publishing & subscribing to platform events (Event Bus, Sprint 25)
+
+Modules must **not** call each other directly. To announce something happened, publish a domain event:
+
+1. Use a canonical name from `App\Services\Platform\EventBus\PlatformEventNames` (typos throw). Then:
+   `app(PlatformEventBus::class)->publish(PlatformEventNames::INCIDENT_OPENED, $project, $user, [...payload], $correlationId)`.
+   The publish is workspace-aware and audited (`platform_event_published`); fan-out is isolated.
+2. To **react**, implement `App\Contracts\Platform\EventSubscriber` (`key()`, `subscribedTo()`,
+   `handle()`; return `['*']` to receive everything) and register it once in `AppServiceProvider::boot()`
+   via `PlatformEventBus::subscribe(...)`. The publisher is untouched — no module branching. See Doc 35.
+
+## Building AI context (Context Engine, Sprint 25)
+
+Never hand-assemble enterprise context. Call
+`app(EnterpriseContextEngine::class)->build($project, $user, ['query' => ..., 'exclude' => [...]])` to get
+one normalized object (workspace, user, permissions, cross-module gather, timeline, graph, search). It is
+a read-model and recursion-safe. QynVA (`QynVaOperatorService`) consumes it to reason and propose
+**editable** cross-module plans — and **never executes**. New module intelligence should follow the same
+pattern: deterministic evidence first, then narrate via `ModuleAiNarrator`. See Docs 34, 37.

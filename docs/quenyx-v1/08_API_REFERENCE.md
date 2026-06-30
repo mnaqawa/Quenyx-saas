@@ -413,6 +413,35 @@ Base `/api/collaboration`. Workspace-scoped, UUID-only, `accessAi`. Polymorphic 
 | POST | `/participants` | Add `watcher` / `assignee` / `owner`. |
 | DELETE | `/participants` | Remove a participant role. |
 
+## 19h. QynVA — Enterprise AI Operator + Intelligence surfaces (Sprint 25)
+
+Base `/api/qynva`. Workspace-scoped, UUID-only. Reads require `accessAi`; the operator and executive AI
+summary require `can_use_ai`; Platform Health and Event Bus introspection require `administerAi`. AI runs
+through `ModuleAiNarrator` over the **Enterprise Context Engine**; dashboards/analytics are read-models
+over real rows (honest `available:false` when data is thin). QynVA proposes editable plans and **never
+executes**.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/operator/capabilities` | Discovered modules, capabilities, and cross-module action catalog. |
+| POST | `/operator/operate` | `{ workspace, message, conversation? }` — reason over enterprise context; editable plan. |
+| GET | `/executive` | Executive Intelligence dashboard (evidence-based). |
+| POST | `/executive/summary` | Executive AI summary over the deterministic dashboard. |
+| GET | `/analytics` | Enterprise Analytics (`?days=30`): MTTD/MTTR, trends, effectiveness, adoption, KPIs. |
+| GET | `/health` | Platform Health snapshot (privileged — `administerAi`). |
+| GET | `/events` | Platform Event Bus introspection: vocabulary, subscribers, recent events (privileged). |
+
+## 19i. QynBalance — Enterprise Cost Intelligence (Sprint 25)
+
+Base `/api/qynbalance`. Workspace-scoped, UUID-only. Overview requires `accessAi`; the cost copilot
+requires `can_use_ai`. Uses **real** platform data; **no fabricated financial values** — monetary figures
+appear only where `config/cost.php` rates are configured, otherwise counts + "pricing unavailable".
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/cost/overview` | Infrastructure cost, license/asset/automation/capacity/cloud sections, budget forecast, recommendations. |
+| POST | `/cost/copilot` | `{ workspace, message, conversation? }` — FinOps copilot over deterministic cost evidence. |
+
 ## 20. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current

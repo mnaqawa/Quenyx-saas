@@ -131,6 +131,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#automation-amp-incident-operations-sprint-23"><span class="toc-text">Automation &amp;amp; Incident operations (Sprint 23)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#knowledge-service-desk-amp-notification-operations-sprint-24"><span class="toc-text">Knowledge, Service Desk &amp;amp; Notification operations (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#enterprise-intelligence-operations-sprint-25"><span class="toc-text">Enterprise Intelligence operations (Sprint 25)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -349,6 +350,30 @@ guessing an assignee.</li>
 table. All data is workspace-isolated and UUID-only.</li>
 <li><strong>No duplicated AI/orchestration</strong>: knowledge, ticket, and notification intelligence all narrate
 through <code>ModuleAiNarrator</code> and reuse the <code>CrossModuleOrchestrator</code>. See Docs 28–32.</li>
+</ul>
+<hr />
+<h2 id="enterprise-intelligence-operations-sprint-25">Enterprise Intelligence operations (Sprint 25)</h2>
+<ul>
+<li><strong>Platform Health is the first stop</strong>: <code>GET /api/qynva/health</code> (requires <code>administerAi</code>) reports overall
+<ul>
+<li>per-area status (AI/automation/knowledge platforms, search, registries, providers, queues, event bus,
+background jobs). For any <code>degraded</code>/<code>down</code> area, read its <code>reason</code> and follow the matching registry/
+queue/provider check. UI: <code>/qynva/health</code>.</li>
+</ul>
+</li>
+<li><strong>Event Bus introspection</strong>: <code>GET /api/qynva/events</code> (privileged) shows the event vocabulary, registered
+subscribers (and what each listens to), and the recent event ring. A subscriber that throws is caught and
+logged — it <strong>never</strong> breaks publishing. Every publish is audited as <code>platform_event_published</code>.</li>
+<li><strong>QynVA never executes</strong>: the operator (<code>POST /api/qynva/operator/operate</code>) only returns editable,
+evidence-based plans referencing existing module actions; humans approve and the owning module executes.</li>
+<li><strong>QynBalance honesty</strong>: <code>GET /api/qynbalance/cost/overview</code> shows real counts and monetary figures <strong>only
+where <code>config/cost.php</code> rates are set</strong>; otherwise it reports &quot;pricing unavailable&quot; with a
+<code>configure_pricing</code> recommendation. This is expected behavior, not a fault. Set <code>COST_*</code> env to enable
+monetary estimates and re-cache config.</li>
+<li><strong>AI disabled</strong>: Executive summaries, QynVA, and the cost copilot fall back to the deterministic mock
+provider (flagged <code>ai_enabled:false</code>); the underlying evidence is always real.</li>
+<li><strong>Async migration</strong>: Event Bus fan-out is synchronous-but-isolated; replacing the <code>dispatch()</code> body with
+a queued job requires no changes to publishers or subscribers. See Docs 33–36, 44.</li>
 </ul>
 
 </main>

@@ -136,6 +136,8 @@ body{margin:0}
 <li class="toc-l2"><a href="#19e-qynsupport-service-desk-ticket-intelligence-sprint-24"><span class="toc-text">19e. QynSupport — Service Desk + Ticket Intelligence (Sprint 24)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#19f-qynnotify-notification-intelligence-sprint-24"><span class="toc-text">19f. QynNotify — Notification Intelligence (Sprint 24)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#19g-collaboration-platform-sprint-24"><span class="toc-text">19g. Collaboration Platform (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19h-qynva-enterprise-ai-operator-intelligence-surfaces-sprint-25"><span class="toc-text">19h. QynVA — Enterprise AI Operator + Intelligence surfaces (Sprint 25)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19i-qynbalance-enterprise-cost-intelligence-sprint-25"><span class="toc-text">19i. QynBalance — Enterprise Cost Intelligence (Sprint 25)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#20-notes-on-examples"><span class="toc-text">20. Notes on examples</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
@@ -1014,6 +1016,83 @@ runs, rollback, and deletes require <code>administerAi</code>.</p>
 <td>DELETE</td>
 <td><code>/participants</code></td>
 <td>Remove a participant role.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19h-qynva-enterprise-ai-operator-intelligence-surfaces-sprint-25">19h. QynVA — Enterprise AI Operator + Intelligence surfaces (Sprint 25)</h2>
+<p>Base <code>/api/qynva</code>. Workspace-scoped, UUID-only. Reads require <code>accessAi</code>; the operator and executive AI
+summary require <code>can_use_ai</code>; Platform Health and Event Bus introspection require <code>administerAi</code>. AI runs
+through <code>ModuleAiNarrator</code> over the <strong>Enterprise Context Engine</strong>; dashboards/analytics are read-models
+over real rows (honest <code>available:false</code> when data is thin). QynVA proposes editable plans and <strong>never
+executes</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/operator/capabilities</code></td>
+<td>Discovered modules, capabilities, and cross-module action catalog.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/operator/operate</code></td>
+<td><code>{ workspace, message, conversation? }</code> — reason over enterprise context; editable plan.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/executive</code></td>
+<td>Executive Intelligence dashboard (evidence-based).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/executive/summary</code></td>
+<td>Executive AI summary over the deterministic dashboard.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/analytics</code></td>
+<td>Enterprise Analytics (<code>?days=30</code>): MTTD/MTTR, trends, effectiveness, adoption, KPIs.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/health</code></td>
+<td>Platform Health snapshot (privileged — <code>administerAi</code>).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/events</code></td>
+<td>Platform Event Bus introspection: vocabulary, subscribers, recent events (privileged).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19i-qynbalance-enterprise-cost-intelligence-sprint-25">19i. QynBalance — Enterprise Cost Intelligence (Sprint 25)</h2>
+<p>Base <code>/api/qynbalance</code>. Workspace-scoped, UUID-only. Overview requires <code>accessAi</code>; the cost copilot
+requires <code>can_use_ai</code>. Uses <strong>real</strong> platform data; <strong>no fabricated financial values</strong> — monetary figures
+appear only where <code>config/cost.php</code> rates are configured, otherwise counts + &quot;pricing unavailable&quot;.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/cost/overview</code></td>
+<td>Infrastructure cost, license/asset/automation/capacity/cloud sections, budget forecast, recommendations.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/cost/copilot</code></td>
+<td><code>{ workspace, message, conversation? }</code> — FinOps copilot over deterministic cost evidence.</td>
 </tr>
 </tbody>
 </table>

@@ -407,3 +407,41 @@ per-module implementations. Core pieces under `App\Services\Knowledge\*`,
 `CrossModuleOrchestrator` (never module-branch). All drafts are editable and never auto-applied.
 Workspace isolation, RBAC (`accessAi` / `can_use_ai`), UUID-only, and full audit (`PlatformAuditLogger`)
 throughout. New tables in `2026_07_05_010000_create_knowledge_collaboration_tables.php`. See Docs 28–32.
+
+---
+
+## Sprint 25 — Enterprise Intelligence Platform (v1.0.0 GA)
+
+**Everything becomes one enterprise ecosystem.** Sprint 25 adds the connective tissue and the
+intelligence surfaces that sit on top of every prior module — with **no duplicated logic** and **no
+direct module-to-module calls**. Core pieces under `App\Services\Platform\*`:
+
+- **Platform Event Bus** (`App\Services\Platform\EventBus\*`) — `PlatformEventBus` (publish/subscribe),
+  immutable `PlatformEvent`, a 21-event canonical vocabulary (`PlatformEventNames`), and the
+  `EventSubscriber` contract. Workspace-aware, **audited** on every publish (`platform_event_published`),
+  **async-ready** (the `dispatch()` seam is a drop-in for a queue), and **decoupled** — publishers don't
+  know subscribers; failures are isolated. Example `NotificationFanoutSubscriber` reacts to urgent events.
+  This replaces direct cross-module calls; no module branching.
+- **Enterprise Context Engine** (`App\Services\Platform\Context\EnterpriseContextEngine`) — assembles
+  **one normalized AI context** (workspace, user, permissions, monitoring/assets/automation/knowledge/
+  incidents/notifications/compliance via `CrossModuleOrchestrator`, plus Global Timeline, Knowledge Graph
+  v2, and Enterprise Search). Pure read-model; recursion-safe (QynVA excludes itself). The single context
+  source for all AI surfaces.
+- **QynVA — Enterprise AI Operator** (`App\Services\Platform\Operator\QynVaOperatorService`,
+  `QynVaAiAdapter`) — discovers adapters/capabilities, builds context, reasons via `ModuleAiNarrator`, and
+  proposes **editable, evidence-based** cross-module coordination plans. **Never executes**; records a
+  conversation and publishes `ConversationCompleted` each turn.
+- **QynBalance — Cost Intelligence** (`App\Services\Platform\Cost\*`, `config/cost.php`) — infrastructure
+  cost, capacity/license/cloud optimization, automation savings, asset utilization, budget forecasting,
+  and advisory recommendations over **real** data. **No fabricated financial values** — counts +
+  "pricing unavailable" until real rates are configured.
+- **Executive Intelligence** (`ExecutiveIntelligenceService`), **Enterprise Analytics**
+  (`EnterpriseAnalyticsService`), and **Platform Health** (`PlatformHealthService`) — evidence-based
+  read-models (deterministic health scores, MTTD/MTTR/trends/adoption KPIs, and self-monitoring of AI/
+  automation/knowledge platforms, search, registries, providers, queues, event bus, jobs). Honest
+  `available:false` when data is thin.
+
+**Envelope.** Surfaces live under `/api/qynva/*` and `/api/qynbalance/*` (`routes/qynva-operator.php`,
+`routes/qynbalance-cost.php`). Workspace isolation, UUID-only, RBAC (`accessAi` / `can_use_ai` /
+`administerAi`), and full audit throughout. The temporary sidebar feature flag is removed — all business
+modules are enabled; QynCore/Integrations remain platform-only. See Docs 33–44.

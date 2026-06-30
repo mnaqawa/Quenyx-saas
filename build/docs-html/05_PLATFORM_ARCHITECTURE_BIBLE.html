@@ -136,6 +136,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#ai-adapter-platform-qynasset-asset-intelligence-sprint-22"><span class="toc-text">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-23-automation-platform-amp-incident-workspace"><span class="toc-text">Sprint 23 — Automation Platform &amp;amp; Incident Workspace</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-24-enterprise-knowledge-amp-collaboration-platform"><span class="toc-text">Sprint 24 — Enterprise Knowledge &amp;amp; Collaboration Platform</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-25-enterprise-intelligence-platform-v1-0-0-ga"><span class="toc-text">Sprint 25 — Enterprise Intelligence Platform (v1.0.0 GA)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -562,6 +563,41 @@ urgency scoring, recipient/channel selection, escalation) — evidence-based, ho
 <code>CrossModuleOrchestrator</code> (never module-branch). All drafts are editable and never auto-applied.
 Workspace isolation, RBAC (<code>accessAi</code> / <code>can_use_ai</code>), UUID-only, and full audit (<code>PlatformAuditLogger</code>)
 throughout. New tables in <code>2026_07_05_010000_create_knowledge_collaboration_tables.php</code>. See Docs 28–32.</p>
+<hr />
+<h2 id="sprint-25-enterprise-intelligence-platform-v1-0-0-ga">Sprint 25 — Enterprise Intelligence Platform (v1.0.0 GA)</h2>
+<p><strong>Everything becomes one enterprise ecosystem.</strong> Sprint 25 adds the connective tissue and the
+intelligence surfaces that sit on top of every prior module — with <strong>no duplicated logic</strong> and <strong>no
+direct module-to-module calls</strong>. Core pieces under <code>App\Services\Platform\*</code>:</p>
+<ul>
+<li><strong>Platform Event Bus</strong> (<code>App\Services\Platform\EventBus\*</code>) — <code>PlatformEventBus</code> (publish/subscribe),
+immutable <code>PlatformEvent</code>, a 21-event canonical vocabulary (<code>PlatformEventNames</code>), and the
+<code>EventSubscriber</code> contract. Workspace-aware, <strong>audited</strong> on every publish (<code>platform_event_published</code>),
+<strong>async-ready</strong> (the <code>dispatch()</code> seam is a drop-in for a queue), and <strong>decoupled</strong> — publishers don't
+know subscribers; failures are isolated. Example <code>NotificationFanoutSubscriber</code> reacts to urgent events.
+This replaces direct cross-module calls; no module branching.</li>
+<li><strong>Enterprise Context Engine</strong> (<code>App\Services\Platform\Context\EnterpriseContextEngine</code>) — assembles
+<strong>one normalized AI context</strong> (workspace, user, permissions, monitoring/assets/automation/knowledge/
+incidents/notifications/compliance via <code>CrossModuleOrchestrator</code>, plus Global Timeline, Knowledge Graph
+v2, and Enterprise Search). Pure read-model; recursion-safe (QynVA excludes itself). The single context
+source for all AI surfaces.</li>
+<li><strong>QynVA — Enterprise AI Operator</strong> (<code>App\Services\Platform\Operator\QynVaOperatorService</code>,
+<code>QynVaAiAdapter</code>) — discovers adapters/capabilities, builds context, reasons via <code>ModuleAiNarrator</code>, and
+proposes <strong>editable, evidence-based</strong> cross-module coordination plans. <strong>Never executes</strong>; records a
+conversation and publishes <code>ConversationCompleted</code> each turn.</li>
+<li><strong>QynBalance — Cost Intelligence</strong> (<code>App\Services\Platform\Cost\*</code>, <code>config/cost.php</code>) — infrastructure
+cost, capacity/license/cloud optimization, automation savings, asset utilization, budget forecasting,
+and advisory recommendations over <strong>real</strong> data. <strong>No fabricated financial values</strong> — counts +
+&quot;pricing unavailable&quot; until real rates are configured.</li>
+<li><strong>Executive Intelligence</strong> (<code>ExecutiveIntelligenceService</code>), <strong>Enterprise Analytics</strong>
+(<code>EnterpriseAnalyticsService</code>), and <strong>Platform Health</strong> (<code>PlatformHealthService</code>) — evidence-based
+read-models (deterministic health scores, MTTD/MTTR/trends/adoption KPIs, and self-monitoring of AI/
+automation/knowledge platforms, search, registries, providers, queues, event bus, jobs). Honest
+<code>available:false</code> when data is thin.</li>
+</ul>
+<p><strong>Envelope.</strong> Surfaces live under <code>/api/qynva/*</code> and <code>/api/qynbalance/*</code> (<code>routes/qynva-operator.php</code>,
+<code>routes/qynbalance-cost.php</code>). Workspace isolation, UUID-only, RBAC (<code>accessAi</code> / <code>can_use_ai</code> /
+<code>administerAi</code>), and full audit throughout. The temporary sidebar feature flag is removed — all business
+modules are enabled; QynCore/Integrations remain platform-only. See Docs 33–44.</p>
 
 </main>
 

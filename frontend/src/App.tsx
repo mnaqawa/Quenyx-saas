@@ -70,6 +70,12 @@ const EnterpriseSearch = lazy(() => import('./pages/knowledge/EnterpriseSearch')
 const GlobalTimeline = lazy(() => import('./pages/knowledge/GlobalTimeline'))
 const ServiceDesk = lazy(() => import('./pages/support/ServiceDesk'))
 const NotificationCenter = lazy(() => import('./pages/notify/NotificationCenter'))
+// Sprint 25 — Enterprise Intelligence Platform v1.0
+const OperatorConsole = lazy(() => import('./pages/qynva/OperatorConsole'))
+const ExecutiveIntelligence = lazy(() => import('./pages/qynva/ExecutiveIntelligence'))
+const EnterpriseAnalytics = lazy(() => import('./pages/qynva/EnterpriseAnalytics'))
+const PlatformHealth = lazy(() => import('./pages/qynva/PlatformHealth'))
+const CostIntelligence = lazy(() => import('./pages/qynbalance/CostIntelligence'))
 
 function ObserveSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
@@ -303,6 +309,13 @@ function App() {
                 </ObserveSuspense>
               }
             />
+            {/* Sprint 25 — QynVA Enterprise AI Operator + Enterprise Intelligence (Executive, Analytics, Health). */}
+            <Route path="app/workspaces/:id/qynva/operator" element={<ObserveSuspense><OperatorConsole /></ObserveSuspense>} />
+            <Route path="app/workspaces/:id/qynva/executive" element={<ObserveSuspense><ExecutiveIntelligence /></ObserveSuspense>} />
+            <Route path="app/workspaces/:id/qynva/analytics" element={<ObserveSuspense><EnterpriseAnalytics /></ObserveSuspense>} />
+            <Route path="app/workspaces/:id/qynva/health" element={<ObserveSuspense><PlatformHealth /></ObserveSuspense>} />
+            {/* Sprint 25 — QynBalance Enterprise Cost Intelligence. */}
+            <Route path="app/workspaces/:id/qynbalance/cost" element={<ObserveSuspense><CostIntelligence /></ObserveSuspense>} />
             <Route path="app/workspaces/:id/modules/:moduleKey" element={<ComingSoon />} />
           </Route>
         </Route>

@@ -31,9 +31,9 @@ return [
         ['key' => 'qynreact',       'name' => 'QynReact',       'ai_candidate' => true],
         ['key' => 'qynnotify',      'name' => 'QynNotify',      'ai_candidate' => true],
         ['key' => 'qynknow',        'name' => 'QynKnow',        'ai_candidate' => true],
-        ['key' => 'qynva',          'name' => 'QynVA',          'ai_candidate' => false],
+        ['key' => 'qynva',          'name' => 'QynVA',          'ai_candidate' => true],
         ['key' => 'qynsupport',     'name' => 'QynSupport',     'ai_candidate' => true],
-        ['key' => 'qynbalance',     'name' => 'QynBalance',     'ai_candidate' => false],
+        ['key' => 'qynbalance',     'name' => 'QynBalance',     'ai_candidate' => true],
     ],
 
     /*

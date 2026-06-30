@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release Notes — Quenyx vOPS HUB v1.0.0 — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Release Notes — Quenyx vOPS HUB v1.0.0"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Internal"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Internal</div>
+  <div class="tp-title">Release Notes — Quenyx vOPS HUB v1.0.0</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 · Document v1.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>1.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 (GA) — Sprint 25</td></tr>
+<tr><th>Classification</th><td>Internal</td></tr>
+<tr><th>Owner</th><td>Platform Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Document Type</th><td>Release notes</td></tr>
+</tbody></table>
+  
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#overview"><span class="toc-text">Overview</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#what-s-new-in-sprint-25-v1-0-0"><span class="toc-text">What&#039;s new in Sprint 25 (v1.0.0)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#platform-event-bus"><span class="toc-text">Platform Event Bus</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#enterprise-context-engine"><span class="toc-text">Enterprise Context Engine</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#qynva-enterprise-ai-operator"><span class="toc-text">QynVA — Enterprise AI Operator</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#qynbalance-enterprise-cost-intelligence"><span class="toc-text">QynBalance — Enterprise Cost Intelligence</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#executive-intelligence-amp-enterprise-analytics"><span class="toc-text">Executive Intelligence &amp;amp; Enterprise Analytics</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#platform-health"><span class="toc-text">Platform Health</span><span class="toc-dots"></span></a></li>
+<li class="toc-l3"><a href="#navigation"><span class="toc-text">Navigation</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#compatibility-amp-upgrade"><span class="toc-text">Compatibility &amp;amp; upgrade</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#quality-gate-met"><span class="toc-text">Quality gate (met)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#known-limitations"><span class="toc-text">Known limitations</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>Release Notes — Quenyx vOPS HUB v1.0.0</h1>
+<h2 id="overview">Overview</h2>
+<p><strong>Quenyx vOPS HUB v1.0.0</strong> is the first General Availability release and the completion of the original
+Quenyx roadmap (Phases 1–4, Sprints 1–25). Sprint 25 — the <strong>Enterprise Intelligence Platform</strong> — unifies
+every module into a single enterprise ecosystem with a shared event bus, a shared context engine, the
+QynVA Enterprise AI Operator, QynBalance Cost Intelligence, Executive Intelligence, Enterprise Analytics,
+and Platform Health, and turns on the full module navigation.</p>
+<h2 id="what-s-new-in-sprint-25-v1-0-0">What's new in Sprint 25 (v1.0.0)</h2>
+<h3 id="platform-event-bus">Platform Event Bus</h3>
+<p>Shared publish/subscribe layer (<code>PlatformEventBus</code>) with a 21-event canonical vocabulary
+(<code>PlatformEventNames</code>), immutable <code>PlatformEvent</code> DTO, <code>EventSubscriber</code> contract, audited publishes,
+async-ready fan-out, and an example <code>NotificationFanoutSubscriber</code>. Eliminates direct module-to-module
+calls.</p>
+<h3 id="enterprise-context-engine">Enterprise Context Engine</h3>
+<p>A single <code>EnterpriseContextEngine</code> that assembles one normalized AI context from workspace, user,
+permissions, monitoring, assets, automation, knowledge, incidents, notifications, compliance, timeline,
+graph and search — reusing existing read-models (cross-module gather, Global Timeline, Knowledge Graph v2,
+Enterprise Search). Recursion-safe; consumed by all AI surfaces.</p>
+<h3 id="qynva-enterprise-ai-operator">QynVA — Enterprise AI Operator</h3>
+<p>Not a chatbot: discovers adapters/capabilities, builds enterprise context, reasons through
+<code>ModuleAiNarrator</code>, and proposes <strong>editable, evidence-based</strong> cross-module coordination plans. Never
+executes; every turn is recorded and publishes <code>ConversationCompleted</code>. New <code>/api/qynva/*</code> surface.</p>
+<h3 id="qynbalance-enterprise-cost-intelligence">QynBalance — Enterprise Cost Intelligence</h3>
+<p>Cost analysis over <strong>real</strong> platform data (hosts, services, agents, seats, automation). Capacity/license/
+cloud optimization, automation savings, asset utilization, budget forecasting, and advisory
+recommendations. <strong>No fabricated financial values</strong> — monetary figures appear only where real rates are
+configured; otherwise counts + &quot;pricing unavailable&quot;. New <code>/api/qynbalance/*</code> surface.</p>
+<h3 id="executive-intelligence-amp-enterprise-analytics">Executive Intelligence &amp; Enterprise Analytics</h3>
+<p>Evidence-based executive dashboard (operational/infrastructure/compliance health, capacity forecast, top
+risks/recommendations, automation success, AI usage, incident/knowledge/cost KPIs) with an AI executive
+summary; and the shared analytics platform (MTTD, MTTR, trends, effectiveness, adoption, KPIs). Honest
+<code>available: false</code> when data is insufficient.</p>
+<h3 id="platform-health">Platform Health</h3>
+<p>Self-monitoring of AI/automation/knowledge platforms, search, registries, provider health, queues, event
+bus, and background jobs, with overall + per-area status.</p>
+<h3 id="navigation">Navigation</h3>
+<p>The temporary sidebar feature flag is removed. <strong>QynSight, QynAsset, QynRun, QynReact, QynKnow,
+QynSupport, QynNotify, QynShield, QynBalance, QynVA</strong> are all enabled. Platform items (Dashboard,
+Workspaces, Quenyx AI, Integrations) retained. <strong>QynCore</strong> remains platform-only.</p>
+<h2 id="compatibility-amp-upgrade">Compatibility &amp; upgrade</h2>
+<ul>
+<li><strong>No breaking changes</strong> to Sprint 20–24 behavior. All previous APIs, routes, and data are unchanged.</li>
+<li>New optional config: <code>config/cost.php</code> (+ <code>COST_*</code> env) for QynBalance pricing. Without it, QynBalance
+is fully functional in count/&quot;pricing unavailable&quot; mode.</li>
+<li>See the <strong>Migration Guide</strong> (doc 40) for the exact upgrade steps.</li>
+</ul>
+<h2 id="quality-gate-met">Quality gate (met)</h2>
+<p>No duplicated platform logic · event-driven · shared Context Engine / AI / Automation / Knowledge ·
+workspace isolation · UUID-only · RBAC · audit · EN/AR complete · backend syntax clean · documentation
+updated · PDFs regenerated.</p>
+<h2 id="known-limitations">Known limitations</h2>
+<ul>
+<li>AI narration runs on the deterministic mock provider unless an AI provider is configured (evidence is
+always real; responses are flagged <code>ai_enabled: false</code>).</li>
+<li>QynBalance monetary estimates require operator-supplied rates; cloud-spend optimization needs a
+connected cloud billing source.</li>
+<li>Event Bus fan-out is synchronous-but-isolated; the queue-backed path is a drop-in (no publisher/
+subscriber changes) but ships disabled by default.</li>
+</ul>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

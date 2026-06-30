@@ -216,3 +216,22 @@ QynKnow/QynSupport/QynNotify run on shared platform services. Administration not
   there is no per-module collaboration system to administer separately.
 - **RBAC / isolation / audit.** All Sprint 24 data is workspace-isolated, UUID-only, and audited via
   `PlatformAuditLogger`. AI surfaces require `can_use_ai`. See Docs 28–32.
+
+---
+
+## Enterprise Intelligence administration (Sprint 25)
+
+- **Navigation.** The temporary sidebar feature flag is removed; all business modules (QynSight, QynAsset,
+  QynRun, QynReact, QynKnow, QynSupport, QynNotify, QynShield, QynBalance, QynVA) are enabled. QynCore and
+  Integrations remain platform-only. Per-workspace exposure is still controlled by **plan entitlements**
+  (`modules_allowed`) and AI RBAC.
+- **QynVA & QynBalance entitlements.** Add `qynva` / `qynbalance` to a plan's `modules_allowed` to expose
+  them. Both are `ai_candidate` and respect the same AI flags/provider config as every module.
+- **QynBalance pricing.** No financial values are fabricated. To enable monetary estimates, set real rates
+  in `config/cost.php` via `COST_*` env (host/agent/service/seat/automation-minute, optional budget) and
+  re-cache config. Until then QynBalance shows real counts + "pricing unavailable".
+- **Privileged surfaces.** Platform Health (`/api/qynva/health`) and Event Bus introspection
+  (`/api/qynva/events`) require `administerAi`. Use Platform Health to confirm AI/automation/knowledge
+  platforms, registries, providers, queues, and the event bus are operational.
+- **RBAC / isolation / audit.** All Sprint 25 surfaces are workspace-isolated, UUID-only, and audited
+  (incl. `platform_event_published`). QynVA proposes editable plans and never executes. See Docs 33–44.

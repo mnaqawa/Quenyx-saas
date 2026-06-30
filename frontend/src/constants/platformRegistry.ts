@@ -61,18 +61,25 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 
-// TEMPORARY (RC1.1): while QynSight is the only visible BUSINESS module, hide every other
-// business module across navigation, subscriptions, and workspace settings.
-//
-// To bring the hidden business modules back later, flip HIDE_NON_QYNSIGHT_MODULES to false (or add
-// their keys to ACTIVE_MODULE_KEYS for a staged rollout). This flag does NOT affect the platform-level
-// items (AI Workspace, Integrations) or the platform core (QynCore billing), which are wired
-// separately and remain available.
-export const HIDE_NON_QYNSIGHT_MODULES = true
-export const ACTIVE_MODULE_KEYS = ['qynsight']
+// Sprint 25 (v1.0 GA): the temporary "QynSight-only" sidebar gate has been REMOVED. Every customer
+// business module is now enabled across navigation, subscriptions, and workspace settings. QynCore and
+// the legacy `qynintegrations` entitlement key remain PLATFORM-ONLY (never navigable business modules):
+// QynCore backs billing/governance surfaces, and Integrations is a platform page for external systems.
+export const HIDE_NON_QYNSIGHT_MODULES = false
+
+/** Keys that are platform capabilities, not customer-facing business modules — never shown in the module nav. */
+const PLATFORM_ONLY_MODULE_KEYS = ['qyncore', 'qynintegrations']
+
+// Retained for backward compatibility with callers that reference it; with the gate removed it lists all
+// business module keys (used only for staged rollouts in the past).
+export const ACTIVE_MODULE_KEYS = [
+  'qynsight', 'qynasset', 'qynrun', 'qynreact', 'qynknow',
+  'qynsupport', 'qynnotify', 'qynshield', 'qynbalance', 'qynva',
+]
 
 export function isModuleTemporarilyVisible(key: string): boolean {
-  return !HIDE_NON_QYNSIGHT_MODULES || ACTIVE_MODULE_KEYS.includes(key)
+  if (PLATFORM_ONLY_MODULE_KEYS.includes(key)) return false
+  return true
 }
 
 export const modules: ModuleConfig[] = [
@@ -101,27 +108,27 @@ export const modules: ModuleConfig[] = [
   {
     key: 'qynrun',
     displayName: 'QynRun',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynrun/automation',
     description: 'Workflow automation and process orchestration across systems and teams.',
     sidebar: { order: 3 },
   },
   {
     key: 'qynbalance',
     displayName: 'QynBalance',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'Load balancing and traffic management for optimal resource distribution.',
+    baseRoutePattern: '/app/workspaces/:id/qynbalance/cost',
+    description: 'Enterprise Cost Intelligence: infrastructure cost, optimization, and budget forecasting from real data.',
     sidebar: { order: 4 },
   },
   {
     key: 'qynsupport',
     displayName: 'QynSupport',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynsupport/tickets',
     description: 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
     sidebar: { order: 5 },
   },
@@ -133,36 +140,36 @@ export const modules: ModuleConfig[] = [
   {
     key: 'qynasset',
     displayName: 'QynAsset',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynasset/intelligence',
     description: 'Comprehensive asset discovery, inventory management, and automated health tracking.',
     sidebar: { order: 7 },
   },
   {
     key: 'qynknow',
     displayName: 'QynKnow',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynknow/knowledge',
     description: 'Knowledge management for documentation, playbooks, and operational procedures.',
     sidebar: { order: 8 },
   },
   {
     key: 'qynnotify',
     displayName: 'QynNotify',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynnotify/notifications',
     description: 'Alert and notification management across email, SMS, and in-app channels.',
     sidebar: { order: 9 },
   },
   {
     key: 'qynreact',
     displayName: 'QynReact',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
+    baseRoutePattern: '/app/workspaces/:id/qynreact/incidents',
     description: 'Automated incident response and orchestration for rapid recovery and resolution.',
     sidebar: { order: 10 },
   },
@@ -178,16 +185,56 @@ export const modules: ModuleConfig[] = [
   {
     key: 'qynva',
     displayName: 'QynVA',
-    status: 'comingSoon',
+    status: 'ready',
     requiresWorkspace: true,
-    baseRoutePattern: '/app/workspaces/:id/modules/:moduleKey',
-    description: 'AI voice and IVR operations for automated customer support and service analytics.',
+    baseRoutePattern: '/app/workspaces/:id/qynva/operator',
+    description: 'Enterprise AI Operator: discovers capabilities, builds context, reasons, and coordinates cross-module plans.',
     sidebar: { order: 12 },
   },
 ]
 
+// Child routes per module. The sidebar links to the FIRST route of each ready module; additional routes
+// are reached via in-page navigation. QynShield has no SPA surface yet (remains a placeholder).
+const qynAssetRoutes: RouteConfig[] = [
+  { key: 'intelligence', label: 'Asset Intelligence', i18nKey: 'nav.qynasset.assetIntelligence', path: '/app/workspaces/:id/qynasset/intelligence', title: 'Asset Intelligence' },
+]
+const qynRunRoutes: RouteConfig[] = [
+  { key: 'automation', label: 'Automation', i18nKey: 'nav.qynrun.automation', path: '/app/workspaces/:id/qynrun/automation', title: 'Automation' },
+]
+const qynReactRoutes: RouteConfig[] = [
+  { key: 'incidents', label: 'Incident Workspace', i18nKey: 'nav.qynreact.incidents', path: '/app/workspaces/:id/qynreact/incidents', title: 'Incident Workspace' },
+]
+const qynKnowRoutes: RouteConfig[] = [
+  { key: 'knowledge', label: 'Knowledge Center', i18nKey: 'nav.qynknow.knowledge', path: '/app/workspaces/:id/qynknow/knowledge', title: 'Knowledge Center' },
+  { key: 'search', label: 'Enterprise Search', i18nKey: 'nav.qynknow.search', path: '/app/workspaces/:id/qynknow/search', title: 'Enterprise Search' },
+  { key: 'timeline', label: 'Global Timeline', i18nKey: 'nav.qynknow.timeline', path: '/app/workspaces/:id/qynknow/timeline', title: 'Global Timeline' },
+]
+const qynSupportRoutes: RouteConfig[] = [
+  { key: 'tickets', label: 'Service Desk', i18nKey: 'nav.qynsupport.tickets', path: '/app/workspaces/:id/qynsupport/tickets', title: 'Service Desk' },
+]
+const qynNotifyRoutes: RouteConfig[] = [
+  { key: 'notifications', label: 'Notification Center', i18nKey: 'nav.qynnotify.notifications', path: '/app/workspaces/:id/qynnotify/notifications', title: 'Notification Center' },
+]
+const qynBalanceRoutes: RouteConfig[] = [
+  { key: 'cost', label: 'Cost Intelligence', i18nKey: 'nav.qynbalance.cost', path: '/app/workspaces/:id/qynbalance/cost', title: 'Cost Intelligence' },
+]
+const qynVaRoutes: RouteConfig[] = [
+  { key: 'operator', label: 'Operator', i18nKey: 'nav.qynva.operator', path: '/app/workspaces/:id/qynva/operator', title: 'Enterprise AI Operator' },
+  { key: 'executive', label: 'Executive Intelligence', i18nKey: 'nav.qynva.executive', path: '/app/workspaces/:id/qynva/executive', title: 'Executive Intelligence' },
+  { key: 'analytics', label: 'Enterprise Analytics', i18nKey: 'nav.qynva.analytics', path: '/app/workspaces/:id/qynva/analytics', title: 'Enterprise Analytics' },
+  { key: 'health', label: 'Platform Health', i18nKey: 'nav.qynva.health', path: '/app/workspaces/:id/qynva/health', title: 'Platform Health' },
+]
+
 export const routesByModule: Record<string, RouteConfig[]> = {
   qynsight: qynSightRoutes,
+  qynasset: qynAssetRoutes,
+  qynrun: qynRunRoutes,
+  qynreact: qynReactRoutes,
+  qynknow: qynKnowRoutes,
+  qynsupport: qynSupportRoutes,
+  qynnotify: qynNotifyRoutes,
+  qynbalance: qynBalanceRoutes,
+  qynva: qynVaRoutes,
 }
 
 export function getModule(key: string): ModuleConfig | undefined {

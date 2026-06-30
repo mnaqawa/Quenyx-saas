@@ -39,7 +39,7 @@ $browser = @(
 if (-not $browser) { throw "No headless Edge/Chrome found." }
 Write-Host "Browser: $browser"
 
-# --- documents (01-32 + OBSERVE) ---------------------------------------------
+# --- documents (01-44 + OBSERVE) ---------------------------------------------
 $docs = @(
     'docs\quenyx-v1\01_EXECUTIVE_OVERVIEW.md', 'docs\quenyx-v1\02_PRODUCT_BROCHURE.md',
     'docs\quenyx-v1\03_INVESTOR_DECK_OUTLINE.md', 'docs\quenyx-v1\04_EXECUTIVE_WHITEPAPER.md',
@@ -58,6 +58,12 @@ $docs = @(
     'docs\quenyx-v1\28_ENTERPRISE_KNOWLEDGE_GUIDE.md', 'docs\quenyx-v1\29_SERVICE_DESK_GUIDE.md',
     'docs\quenyx-v1\30_NOTIFICATION_GUIDE.md', 'docs\quenyx-v1\31_COLLABORATION_GUIDE.md',
     'docs\quenyx-v1\32_GLOBAL_TIMELINE_GUIDE.md',
+    'docs\quenyx-v1\33_EXECUTIVE_INTELLIGENCE_GUIDE.md', 'docs\quenyx-v1\34_CONTEXT_ENGINE_GUIDE.md',
+    'docs\quenyx-v1\35_PLATFORM_EVENT_BUS_GUIDE.md', 'docs\quenyx-v1\36_PLATFORM_OPERATIONS_GUIDE.md',
+    'docs\quenyx-v1\37_QYNVA_GUIDE.md', 'docs\quenyx-v1\38_QYNBALANCE_GUIDE.md',
+    'docs\quenyx-v1\39_RELEASE_NOTES_v1.0.md', 'docs\quenyx-v1\40_MIGRATION_GUIDE.md',
+    'docs\quenyx-v1\41_ARCHITECTURE_SUMMARY_v1.0.md', 'docs\quenyx-v1\42_EXECUTIVE_SUMMARY_v1.0.md',
+    'docs\quenyx-v1\43_DEPLOYMENT_CHECKLIST_v1.0.md', 'docs\quenyx-v1\44_PRODUCTION_READINESS_REPORT_v1.0.md',
     'docs\OBSERVE_RUNBOOK.md'
 )
 if ($Only) { $docs = $docs | Where-Object { $n = [IO.Path]::GetFileNameWithoutExtension($_); $Only -contains $n } }

@@ -139,6 +139,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#25-ai-adapter-platform-sprint-22"><span class="toc-text">25. AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-23-qynrun-amp-qynreact-adapters-cross-module-orchestration"><span class="toc-text">Sprint 23 — QynRun &amp;amp; QynReact adapters + cross-module orchestration</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-24-knowledge-service-desk-amp-notification-adapters"><span class="toc-text">Sprint 24 — Knowledge, Service Desk &amp;amp; Notification adapters</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-25-context-engine-qynva-operator-amp-intelligence-adapters"><span class="toc-text">Sprint 25 — Context Engine, QynVA Operator &amp;amp; intelligence adapters</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -406,6 +407,28 @@ AI disabled the mock provider answers (flagged) while the evidence stays real.</
 sources self-describe and self-register, so adding a provider never touches search/graph/timeline code.
 See the <strong>Enterprise Knowledge Guide (doc 28)</strong>, <strong>Service Desk Guide (doc 29)</strong>, <strong>Notification Guide
 (doc 30)</strong>, <strong>Collaboration Guide (doc 31)</strong>, <strong>Global Timeline Guide (doc 32)</strong>.</p>
+<hr />
+<h2 id="sprint-25-context-engine-qynva-operator-amp-intelligence-adapters">Sprint 25 — Context Engine, QynVA Operator &amp; intelligence adapters</h2>
+<p><strong>One context for all AI.</strong> The <strong>Enterprise Context Engine</strong>
+(<code>App\Services\Platform\Context\EnterpriseContextEngine</code>) is now the single source of AI context. It
+assembles a normalized object from workspace, user, permissions, the cross-module gather (monitoring,
+assets, automation, knowledge, incidents, notifications, compliance — via the <strong>AI Adapter Registry</strong>, no
+branching), Global Timeline, Knowledge Graph v2, and Enterprise Search. It is a pure read-model and is
+recursion-safe (QynVA excludes itself from the gather; the QynVA adapter's <code>buildContext()</code> is
+registry-introspection only). All AI surfaces should consume the engine instead of hand-assembling context.</p>
+<p><strong>QynVA is the Enterprise AI Operator, not a chatbot.</strong> <code>QynVaOperatorService</code> discovers adapters and
+capabilities, builds enterprise context, reasons through the shared <code>ModuleAiNarrator</code>, and proposes
+<strong>editable, evidence-based</strong> cross-module coordination plans that reference <em>existing</em> module actions by
+key. It <strong>never executes</strong> — the owning module executes after human approval. Two new adapters register
+the standard way (no platform change): <strong><code>qynva</code></strong> and <strong><code>qynbalance</code></strong>, bringing the registry to nine
+production adapters; both are <code>ai_candidate</code> in <code>config/quenyx_ai.php</code>.</p>
+<p><strong>Evidence-based executive AI.</strong> The Executive AI Summary narrates a <strong>deterministic</strong> dashboard built
+from real read-models (health scores, KPIs, top risks/recommendations); QynBalance's FinOps copilot
+narrates deterministic cost evidence and is explicit when <strong>pricing is unavailable</strong>. As everywhere, with
+AI disabled the mock provider answers (flagged <code>ai_enabled:false</code>) while the evidence stays real, and every
+turn is audited. QynVA also publishes <code>ConversationCompleted</code> on the <strong>Platform Event Bus</strong>. See the
+<strong>Context Engine Guide (doc 34)</strong>, <strong>QynVA Guide (doc 37)</strong>, <strong>QynBalance Guide (doc 38)</strong>, <strong>Executive
+Intelligence Guide (doc 33)</strong>, and <strong>Platform Event Bus Guide (doc 35)</strong>.</p>
 
 </main>
 

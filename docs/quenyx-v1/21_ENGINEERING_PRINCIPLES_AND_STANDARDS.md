@@ -162,5 +162,25 @@ These extend the standards above for knowledge, search, and collaboration code:
 
 ---
 
+## Enterprise Intelligence standards (Sprint 25)
+
+These extend the standards above for event-driven, context, and intelligence code:
+
+- **No module-to-module calls.** Cross-module communication goes through the **Platform Event Bus**
+  (`PlatformEventBus`) using canonical `PlatformEventNames`. Publishers don't know subscribers; subscriber
+  failures are isolated; every publish is audited. **No `if (module == …)`** branching, ever.
+- **One context source.** AI context is built **only** by the `EnterpriseContextEngine` — never
+  hand-assembled in a module. It is a read-model and must stay recursion-safe.
+- **Operators recommend, modules execute.** QynVA proposes **editable, evidence-based** plans referencing
+  existing module actions and **never executes**. Cross-module execution happens through the owning
+  module's approved, audited path after human approval.
+- **No fabricated values.** Analytics/Executive return honest `available:false`; QynBalance returns counts
+  + "pricing unavailable" unless real rates are configured. Never invent financial, capacity, or KPI
+  numbers.
+- **Self-observability.** Platform-level state is exposed through Platform Health and Enterprise Analytics
+  as read-models over real signals — never mocked status.
+
+---
+
 > **The standard, in one line:** *Deterministic, provenance‑backed, fail‑closed, UUID‑first,
 > AI‑as‑renderer — with no fake data, no fabricated claims, and no unapproved actions, ever.*

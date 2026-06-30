@@ -131,6 +131,8 @@ body{margin:0}
 <li class="toc-l2"><a href="#adding-an-execution-adapter-automation-platform-sprint-23"><span class="toc-text">Adding an execution adapter (Automation Platform, Sprint 23)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#adding-a-knowledge-source-knowledge-platform-sprint-24"><span class="toc-text">Adding a knowledge source (Knowledge Platform, Sprint 24)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#adding-collaboration-to-a-new-surface-sprint-24"><span class="toc-text">Adding collaboration to a new surface (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#publishing-amp-subscribing-to-platform-events-event-bus-sprint-25"><span class="toc-text">Publishing &amp;amp; subscribing to platform events (Event Bus, Sprint 25)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#building-ai-context-context-engine-sprint-25"><span class="toc-text">Building AI context (Context Engine, Sprint 25)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -355,6 +357,24 @@ automatically — <strong>no provider-specific branching anywhere</strong>.</p>
 any entity: call <code>CollaborationService</code> server-side (addressed by <code>entity_type</code> + <code>entity_uuid</code>) and drop
 the reusable <code>CollaborationPanel</code> React component into the page with <code>{ workspaceUuid, entityType, entityUuid }</code>. Do <strong>not</strong> build a per-module comment system. New AI surfaces must narrate only through
 <code>ModuleAiNarrator</code> and register an <code>AiModuleAdapter</code>. See Docs 28–32.</p>
+<hr />
+<h2 id="publishing-amp-subscribing-to-platform-events-event-bus-sprint-25">Publishing &amp; subscribing to platform events (Event Bus, Sprint 25)</h2>
+<p>Modules must <strong>not</strong> call each other directly. To announce something happened, publish a domain event:</p>
+<ol>
+<li>Use a canonical name from <code>App\Services\Platform\EventBus\PlatformEventNames</code> (typos throw). Then:
+<code>app(PlatformEventBus::class)-&gt;publish(PlatformEventNames::INCIDENT_OPENED, $project, $user, [...payload], $correlationId)</code>.
+The publish is workspace-aware and audited (<code>platform_event_published</code>); fan-out is isolated.</li>
+<li>To <strong>react</strong>, implement <code>App\Contracts\Platform\EventSubscriber</code> (<code>key()</code>, <code>subscribedTo()</code>,
+<code>handle()</code>; return <code>['*']</code> to receive everything) and register it once in <code>AppServiceProvider::boot()</code>
+via <code>PlatformEventBus::subscribe(...)</code>. The publisher is untouched — no module branching. See Doc 35.</li>
+</ol>
+<h2 id="building-ai-context-context-engine-sprint-25">Building AI context (Context Engine, Sprint 25)</h2>
+<p>Never hand-assemble enterprise context. Call
+<code>app(EnterpriseContextEngine::class)-&gt;build($project, $user, ['query' =&gt; ..., 'exclude' =&gt; [...]])</code> to get
+one normalized object (workspace, user, permissions, cross-module gather, timeline, graph, search). It is
+a read-model and recursion-safe. QynVA (<code>QynVaOperatorService</code>) consumes it to reason and propose
+<strong>editable</strong> cross-module plans — and <strong>never executes</strong>. New module intelligence should follow the same
+pattern: deterministic evidence first, then narrate via <code>ModuleAiNarrator</code>. See Docs 34, 37.</p>
 
 </main>
 

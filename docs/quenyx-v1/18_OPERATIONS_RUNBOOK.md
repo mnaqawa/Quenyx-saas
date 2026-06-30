@@ -252,3 +252,25 @@ php artisan config:cache
   table. All data is workspace-isolated and UUID-only.
 - **No duplicated AI/orchestration**: knowledge, ticket, and notification intelligence all narrate
   through `ModuleAiNarrator` and reuse the `CrossModuleOrchestrator`. See Docs 28–32.
+
+---
+
+## Enterprise Intelligence operations (Sprint 25)
+
+- **Platform Health is the first stop**: `GET /api/qynva/health` (requires `administerAi`) reports overall
+  + per-area status (AI/automation/knowledge platforms, search, registries, providers, queues, event bus,
+  background jobs). For any `degraded`/`down` area, read its `reason` and follow the matching registry/
+  queue/provider check. UI: `/qynva/health`.
+- **Event Bus introspection**: `GET /api/qynva/events` (privileged) shows the event vocabulary, registered
+  subscribers (and what each listens to), and the recent event ring. A subscriber that throws is caught and
+  logged — it **never** breaks publishing. Every publish is audited as `platform_event_published`.
+- **QynVA never executes**: the operator (`POST /api/qynva/operator/operate`) only returns editable,
+  evidence-based plans referencing existing module actions; humans approve and the owning module executes.
+- **QynBalance honesty**: `GET /api/qynbalance/cost/overview` shows real counts and monetary figures **only
+  where `config/cost.php` rates are set**; otherwise it reports "pricing unavailable" with a
+  `configure_pricing` recommendation. This is expected behavior, not a fault. Set `COST_*` env to enable
+  monetary estimates and re-cache config.
+- **AI disabled**: Executive summaries, QynVA, and the cost copilot fall back to the deterministic mock
+  provider (flagged `ai_enabled:false`); the underlying evidence is always real.
+- **Async migration**: Event Bus fan-out is synchronous-but-isolated; replacing the `dispatch()` body with
+  a queued job requires no changes to publishers or subscribers. See Docs 33–36, 44.

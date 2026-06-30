@@ -14,7 +14,10 @@ use App\Services\Automation\AutomationAdapterRegistry;
 use App\Services\Knowledge\KnowledgeSourceRegistry;
 use App\Services\Knowledge\Sources\InternalKnowledgeBaseSource;
 use App\Services\Knowledge\Sources\PlannedKnowledgeSource;
+use App\Services\Platform\EventBus\PlatformEventBus;
+use App\Services\Platform\EventBus\Subscribers\NotificationFanoutSubscriber;
 use App\Services\QuenyxAI\Adapters\QynAssetAiAdapter;
+use App\Services\QuenyxAI\Adapters\QynBalanceAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynKnowAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynNotifyAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynReactAiAdapter;
@@ -22,6 +25,7 @@ use App\Services\QuenyxAI\Adapters\QynRunAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynShieldAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynSightAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynSupportAiAdapter;
+use App\Services\QuenyxAI\Adapters\QynVaAiAdapter;
 use App\Services\QuenyxAI\AiModuleAdapterRegistry;
 use App\Services\QuenyxAI\QuenyxAiPlatform;
 use GuzzleHttp\Client as GuzzleClient;
@@ -55,6 +59,11 @@ class AppServiceProvider extends ServiceProvider
         // register here so Enterprise Search and the Knowledge Assistant discover them dynamically
         // (no provider branching). Future connectors plug in with one registration line.
         $this->app->singleton(KnowledgeSourceRegistry::class);
+
+        // Sprint 25 — the Platform Event Bus is a process-wide singleton so subscriber registrations and
+        // the recent-event ring persist for the request lifecycle. Publishers and subscribers never call
+        // each other directly — everything goes through the bus.
+        $this->app->singleton(PlatformEventBus::class);
 
         // LlmClient is config-driven; bind it so AiAgentService can be auto-resolved.
         $this->app->singleton(LlmClient::class, fn () => LlmClient::fromConfig());
@@ -100,6 +109,11 @@ class AppServiceProvider extends ServiceProvider
         $registry->register($this->app->make(QynKnowAiAdapter::class));
         $registry->register($this->app->make(QynSupportAiAdapter::class));
         $registry->register($this->app->make(QynNotifyAiAdapter::class));
+        // Sprint 25 — QynVA (Enterprise AI Operator) and QynBalance (Cost Intelligence) complete the
+        // registry. With these, the cross-module operator and context engine discover EVERY module the
+        // same way — no module branching anywhere.
+        $registry->register($this->app->make(QynVaAiAdapter::class));
+        $registry->register($this->app->make(QynBalanceAiAdapter::class));
 
         // Sprint 23 — register execution adapters with the Automation Registry. Future runners plug in
         // here with one line (implement adapter + register) — the engine, registry, and APIs are unchanged.
@@ -131,5 +145,11 @@ class AppServiceProvider extends ServiceProvider
                 (string) ($planned['category'] ?? 'general'),
             ));
         }
+
+        // Sprint 25 — register Platform Event Bus subscribers. Modules react to domain events through
+        // handlers (here: urgent events fan out to QynNotify) WITHOUT the publisher ever knowing about
+        // them. Future subscribers plug in with one line — publishers are untouched.
+        $bus = $this->app->make(PlatformEventBus::class);
+        $bus->subscribe($this->app->make(NotificationFanoutSubscriber::class));
     }
 }

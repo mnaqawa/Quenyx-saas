@@ -285,4 +285,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sprint 24 — Collaboration Platform (shared comments/mentions/watchers/assignments for every module) — see routes/collaboration.php
     require base_path('routes/collaboration.php');
+
+    // Sprint 25 — QynVA Enterprise AI Operator + Executive Intelligence, Enterprise Analytics, Platform Health, Event Bus — see routes/qynva-operator.php
+    require base_path('routes/qynva-operator.php');
+
+    // Sprint 25 — QynBalance Enterprise Cost Intelligence (real data, no fabricated financials) — see routes/qynbalance-cost.php
+    require base_path('routes/qynbalance-cost.php');
 });

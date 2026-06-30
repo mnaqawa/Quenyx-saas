@@ -357,3 +357,30 @@ AI disabled the mock provider answers (flagged) while the evidence stays real.
 sources self-describe and self-register, so adding a provider never touches search/graph/timeline code.
 See the **Enterprise Knowledge Guide (doc 28)**, **Service Desk Guide (doc 29)**, **Notification Guide
 (doc 30)**, **Collaboration Guide (doc 31)**, **Global Timeline Guide (doc 32)**.
+
+---
+
+## Sprint 25 — Context Engine, QynVA Operator & intelligence adapters
+
+**One context for all AI.** The **Enterprise Context Engine**
+(`App\Services\Platform\Context\EnterpriseContextEngine`) is now the single source of AI context. It
+assembles a normalized object from workspace, user, permissions, the cross-module gather (monitoring,
+assets, automation, knowledge, incidents, notifications, compliance — via the **AI Adapter Registry**, no
+branching), Global Timeline, Knowledge Graph v2, and Enterprise Search. It is a pure read-model and is
+recursion-safe (QynVA excludes itself from the gather; the QynVA adapter's `buildContext()` is
+registry-introspection only). All AI surfaces should consume the engine instead of hand-assembling context.
+
+**QynVA is the Enterprise AI Operator, not a chatbot.** `QynVaOperatorService` discovers adapters and
+capabilities, builds enterprise context, reasons through the shared `ModuleAiNarrator`, and proposes
+**editable, evidence-based** cross-module coordination plans that reference *existing* module actions by
+key. It **never executes** — the owning module executes after human approval. Two new adapters register
+the standard way (no platform change): **`qynva`** and **`qynbalance`**, bringing the registry to nine
+production adapters; both are `ai_candidate` in `config/quenyx_ai.php`.
+
+**Evidence-based executive AI.** The Executive AI Summary narrates a **deterministic** dashboard built
+from real read-models (health scores, KPIs, top risks/recommendations); QynBalance's FinOps copilot
+narrates deterministic cost evidence and is explicit when **pricing is unavailable**. As everywhere, with
+AI disabled the mock provider answers (flagged `ai_enabled:false`) while the evidence stays real, and every
+turn is audited. QynVA also publishes `ConversationCompleted` on the **Platform Event Bus**. See the
+**Context Engine Guide (doc 34)**, **QynVA Guide (doc 37)**, **QynBalance Guide (doc 38)**, **Executive
+Intelligence Guide (doc 33)**, and **Platform Event Bus Guide (doc 35)**.
