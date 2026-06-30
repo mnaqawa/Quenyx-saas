@@ -29,10 +29,10 @@ return [
         ['key' => 'qynasset',       'name' => 'QynAsset',       'ai_candidate' => true],
         ['key' => 'qynrun',         'name' => 'QynRun',         'ai_candidate' => true],
         ['key' => 'qynreact',       'name' => 'QynReact',       'ai_candidate' => true],
-        ['key' => 'qynnotify',      'name' => 'QynNotify',      'ai_candidate' => false],
-        ['key' => 'qynknow',        'name' => 'QynKnow',        'ai_candidate' => false],
+        ['key' => 'qynnotify',      'name' => 'QynNotify',      'ai_candidate' => true],
+        ['key' => 'qynknow',        'name' => 'QynKnow',        'ai_candidate' => true],
         ['key' => 'qynva',          'name' => 'QynVA',          'ai_candidate' => false],
-        ['key' => 'qynsupport',     'name' => 'QynSupport',     'ai_candidate' => false],
+        ['key' => 'qynsupport',     'name' => 'QynSupport',     'ai_candidate' => true],
         ['key' => 'qynbalance',     'name' => 'QynBalance',     'ai_candidate' => false],
     ],
 

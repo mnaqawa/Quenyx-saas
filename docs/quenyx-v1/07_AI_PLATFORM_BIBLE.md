@@ -331,3 +331,29 @@ registers an adapter — there is still no `if (module == …)` anywhere.
 `AutomationLearningService` aggregates (success/failure/rollback rates, typical duration). There is
 **no model training and no hidden state** — the "learning" is inspectable, workspace-scoped history.
 See the **Automation Platform Guide (doc 24)**, **QynRun Guide (doc 25)**, **QynReact Guide (doc 26)**.
+
+---
+
+## Sprint 24 — Knowledge, Service Desk & Notification adapters
+
+Three new production adapters register the same way (no platform change): **`qynknow`** (Enterprise
+Knowledge), **`qynsupport`** (Service Desk / Ticket Intelligence), and **`qynnotify`** (Notification
+Intelligence) — bringing the registry to seven production adapters (QynSight, QynAsset, QynRun,
+QynReact, QynKnow, QynSupport, QynNotify). All narrate exclusively through the shared `ModuleAiNarrator`;
+no AI/provider/orchestration logic is duplicated, and `ai_candidate` is enabled for the three modules in
+`config/quenyx_ai.php`.
+
+**Knowledge Assistant.** `QynKnowIntelligenceService` supports Explain, Summarize (KB/incident/
+executive/technical), Find related, and Generate (KB/runbook) drafts. Every answer is grounded in real
+evidence retrieved via `EnterpriseSearchService` and cross-module context from the
+`CrossModuleOrchestrator`; drafts are **editable and never fabricated**, never auto-applied.
+
+**Ticket & Notification Intelligence (evidence-based).** Suggestions (category/priority/impact/assignee/
+SLA, digests, executive summaries) are computed deterministically from real rows and only then narrated;
+when there is no history the services say **"insufficient evidence"** rather than inventing facts. With
+AI disabled the mock provider answers (flagged) while the evidence stays real.
+
+**Registry-driven knowledge.** The `KnowledgeSourceRegistry` mirrors the AI Adapter Registry pattern:
+sources self-describe and self-register, so adding a provider never touches search/graph/timeline code.
+See the **Enterprise Knowledge Guide (doc 28)**, **Service Desk Guide (doc 29)**, **Notification Guide
+(doc 30)**, **Collaboration Guide (doc 31)**, **Global Timeline Guide (doc 32)**.

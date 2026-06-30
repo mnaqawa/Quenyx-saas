@@ -129,6 +129,8 @@ body{margin:0}
 <li class="toc-l2"><a href="#consuming-the-ai-runtime-from-a-module-operations-intelligence-sprint-21"><span class="toc-text">Consuming the AI runtime from a module — Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l3"><a href="#adding-ai-to-a-module-the-ai-adapter-platform-sprint-22"><span class="toc-text">Adding AI to a module (the AI Adapter Platform — Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#adding-an-execution-adapter-automation-platform-sprint-23"><span class="toc-text">Adding an execution adapter (Automation Platform, Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#adding-a-knowledge-source-knowledge-platform-sprint-24"><span class="toc-text">Adding a knowledge source (Knowledge Platform, Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#adding-collaboration-to-a-new-surface-sprint-24"><span class="toc-text">Adding collaboration to a new surface (Sprint 24)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -334,6 +336,25 @@ actions to <code>config('automation.actions')</code> (mark <code>destructive</co
 <p>The Execution Engine handles dry-run defaulting, approval gating, retries, audit, and learning for
 you. The Library UI, workflows, and runbooks pick up the new adapter automatically. See the
 <strong>Automation Platform Guide (Doc 24)</strong>.</p>
+<hr />
+<h2 id="adding-a-knowledge-source-knowledge-platform-sprint-24">Adding a knowledge source (Knowledge Platform, Sprint 24)</h2>
+<p>Knowledge sources plug into the <strong><code>KnowledgeSourceRegistry</code></strong> the same way — no core change to Enterprise
+Search, the Knowledge Graph, or the Global Timeline. To add a provider (e.g. Confluence, a Vector Store):</p>
+<ol>
+<li>Implement <code>App\Contracts\Knowledge\KnowledgeSource</code> (or extend <code>AbstractKnowledgeSource</code>). Declare
+<code>key()</code>, <code>name()</code>, <code>isOperational()</code>, <code>search()</code>, and <code>count()</code>.</li>
+<li><strong>Be honest:</strong> until the provider is actually wired, return <code>isOperational() === false</code> (this is what
+<code>PlannedKnowledgeSource</code> does) — Enterprise Search will skip it cleanly rather than fabricate hits.
+Operational sources must return only <strong>real indexed rows</strong>.</li>
+<li>Register it in <code>AppServiceProvider::boot()</code> via <code>KnowledgeSourceRegistry::register(...)</code>.</li>
+</ol>
+<p>Enterprise Search, the registry view (<code>GET /api/qynknow/sources</code>), and the UI pick up the new source
+automatically — <strong>no provider-specific branching anywhere</strong>.</p>
+<h2 id="adding-collaboration-to-a-new-surface-sprint-24">Adding collaboration to a new surface (Sprint 24)</h2>
+<p>Collaboration is a shared, polymorphic capability. To add comments/mentions/watchers/assignees/owners to
+any entity: call <code>CollaborationService</code> server-side (addressed by <code>entity_type</code> + <code>entity_uuid</code>) and drop
+the reusable <code>CollaborationPanel</code> React component into the page with <code>{ workspaceUuid, entityType, entityUuid }</code>. Do <strong>not</strong> build a per-module comment system. New AI surfaces must narrate only through
+<code>ModuleAiNarrator</code> and register an <code>AiModuleAdapter</code>. See Docs 28–32.</p>
 
 </main>
 

@@ -4,7 +4,7 @@
 >
 > | Field | Value |
 > |---|---|
-> | Document Version | 2.3 |
+> | Document Version | 2.4 |
 > | Software Version | v1.0.0 RC1 |
 > | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
 > | Classification | Internal |
@@ -22,6 +22,7 @@
 > | 2.1 | 2026-06-29 | RC1.1 cleanup: code aligned to docs — removed stale gateway Nagios config, normalized native engine_key, reclassified QynIntegrations (entitlement key only) and QynCore (platform core) in code catalogs, banner-marked legacy ShieldObserve docs. |
 > | 2.2 | 2026-06-29 | RC1.1 AI polish: Sprint 20 surface branded **Quenyx AI** (routes unchanged; `/quenyx-ai/*` alias); enterprise provider catalog (14 providers, only OpenAI executable); mock provider removed from production default/UI; real Test‑connection endpoint; enriched overview. Affected PDFs (01,05,07,08,11,12,16,18) should be regenerated on a build host (see Audit Report RC1.1 AI addendum). |
 > | 2.3 | 2026-06-30 | Sprint 21 — **QynSight Operations Intelligence**: QynSight becomes a live AI consumer (Monitoring Copilot, Alert/Root‑Cause/Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, OI dashboard) reusing the shared Quenyx AI platform; new UUID‑only `/api/qynsight/intelligence/*` APIs. Docs 01, 02, 05, 07, 08, 11, 12, 14, 18 updated and PDFs regenerated (deterministic CDP builder). |
+| 2.4 | 2026-06-30 | Sprint 24 — **Enterprise Knowledge & Collaboration Platform**: QynKnow/QynSupport/QynNotify unified into shared platform capabilities — **Knowledge Source Registry** (registry-driven, Internal KB live + planned providers), **Enterprise Search** (keyword + semantic over real rows), **Knowledge Graph v2**, **Global Timeline**, **Collaboration Platform** (comments/mentions/participants, polymorphic), **Ticket Intelligence**, **Notification Intelligence** — all AI via `ModuleAiNarrator` (no direct provider calls, no duplicated AI/automation/orchestration). New guides 28–32; docs 05, 07, 08, 11, 12, 18, 21 updated; PDFs regenerated (deterministic CDP builder). |
 
 This pack is the **canonical, definitive documentation set** for Quenyx vOPS HUB at **v1.0.0 RC1**.
 Every statement here is grounded in the **current production codebase and actually delivered
@@ -92,6 +93,11 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | 25 | [QynRun Guide](./25_QYNRUN_GUIDE.md) | [PDF](../pdf/25_QYNRUN_GUIDE.pdf) | QynRun users | Enterprise Automation module |
 | 26 | [QynReact Guide](./26_QYNREACT_GUIDE.md) | [PDF](../pdf/26_QYNREACT_GUIDE.pdf) | Incident responders | Unified Incident Workspace |
 | 27 | [Incident Response Guide](./27_INCIDENT_RESPONSE_GUIDE.md) | [PDF](../pdf/27_INCIDENT_RESPONSE_GUIDE.pdf) | On-call, SRE | Incident lifecycle playbook |
+| 28 | [Enterprise Knowledge Guide](./28_ENTERPRISE_KNOWLEDGE_GUIDE.md) | [PDF](../pdf/28_ENTERPRISE_KNOWLEDGE_GUIDE.pdf) | Knowledge users, platform engineers | Shared Knowledge Platform |
+| 29 | [Service Desk Guide](./29_SERVICE_DESK_GUIDE.md) | [PDF](../pdf/29_SERVICE_DESK_GUIDE.pdf) | Service desk, SRE | QynSupport + Ticket Intelligence |
+| 30 | [Notification Guide](./30_NOTIFICATION_GUIDE.md) | [PDF](../pdf/30_NOTIFICATION_GUIDE.pdf) | On-call, ops | QynNotify + Notification Intelligence |
+| 31 | [Collaboration Guide](./31_COLLABORATION_GUIDE.md) | [PDF](../pdf/31_COLLABORATION_GUIDE.pdf) | All users, platform engineers | Shared collaboration layer |
+| 32 | [Global Timeline Guide](./32_GLOBAL_TIMELINE_GUIDE.md) | [PDF](../pdf/32_GLOBAL_TIMELINE_GUIDE.pdf) | Ops, auditors | Platform-wide chronological read-model |
 | QA | [QA Audit Report](./QA_AUDIT_REPORT.md) | — | Eng leadership, auditors | Track‑B audit results |
 
 ---
@@ -111,7 +117,9 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | Quenyx AI Platform (shared, platform‑wide: provider abstraction, skills, context, retrieval, reasoning, knowledge graph, gap/evidence/recommendation engines, copilot, RAG runtime, executive platform, capability catalog) | 🟢 Built · QynShield adapter live |
 | Unified AI Workspace (Sprint 20) — top‑level platform AI surface, workspace‑scoped, UUID‑only APIs | 🟢 Built · 🟡 master switch (`AI_WORKSPACE_ENABLED`) |
 | QynSight Operations Intelligence (Sprint 21) — Monitoring Copilot, alert/root‑cause/capacity/performance/infrastructure/service‑health intelligence, evidence‑based recommendations, OI dashboard; reuses the shared AI platform; UUID‑only `/api/qynsight/intelligence/*` | 🟢 Built · live AI consumer · 🟡 same AI flags |
-| Other HUB modules (QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynVA, QynSupport, QynBalance) | 🔵 Registered internally · **disabled in the navigation by sidebar flag** until production rollout |
+| Automation Platform (Sprint 23) — shared, registry-driven Automation Registry / Execution / Workflow / Runbook / Approval engines; Incident Workspace (QynReact); cross-module orchestration | 🟢 Built · 🟡 same AI flags |
+| Enterprise Knowledge & Collaboration Platform (Sprint 24) — **Knowledge Source Registry** (Internal KB live; Markdown/PDF/HTML/Git/Confluence/SharePoint/Drive/OneDrive/Wikis/Elastic/Vector planned), **Enterprise Search**, **Knowledge Graph v2**, **Global Timeline**, **Collaboration Platform**, **Ticket Intelligence**, **Notification Intelligence**; all AI via `ModuleAiNarrator`; UUID‑only `/api/qynknow/*`, `/api/qynsupport/*`, `/api/qynnotify/*`, `/api/collaboration/*` | 🟢 Built · live AI consumers · 🟡 same AI flags |
+| Other HUB modules (QynVA, QynBalance) | 🔵 Registered internally · **disabled in the navigation by sidebar flag** until production rollout |
 | QynCore (platform core: internal communication services) | 🟢 Platform layer (not a navigable module) |
 | Integrations (platform page, **external** systems only) | 🟢 Platform page (not a module) |
 
@@ -138,9 +146,9 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 |---|---|---|
 | Sprint 20 | Unified AI Workspace | ✅ Delivered in RC1 |
 | Sprint 21 | Operations Intelligence | ✅ Delivered in RC1 |
-| Sprint 22 | Asset & Knowledge Intelligence | Planned |
-| Sprint 23 | Automation & Response Intelligence | Planned |
-| Sprint 24 | Service, Notification & Cost Intelligence | Planned |
+| Sprint 22 | Asset Intelligence (QynAsset) | ✅ Delivered in RC1 |
+| Sprint 23 | Enterprise Automation & Incident Intelligence (QynRun/QynReact) | ✅ Delivered in RC1 |
+| Sprint 24 | Enterprise Knowledge & Collaboration Platform (QynKnow/QynSupport/QynNotify) | ✅ Delivered in RC1 |
 | Sprint 25 | Enterprise Intelligence Platform | Planned |
 
 There is **no roadmap content beyond Sprint 25** at this time.
@@ -149,7 +157,7 @@ There is **no roadmap content beyond Sprint 25** at this time.
 
 ## PDF deliverables
 
-Branded, print-ready PDFs of **all 21** documents (01–21) are generated into the single canonical
+Branded, print-ready PDFs of **all 32** documents (01–32) are generated into the single canonical
 folder [`docs/pdf/`](../pdf/) (title page, auto TOC, page numbers, classification footer, rendered
 Mermaid diagrams). Markdown remains the editable source of truth; the PDFs are build artifacts.
 Regenerate all of them with the **deterministic CDP builder** (waits for Paged.js/Mermaid pagination

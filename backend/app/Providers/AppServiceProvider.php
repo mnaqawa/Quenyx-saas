@@ -11,11 +11,17 @@ use App\Services\Automation\Adapters\ScriptExecutionAdapter;
 use App\Services\Automation\Adapters\SshExecutionAdapter;
 use App\Services\Automation\Adapters\WebhookExecutionAdapter;
 use App\Services\Automation\AutomationAdapterRegistry;
+use App\Services\Knowledge\KnowledgeSourceRegistry;
+use App\Services\Knowledge\Sources\InternalKnowledgeBaseSource;
+use App\Services\Knowledge\Sources\PlannedKnowledgeSource;
 use App\Services\QuenyxAI\Adapters\QynAssetAiAdapter;
+use App\Services\QuenyxAI\Adapters\QynKnowAiAdapter;
+use App\Services\QuenyxAI\Adapters\QynNotifyAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynReactAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynRunAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynShieldAiAdapter;
 use App\Services\QuenyxAI\Adapters\QynSightAiAdapter;
+use App\Services\QuenyxAI\Adapters\QynSupportAiAdapter;
 use App\Services\QuenyxAI\AiModuleAdapterRegistry;
 use App\Services\QuenyxAI\QuenyxAiPlatform;
 use GuzzleHttp\Client as GuzzleClient;
@@ -44,6 +50,11 @@ class AppServiceProvider extends ServiceProvider
         // through the registry — there is no hardcoded execution path anywhere.
         $this->app->singleton(AutomationAdapterRegistry::class);
         $this->app->singleton(ActionRegistry::class, fn (): ActionRegistry => new ActionRegistry((array) config('automation.actions', [])));
+
+        // Sprint 24 — the Knowledge Source Registry is a process-wide singleton: knowledge providers
+        // register here so Enterprise Search and the Knowledge Assistant discover them dynamically
+        // (no provider branching). Future connectors plug in with one registration line.
+        $this->app->singleton(KnowledgeSourceRegistry::class);
 
         // LlmClient is config-driven; bind it so AiAgentService can be auto-resolved.
         $this->app->singleton(LlmClient::class, fn () => LlmClient::fromConfig());
@@ -84,6 +95,11 @@ class AppServiceProvider extends ServiceProvider
         // Sprint 23 — QynRun (automation) and QynReact (incident) become AI adapters the same way.
         $registry->register($this->app->make(QynRunAiAdapter::class));
         $registry->register($this->app->make(QynReactAiAdapter::class));
+        // Sprint 24 — QynKnow (knowledge), QynSupport (service desk), and QynNotify (notifications) join
+        // the AI Adapter Registry with one line each — the platform core is unchanged.
+        $registry->register($this->app->make(QynKnowAiAdapter::class));
+        $registry->register($this->app->make(QynSupportAiAdapter::class));
+        $registry->register($this->app->make(QynNotifyAiAdapter::class));
 
         // Sprint 23 — register execution adapters with the Automation Registry. Future runners plug in
         // here with one line (implement adapter + register) — the engine, registry, and APIs are unchanged.
@@ -99,6 +115,20 @@ class AppServiceProvider extends ServiceProvider
                 (string) $planned['name'],
                 (string) ($planned['category'] ?? 'generic'),
                 (string) ($planned['description'] ?? ''),
+            ));
+        }
+
+        // Sprint 24 — register Knowledge Sources with the Knowledge Source Registry. The Internal
+        // Knowledge Base is always operational; external providers register as "planned" until a real
+        // connector is configured (they report not-connected and never fabricate results). Future
+        // connectors plug in here with one line — Enterprise Search and the Assistant are unchanged.
+        $knowledge = $this->app->make(KnowledgeSourceRegistry::class);
+        $knowledge->register($this->app->make(InternalKnowledgeBaseSource::class));
+        foreach ((array) config('knowledge.planned_sources', []) as $planned) {
+            $knowledge->register(new PlannedKnowledgeSource(
+                (string) $planned['key'],
+                (string) $planned['name'],
+                (string) ($planned['category'] ?? 'general'),
             ));
         }
     }

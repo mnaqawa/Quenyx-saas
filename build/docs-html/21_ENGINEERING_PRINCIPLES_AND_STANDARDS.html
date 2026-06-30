@@ -127,6 +127,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#14-security-by-design"><span class="toc-text">14. Security‑by‑design</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#ai-adapter-platform-principles-sprint-22"><span class="toc-text">AI Adapter Platform principles (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#automation-standards-sprint-23"><span class="toc-text">Automation standards (Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#knowledge-amp-collaboration-standards-sprint-24"><span class="toc-text">Knowledge &amp;amp; collaboration standards (Sprint 24)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -231,6 +232,22 @@ fabricate output, mirroring the platform's &quot;no fake data&quot; rule.</li>
 audited; UUID-only, workspace-isolated, RBAC-gated.</li>
 <li><strong>Evidence-based AI, no auto-execution.</strong> AI may draft/recommend (citing auditable learning records)
 but never auto-executes. Learning is inspectable history — <strong>no model training, no hidden state.</strong></li>
+</ul>
+<hr />
+<h2 id="knowledge-amp-collaboration-standards-sprint-24">Knowledge &amp; collaboration standards (Sprint 24)</h2>
+<p>These extend the standards above for knowledge, search, and collaboration code:</p>
+<ul>
+<li><strong>Registry-driven knowledge.</strong> Knowledge providers go through the <code>KnowledgeSourceRegistry</code> implementing
+the <code>KnowledgeSource</code> contract. <strong>No provider-specific branching</strong> in search/graph/timeline — there is
+no <code>if (source == 'confluence')</code> anywhere; the registry is the only seam.</li>
+<li><strong>Read-models, not duplicates.</strong> Enterprise Search, Knowledge Graph v2, and the Global Timeline read
+real rows and write nothing. They never duplicate, cache-mutate, or fabricate events.</li>
+<li><strong>Real data only.</strong> Search returns only real indexed rows; planned/unwired sources report
+<code>isOperational() === false</code> and are skipped. Notification routing selects only real workspace members.</li>
+<li><strong>Honest AI.</strong> Knowledge Assistant, Ticket, and Notification Intelligence narrate exclusively through
+<code>ModuleAiNarrator</code>, are grounded in retrieved evidence, are <strong>editable and never auto-applied</strong>, and
+say <strong>&quot;insufficient evidence&quot;</strong> rather than inventing assignees, owners, or facts.</li>
+<li><strong>One collaboration layer.</strong> Comments/mentions/participants are polymorphic over <code>(entity_type, entity_uuid)</code>; modules reuse the shared <code>CollaborationService</code>/<code>CollaborationPanel</code> — never a private copy.</li>
 </ul>
 <hr />
 <blockquote>

@@ -230,3 +230,28 @@ registry — no core change. To add a runner (e.g. Docker, AWS):
 The Execution Engine handles dry-run defaulting, approval gating, retries, audit, and learning for
 you. The Library UI, workflows, and runbooks pick up the new adapter automatically. See the
 **Automation Platform Guide (Doc 24)**.
+
+---
+
+## Adding a knowledge source (Knowledge Platform, Sprint 24)
+
+Knowledge sources plug into the **`KnowledgeSourceRegistry`** the same way — no core change to Enterprise
+Search, the Knowledge Graph, or the Global Timeline. To add a provider (e.g. Confluence, a Vector Store):
+
+1. Implement `App\Contracts\Knowledge\KnowledgeSource` (or extend `AbstractKnowledgeSource`). Declare
+   `key()`, `name()`, `isOperational()`, `search()`, and `count()`.
+2. **Be honest:** until the provider is actually wired, return `isOperational() === false` (this is what
+   `PlannedKnowledgeSource` does) — Enterprise Search will skip it cleanly rather than fabricate hits.
+   Operational sources must return only **real indexed rows**.
+3. Register it in `AppServiceProvider::boot()` via `KnowledgeSourceRegistry::register(...)`.
+
+Enterprise Search, the registry view (`GET /api/qynknow/sources`), and the UI pick up the new source
+automatically — **no provider-specific branching anywhere**.
+
+## Adding collaboration to a new surface (Sprint 24)
+
+Collaboration is a shared, polymorphic capability. To add comments/mentions/watchers/assignees/owners to
+any entity: call `CollaborationService` server-side (addressed by `entity_type` + `entity_uuid`) and drop
+the reusable `CollaborationPanel` React component into the page with `{ workspaceUuid, entityType,
+entityUuid }`. Do **not** build a per-module comment system. New AI surfaces must narrate only through
+`ModuleAiNarrator` and register an `AiModuleAdapter`. See Docs 28–32.

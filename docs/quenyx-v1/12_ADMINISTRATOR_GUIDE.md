@@ -195,3 +195,24 @@ QynRun/QynReact run on the shared Automation Platform. Administration is **safe 
 
 All automation and incident data is workspace-isolated and UUID-only. See the **Automation Platform
 Guide (Doc 24)** and **Incident Response Guide (Doc 27)**.
+
+---
+
+## Knowledge & Collaboration Platform administration (Sprint 24)
+
+QynKnow/QynSupport/QynNotify run on shared platform services. Administration notes:
+
+- **Knowledge sources.** The Internal Knowledge Base is operational out of the box. All external
+  providers (Markdown/PDF/HTML/Git/Confluence/SharePoint/Drive/OneDrive/Wikis/Elastic·OpenSearch/Vector)
+  are **registered but planned** and report as non-operational until wired — Enterprise Search skips them
+  cleanly. The live registry is visible at `GET /api/qynknow/sources`.
+- **AI surfaces.** Knowledge Assistant, Ticket Intelligence, and Notification Intelligence respect the
+  same AI flags as the rest of the platform (`AI_WORKSPACE_ENABLED`, provider config) and narrate only
+  through `ModuleAiNarrator`. They are evidence-based, editable, and never auto-apply.
+- **Notification routing.** Recipients are only ever **real workspace members**; channel selection is
+  recorded intent until a transport is connected (no fake dispatch). Tune severity weights and the
+  correlation window in `config/knowledge.php → notifications`.
+- **Collaboration.** A shared, polymorphic capability available to any workspace member (`accessAi`);
+  there is no per-module collaboration system to administer separately.
+- **RBAC / isolation / audit.** All Sprint 24 data is workspace-isolated, UUID-only, and audited via
+  `PlatformAuditLogger`. AI surfaces require `can_use_ai`. See Docs 28–32.

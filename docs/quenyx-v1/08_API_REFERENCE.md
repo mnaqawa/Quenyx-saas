@@ -359,6 +359,60 @@ Base `/api/qynreact`. Workspace-scoped, UUID-only, `accessAi`; AI surfaces requi
 | POST | `/incidents/{uuid}/recommend` | Evidence-based response actions. |
 | POST | `/incidents/{uuid}/postmortem` | Editable postmortem draft. |
 
+## 19d. QynKnow — Enterprise Knowledge Platform (Sprint 24)
+
+Base `/api/qynknow`. Workspace-scoped, UUID-only. Reads require `accessAi`; AI surfaces require
+`can_use_ai`. All AI goes through `ModuleAiNarrator`; search/timeline/graph are read-models over real rows.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET / POST | `/documents` | List / create knowledge documents (Internal KB). |
+| GET / PUT / DELETE | `/documents/{uuid}` | Read / update / delete. |
+| GET | `/sources` | Knowledge Source Registry (operational + planned providers). |
+| GET | `/search` | Enterprise Search (keyword + semantic) across real rows. |
+| GET | `/timeline` | Global Timeline (chronological, cross-module read-model). |
+| GET | `/graph` | Enterprise Knowledge Graph v2 (typed nodes + edges). |
+| POST | `/intelligence/explain` | Explain a document/entity (editable). |
+| POST | `/intelligence/summarize` | Summarize (KB/incident/executive/technical). |
+| POST | `/intelligence/related` | Find related (evidence-based). |
+| POST | `/intelligence/draft` | Generate KB / runbook draft (editable, never fabricated). |
+| POST | `/intelligence/copilot` | Knowledge copilot (grounded). |
+
+## 19e. QynSupport — Service Desk + Ticket Intelligence (Sprint 24)
+
+Base `/api/qynsupport`. Workspace-scoped, UUID-only. `accessAi`; AI requires `can_use_ai`.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET / POST | `/tickets` | List / create tickets. |
+| GET / PUT | `/tickets/{uuid}` | Read / update. |
+| POST | `/tickets/{uuid}/intelligence/analyze` | Category/priority/impact/assignee/SLA + related (evidence-based). |
+| POST | `/tickets/{uuid}/intelligence/copilot` | Ticket copilot (grounded). |
+
+## 19f. QynNotify — Notification Intelligence (Sprint 24)
+
+Base `/api/qynnotify`. Workspace-scoped, UUID-only. `accessAi`; AI requires `can_use_ai`.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET / POST | `/notifications` | List (+ correlation groups) / ingest (dedup, correlate, route). |
+| POST | `/notifications/{uuid}/read` | Mark read. |
+| POST | `/intelligence/digest` | On-call digest (real active notifications). |
+| POST | `/intelligence/executive` | Executive summary. |
+| POST | `/intelligence/copilot` | Notification copilot (grounded). |
+
+## 19g. Collaboration Platform (Sprint 24)
+
+Base `/api/collaboration`. Workspace-scoped, UUID-only, `accessAi`. Polymorphic over any entity
+(`entity_type`, `entity_uuid`). Shared platform capability — no per-module entitlement.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/thread` | Comments + participants for `entity_type` + `entity_uuid`. |
+| POST | `/comments` | Add comment (optional `mentions[]`; mentions become watchers). |
+| POST | `/participants` | Add `watcher` / `assignee` / `owner`. |
+| DELETE | `/participants` | Remove a participant role. |
+
 ## 20. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current

@@ -39,7 +39,7 @@ $browser = @(
 if (-not $browser) { throw "No headless Edge/Chrome found." }
 Write-Host "Browser: $browser"
 
-# --- documents (01-21 + OBSERVE) ---------------------------------------------
+# --- documents (01-32 + OBSERVE) ---------------------------------------------
 $docs = @(
     'docs\quenyx-v1\01_EXECUTIVE_OVERVIEW.md', 'docs\quenyx-v1\02_PRODUCT_BROCHURE.md',
     'docs\quenyx-v1\03_INVESTOR_DECK_OUTLINE.md', 'docs\quenyx-v1\04_EXECUTIVE_WHITEPAPER.md',
@@ -55,6 +55,9 @@ $docs = @(
     'docs\quenyx-v1\22_QYNASSET_GUIDE.md', 'docs\quenyx-v1\23_AI_ADAPTER_DEVELOPER_GUIDE.md',
     'docs\quenyx-v1\24_AUTOMATION_PLATFORM_GUIDE.md', 'docs\quenyx-v1\25_QYNRUN_GUIDE.md',
     'docs\quenyx-v1\26_QYNREACT_GUIDE.md', 'docs\quenyx-v1\27_INCIDENT_RESPONSE_GUIDE.md',
+    'docs\quenyx-v1\28_ENTERPRISE_KNOWLEDGE_GUIDE.md', 'docs\quenyx-v1\29_SERVICE_DESK_GUIDE.md',
+    'docs\quenyx-v1\30_NOTIFICATION_GUIDE.md', 'docs\quenyx-v1\31_COLLABORATION_GUIDE.md',
+    'docs\quenyx-v1\32_GLOBAL_TIMELINE_GUIDE.md',
     'docs\OBSERVE_RUNBOOK.md'
 )
 if ($Only) { $docs = $docs | Where-Object { $n = [IO.Path]::GetFileNameWithoutExtension($_); $Only -contains $n } }

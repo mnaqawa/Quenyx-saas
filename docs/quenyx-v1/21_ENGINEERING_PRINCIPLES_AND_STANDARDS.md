@@ -143,5 +143,24 @@ These extend the standards above for any code that executes actions:
 
 ---
 
+## Knowledge & collaboration standards (Sprint 24)
+
+These extend the standards above for knowledge, search, and collaboration code:
+
+- **Registry-driven knowledge.** Knowledge providers go through the `KnowledgeSourceRegistry` implementing
+  the `KnowledgeSource` contract. **No provider-specific branching** in search/graph/timeline — there is
+  no `if (source == 'confluence')` anywhere; the registry is the only seam.
+- **Read-models, not duplicates.** Enterprise Search, Knowledge Graph v2, and the Global Timeline read
+  real rows and write nothing. They never duplicate, cache-mutate, or fabricate events.
+- **Real data only.** Search returns only real indexed rows; planned/unwired sources report
+  `isOperational() === false` and are skipped. Notification routing selects only real workspace members.
+- **Honest AI.** Knowledge Assistant, Ticket, and Notification Intelligence narrate exclusively through
+  `ModuleAiNarrator`, are grounded in retrieved evidence, are **editable and never auto-applied**, and
+  say **"insufficient evidence"** rather than inventing assignees, owners, or facts.
+- **One collaboration layer.** Comments/mentions/participants are polymorphic over `(entity_type,
+  entity_uuid)`; modules reuse the shared `CollaborationService`/`CollaborationPanel` — never a private copy.
+
+---
+
 > **The standard, in one line:** *Deterministic, provenance‑backed, fail‑closed, UUID‑first,
 > AI‑as‑renderer — with no fake data, no fabricated claims, and no unapproved actions, ever.*

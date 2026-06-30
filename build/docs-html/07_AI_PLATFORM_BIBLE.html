@@ -138,6 +138,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#24-qynsight-operations-intelligence-sprint-21"><span class="toc-text">24. QynSight Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#25-ai-adapter-platform-sprint-22"><span class="toc-text">25. AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-23-qynrun-amp-qynreact-adapters-cross-module-orchestration"><span class="toc-text">Sprint 23 — QynRun &amp;amp; QynReact adapters + cross-module orchestration</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-24-knowledge-service-desk-amp-notification-adapters"><span class="toc-text">Sprint 24 — Knowledge, Service Desk &amp;amp; Notification adapters</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -385,6 +386,26 @@ registers an adapter — there is still no <code>if (module == …)</code> anywh
 <code>AutomationLearningService</code> aggregates (success/failure/rollback rates, typical duration). There is
 <strong>no model training and no hidden state</strong> — the &quot;learning&quot; is inspectable, workspace-scoped history.
 See the <strong>Automation Platform Guide (doc 24)</strong>, <strong>QynRun Guide (doc 25)</strong>, <strong>QynReact Guide (doc 26)</strong>.</p>
+<hr />
+<h2 id="sprint-24-knowledge-service-desk-amp-notification-adapters">Sprint 24 — Knowledge, Service Desk &amp; Notification adapters</h2>
+<p>Three new production adapters register the same way (no platform change): <strong><code>qynknow</code></strong> (Enterprise
+Knowledge), <strong><code>qynsupport</code></strong> (Service Desk / Ticket Intelligence), and <strong><code>qynnotify</code></strong> (Notification
+Intelligence) — bringing the registry to seven production adapters (QynSight, QynAsset, QynRun,
+QynReact, QynKnow, QynSupport, QynNotify). All narrate exclusively through the shared <code>ModuleAiNarrator</code>;
+no AI/provider/orchestration logic is duplicated, and <code>ai_candidate</code> is enabled for the three modules in
+<code>config/quenyx_ai.php</code>.</p>
+<p><strong>Knowledge Assistant.</strong> <code>QynKnowIntelligenceService</code> supports Explain, Summarize (KB/incident/
+executive/technical), Find related, and Generate (KB/runbook) drafts. Every answer is grounded in real
+evidence retrieved via <code>EnterpriseSearchService</code> and cross-module context from the
+<code>CrossModuleOrchestrator</code>; drafts are <strong>editable and never fabricated</strong>, never auto-applied.</p>
+<p><strong>Ticket &amp; Notification Intelligence (evidence-based).</strong> Suggestions (category/priority/impact/assignee/
+SLA, digests, executive summaries) are computed deterministically from real rows and only then narrated;
+when there is no history the services say <strong>&quot;insufficient evidence&quot;</strong> rather than inventing facts. With
+AI disabled the mock provider answers (flagged) while the evidence stays real.</p>
+<p><strong>Registry-driven knowledge.</strong> The <code>KnowledgeSourceRegistry</code> mirrors the AI Adapter Registry pattern:
+sources self-describe and self-register, so adding a provider never touches search/graph/timeline code.
+See the <strong>Enterprise Knowledge Guide (doc 28)</strong>, <strong>Service Desk Guide (doc 29)</strong>, <strong>Notification Guide
+(doc 30)</strong>, <strong>Collaboration Guide (doc 31)</strong>, <strong>Global Timeline Guide (doc 32)</strong>.</p>
 
 </main>
 

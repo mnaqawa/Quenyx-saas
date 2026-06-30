@@ -273,4 +273,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sprint 23 — QynReact Incident Workspace (cross-module orchestration via the AI adapter registry) — see routes/qynreact-incident.php
     require base_path('routes/qynreact-incident.php');
+
+    // Sprint 24 — QynKnow Enterprise Knowledge Platform (registry-driven knowledge, enterprise search, graph, timeline) — see routes/qynknow-knowledge.php
+    require base_path('routes/qynknow-knowledge.php');
+
+    // Sprint 24 — QynSupport Service Desk (evidence-based Ticket Intelligence) — see routes/qynsupport-servicedesk.php
+    require base_path('routes/qynsupport-servicedesk.php');
+
+    // Sprint 24 — QynNotify Notification Center (deterministic routing + Notification Intelligence) — see routes/qynnotify-notifications.php
+    require base_path('routes/qynnotify-notifications.php');
+
+    // Sprint 24 — Collaboration Platform (shared comments/mentions/watchers/assignments for every module) — see routes/collaboration.php
+    require base_path('routes/collaboration.php');
 });

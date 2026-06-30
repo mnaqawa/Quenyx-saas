@@ -65,6 +65,11 @@ const OperationsIntelligence = lazy(() => import('./pages/observe/OperationsInte
 const AssetIntelligence = lazy(() => import('./pages/asset/AssetIntelligence'))
 const AutomationDashboard = lazy(() => import('./pages/automation/AutomationDashboard'))
 const IncidentWorkspace = lazy(() => import('./pages/incident/IncidentWorkspace'))
+const KnowledgeCenter = lazy(() => import('./pages/knowledge/KnowledgeCenter'))
+const EnterpriseSearch = lazy(() => import('./pages/knowledge/EnterpriseSearch'))
+const GlobalTimeline = lazy(() => import('./pages/knowledge/GlobalTimeline'))
+const ServiceDesk = lazy(() => import('./pages/support/ServiceDesk'))
+const NotificationCenter = lazy(() => import('./pages/notify/NotificationCenter'))
 
 function ObserveSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
@@ -254,6 +259,47 @@ function App() {
               element={
                 <ObserveSuspense>
                   <IncidentWorkspace />
+                </ObserveSuspense>
+              }
+            />
+            {/* Sprint 24 — Enterprise Knowledge & Collaboration Platform. */}
+            <Route
+              path="app/workspaces/:id/qynknow/knowledge"
+              element={
+                <ObserveSuspense>
+                  <KnowledgeCenter />
+                </ObserveSuspense>
+              }
+            />
+            <Route
+              path="app/workspaces/:id/qynknow/search"
+              element={
+                <ObserveSuspense>
+                  <EnterpriseSearch />
+                </ObserveSuspense>
+              }
+            />
+            <Route
+              path="app/workspaces/:id/qynknow/timeline"
+              element={
+                <ObserveSuspense>
+                  <GlobalTimeline />
+                </ObserveSuspense>
+              }
+            />
+            <Route
+              path="app/workspaces/:id/qynsupport/tickets"
+              element={
+                <ObserveSuspense>
+                  <ServiceDesk />
+                </ObserveSuspense>
+              }
+            />
+            <Route
+              path="app/workspaces/:id/qynnotify/notifications"
+              element={
+                <ObserveSuspense>
+                  <NotificationCenter />
                 </ObserveSuspense>
               }
             />

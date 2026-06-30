@@ -130,6 +130,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-sprint-21-operations"><span class="toc-text">QynSight Operations Intelligence (Sprint 21) — operations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#automation-amp-incident-operations-sprint-23"><span class="toc-text">Automation &amp;amp; Incident operations (Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#knowledge-service-desk-amp-notification-operations-sprint-24"><span class="toc-text">Knowledge, Service Desk &amp;amp; Notification operations (Sprint 24)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -327,6 +328,27 @@ records — no model training, no hidden state.</li>
 <code>automation_executions</code> / <code>automation_execution_steps</code> for status and step-level detail.</li>
 <li><strong>No duplicated automation</strong>: QynRun/QynReact and all future modules consume the shared Automation
 Platform — there is no module-specific execution engine to operate. See Docs 24–27.</li>
+</ul>
+<hr />
+<h2 id="knowledge-service-desk-amp-notification-operations-sprint-24">Knowledge, Service Desk &amp; Notification operations (Sprint 24)</h2>
+<ul>
+<li><strong>Check knowledge sources</strong>: <code>GET /api/qynknow/sources</code> lists operational vs planned providers. The
+Internal KB is the only operational source until external providers are wired; planned sources report
+non-operational and are skipped by Enterprise Search (no fabricated results).</li>
+<li><strong>Enterprise Search / Timeline / Graph</strong> are <strong>read-models</strong> over real rows — they write nothing and
+cannot affect other modules. If results look stale, confirm the underlying rows exist; there is no
+separate index to rebuild for the Internal KB (it queries <code>knowledge_documents</code> directly).</li>
+<li><strong>Notification triage</strong>: signals are ingested via <code>POST /api/qynnotify/notifications</code> with deterministic
+deduplication (<code>dedup_key</code>), correlation (<code>correlation_id</code>), and urgency scoring. Recipients are real
+members only; if critical signals select no privileged member, the workspace owner is the fallback.
+Tune <code>config/knowledge.php → notifications</code> (severity weights, correlation window) and re-cache config.</li>
+<li><strong>Service desk triage</strong>: <code>POST /api/qynsupport/tickets/{uuid}/intelligence/analyze</code> returns
+evidence-based suggestions; when there is no history it reports <strong>&quot;insufficient evidence&quot;</strong> rather than
+guessing an assignee.</li>
+<li><strong>Auditing</strong>: all Sprint 24 events are written via <code>PlatformAuditLogger</code> to the shared <code>audit_logs</code>
+table. All data is workspace-isolated and UUID-only.</li>
+<li><strong>No duplicated AI/orchestration</strong>: knowledge, ticket, and notification intelligence all narrate
+through <code>ModuleAiNarrator</code> and reuse the <code>CrossModuleOrchestrator</code>. See Docs 28–32.</li>
 </ul>
 
 </main>

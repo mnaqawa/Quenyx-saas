@@ -230,3 +230,25 @@ php artisan config:cache
   `automation_executions` / `automation_execution_steps` for status and step-level detail.
 - **No duplicated automation**: QynRun/QynReact and all future modules consume the shared Automation
   Platform — there is no module-specific execution engine to operate. See Docs 24–27.
+
+---
+
+## Knowledge, Service Desk & Notification operations (Sprint 24)
+
+- **Check knowledge sources**: `GET /api/qynknow/sources` lists operational vs planned providers. The
+  Internal KB is the only operational source until external providers are wired; planned sources report
+  non-operational and are skipped by Enterprise Search (no fabricated results).
+- **Enterprise Search / Timeline / Graph** are **read-models** over real rows — they write nothing and
+  cannot affect other modules. If results look stale, confirm the underlying rows exist; there is no
+  separate index to rebuild for the Internal KB (it queries `knowledge_documents` directly).
+- **Notification triage**: signals are ingested via `POST /api/qynnotify/notifications` with deterministic
+  deduplication (`dedup_key`), correlation (`correlation_id`), and urgency scoring. Recipients are real
+  members only; if critical signals select no privileged member, the workspace owner is the fallback.
+  Tune `config/knowledge.php → notifications` (severity weights, correlation window) and re-cache config.
+- **Service desk triage**: `POST /api/qynsupport/tickets/{uuid}/intelligence/analyze` returns
+  evidence-based suggestions; when there is no history it reports **"insufficient evidence"** rather than
+  guessing an assignee.
+- **Auditing**: all Sprint 24 events are written via `PlatformAuditLogger` to the shared `audit_logs`
+  table. All data is workspace-isolated and UUID-only.
+- **No duplicated AI/orchestration**: knowledge, ticket, and notification intelligence all narrate
+  through `ModuleAiNarrator` and reuse the `CrossModuleOrchestrator`. See Docs 28–32.

@@ -135,6 +135,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#sprint-21-qynsight-operations-intelligence-additive-intelligence-layer"><span class="toc-text">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#ai-adapter-platform-qynasset-asset-intelligence-sprint-22"><span class="toc-text">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-23-automation-platform-amp-incident-workspace"><span class="toc-text">Sprint 23 — Automation Platform &amp;amp; Incident Workspace</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-24-enterprise-knowledge-amp-collaboration-platform"><span class="toc-text">Sprint 24 — Enterprise Knowledge &amp;amp; Collaboration Platform</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -528,6 +529,39 @@ fabricate — they return <code>dry_run</code> or honestly <code>skipped</code>.
 context (<code>CrossModuleOrchestrator</code> over the AI Adapter Registry — never module-branch), Automation,
 Knowledge, Evidence, Resolution, and Postmortem. New tables in
 <code>2026_06_30_010000_create_automation_and_incident_tables.php</code>. See Docs 24–27.</p>
+<hr />
+<h2 id="sprint-24-enterprise-knowledge-amp-collaboration-platform">Sprint 24 — Enterprise Knowledge &amp; Collaboration Platform</h2>
+<p><strong>Knowledge as a shared platform capability.</strong> QynKnow, QynSupport, and QynNotify are unified so that
+Knowledge, Search, Timeline, and Collaboration are platform services every module reuses — not isolated
+per-module implementations. Core pieces under <code>App\Services\Knowledge\*</code>,
+<code>App\Services\Collaboration\*</code>, <code>App\Services\Support\*</code>, <code>App\Services\Notification\*</code>:</p>
+<ul>
+<li><strong><code>KnowledgeSourceRegistry</code></strong> + <strong><code>KnowledgeSource</code></strong> contract — dynamic, registry-driven sources.
+<code>InternalKnowledgeBaseSource</code> is live (operates on <code>knowledge_documents</code> with deterministic lexical
+search); Markdown/PDF/HTML/Git/Confluence/SharePoint/Google Drive/OneDrive/GitHub &amp; GitLab Wiki/
+MediaWiki/Elastic·OpenSearch/Vector Store register as <code>PlannedKnowledgeSource</code>s
+(<code>isOperational() === false</code>). <strong>No provider-specific branching</strong> — the registry is the only seam.</li>
+<li><strong><code>EnterpriseSearchService</code></strong> — one keyword + semantic search interface over <strong>real indexed rows</strong>
+(knowledge documents, incidents, tickets, notifications, automation workflows/runbooks); unified,
+deterministically scored results. No fabricated hits.</li>
+<li><strong><code>KnowledgeGraphService</code> (v2)</strong> — deterministic, bounded read-model of typed nodes (project, hosts,
+assets, alerts, incidents, runbooks, automation, tickets, documents, notifications, people, …) and
+edges, with traversal.</li>
+<li><strong><code>GlobalTimelineService</code></strong> — platform-wide chronological read-model aggregating incidents,
+automation, tickets, notifications, and knowledge updates from real tables (writes nothing).</li>
+<li><strong><code>CollaborationService</code></strong> — polymorphic comments/mentions/participants (<code>watcher</code>/<code>assignee</code>/<code>owner</code>)
+addressed by <code>(entity_type, entity_uuid)</code> for <strong>any</strong> entity. One shared layer; no per-module copy.</li>
+<li><strong>Ticket Intelligence</strong> (<code>TicketIntelligenceService</code>) and <strong>Notification Intelligence</strong>
+(<code>NotificationIntelligenceService</code> + deterministic <code>NotificationService</code> ingest: dedup, correlation,
+urgency scoring, recipient/channel selection, escalation) — evidence-based, honest about
+&quot;insufficient evidence&quot;, real recipients only (no fake routing).</li>
+</ul>
+<p><strong>AI envelope.</strong> Every new intelligence surface narrates exclusively through the shared
+<code>ModuleAiNarrator</code> (no direct provider calls), discovered via the <strong>AI Adapter Registry</strong>
+(<code>QynKnowAiAdapter</code>, <code>QynSupportAiAdapter</code>, <code>QynNotifyAiAdapter</code>); cross-module context reuses
+<code>CrossModuleOrchestrator</code> (never module-branch). All drafts are editable and never auto-applied.
+Workspace isolation, RBAC (<code>accessAi</code> / <code>can_use_ai</code>), UUID-only, and full audit (<code>PlatformAuditLogger</code>)
+throughout. New tables in <code>2026_07_05_010000_create_knowledge_collaboration_tables.php</code>. See Docs 28–32.</p>
 
 </main>
 

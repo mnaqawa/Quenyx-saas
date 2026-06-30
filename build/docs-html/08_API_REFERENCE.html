@@ -132,6 +132,10 @@ body{margin:0}
 <li class="toc-l2"><a href="#19-qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">19. QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#19b-qynrun-automation-platform-sprint-23"><span class="toc-text">19b. QynRun — Automation Platform (Sprint 23)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#19c-qynreact-incident-workspace-sprint-23"><span class="toc-text">19c. QynReact — Incident Workspace (Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19d-qynknow-enterprise-knowledge-platform-sprint-24"><span class="toc-text">19d. QynKnow — Enterprise Knowledge Platform (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19e-qynsupport-service-desk-ticket-intelligence-sprint-24"><span class="toc-text">19e. QynSupport — Service Desk + Ticket Intelligence (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19f-qynnotify-notification-intelligence-sprint-24"><span class="toc-text">19f. QynNotify — Notification Intelligence (Sprint 24)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19g-collaboration-platform-sprint-24"><span class="toc-text">19g. Collaboration Platform (Sprint 24)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#20-notes-on-examples"><span class="toc-text">20. Notes on examples</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
@@ -836,6 +840,180 @@ runs, rollback, and deletes require <code>administerAi</code>.</p>
 <td>POST</td>
 <td><code>/incidents/{uuid}/postmortem</code></td>
 <td>Editable postmortem draft.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19d-qynknow-enterprise-knowledge-platform-sprint-24">19d. QynKnow — Enterprise Knowledge Platform (Sprint 24)</h2>
+<p>Base <code>/api/qynknow</code>. Workspace-scoped, UUID-only. Reads require <code>accessAi</code>; AI surfaces require
+<code>can_use_ai</code>. All AI goes through <code>ModuleAiNarrator</code>; search/timeline/graph are read-models over real rows.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET / POST</td>
+<td><code>/documents</code></td>
+<td>List / create knowledge documents (Internal KB).</td>
+</tr>
+<tr>
+<td>GET / PUT / DELETE</td>
+<td><code>/documents/{uuid}</code></td>
+<td>Read / update / delete.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/sources</code></td>
+<td>Knowledge Source Registry (operational + planned providers).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/search</code></td>
+<td>Enterprise Search (keyword + semantic) across real rows.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/timeline</code></td>
+<td>Global Timeline (chronological, cross-module read-model).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/graph</code></td>
+<td>Enterprise Knowledge Graph v2 (typed nodes + edges).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/explain</code></td>
+<td>Explain a document/entity (editable).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/summarize</code></td>
+<td>Summarize (KB/incident/executive/technical).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/related</code></td>
+<td>Find related (evidence-based).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/draft</code></td>
+<td>Generate KB / runbook draft (editable, never fabricated).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/copilot</code></td>
+<td>Knowledge copilot (grounded).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19e-qynsupport-service-desk-ticket-intelligence-sprint-24">19e. QynSupport — Service Desk + Ticket Intelligence (Sprint 24)</h2>
+<p>Base <code>/api/qynsupport</code>. Workspace-scoped, UUID-only. <code>accessAi</code>; AI requires <code>can_use_ai</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET / POST</td>
+<td><code>/tickets</code></td>
+<td>List / create tickets.</td>
+</tr>
+<tr>
+<td>GET / PUT</td>
+<td><code>/tickets/{uuid}</code></td>
+<td>Read / update.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/tickets/{uuid}/intelligence/analyze</code></td>
+<td>Category/priority/impact/assignee/SLA + related (evidence-based).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/tickets/{uuid}/intelligence/copilot</code></td>
+<td>Ticket copilot (grounded).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19f-qynnotify-notification-intelligence-sprint-24">19f. QynNotify — Notification Intelligence (Sprint 24)</h2>
+<p>Base <code>/api/qynnotify</code>. Workspace-scoped, UUID-only. <code>accessAi</code>; AI requires <code>can_use_ai</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET / POST</td>
+<td><code>/notifications</code></td>
+<td>List (+ correlation groups) / ingest (dedup, correlate, route).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/notifications/{uuid}/read</code></td>
+<td>Mark read.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/digest</code></td>
+<td>On-call digest (real active notifications).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/executive</code></td>
+<td>Executive summary.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/copilot</code></td>
+<td>Notification copilot (grounded).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19g-collaboration-platform-sprint-24">19g. Collaboration Platform (Sprint 24)</h2>
+<p>Base <code>/api/collaboration</code>. Workspace-scoped, UUID-only, <code>accessAi</code>. Polymorphic over any entity
+(<code>entity_type</code>, <code>entity_uuid</code>). Shared platform capability — no per-module entitlement.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/thread</code></td>
+<td>Comments + participants for <code>entity_type</code> + <code>entity_uuid</code>.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/comments</code></td>
+<td>Add comment (optional <code>mentions[]</code>; mentions become watchers).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/participants</code></td>
+<td>Add <code>watcher</code> / <code>assignee</code> / <code>owner</code>.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/participants</code></td>
+<td>Remove a participant role.</td>
 </tr>
 </tbody>
 </table>

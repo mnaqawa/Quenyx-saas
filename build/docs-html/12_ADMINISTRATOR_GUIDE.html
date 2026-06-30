@@ -127,6 +127,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-administration-sprint-21"><span class="toc-text">QynSight Operations Intelligence administration (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l3"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#automation-platform-administration-sprint-23"><span class="toc-text">Automation Platform administration (Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#knowledge-amp-collaboration-platform-administration-sprint-24"><span class="toc-text">Knowledge &amp;amp; Collaboration Platform administration (Sprint 24)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -301,6 +302,25 @@ auto-trigger — AI recommendations.</li>
 </ul>
 <p>All automation and incident data is workspace-isolated and UUID-only. See the <strong>Automation Platform
 Guide (Doc 24)</strong> and <strong>Incident Response Guide (Doc 27)</strong>.</p>
+<hr />
+<h2 id="knowledge-amp-collaboration-platform-administration-sprint-24">Knowledge &amp; Collaboration Platform administration (Sprint 24)</h2>
+<p>QynKnow/QynSupport/QynNotify run on shared platform services. Administration notes:</p>
+<ul>
+<li><strong>Knowledge sources.</strong> The Internal Knowledge Base is operational out of the box. All external
+providers (Markdown/PDF/HTML/Git/Confluence/SharePoint/Drive/OneDrive/Wikis/Elastic·OpenSearch/Vector)
+are <strong>registered but planned</strong> and report as non-operational until wired — Enterprise Search skips them
+cleanly. The live registry is visible at <code>GET /api/qynknow/sources</code>.</li>
+<li><strong>AI surfaces.</strong> Knowledge Assistant, Ticket Intelligence, and Notification Intelligence respect the
+same AI flags as the rest of the platform (<code>AI_WORKSPACE_ENABLED</code>, provider config) and narrate only
+through <code>ModuleAiNarrator</code>. They are evidence-based, editable, and never auto-apply.</li>
+<li><strong>Notification routing.</strong> Recipients are only ever <strong>real workspace members</strong>; channel selection is
+recorded intent until a transport is connected (no fake dispatch). Tune severity weights and the
+correlation window in <code>config/knowledge.php → notifications</code>.</li>
+<li><strong>Collaboration.</strong> A shared, polymorphic capability available to any workspace member (<code>accessAi</code>);
+there is no per-module collaboration system to administer separately.</li>
+<li><strong>RBAC / isolation / audit.</strong> All Sprint 24 data is workspace-isolated, UUID-only, and audited via
+<code>PlatformAuditLogger</code>. AI surfaces require <code>can_use_ai</code>. See Docs 28–32.</li>
+</ul>
 
 </main>
 
