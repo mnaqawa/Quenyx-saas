@@ -3,7 +3,7 @@
 namespace App\Services\Compliance\Rag;
 
 use App\Contracts\Compliance\Retrieval\VectorRetrievalProviderInterface;
-use App\Services\Ai\AiProviderRegistry;
+use App\Services\AI\AiProviderRegistry;
 
 /**
  * Resolves the configured vector retrieval provider (QCIF Sprint 17), mirroring the AI Provider

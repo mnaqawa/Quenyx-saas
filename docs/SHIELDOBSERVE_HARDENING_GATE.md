@@ -1,6 +1,6 @@
 # ShieldObserve Hardening Gate (TPM Acceptance)
 
-> **⚠️ SUPERSEDED / LEGACY (pre‑RC1.1).** The publish/poll/reload flows and `NAGIOS_*` gates described
+> **⚠️ SUPERSEDED / LEGACY (pre‑v1.0.0).** The publish/poll/reload flows and `NAGIOS_*` gates described
 > here belonged to the former **Nagios‑based** runtime, which has been **removed**. QynSight monitoring
 > is now **native** (`observe:run-checks`); `/internal/engines/nagios*` returns `410 Gone`. Retained for
 > historical context only — see **[`docs/OBSERVE_RUNBOOK.md`](./OBSERVE_RUNBOOK.md)** for current procedures.

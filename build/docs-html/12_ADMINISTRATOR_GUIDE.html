@@ -14,7 +14,7 @@ body{margin:0}
 @page{
   size:A4; margin:18mm 16mm 16mm 16mm;
   @top-right{ content: "Administrator Guide"; font-size:8pt; color:#94a3b8; }
-  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0"; font-size:8pt; color:#94a3b8; }
   @bottom-center{ content: "Internal"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
   @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
 }
@@ -94,19 +94,19 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Internal</div>
   <div class="tp-title">Administrator Guide</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 · Document v2.1</div>
   <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
-<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
-<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Software Version</th><td>v1.0.0</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0</td></tr>
 <tr><th>Classification</th><td>Internal</td></tr>
 <tr><th>Owner</th><td>Operations</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
 <tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Administrator guide</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0 RC1; native monitoring administration; Unified AI Workspace administration.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Added administration of QynSight Operations Intelligence (Sprint 21): entitlement + `can_use_ai` capability, audit, and rate limits.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial v1 pack (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>Aligned to v1.0.0; native monitoring administration; Unified AI Workspace administration.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Added administration of QynSight Operations Intelligence (Sprint 21): entitlement + `can_use_ai` capability, audit, and rate limits.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
-  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Internal. This document is part of Documentation Pack v3.0 and reflects v1.0.0 (GA).</div>
 </section>
 
 <nav class="toc">
@@ -135,7 +135,7 @@ body{margin:0}
 <main class="content">
 <h1>12 — Administrator Guide</h1>
 <p><strong>Audience:</strong> Platform administrators.
-<strong>Scope:</strong> Admin tasks supported by the current product at v1.0.0 RC1 (including the Unified AI
+<strong>Scope:</strong> Admin tasks supported by the current product at v1.0.0 (including the Unified AI
 Workspace, Sprint 20).</p>
 <hr />
 <h2 id="1-login">1. Login</h2>
@@ -215,7 +215,7 @@ pre‑Sprint 20).</li>
 </ul>
 <h2 id="quenyx-ai-administration-unified-ai-workspace-sprint-20">Quenyx AI administration (Unified AI Workspace — Sprint 20)</h2>
 <blockquote>
-<p><strong>RC1.1:</strong> this surface is now branded <strong>Quenyx AI</strong> in the UI (sidebar, header, breadcrumbs). The
+<p><strong>v1.0.0:</strong> this surface is now branded <strong>Quenyx AI</strong> in the UI (sidebar, header, breadcrumbs). The
 canonical SPA route stays <code>/ai-workspace/*</code> for backward compatibility; the branded <code>/quenyx-ai/*</code>
 path redirects to it. Do not confuse Quenyx AI (the AI control center) with <strong>Workspaces</strong>
 (tenant/project management).</p>

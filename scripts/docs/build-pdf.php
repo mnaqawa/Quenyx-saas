@@ -178,7 +178,7 @@ foreach ($toc as $item) {
 // ---- Metadata helpers ---------------------------------------------------------
 $classification = $meta['Classification'] ?? 'Internal';
 $docVersion = $meta['Document Version'] ?? '2.0';
-$swVersion = $meta['Software Version'] ?? 'v1.0.0 RC1';
+$swVersion = $meta['Software Version'] ?? 'v1.0.0';
 $esc = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
 $metaRowsHtml = '';
@@ -319,7 +319,7 @@ $page = <<<HTML
   {$metaBlockFront}
   {$revFront}
   <div class="tp-spacer"></div>
-  <div class="tp-foot">© Quenyx vOPS HUB. {$classEsc}. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+  <div class="tp-foot">© Quenyx vOPS HUB. {$classEsc}. This document is part of Documentation Pack v3.0 and reflects v1.0.0 (GA).</div>
 </section>
 
 <nav class="toc">

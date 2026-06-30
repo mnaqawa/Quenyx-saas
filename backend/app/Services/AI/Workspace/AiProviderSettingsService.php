@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Services\Ai\Workspace;
+namespace App\Services\AI\Workspace;
 
 use App\Models\Ai\AiProviderSetting;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\Ai\AiProviderCatalog;
-use App\Services\Ai\AiProviderRegistry;
+use App\Services\AI\AiProviderCatalog;
+use App\Services\AI\AiProviderRegistry;
 use Ramsey\Uuid\Uuid;
 
 /**
- * RC1.1 — per-workspace provider preferences over the declarative AiProviderCatalog and the
+ * v1.0.0 — per-workspace provider preferences over the declarative AiProviderCatalog and the
  * config-driven AiProviderRegistry.
  *
  * The catalog defines WHICH providers exist (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter,

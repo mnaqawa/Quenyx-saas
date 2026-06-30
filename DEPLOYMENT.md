@@ -150,25 +150,52 @@ server {
 
 ### 6. Systemd services
 
-**Backend**
+**Backend (production: PHP-FPM, NOT `php artisan serve`)**
 
-`/etc/systemd/system/quenyx-backend.service`:
+> ⚠️ **GA requirement:** `php artisan serve` is a single-threaded development
+> server and must **not** be used in production. Serve the Laravel backend with
+> **PHP-FPM** behind a dedicated Nginx server block. The Node gateway proxies to
+> this backend (`BACKEND_BASE_URL=http://127.0.0.1:8000`).
 
-```ini
-[Unit]
-Description=Quenyx Backend API
-After=network.target
+1. Install PHP-FPM (e.g. `php8.2-fpm`) and confirm the pool socket
+   (`/run/php/php8.2-fpm.sock`). PHP-FPM is managed by its own systemd unit
+   (`php8.2-fpm.service`) — no custom backend unit is needed.
 
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/quenyx/quenyx-saas/backend
-ExecStart=/usr/bin/php artisan serve --host=127.0.0.1 --port=8000
-Restart=always
+2. Add a backend Nginx server block listening on `127.0.0.1:8000` with the
+   document root at `backend/public`:
 
-[Install]
-WantedBy=multi-user.target
-```
+   ```nginx
+   server {
+       listen 127.0.0.1:8000;
+       server_name _;
+       root /var/www/quenyx/quenyx-saas/backend/public;
+       index index.php;
+
+       location / {
+           try_files $uri $uri/ /index.php?$query_string;
+       }
+
+       location ~ \.php$ {
+           include snippets/fastcgi-php.conf;
+           fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+       }
+
+       location ~ /\.(?!well-known).* { deny all; }
+       client_max_body_size 25m;
+   }
+   ```
+
+3. Validate config and warm caches after deploy:
+
+   ```bash
+   cd backend
+   php artisan quenyx:config-check   # fails fast on production misconfig
+   php artisan config:cache && php artisan route:cache && php artisan view:cache
+   sudo systemctl reload php8.2-fpm nginx
+   ```
+
+> For containerized deployments, run `php-fpm` as the container command instead
+> of `artisan serve`, with Nginx (sidecar or ingress) in front.
 
 **Gateway**
 
@@ -262,15 +289,46 @@ Port scans (especially full 1–65535) run as background jobs. **Without a queue
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable quenyx-backend quenyx-gateway quenyx-queue
-sudo systemctl start quenyx-backend quenyx-gateway quenyx-queue
+# Backend is served by PHP-FPM (php8.2-fpm), not a custom quenyx-backend unit.
+sudo systemctl enable php8.2-fpm quenyx-gateway quenyx-queue
+sudo systemctl start php8.2-fpm quenyx-gateway quenyx-queue
 sudo systemctl reload nginx
 ```
 
 ### 10. Health checks
 
 - Gateway: `curl http://127.0.0.1:4000/health` → `{"status":"ok","service":"gateway"}`
-- Backend: `curl http://127.0.0.1:8000/api/health` → Laravel health response
+- Backend **liveness**: `curl http://127.0.0.1:8000/api/health` → `200` lightweight liveness response.
+- Backend **readiness**: `curl http://127.0.0.1:8000/api/health/ready` → `200` when DB/cache are reachable, `503` when not. Use this for load-balancer / orchestrator readiness probes (do **not** route traffic until it returns `200`).
+
+### 11. Backups, restore verification & disaster recovery
+
+Automated, verified logical backups are provided under `scripts/`:
+
+```bash
+# Create a compressed, checksummed, self-verifying backup (safe for cron).
+scripts/backup-db.sh /var/backups/quenyx
+
+# Prove a backup is restorable WITHOUT touching the live DB (temp DB, auto-dropped).
+scripts/restore-db.sh /var/backups/quenyx/quenyx-<db>-<timestamp>.sql.gz
+
+# Real restore into a target database (interactive confirmation required).
+scripts/restore-db.sh <backup_file.sql.gz> --target quenyx_dev
+```
+
+Schedule nightly backups + a weekly restore-verification via cron:
+
+```cron
+# Nightly backup at 02:30 (retains BACKUP_RETENTION_DAYS, default 14).
+30 2 * * *  /var/www/quenyx/quenyx-saas/scripts/backup-db.sh /var/backups/quenyx >> /var/log/quenyx-backup.log 2>&1
+# Weekly restore verification (Sundays 03:30) against the most recent backup.
+30 3 * * 0  f=$(ls -t /var/backups/quenyx/quenyx-*.sql.gz | head -n1); /var/www/quenyx/quenyx-saas/scripts/restore-db.sh "$f" >> /var/log/quenyx-restore-verify.log 2>&1
+```
+
+> **DR note:** Store backups off-host (object storage / different volume). The
+> backup script writes a `.sha256` sidecar; `restore-db.sh` verifies gzip
+> integrity and checksum before any restore, so a corrupt backup fails loudly
+> instead of silently restoring bad data.
 
 ---
 
@@ -363,7 +421,12 @@ Before going live:
 | Item | Action |
 |------|--------|
 | **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx`, `DB_PASSWORD` |
-| **CORS** | Set `SANCTUM_STATEFUL_DOMAINS` / frontend domain in backend; allow only your frontend origin |
+| **Config validation** | Run `php artisan quenyx:config-check` (use `--strict` in CI). It must pass before go-live |
+| **CORS** | Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s) (no `*`); set `SANCTUM_STATEFUL_DOMAINS`. `CORS_SUPPORTS_CREDENTIALS=true` requires an explicit origin |
+| **Token expiry** | `SANCTUM_TOKEN_EXPIRATION_MINUTES` set (default 7 days). Schedule runs `sanctum:prune-expired` daily |
+| **Security headers** | `SECURITY_HEADERS_ENABLED=true`; HSTS enabled (served over HTTPS). CSP/Referrer/Permissions policies applied by `SecurityHeaders` middleware |
+| **Login protection** | `AUTH_LOGIN_MAX_ATTEMPTS` / `AUTH_REGISTER_MAX_ATTEMPTS` tuned; login is rate-limited per email + IP |
+| **Sessions** | `SESSION_SECURE_COOKIE=true` (HTTPS only) |
 | **Frontend build** | `VITE_API_BASE_URL` set to your API base (e.g. `https://your-domain/api`) so requests go to gateway |
 | **Seeded credentials** | Set `SEED_ADMIN_PASSWORD` before seeding; rotate after first login if required |
 | **Gateway internal secret** | Set strong `GATEWAY_INTERNAL_SECRET` in both backend and gateway env; deployment should fail if missing |

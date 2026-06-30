@@ -9,6 +9,8 @@ use App\Models\Incident\IncidentTimelineEntry;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Automation\ExecutionHistory;
+use App\Services\Platform\EventBus\PlatformEventNames;
+use App\Services\Platform\EventBus\PublishesPlatformEvents;
 
 /**
  * Sprint 23 — QynReact Incident Workspace.
@@ -20,6 +22,8 @@ use App\Services\Automation\ExecutionHistory;
  */
 class IncidentService
 {
+    use PublishesPlatformEvents;
+
     public function __construct(
         private readonly CrossModuleOrchestrator $orchestrator,
         private readonly ExecutionHistory $executions,
@@ -60,6 +64,15 @@ class IncidentService
             'source' => $incident->source,
         ]);
 
+        $this->publishPlatformEvent(PlatformEventNames::INCIDENT_OPENED, $project, $user, [
+            'incident_uuid' => $incident->uuid,
+            'title' => $incident->title,
+            'severity' => $incident->severity,
+            'source' => $incident->source,
+            'alert_uuid' => $incident->alert_uuid,
+            'asset_uuid' => $incident->asset_uuid,
+        ]);
+
         return $incident;
     }
 
@@ -88,6 +101,17 @@ class IncidentService
 
         if (isset($changes['status'])) {
             $this->addTimeline($incident, $user, 'status_change', 'status', 'Status changed to '.$changes['status'].'.', $changes);
+        }
+
+        $project = $incident->project;
+        if ($project !== null) {
+            $resolved = ($changes['status'] ?? null) === 'resolved';
+            $this->publishPlatformEvent(
+                $resolved ? PlatformEventNames::INCIDENT_RESOLVED : PlatformEventNames::INCIDENT_UPDATED,
+                $project,
+                $user,
+                array_merge(['incident_uuid' => $incident->uuid], array_intersect_key($changes, array_flip(['status', 'severity']))),
+            );
         }
 
         return $incident->fresh();

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Ai\Workspace;
 
 use App\Contracts\QuenyxAI\AiModuleAdapter;
 use App\Models\Project;
-use App\Services\Ai\AiAccessAuditLogger;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\AiAccessAuditLogger;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\EntitlementService;
 use App\Services\QuenyxAI\AiModuleAdapterRegistry;
 use Illuminate\Http\JsonResponse;

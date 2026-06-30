@@ -155,7 +155,7 @@ QynKnow, QynVA, QynSupport, QynBalance.
 > Registry, Service Registry, AI Context Broker, Permission Broker, Audit Pipeline, Notification
 > Broker, Workspace Context, Domain Events) through which modules communicate. **Integrations** is a
 > **platform page** for external systems only; there is no `QynIntegrations` business module. As of
-> **RC1.1**, `config/quenyx_ai.php` no longer lists `qyncore` or `qynintegrations` in the business
+> **v1.0.0**, `config/quenyx_ai.php` no longer lists `qyncore` or `qynintegrations` in the business
 > module universe. Both keys survive only as **entitlement keys** (plans/subscriptions and the gateway
 > gate for `/integrations*`) for backward compatibility — never presented to customers as business
 > modules.

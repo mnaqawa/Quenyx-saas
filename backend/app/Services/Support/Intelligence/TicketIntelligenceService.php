@@ -10,7 +10,7 @@ use App\Models\Project;
 use App\Models\Support\Ticket;
 use App\Models\User;
 use App\Repositories\Ai\AiConversationRepository;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 use App\Services\Knowledge\EnterpriseSearchService;
 
 /**

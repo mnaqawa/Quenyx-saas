@@ -28,6 +28,13 @@ class Kernel extends ConsoleKernel
                 \Illuminate\Support\Facades\Log::error('observe:evaluate-alerts scheduler run failed');
             })
             ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+        // GA HARDENING: prune expired/revoked personal access tokens daily so the
+        // personal_access_tokens table does not accumulate dead rows once token
+        // expiration is enabled (see config/sanctum.php).
+        $schedule->command('sanctum:prune-expired --hours=24')
+            ->daily()
+            ->appendOutputTo(storage_path('logs/scheduler.log'));
     }
 
     /**

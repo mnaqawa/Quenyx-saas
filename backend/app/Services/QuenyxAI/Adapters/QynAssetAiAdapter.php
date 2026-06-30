@@ -12,7 +12,7 @@ use App\Services\Asset\Intelligence\AssetEvidenceCollector;
  * contextual actions, and builds a deterministic, workspace-scoped evidence context from REAL
  * collected data via {@see AssetEvidenceCollector} (discovered hosts + enrolled agents + agent
  * inventory + reused capacity/topology). It is a thin seam: it reuses the QynAsset domain services and
- * the shared Quenyx AI runtime ({@see \App\Services\Ai\ModuleAiNarrator}) — it moves NO business
+ * the shared Quenyx AI runtime ({@see \App\Services\AI\ModuleAiNarrator}) — it moves NO business
  * logic, duplicates NO AI logic, calls NO provider directly, and fabricates NO inventory, lifecycle,
  * or license data. Capabilities with no data source (licenses, warranty/EOL dates) are surfaced
  * honestly as "not collected".

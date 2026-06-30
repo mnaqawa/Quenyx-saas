@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 1.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 — Sprint 24 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 — Sprint 24 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |

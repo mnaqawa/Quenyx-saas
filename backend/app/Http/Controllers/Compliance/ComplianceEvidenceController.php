@@ -6,7 +6,7 @@ use App\DataTransferObjects\Ai\AiSkillRequest;
 use App\Exceptions\Ai\AiSkillException;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
-use App\Services\Ai\Skills\EvidenceSkill;
+use App\Services\AI\Skills\EvidenceSkill;
 use App\Services\Compliance\ComplianceCorpusAccessAuditLogger;
 use App\Services\Compliance\Evidence\EvidenceLifecycleService;
 use App\Services\Compliance\Evidence\EvidenceNormalizationService;

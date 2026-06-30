@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Ai\Workspace;
 
-use App\Services\Ai\Workspace\AiProviderSettingsService;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiProviderSettingsService;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

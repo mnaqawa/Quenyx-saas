@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services\Ai;
+namespace App\Services\AI;
 
 /**
- * RC1.1 — declarative catalog of AI providers the platform is AWARE of.
+ * v1.0.0 — declarative catalog of AI providers the platform is AWARE of.
  *
  * This is metadata ONLY. A provider appearing here does NOT mean it is configured or executable:
  *

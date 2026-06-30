@@ -7,7 +7,7 @@ use App\Exceptions\Ai\AiSkillException;
 use App\Exceptions\ComplianceCorpusNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
-use App\Services\Ai\Skills\GapAssessmentSkill;
+use App\Services\AI\Skills\GapAssessmentSkill;
 use App\Services\Compliance\ComplianceCorpusAccessAuditLogger;
 use App\Services\Compliance\ComplianceCorpusCacheService;
 use App\Services\Compliance\Gap\GapAssessmentService;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai;
+namespace App\Services\AI;
 
 use App\Contracts\Ai\AiProviderInterface;
 use App\Exceptions\Ai\AiProviderException;
@@ -29,7 +29,7 @@ class AiProviderRegistry
     /**
      * Resolve the platform default provider key.
      *
-     * RC1.1 — the mock provider must NEVER be the production default. Resolution order:
+     * v1.0.0 — the mock provider must NEVER be the production default. Resolution order:
      *   1. An explicit AI_PROVIDER (config('ai.default')) always wins.
      *   2. Otherwise prefer a real, configured provider (currently OpenAI when its key is set).
      *   3. Otherwise fall back to `mock` ONLY in local/testing.

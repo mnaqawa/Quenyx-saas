@@ -6,7 +6,7 @@ namespace App\Services\Platform\Context;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\Incident\CrossModuleOrchestrator;
 use App\Services\Knowledge\EnterpriseSearchService;
 use App\Services\Knowledge\GlobalTimelineService;

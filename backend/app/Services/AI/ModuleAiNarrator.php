@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Ai;
+namespace App\Services\AI;
 
 use App\Contracts\Ai\AiProviderInterface;
 use App\DataTransferObjects\Ai\AiCompletionRequest;

@@ -5,7 +5,7 @@ namespace App\Services\Compliance\Retrieval;
 use App\DataTransferObjects\Ai\AiSkillResponse;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalResult;
-use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\AI\Skills\AiSkillRouter;
 use App\Services\Compliance\Copilot\ComplianceCopilotScopeResolver;
 
 /**

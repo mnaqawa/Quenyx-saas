@@ -12,7 +12,7 @@ class ModuleSeeder extends Seeder
      * Authoritative list of Quenyx modules (Qyn*).
      * This is the source of truth - only these modules should exist.
      */
-    // NOTE (RC1.1): 'qyncore' and 'qynintegrations' are NOT customer-facing business modules.
+    // NOTE (v1.0.0): 'qyncore' and 'qynintegrations' are NOT customer-facing business modules.
     // 'qyncore' is the platform core (billing/subscriptions/governance) and 'qynintegrations' is the
     // entitlement key for the Integrations platform capability (external systems only). Both are kept
     // in this table for backward compatibility with existing plans, subscriptions, overrides, and the

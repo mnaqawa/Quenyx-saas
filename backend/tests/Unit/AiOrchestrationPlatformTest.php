@@ -7,10 +7,10 @@ use App\DataTransferObjects\Ai\AiCompletionRequest;
 use App\DataTransferObjects\Ai\AiMessage;
 use App\Enums\Ai\AiCapability;
 use App\Exceptions\Ai\AiProviderException;
-use App\Services\Ai\AiProviderRegistry;
-use App\Services\Ai\CompliancePromptOrchestrator;
-use App\Services\Ai\Providers\MockAiProvider;
-use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\AI\AiProviderRegistry;
+use App\Services\AI\CompliancePromptOrchestrator;
+use App\Services\AI\Providers\MockAiProvider;
+use App\Services\AI\Providers\OpenAiProvider;
 use Tests\TestCase;
 
 /**
@@ -23,7 +23,7 @@ class AiOrchestrationPlatformTest extends TestCase
     public function test_default_provider_is_mock_and_ai_is_disabled_by_default(): void
     {
         $this->assertFalse((bool) config('ai.feature_flags.enabled'));
-        // RC1.1: ai.default is no longer hardcoded to "mock"; with AI_PROVIDER unset it is null and the
+        // v1.0.0: ai.default is no longer hardcoded to "mock"; with AI_PROVIDER unset it is null and the
         // registry resolves the default safely (mock only in local/testing, never as a prod default).
         $this->assertNull(config('ai.default'));
 

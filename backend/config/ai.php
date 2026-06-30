@@ -1,14 +1,14 @@
 <?php
 
-use App\Services\Ai\Providers\MockAiProvider;
-use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\AI\Providers\MockAiProvider;
+use App\Services\AI\Providers\OpenAiProvider;
 use App\Services\Compliance\Rag\Providers\OpenAiVectorRetrievalProvider;
-use App\Services\Ai\Skills\CorpusSearchSkill;
-use App\Services\Ai\Skills\EvidenceSkill;
-use App\Services\Ai\Skills\FrameworkMappingSkill;
-use App\Services\Ai\Skills\GapAssessmentSkill;
-use App\Services\Ai\Skills\KnowledgeGraphSkill;
-use App\Services\Ai\Skills\RecommendationSkill;
+use App\Services\AI\Skills\CorpusSearchSkill;
+use App\Services\AI\Skills\EvidenceSkill;
+use App\Services\AI\Skills\FrameworkMappingSkill;
+use App\Services\AI\Skills\GapAssessmentSkill;
+use App\Services\AI\Skills\KnowledgeGraphSkill;
+use App\Services\AI\Skills\RecommendationSkill;
 
 /*
 |--------------------------------------------------------------------------
@@ -175,7 +175,7 @@ return [
     | today: openai (production execution adapter) and mock (dev-only fallback used when AI execution
     | is disabled). The broader, customer-visible provider CATALOG (OpenAI, Anthropic, Gemini, Azure
     | OpenAI, OpenRouter, Mistral, Cohere, xAI, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom
-    | OpenAI-compatible) lives in App\Services\Ai\AiProviderCatalog and is "configurable but not
+    | OpenAI-compatible) lives in App\Services\AI\AiProviderCatalog and is "configurable but not
     | executable" until an adapter is added here — nothing fabricates connectivity.
     */
     'providers' => [

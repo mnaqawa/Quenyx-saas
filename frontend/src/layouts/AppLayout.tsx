@@ -4,7 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { authService, type AuthUser } from '../services/authService'
-import { routesByModule, getVisibleModuleRoutes, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleTemporarilyVisible } from '../constants/platformRegistry'
+import { routesByModule, getVisibleModuleRoutes, isModuleReady, getModuleBasePath, isModuleLocked, modules as platformModules, isModuleNavigable } from '../constants/platformRegistry'
 import { AIAgentDrawer } from '../components/ai/AIAgentDrawer'
 import { ProductTourProvider, useProductTour } from '../tour/ProductTour'
 import { useOnboarding } from '../onboarding/OnboardingContext'
@@ -227,6 +227,22 @@ function AppLayoutInner() {
           >
             {t('nav.aiWorkspace')}
           </Link>
+          <Link
+            to="/getting-started"
+            className={[
+              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition',
+              isActive('/getting-started')
+                ? 'bg-white/10 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+            ].join(' ')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {t('nav.help')}
+          </Link>
         </nav>
         <nav className="flex flex-col gap-1 px-4 pb-6" data-tour="tour-modules">
           <button
@@ -320,8 +336,11 @@ function AppLayoutInner() {
               {/* Other modules - use platformRegistry as source of truth */}
               {platformModules
                 .filter((moduleConfig) => {
-                  // Show all modules except qynsight (which is shown separately above)
-                  return moduleConfig.key !== 'qynsight' && isModuleTemporarilyVisible(moduleConfig.key)
+                  // Show production-ready business modules only (qynsight is shown
+                  // separately above). isModuleNavigable hides platform-only keys AND
+                  // not-yet-shipped 'comingSoon' modules (e.g. QynShield) — no placeholder
+                  // pages are reachable from navigation.
+                  return moduleConfig.key !== 'qynsight' && isModuleNavigable(moduleConfig.key)
                 })
                 .sort((a, b) => (a.sidebar.order || 999) - (b.sidebar.order || 999))
                 .map((moduleConfig) => {
@@ -374,7 +393,15 @@ function AppLayoutInner() {
                           }
                         `}
                       >
-                        <span>{moduleConfig.displayName}</span>
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold uppercase text-white/70"
+                          >
+                            {moduleConfig.displayName.replace(/^Qyn/i, '').charAt(0) || moduleConfig.displayName.charAt(0)}
+                          </span>
+                          <span>{moduleConfig.displayName}</span>
+                        </span>
                         {isLocked && (
                           <svg
                             width="14"

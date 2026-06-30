@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal |
 > | Owner | Professional Services |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1 (Documentation Pack v2.0). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0 (Documentation Pack v2.0). |
 
 **Audience:** Implementation partners.
 **Goal:** A repeatable path to onboard a customer onto Quenyx vOPS HUB.

@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal — Operations |
 > | Owner | Operations / SRE |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring operations; Unified AI Workspace operations. See also `docs/OBSERVE_RUNBOOK.md`. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring operations; Unified AI Workspace operations. See also `docs/OBSERVE_RUNBOOK.md`. |
 > | 2.1 | 2026-06-30 | Added Operations Intelligence (Sprint 21) operations — shares the Quenyx AI runtime; no new services to operate. |
 
 **Audience:** Ops / SRE.
@@ -134,7 +134,7 @@ journalctl -u quenyx-gateway -f
 
 ## Quenyx AI (Unified AI Workspace — Sprint 20) — operations
 
-> **RC1.1:** UI label is **Quenyx AI**. Routes unchanged (`/api/ai/*`, `/ai-workspace/*`; `/quenyx-ai/*`
+> **v1.0.0:** UI label is **Quenyx AI**. Routes unchanged (`/api/ai/*`, `/ai-workspace/*`; `/quenyx-ai/*`
 > redirects). The provider list is now catalog‑driven and the dev‑only **mock** provider is hidden
 > outside `local`/`testing`; the production default provider is **OpenAI** when configured, otherwise
 > an honest "no provider configured" state (never mock).
@@ -155,7 +155,7 @@ php artisan config:cache
 - **Safe by default**: with `AI_ENABLED=false` (default), chat uses the mock provider; nothing reaches
   an external model. No raw provider secrets are stored — `ai_provider_settings.settings` is encrypted
   (depends on a valid `APP_KEY`; rotating `APP_KEY` invalidates stored secrets, which must be re‑entered).
-- **Default provider (RC1.1)**: leave `AI_PROVIDER` unset to let the registry resolve it safely
+- **Default provider (v1.0.0)**: leave `AI_PROVIDER` unset to let the registry resolve it safely
   (OpenAI when `OPENAI_API_KEY` is set; `mock` only in local/testing; otherwise none). Set
   `AI_PROVIDER` explicitly to override. The provider **catalog** is informational; only providers with
   a real adapter (today OpenAI) are executable. The **Test connection** action / `POST

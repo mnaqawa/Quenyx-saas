@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Public / External |
 > | Owner | Security / vCISO |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; QynCore internal communication; Integrations = external only. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; QynCore internal communication; Integrations = external only. |
 
 **Audience:** Security teams, vCISO, auditors.
 **Scope:** The security model as implemented at Sprint 19.

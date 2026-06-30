@@ -8,7 +8,7 @@ use App\DataTransferObjects\Ai\AiUsage;
 use App\Models\Project;
 use App\Models\User;
 use App\Repositories\Ai\AiConversationRepository;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 
 /**
  * Sprint 25 — QynBalance Cost Intelligence copilot.

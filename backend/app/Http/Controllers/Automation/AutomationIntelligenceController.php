@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Automation;
 
 use App\Models\Automation\AutomationExecution;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\Automation\Intelligence\QynRunIntelligenceService;
 use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;

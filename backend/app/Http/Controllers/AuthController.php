@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\DB;
 class AuthController extends Controller
 {
     /**
+     * A precomputed bcrypt hash of a random value, used solely to equalize the
+     * cost of the login path when no matching user exists (timing-attack /
+     * user-enumeration resistance). Never matches any real credential.
+     */
+    private const DUMMY_PASSWORD_HASH = '$2y$10$tYHLES4jGjiFta.FWxqxA.2f03LdexqejX5lXz95gEwUynrcxYNO6';
+
+    /**
      * Register a new user and create their default workspace
      */
     public function register(Request $request): JsonResponse
@@ -130,6 +137,11 @@ class AuthController extends Controller
             ->first();
 
         if ($user === null) {
+            // GA HARDENING: timing-attack / user-enumeration resistance. Perform a
+            // dummy hash comparison so the "user not found" path costs roughly the
+            // same as the "wrong password" path instead of returning immediately.
+            Hash::check($credentials['password'], self::DUMMY_PASSWORD_HASH);
+
             Log::warning('Login failed', [
                 'reason' => 'user_not_found',
                 'email_masked' => $maskedEmail,
@@ -317,6 +329,14 @@ class AuthController extends Controller
 
         $user->password = Hash::make($validated['password']);
         $user->save();
+
+        // GA HARDENING: invalidate all OTHER active tokens after a password change
+        // so a leaked/old session cannot survive a credential rotation. The current
+        // request's token is preserved so the active session is not disrupted.
+        $currentTokenId = $request->user()?->currentAccessToken()?->getKey();
+        $user->tokens()
+            ->when($currentTokenId !== null, fn ($q) => $q->where('id', '!=', $currentTokenId))
+            ->delete();
 
         return response()->json([
             'success' => true,

@@ -6,7 +6,7 @@ use App\Contracts\Compliance\Retrieval\VectorRetrievalProviderInterface;
 use App\DataTransferObjects\Ai\AiEmbeddingsRequest;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalChunk;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
-use App\Services\Ai\AiProviderRegistry;
+use App\Services\AI\AiProviderRegistry;
 use RuntimeException;
 
 /**

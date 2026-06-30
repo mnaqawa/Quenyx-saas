@@ -1,12 +1,12 @@
-# Documentation Audit Report — Documentation Pack v2.0 (RC1 Alignment)
+# Documentation Audit Report — Documentation Pack v2.0 (v1.0.0 Alignment)
 
 > **Quenyx vOPS HUB — Document Metadata**
 >
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal |
 > | Owner | Platform Engineering / Documentation |
 > | Status | Released |
@@ -14,7 +14,7 @@
 > | Document Type | Audit report |
 
 **Objective.** Align every Quenyx vOPS HUB document with the actual production implementation at
-**v1.0.0 RC1**: remove obsolete architecture, correct changed content, document missing content, and
+**v1.0.0**: remove obsolete architecture, correct changed content, document missing content, and
 regenerate external-facing PDFs. No application source code was modified (corrections that depend on
 code are flagged in §10).
 
@@ -51,18 +51,18 @@ Whitepaper, 05 Platform Architecture Bible, 06 QCIF Architecture Bible, 07 AI Pl
 
 | Document | Key changes |
 |---|---|
-| `quenyx-v1/README.md` | v2.0 header; **Architecture invariants** block; status table → RC1 with native engines; **Official roadmap** (Phases 1–4 / Sprints 20–25); hidden-modules framing. |
-| `quenyx-v1/01_EXECUTIVE_OVERVIEW.md` | Metadata header; status basis → RC1; investor narrative updated; **§14 replaced** with official roadmap. |
+| `quenyx-v1/README.md` | v2.0 header; **Architecture invariants** block; status table → v1.0.0 with native engines; **Official roadmap** (Phases 1–4 / Sprints 20–25); hidden-modules framing. |
+| `quenyx-v1/01_EXECUTIVE_OVERVIEW.md` | Metadata header; status basis → v1.0.0; investor narrative updated; **§14 replaced** with official roadmap. |
 | `quenyx-v1/02_PRODUCT_BROCHURE.md` | Metadata header; modules table corrected (QynIntegrations removed; QynCore repositioned); Integrations = external-only note. |
 | `quenyx-v1/03_INVESTOR_DECK_OUTLINE.md` | Metadata header; title/roadmap/traction/milestone slides updated to Phases 1–4 / Sprints 20–25. |
 | `quenyx-v1/04_EXECUTIVE_WHITEPAPER.md` | Metadata header; roadmap section replaced with Phase 4 sprint list; native monitoring. |
-| `quenyx-v1/05_PLATFORM_ARCHITECTURE_BIBLE.md` | Metadata header; **§6.1 QynCore internal communication**; **§6.2 Integrations (external only)**; **§7 native QynSight engines** (no Nagios); status basis → RC1. |
-| `quenyx-v1/07_AI_PLATFORM_BIBLE.md` | Metadata header; "shared platform, not QynShield AI" emphasis + capability list; **§20 explicit future-adapter list**; scope → RC1. |
+| `quenyx-v1/05_PLATFORM_ARCHITECTURE_BIBLE.md` | Metadata header; **§6.1 QynCore internal communication**; **§6.2 Integrations (external only)**; **§7 native QynSight engines** (no Nagios); status basis → v1.0.0. |
+| `quenyx-v1/07_AI_PLATFORM_BIBLE.md` | Metadata header; "shared platform, not QynShield AI" emphasis + capability list; **§20 explicit future-adapter list**; scope → v1.0.0. |
 | `quenyx-v1/09_DATABASE_REFERENCE.md` | Metadata header; `observe_*` description switched from "Nagios-style fields" to native check fields + exit-code convention. |
-| `quenyx-v1/12_ADMINISTRATOR_GUIDE.md` | Metadata header; scope → RC1 (incl. Unified AI Workspace). |
+| `quenyx-v1/12_ADMINISTRATOR_GUIDE.md` | Metadata header; scope → v1.0.0 (incl. Unified AI Workspace). |
 | `quenyx-v1/13_CUSTOMER_USER_GUIDE.md` | Metadata header; "disabled in the navigation" framing; QynCore/Integrations clarified. |
 | `quenyx-v1/14_QYNSIGHT_GUIDE.md` | Metadata header; service checks described as native (no external daemon). |
-| `quenyx-v1/06,08,10,11,15,16,17,18,19,20,21` | Standard metadata headers added; consistency with RC1 invariants. |
+| `quenyx-v1/06,08,10,11,15,16,17,18,19,20,21` | Standard metadata headers added; consistency with v1.0.0 invariants. |
 | `docs/QUENYX_AI_PLATFORM.md` | Future-adapter list corrected; QynCore = platform core / no QynIntegrations module note; flagged legacy catalog keys. |
 | `docs/OBSERVE_RUNBOOK.md` | **Full rewrite** to the native QynSight monitoring engine; Nagios procedures moved to a legacy/optional **Appendix A**. |
 
@@ -73,7 +73,7 @@ Whitepaper, 05 Platform Architecture Bible, 06 QCIF Architecture Bible, 07 AI Pl
   were removed from the main body and relegated to a clearly-labelled legacy/optional appendix.
 - **`QynIntegrations` as a future business module** — removed from the module lists in
   `02_PRODUCT_BROCHURE`, `13_CUSTOMER_USER_GUIDE`, and `QUENYX_AI_PLATFORM.md`.
-- **"Phase I / through Sprint 19" as the end-state** — replaced with the v1.0.0 RC1 status and the
+- **"Phase I / through Sprint 19" as the end-state** — replaced with the v1.0.0 status and the
   Phases 1–4 roadmap across README, 01, 03, 04, 12.
 
 ## 4. Architecture corrections
@@ -123,7 +123,7 @@ Official roadmap is now consistent across README, 01, 03, and 04:
 - **Phase 2** — Operations Platform (QynSight) — ✅ Completed
 - **Phase 3** — Compliance & Enterprise AI Foundation (QCIF Sprints 1–19 + AI Platform Foundation) — ✅ Completed
 - **Phase 4** — Enterprise AI Platform — 🟡 In progress:
-  - Sprint 20 — Unified AI Workspace — ✅ Delivered in RC1
+  - Sprint 20 — Unified AI Workspace — ✅ Delivered in v1.0.0
   - Sprint 21 — Operations Intelligence
   - Sprint 22 — Asset & Knowledge Intelligence
   - Sprint 23 — Automation & Response Intelligence
@@ -181,14 +181,14 @@ cleanly; no markdown artifacts). Regenerate with: `powershell -File scripts/docs
 ## 10. Inconsistencies discovered in the actual implementation
 
 These were **code/documentation mismatches** flagged in Documentation Pack v2.0. Items 1–3 were
-**resolved in the RC1.1 cleanup** (see the RC1.1 addendum below); item 4 remains an honest
+**resolved in the v1.0.0 cleanup** (see the v1.0.0 addendum below); item 4 remains an honest
 "not-enabled" surface.
 
-1. **Legacy Nagios path in code.** *(Resolved in RC1.1.)* On inspection the runtime had already been
+1. **Legacy Nagios path in code.** *(Resolved in v1.0.0.)* On inspection the runtime had already been
    cut over to native in a prior sprint: the gateway returns `410 Gone` for `/internal/engines/nagios*`,
    `observe:poll` is a deprecated alias that forwards to `observe:run-checks`, and there is **no**
    `observe:nagios:publish` command, `gateway/src/engines/nagiosConfig.ts`, or
-   `docker-compose.nagios.yml` in the repo (those were aspirational/already gone). RC1.1 removed the
+   `docker-compose.nagios.yml` in the repo (those were aspirational/already gone). v1.0.0 removed the
    remaining stale artifacts: gateway `.env.example`/`README` Nagios binary/container config, and the
    misleading `engine => 'nagios'` literals in `ObserveServiceDefinitionReadyPluginsSeeder` (the seeder
    already forced `native` at runtime).
@@ -196,7 +196,7 @@ These were **code/documentation mismatches** flagged in Documentation Pack v2.0.
    migration already defaults the column to **`native`**, and migration
    `2026_06_04_190001_rename_observe_runtime_engine_to_native` migrates any legacy `nagios` rows to
    `native`. The stale "default = nagios" note in `OBSERVE_RUNBOOK.md` was corrected.
-3. **Module catalog listed `qyncore` / `qynintegrations` as modules.** *(Resolved in RC1.1.)*
+3. **Module catalog listed `qyncore` / `qynintegrations` as modules.** *(Resolved in v1.0.0.)*
    `qynintegrations` was removed as a business module from `frontend/src/constants/platformRegistry.ts`
    and from the AI module universe in `config/quenyx_ai.php`; `qyncore` is now documented as the
    platform core in both. Both keys are **retained as entitlement keys** (plans, subscriptions, gateway
@@ -207,7 +207,7 @@ These were **code/documentation mismatches** flagged in Documentation Pack v2.0.
 
 ---
 
-## RC1.1 addendum — native monitoring & platform-capability cleanup
+## v1.0.0 addendum — native monitoring & platform-capability cleanup
 
 Applied after Documentation Pack v2.0 to make code match the documented architecture:
 
@@ -227,7 +227,7 @@ Applied after Documentation Pack v2.0 to make code match the documented architec
 
 ---
 
-## RC1.1 addendum — Quenyx AI control center & provider governance
+## v1.0.0 addendum — Quenyx AI control center & provider governance
 
 Applied as the final AI Platform polish before Sprint 21 (no new AI behavior; APIs preserved):
 
@@ -267,7 +267,7 @@ Applied as the final AI Platform polish before Sprint 21 (no new AI behavior; AP
 
 ### Quality checklist
 
-- [x] Reflects v1.0.0 RC1.
+- [x] Reflects v1.0.0.
 - [x] No obsolete architecture (Nagios removed as engine; QynIntegrations removed as module).
 - [x] No fabricated functionality / placeholder text / TODO sections introduced.
 - [x] Correct terminology (native engines, QynCore, platform AI).

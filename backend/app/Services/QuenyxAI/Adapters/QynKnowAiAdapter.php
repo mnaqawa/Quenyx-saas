@@ -11,7 +11,7 @@ use App\Services\Knowledge\KnowledgeSourceRegistry;
  *
  * Exposes knowledge intelligence (explain, summarize, find related, editable drafting) and builds a
  * deterministic, workspace-scoped context from REAL evidence: the registered Knowledge Sources and the
- * indexed document corpus. Reuses the shared Quenyx AI runtime ({@see \App\Services\Ai\ModuleAiNarrator})
+ * indexed document corpus. Reuses the shared Quenyx AI runtime ({@see \App\Services\AI\ModuleAiNarrator})
  * — no AI/provider/orchestration logic is duplicated and nothing is fabricated.
  */
 class QynKnowAiAdapter extends AbstractAiModuleAdapter

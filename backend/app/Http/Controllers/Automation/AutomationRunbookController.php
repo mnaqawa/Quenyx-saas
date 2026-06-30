@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Automation;
 
 use App\Models\Automation\AutomationExecution;
 use App\Models\Automation\AutomationRunbook;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\Automation\ExecutionHistory;
 use App\Services\Automation\RunbookEngine;
 use App\Services\EntitlementService;

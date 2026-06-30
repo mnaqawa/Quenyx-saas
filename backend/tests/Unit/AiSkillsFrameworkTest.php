@@ -6,10 +6,10 @@ use App\DataTransferObjects\Ai\AiSkillExecution;
 use App\DataTransferObjects\Ai\AiSkillRequest;
 use App\DataTransferObjects\Ai\AiSkillResponse;
 use App\DataTransferObjects\Ai\AiSkillResult;
-use App\Services\Ai\CompliancePromptOrchestrator;
-use App\Services\Ai\Skills\AbstractAiSkill;
-use App\Services\Ai\Skills\AiSkillRegistry;
-use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\AI\CompliancePromptOrchestrator;
+use App\Services\AI\Skills\AbstractAiSkill;
+use App\Services\AI\Skills\AiSkillRegistry;
+use App\Services\AI\Skills\AiSkillRouter;
 use Tests\TestCase;
 
 /**

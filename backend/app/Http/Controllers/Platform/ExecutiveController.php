@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Platform;
 
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\EntitlementService;
 use App\Services\Platform\Executive\ExecutiveIntelligenceService;
 use Illuminate\Http\JsonResponse;

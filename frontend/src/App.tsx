@@ -25,7 +25,7 @@ import { validateRegistryInDevelopment } from './constants/registrySanity'
 const BillingPage = lazy(() => import('./pages/Billing'))
 
 /**
- * RC1.1 — backward-compatible alias. "AI Workspace" is surfaced as "Quenyx AI"; the preferred
+ * v1.0.0 — backward-compatible alias. "AI Workspace" is surfaced as "Quenyx AI"; the preferred
  * /quenyx-ai/* path redirects (preserving sub-path + query) to the canonical /ai-workspace/* routes
  * so existing links keep working and the new branded URL also resolves.
  */
@@ -140,7 +140,7 @@ function App() {
               <Route path="administration" element={<ObserveSuspense><AiAdministration /></ObserveSuspense>} />
               <Route path="notifications" element={<ObserveSuspense><AiNotifications /></ObserveSuspense>} />
             </Route>
-            {/* RC1.1 — preferred branded alias; redirects to the canonical /ai-workspace/* routes. */}
+            {/* v1.0.0 — preferred branded alias; redirects to the canonical /ai-workspace/* routes. */}
             <Route path="quenyx-ai/*" element={<QuenyxAiRedirect />} />
             <Route path="getting-started" element={<GettingStarted />} />
             <Route path="help" element={<Navigate to="/getting-started" replace />} />

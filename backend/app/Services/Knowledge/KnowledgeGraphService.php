@@ -75,25 +75,30 @@ class KnowledgeGraphService
             }
         }
         if (Schema::hasTable('automation_executions')) {
-            foreach (AutomationExecution::where('project_id', $project->id)->latest()->limit($cap)->get() as $x) {
+            $executions = AutomationExecution::where('project_id', $project->id)->latest()->limit($cap)->get();
+
+            // PERF (GA remediation): batch-resolve related id -> uuid maps once instead of
+            // running up to 3 lookups per execution row (was an N+1 of ~150 queries).
+            $incidentUuids = (Schema::hasTable('incidents') && $executions->isNotEmpty())
+                ? Incident::whereIn('id', $executions->pluck('incident_id')->filter()->unique()->all())->pluck('uuid', 'id')
+                : collect();
+            $workflowUuids = $executions->isNotEmpty()
+                ? AutomationWorkflow::whereIn('id', $executions->pluck('workflow_id')->filter()->unique()->all())->pluck('uuid', 'id')
+                : collect();
+            $runbookUuids = $executions->isNotEmpty()
+                ? AutomationRunbook::whereIn('id', $executions->pluck('runbook_id')->filter()->unique()->all())->pluck('uuid', 'id')
+                : collect();
+
+            foreach ($executions as $x) {
                 $n = $addNode('execution', $x->uuid, $x->adapter_key.' · '.$x->status, ['mode' => $x->mode]);
-                if ($x->incident_id && Schema::hasTable('incidents')) {
-                    $inc = Incident::where('id', $x->incident_id)->value('uuid');
-                    if ($inc) {
-                        $addEdge($addNode('incident', $inc, 'Incident '.substr($inc, 0, 8)), $n, 'ran_automation');
-                    }
+                if ($x->incident_id && ($inc = $incidentUuids[$x->incident_id] ?? null)) {
+                    $addEdge($addNode('incident', $inc, 'Incident '.substr($inc, 0, 8)), $n, 'ran_automation');
                 }
-                if ($x->workflow_id) {
-                    $wfu = AutomationWorkflow::where('id', $x->workflow_id)->value('uuid');
-                    if ($wfu) {
-                        $addEdge($addNode('workflow', $wfu, 'Workflow '.substr($wfu, 0, 8)), $n, 'executed_as');
-                    }
+                if ($x->workflow_id && ($wfu = $workflowUuids[$x->workflow_id] ?? null)) {
+                    $addEdge($addNode('workflow', $wfu, 'Workflow '.substr($wfu, 0, 8)), $n, 'executed_as');
                 }
-                if ($x->runbook_id) {
-                    $rbu = AutomationRunbook::where('id', $x->runbook_id)->value('uuid');
-                    if ($rbu) {
-                        $addEdge($addNode('runbook', $rbu, 'Runbook '.substr($rbu, 0, 8)), $n, 'executed_as');
-                    }
+                if ($x->runbook_id && ($rbu = $runbookUuids[$x->runbook_id] ?? null)) {
+                    $addEdge($addNode('runbook', $rbu, 'Runbook '.substr($rbu, 0, 8)), $n, 'executed_as');
                 }
             }
         }

@@ -7,6 +7,8 @@ namespace App\Services\Knowledge;
 use App\Models\Knowledge\KnowledgeDocument;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Platform\EventBus\PlatformEventNames;
+use App\Services\Platform\EventBus\PublishesPlatformEvents;
 use App\Services\Platform\PlatformAuditLogger;
 use Illuminate\Support\Str;
 
@@ -17,6 +19,8 @@ use Illuminate\Support\Str;
  */
 class KnowledgeService
 {
+    use PublishesPlatformEvents;
+
     public function __construct(
         private readonly PlatformAuditLogger $audit,
     ) {}
@@ -63,6 +67,13 @@ class KnowledgeService
 
         $this->audit->log($user, $project, 'knowledge_document_created', ['uuid' => $doc->uuid, 'title' => $doc->title]);
 
+        $this->publishPlatformEvent(PlatformEventNames::KNOWLEDGE_CREATED, $project, $user, [
+            'document_uuid' => $doc->uuid,
+            'title' => $doc->title,
+            'category' => $doc->category,
+            'status' => $doc->status,
+        ]);
+
         return $doc;
     }
 
@@ -89,6 +100,11 @@ class KnowledgeService
         $doc->save();
 
         $this->audit->log($user, $project, 'knowledge_document_updated', ['uuid' => $doc->uuid]);
+
+        $this->publishPlatformEvent(PlatformEventNames::KNOWLEDGE_UPDATED, $project, $user, [
+            'document_uuid' => $doc->uuid,
+            'status' => $doc->status,
+        ]);
 
         return $doc;
     }

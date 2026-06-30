@@ -11,10 +11,10 @@ use App\Http\Resources\Ai\AiConversationResource;
 use App\Models\Ai\AiConversation;
 use App\Models\Project;
 use App\Repositories\Ai\AiConversationRepository;
-use App\Services\Ai\AiAccessAuditLogger;
-use App\Services\Ai\AiProviderRegistry;
-use App\Services\Ai\CompliancePromptOrchestrator;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\AiAccessAuditLogger;
+use App\Services\AI\AiProviderRegistry;
+use App\Services\AI\CompliancePromptOrchestrator;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

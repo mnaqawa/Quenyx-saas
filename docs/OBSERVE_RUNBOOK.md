@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal — Operations |
 > | Owner | Operations / SRE |
 > | Status | Released |
@@ -320,7 +320,7 @@ cd gateway && npm run build
 > for teams migrating from, or optionally integrating, an external Nagios deployment. New
 > environments should not enable it.
 
-As of v1.0.0 RC1 the Nagios **runtime path has been removed**; only the following remnants exist, and
+As of v1.0.0 the Nagios **runtime path has been removed**; only the following remnants exist, and
 only for migration/optional integration:
 
 - **No publish command.** The former `observe:nagios:publish` Artisan command no longer exists. The

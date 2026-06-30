@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Public / External |
 > | Owner | Product |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring engine (no Nagios dependency). |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring engine (no Nagios dependency). |
 > | 2.1 | 2026-06-30 | Added Operations Intelligence (Sprint 21): Monitoring Copilot, Alert/Root‑Cause/Capacity/Performance/Infrastructure/Service‑Health intelligence, evidence‑based recommendations, and the Operations Intelligence dashboard — all reusing the Quenyx AI Platform. |
 
 **Audience:** QynSight users and admins.

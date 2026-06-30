@@ -1,6 +1,6 @@
 # Overrides Persistence + Engine Unreachable – Root Cause and Fixes
 
-> **⚠️ PARTIALLY SUPERSEDED / LEGACY (pre‑RC1.1).** Part A (overrides persistence) remains accurate.
+> **⚠️ PARTIALLY SUPERSEDED / LEGACY (pre‑v1.0.0).** Part A (overrides persistence) remains accurate.
 > The "engine unreachable" analysis refers to the former **Nagios‑based** poll path (`observe:poll`
 > calling the gateway `/internal/engines/nagios/*`), which has been **removed**: monitoring is now
 > **native** (`observe:run-checks`) and that gateway path returns `410 Gone`. See

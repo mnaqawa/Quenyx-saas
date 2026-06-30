@@ -6,7 +6,7 @@
 > |---|---|
 > | Document Version | 1.0 |
 > | Software Version | v1.0.0 |
-> | Applies To | Upgrade from v1.0.0 RC1 (Sprint 24) → v1.0.0 (Sprint 25) |
+> | Applies To | Upgrade from v1.0.0 (Sprint 24) → v1.0.0 (Sprint 25) |
 > | Classification | Internal |
 > | Owner | Platform Engineering / SRE |
 > | Status | Released |
@@ -21,7 +21,7 @@ destructive migrations**. Upgrading is low-risk.
 ## Pre-upgrade checklist
 
 - [ ] Back up the database (standard pre-deploy snapshot).
-- [ ] Confirm you are on v1.0.0 RC1 (Sprint 24) and migrations are current (`php artisan migrate:status`).
+- [ ] Confirm you are on v1.0.0 (Sprint 24) and migrations are current (`php artisan migrate:status`).
 - [ ] Note your current AI provider configuration (unchanged by this release).
 
 ## Upgrade steps

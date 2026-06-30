@@ -6,17 +6,23 @@ import './index.css'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { WorkspaceProvider } from './workspaces/WorkspaceContext'
 import { OnboardingProvider } from './onboarding/OnboardingContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { ToastProvider } from './components/toast/ToastProvider'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <LanguageProvider>
-      <OnboardingProvider>
-        <WorkspaceProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </WorkspaceProvider>
-      </OnboardingProvider>
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <ToastProvider>
+          <OnboardingProvider>
+            <WorkspaceProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </WorkspaceProvider>
+          </OnboardingProvider>
+        </ToastProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 )

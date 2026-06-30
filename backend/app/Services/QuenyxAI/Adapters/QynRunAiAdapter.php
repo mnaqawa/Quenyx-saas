@@ -13,7 +13,7 @@ use App\Services\Automation\AutomationLearningService;
  * Exposes automation intelligence (runbook drafting, workflow/execution explanation, evidence-based
  * automation recommendations) and builds a deterministic, workspace-scoped context from REAL evidence:
  * the registry-discovered execution adapters + action catalog and the auditable Automation Learning
- * statistics. It reuses the shared Quenyx AI runtime ({@see \App\Services\Ai\ModuleAiNarrator}) — no
+ * statistics. It reuses the shared Quenyx AI runtime ({@see \App\Services\AI\ModuleAiNarrator}) — no
  * AI logic, provider logic, or orchestration is duplicated, and nothing is fabricated.
  */
 class QynRunAiAdapter extends AbstractAiModuleAdapter

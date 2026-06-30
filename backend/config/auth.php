@@ -35,6 +35,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Credential endpoint rate limits (GA hardening)
+    |--------------------------------------------------------------------------
+    | Per-minute attempt ceilings for the named 'login' / 'register' rate
+    | limiters (see App\Providers\RouteServiceProvider). The login limiter is
+    | applied per-email AND per-IP for brute-force resistance.
+    */
+    'rate_limits' => [
+        'login' => [
+            'max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+        ],
+        'register' => [
+            'max_attempts' => (int) env('AUTH_REGISTER_MAX_ATTEMPTS', 10),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Database seeding
     |--------------------------------------------------------------------------
     | Read through the config layer (not env() directly) so the value survives

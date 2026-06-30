@@ -6,7 +6,7 @@ namespace App\Services\Platform\Executive;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 use App\Services\Platform\Analytics\EnterpriseAnalyticsService;
 use App\Services\Platform\Cost\CostIntelligenceService;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +41,12 @@ class ExecutiveIntelligenceService
     {
         $analytics = $this->analytics->build($project);
 
+        // PERF (GA remediation): compute the cost overview ONCE and derive both the
+        // top recommendations and the cost KPIs from it. Previously dashboard() called
+        // CostIntelligenceService::recommendations() AND ::overview() separately, and
+        // overview() itself recomputes recommendations — duplicating the work.
+        $costOverview = $this->cost->overview($project);
+
         return [
             'generated_at' => now()->toIso8601String(),
             'operational_health' => $this->operationalHealth($project),
@@ -48,12 +54,12 @@ class ExecutiveIntelligenceService
             'compliance_health' => $this->complianceHealth($project),
             'capacity_forecast' => $analytics['capacity_trends'],
             'top_risks' => $this->topRisks($project),
-            'top_recommendations' => $this->cost->recommendations($project),
+            'top_recommendations' => $costOverview['recommendations'],
             'automation_success' => $analytics['automation_effectiveness'],
             'ai_usage' => $analytics['ai_adoption'],
             'incident_kpis' => $this->incidentKpis($project, $analytics),
             'knowledge_kpis' => $analytics['knowledge_usage'],
-            'cost_kpis' => $this->costKpis($project),
+            'cost_kpis' => $this->costKpis($costOverview),
         ];
     }
 
@@ -198,12 +204,11 @@ class ExecutiveIntelligenceService
     }
 
     /**
+     * @param  array<string, mixed>  $overview  Pre-computed cost overview (see dashboard()).
      * @return array<string, mixed>
      */
-    private function costKpis(Project $project): array
+    private function costKpis(array $overview): array
     {
-        $overview = $this->cost->overview($project);
-
         return [
             'pricing_configured' => $overview['pricing_configured'],
             'estimated_monthly' => $overview['infrastructure']['estimated_monthly_total'] ?? null,

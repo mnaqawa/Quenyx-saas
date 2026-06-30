@@ -7,6 +7,8 @@ namespace App\Services\Support;
 use App\Models\Project;
 use App\Models\Support\Ticket;
 use App\Models\User;
+use App\Services\Platform\EventBus\PlatformEventNames;
+use App\Services\Platform\EventBus\PublishesPlatformEvents;
 use App\Services\Platform\PlatformAuditLogger;
 
 /**
@@ -16,6 +18,8 @@ use App\Services\Platform\PlatformAuditLogger;
  */
 class TicketService
 {
+    use PublishesPlatformEvents;
+
     public function __construct(
         private readonly PlatformAuditLogger $audit,
     ) {}
@@ -64,6 +68,14 @@ class TicketService
 
         $this->audit->log($user, $project, 'ticket_created', ['uuid' => $ticket->uuid, 'reference' => $ticket->reference]);
 
+        $this->publishPlatformEvent(PlatformEventNames::TICKET_CREATED, $project, $user, [
+            'ticket_uuid' => $ticket->uuid,
+            'reference' => $ticket->reference,
+            'priority' => $ticket->priority,
+            'category' => $ticket->category,
+            'incident_uuid' => $ticket->incident_uuid,
+        ]);
+
         return $ticket;
     }
 
@@ -94,6 +106,13 @@ class TicketService
 
         $ticket->save();
         $this->audit->log($user, $project, 'ticket_updated', ['uuid' => $ticket->uuid, 'status' => $ticket->status]);
+
+        $this->publishPlatformEvent(PlatformEventNames::TICKET_UPDATED, $project, $user, [
+            'ticket_uuid' => $ticket->uuid,
+            'reference' => $ticket->reference,
+            'status' => $ticket->status,
+            'priority' => $ticket->priority,
+        ]);
 
         return $ticket;
     }

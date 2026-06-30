@@ -12,7 +12,7 @@ interface TabDef {
 }
 
 /**
- * Quenyx AI surfaces (Sprint 20), grouped for an enterprise control-center layout (RC1.1). Routes
+ * Quenyx AI surfaces (Sprint 20), grouped for an enterprise control-center layout (v1.0.0). Routes
  * remain under /ai-workspace/* for backward compatibility; /quenyx-ai/* redirects here.
  */
 const TABS: TabDef[] = [

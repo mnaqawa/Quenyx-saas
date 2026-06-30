@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Public / External |
 > | Owner | Executive Office |
 > | Status | Released |
@@ -18,12 +18,12 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; roadmap Phases 1–4 / Sprints 20–25; native monitoring; shared platform AI. |
 > | 2.1 | 2026-06-30 | Sprint 21 (Operations Intelligence) delivered: QynSight becomes a live AI consumer on the shared platform. |
 
 **Audience:** Investors, board, executives, strategic partners.
 **Tone:** Non‑technical, factual, investor‑ready.
-**Status basis:** v1.0.0 RC1 (Phases 1–3 completed; Phase 4 in progress, Sprints 20–21 delivered).
+**Status basis:** v1.0.0 (Phases 1–3 completed; Phase 4 in progress, Sprints 20–21 delivered).
 
 > This document describes **what exists today** in the Quenyx codebase and what is **planned**. It
 > contains **no fabricated customers, revenue, market sizing, benchmarks, or certifications**.
@@ -140,7 +140,7 @@ Quenyx has completed a **disciplined foundation across Phases 1–3**: a product
 (native QynSight engines), a provenance‑grounded compliance engine, and a governable shared AI
 platform — built with explicit safety rails rather than demo shortcuts. **Phase 4 (Enterprise AI
 Platform)** is now underway, with the **Unified AI Workspace (Sprint 20, presented as "Quenyx AI")**
-and **Operations Intelligence (Sprint 21)** already delivered in RC1 — the latter turning QynSight from
+and **Operations Intelligence (Sprint 21)** already delivered in v1.0.0 — the latter turning QynSight from
 a monitoring product into an operations *intelligence* product on the shared AI platform — converting
 this foundation into broader module coverage and customer‑facing AI from a base that is already
 architecturally sound.
@@ -173,9 +173,9 @@ architecturally sound.
 
 | Sprint | Title | Status |
 |---|---|---|
-| Sprint 20 | Unified AI Workspace ("Quenyx AI") | ✅ Delivered in RC1 |
-| Sprint 21 | Operations Intelligence | ✅ Delivered in RC1 |
-| Sprint 22 | Asset Intelligence + AI Adapter Platform | ✅ Delivered in RC1 |
+| Sprint 20 | Unified AI Workspace ("Quenyx AI") | ✅ Delivered in v1.0.0 |
+| Sprint 21 | Operations Intelligence | ✅ Delivered in v1.0.0 |
+| Sprint 22 | Asset Intelligence + AI Adapter Platform | ✅ Delivered in v1.0.0 |
 | Sprint 23 | Automation & Response Intelligence | Planned |
 | Sprint 24 | Service, Notification & Cost Intelligence | Planned |
 | Sprint 25 | Enterprise Intelligence Platform | Planned |

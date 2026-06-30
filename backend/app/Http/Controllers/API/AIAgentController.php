@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AIAgentQueryRequest;
 use App\Http\Resources\AIAgentAnswerResource;
 use App\Models\Project;
+use App\Services\AI\AiAccessAuditLogger;
 use App\Services\OpenAI\OpenAIService;
 use App\Services\ProjectAccessService;
 use App\Support\SafeLog;
@@ -17,6 +18,7 @@ class AIAgentController extends Controller
     public function __construct(
         private readonly OpenAIService $service,
         private readonly ProjectAccessService $access,
+        private readonly AiAccessAuditLogger $auditLogger,
     ) {
     }
 
@@ -33,6 +35,7 @@ class AIAgentController extends Controller
         $validated = $request->validated();
 
         $context = [];
+        $project = null;
 
         // Optional workspace context — verify membership before using it.
         $workspaceId = $validated['workspace_id'] ?? null;
@@ -55,6 +58,19 @@ class AIAgentController extends Controller
         // Optional QynSight runtime context from the frontend.
         if (! empty($validated['context'])) {
             $context['qynsight'] = $validated['context'];
+        }
+
+        // GA HARDENING: record AI access in the workspace audit trail (no prompt
+        // content) so the KB-agent path is auditable like the governed narrator path.
+        if ($project !== null) {
+            $this->auditLogger->log(
+                $request->user(),
+                $project,
+                'ai_kb_agent_query',
+                'POST /api/ai-agent/query',
+                'openai_kb',
+                ['agent' => (string) $validated['agent']],
+            );
         }
 
         try {

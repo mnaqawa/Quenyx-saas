@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Confidential — Architecture |
 > | Owner | Platform Architecture |
 > | Status | Released |
@@ -18,11 +18,11 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial architecture bible (through Sprint 19). |
-> | 2.0 | 2026-06-29 | RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI. |
+> | 2.0 | 2026-06-29 | v1.0.0 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI. |
 > | 2.1 | 2026-06-30 | Sprint 21 — QynSight Operations Intelligence: QynSight becomes a live AI consumer reusing the shared runtime; UUID‑only `/api/qynsight/intelligence/*` surface. |
 
 **Audience:** Architects, senior engineers, auditors.
-**Status basis:** v1.0.0 RC1. Diagrams reflect the **current** production code.
+**Status basis:** v1.0.0. Diagrams reflect the **current** production code.
 
 ---
 
@@ -107,7 +107,7 @@ additionally tracks module AI‑readiness in `config/quenyx_ai.php` + `QuenyxMod
 
 > **`QynCore` and `Integrations` are not business modules.** `QynCore` is the **platform core** —
 > the internal services layer through which modules communicate (see §6.1). `Integrations` is a
-> **platform page** for **external** systems only (see §6.2). As of **RC1.1**, the frontend business
+> **platform page** for **external** systems only (see §6.2). As of **v1.0.0**, the frontend business
 > catalog (`platformRegistry.ts`) and the AI module universe (`config/quenyx_ai.php`) no longer list
 > `qynintegrations` as a business module, and `qyncore` is documented there as the platform core. The
 > `qyncore` / `qynintegrations` keys are **retained only as entitlement keys** (plans, subscriptions,
@@ -265,13 +265,13 @@ scheduler run alongside. See Doc 10.
   CI/CloudQuenyx (see QA report).
 - One low‑risk **shadowed duplicate route** (`/ai/chat`) noted in the QA report.
 
-## Sprint 20 — Unified AI Workspace (platform layer) — branded "Quenyx AI" (RC1.1)
+## Sprint 20 — Unified AI Workspace (platform layer) — branded "Quenyx AI" (v1.0.0)
 
 The **Unified AI Workspace** is a platform‑level capability (NOT a business module): a top‑level
 sidebar item beside Dashboard / Workspaces / Integrations. It does not touch `platformRegistry.ts`
 and the QynSight‑only sidebar flag is unchanged.
 
-> **RC1.1:** the surface is presented as **Quenyx AI** (enterprise AI control center). Routes are
+> **v1.0.0:** the surface is presented as **Quenyx AI** (enterprise AI control center). Routes are
 > unchanged for backward compatibility (`/api/ai/*`, SPA `/ai-workspace/*`); a branded `/quenyx-ai/*`
 > alias in `App.tsx` redirects to the canonical routes. The provider list is catalog‑driven
 > (`App\Services\Ai\AiProviderCatalog`): a declarative catalog of 14 providers where only those with a

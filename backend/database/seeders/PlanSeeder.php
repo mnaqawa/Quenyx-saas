@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
-    // NOTE (RC1.1): 'qyncore' (platform core) and 'qynintegrations' (Integrations platform capability)
+    // NOTE (v1.0.0): 'qyncore' (platform core) and 'qynintegrations' (Integrations platform capability)
     // are NOT business modules. They remain in modules_allowed for backward compatibility: 'qyncore'
     // backs billing/subscriptions and 'qynintegrations' is the entitlement key that gates the
     // Integrations platform page at the gateway. Do not remove without migrating existing plans.

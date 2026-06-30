@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai\Skills;
+namespace App\Services\AI\Skills;
 
 use App\Contracts\Ai\AiSkillInterface;
 use App\DataTransferObjects\Ai\AiSkillExecution;

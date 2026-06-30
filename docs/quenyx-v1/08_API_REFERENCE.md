@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.2 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; includes Unified AI Workspace (Sprint 20) endpoints. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; includes Unified AI Workspace (Sprint 20) endpoints. |
 > | 2.1 | 2026-06-30 | Added QynSight Operations Intelligence (Sprint 21) endpoints under `/api/qynsight/intelligence/*`. |
 > | 2.2 | 2026-06-30 | Added the AI Adapter discovery API (`/api/ai/adapters`, `/api/ai/actions`) and QynAsset Asset Intelligence (`/api/qynasset/intelligence/*`) — Sprint 22. |
 
@@ -193,7 +193,7 @@ status, supported contexts, and HUB‑wide `module_catalog` (production/reserved
 
 ## 17. Quenyx AI (Unified AI Workspace — Sprint 20)
 
-> **RC1.1 naming:** this surface is presented in the UI as **Quenyx AI** (the internal/codename
+> **v1.0.0 naming:** this surface is presented in the UI as **Quenyx AI** (the internal/codename
 > remains *Unified AI Workspace*). API paths are unchanged: routes stay under `/api/ai/*` and the SPA
 > routes stay under `/ai-workspace/*` (the branded `/quenyx-ai/*` path redirects to them). No API
 > contract changed in the rename.
@@ -236,7 +236,7 @@ addressing uses a deterministic UUIDv5 (workspace + provider key) so providers a
 even before a settings row exists. Provider id `uuid` is also added (additively) to the workspace list
 (`GET /api/workspaces`) and `ProjectResource` so the UI can pass the workspace UUID.
 
-**Provider catalog & execution (RC1.1).** `GET /api/ai/providers` returns the declarative provider
+**Provider catalog & execution (v1.0.0).** `GET /api/ai/providers` returns the declarative provider
 **catalog** (`App\Services\Ai\AiProviderCatalog`) merged with each workspace's saved preferences.
 Each entry exposes `label`, `type` (`hosted` / `gateway` / `self_hosted` / `custom` / `dev`),
 declared `capabilities`, `endpoint`, `docs_url`, `is_default`, `executable`, `platform_configured`,

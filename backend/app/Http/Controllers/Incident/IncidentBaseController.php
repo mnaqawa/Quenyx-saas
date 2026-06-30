@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Incident;
 use App\Http\Controllers\Controller;
 use App\Models\Incident\Incident;
 use App\Models\Project;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

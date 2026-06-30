@@ -7,7 +7,7 @@ import { AiView, Card, StatTile } from '../../components/ai/workspace/shared'
 import { formatDateTime, formatNumber } from '../../components/ai/workspace/format'
 
 /**
- * Quenyx AI — operational overview (RC1.1). Every figure is derived from real backend data
+ * Quenyx AI — operational overview (v1.0.0). Every figure is derived from real backend data
  * (token counts, provider registry/catalog, loaded skills/capabilities, audit activity). When no
  * real provider is configured the dashboard shows an honest "no provider configured" state rather
  * than fabricated availability.

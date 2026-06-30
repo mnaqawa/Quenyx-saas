@@ -17,6 +17,8 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\InviteController;
 
 Route::get('/health', [HealthController::class, 'index']);
+// Readiness probe (GA): verifies DB/cache; returns 503 when not ready.
+Route::get('/health/ready', [HealthController::class, 'ready']);
 
 // Agent API (no user auth; uses enrollment token or agent secret)
 Route::middleware('throttle:120,1')->group(function () {
@@ -28,8 +30,9 @@ Route::middleware('throttle:120,1')->group(function () {
 });
 
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    // GA HARDENING: brute-force protection on credential endpoints.
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -203,19 +206,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{project}/agents/enrollment-tokens/{token}/revoke', [\App\Http\Controllers\AgentController::class, 'revokeEnrollmentToken']);
     Route::delete('/projects/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
 
-    // LEGACY AI routes. Superseded by /api/ai-agent/query and components/ai/AIAgentDrawer.tsx.
-    // TODO: Remove once all clients migrate to the knowledge-base agent. Kept for backward compatibility.
-    // AI agent (QynSight) — workspace canonical
-    Route::get('/workspaces/{project}/ai/personas', [\App\Http\Controllers\AiAgentController::class, 'personas']);
-    Route::post('/workspaces/{project}/ai/chat', [\App\Http\Controllers\AiAgentController::class, 'chat']);
-    Route::post('/workspaces/{project}/ai/chat/stream', [\App\Http\Controllers\AiAgentController::class, 'stream']);
-    Route::post('/workspaces/{project}/ai/analyze', [\App\Http\Controllers\AiAgentController::class, 'analyze']);
-
-    // AI agent (QynSight) — project aliases
-    Route::get('/projects/{project}/ai/personas', [\App\Http\Controllers\AiAgentController::class, 'personas']);
-    Route::post('/projects/{project}/ai/chat', [\App\Http\Controllers\AiAgentController::class, 'chat']);
-    Route::post('/projects/{project}/ai/chat/stream', [\App\Http\Controllers\AiAgentController::class, 'stream']);
-    Route::post('/projects/{project}/ai/analyze', [\App\Http\Controllers\AiAgentController::class, 'analyze']);
+    // NOTE (GA remediation): The legacy QynSight AI routes that previously registered
+    //   POST /{projects|workspaces}/{project}/ai/chat  (App\Http\Controllers\AiAgentController)
+    // were removed. The canonical, governed AI chat/stream endpoints are provided by
+    // routes/ai-orchestration.php (App\Http\Controllers\Ai\AiOrchestrationController), which
+    // already shadowed the legacy /ai/chat registration and is the single AI pipeline (provider
+    // registry + narration + audit). The legacy controller called LlmClient directly (provider
+    // bypass) and was not referenced by the frontend. /ai/chat remains a single canonical endpoint.
 
     // Knowledge base agent (OpenAI Responses API + File Search over Vector Store)
     Route::post('/ai-agent/query', [\App\Http\Controllers\API\AIAgentController::class, 'query']);

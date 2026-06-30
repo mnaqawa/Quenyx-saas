@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Ai\Workspace;
 
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\QuenyxAI\QuenyxAiPlatform;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

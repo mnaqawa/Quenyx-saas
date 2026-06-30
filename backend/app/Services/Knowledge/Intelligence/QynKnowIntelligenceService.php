@@ -9,7 +9,7 @@ use App\Models\Knowledge\KnowledgeDocument;
 use App\Models\Project;
 use App\Models\User;
 use App\Repositories\Ai\AiConversationRepository;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 use App\Services\Incident\CrossModuleOrchestrator;
 use App\Services\Knowledge\EnterpriseSearchService;
 use App\Services\Knowledge\KnowledgeSourceRegistry;

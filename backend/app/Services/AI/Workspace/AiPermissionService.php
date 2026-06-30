@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai\Workspace;
+namespace App\Services\AI\Workspace;
 
 use App\Models\Ai\AiWorkspacePermission;
 use App\Models\Project;

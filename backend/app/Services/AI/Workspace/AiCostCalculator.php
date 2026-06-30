@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai\Workspace;
+namespace App\Services\AI\Workspace;
 
 /**
  * Sprint 20 — derives cost from REAL token counts using an optional, config-driven price table

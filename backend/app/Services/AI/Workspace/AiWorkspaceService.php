@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai\Workspace;
+namespace App\Services\AI\Workspace;
 
 use App\Enums\Ai\AiCapability;
 use App\Models\Ai\AiConversation;
@@ -8,8 +8,8 @@ use App\Models\Ai\AiPromptTemplate;
 use App\Models\Ai\AiProviderSetting;
 use App\Models\AuditLog;
 use App\Models\Project;
-use App\Services\Ai\AiProviderCatalog;
-use App\Services\Ai\AiProviderRegistry;
+use App\Services\AI\AiProviderCatalog;
+use App\Services\AI\AiProviderRegistry;
 use Illuminate\Support\Facades\Schema;
 use Ramsey\Uuid\Uuid;
 

@@ -12,7 +12,7 @@ use App\Models\Automation\AutomationWorkflow;
 use App\Models\Project;
 use App\Models\User;
 use App\Repositories\Ai\AiConversationRepository;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 use App\Services\Automation\ActionRegistry;
 use App\Services\Automation\AutomationAdapterRegistry;
 use App\Services\Automation\AutomationLearningService;

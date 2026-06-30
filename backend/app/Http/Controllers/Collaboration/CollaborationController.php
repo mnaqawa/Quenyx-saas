@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Collaboration;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\Collaboration\CollaborationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

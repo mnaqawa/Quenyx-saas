@@ -7,7 +7,7 @@ import { formatDateTime } from '../../components/ai/workspace/format'
 import type { AiProvider, AiProviderTestResult } from '../../types/aiWorkspace'
 
 /**
- * Quenyx AI — enterprise provider governance (RC1.1).
+ * Quenyx AI — enterprise provider governance (v1.0.0).
  *
  * Lists the platform provider catalog merged with this workspace's saved preferences. Secrets are
  * write-only (the API never returns them, only a "configured" indicator). Providers without a live

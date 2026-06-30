@@ -6,7 +6,7 @@ namespace App\Services\Observe\Intelligence;
 
 use App\Models\Project;
 use App\Models\User;
-use App\Services\Ai\ModuleAiNarrator;
+use App\Services\AI\ModuleAiNarrator;
 
 /**
  * Sprint 21 — the Operations Intelligence reuse point for the shared Quenyx AI runtime.

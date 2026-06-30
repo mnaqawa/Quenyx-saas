@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Ai\Workspace;
 
 use App\Models\Ai\AiWorkspacePermission;
-use App\Services\Ai\Workspace\AiPermissionService;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiPermissionService;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

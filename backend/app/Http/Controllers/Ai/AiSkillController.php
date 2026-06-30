@@ -6,9 +6,9 @@ use App\DataTransferObjects\Ai\AiSkillRequest;
 use App\Exceptions\Ai\AiSkillException;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
-use App\Services\Ai\AiAccessAuditLogger;
-use App\Services\Ai\Skills\AiSkillRegistry;
-use App\Services\Ai\Skills\AiSkillRouter;
+use App\Services\AI\AiAccessAuditLogger;
+use App\Services\AI\Skills\AiSkillRegistry;
+use App\Services\AI\Skills\AiSkillRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

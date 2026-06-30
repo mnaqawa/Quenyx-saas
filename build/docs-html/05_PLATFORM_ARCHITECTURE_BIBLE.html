@@ -14,7 +14,7 @@ body{margin:0}
 @page{
   size:A4; margin:18mm 16mm 16mm 16mm;
   @top-right{ content: "Quenyx Platform Architecture Bible"; font-size:8pt; color:#94a3b8; }
-  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0"; font-size:8pt; color:#94a3b8; }
   @bottom-center{ content: "Confidential — Architecture"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
   @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
 }
@@ -94,19 +94,19 @@ body{margin:0}
   <div class="tp-spacer"></div>
   <div class="tp-class">Confidential — Architecture</div>
   <div class="tp-title">Quenyx Platform Architecture Bible</div>
-  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v2.1</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 · Document v2.1</div>
   <table class="tp-meta"><tbody><tr><th>Document Version</th><td>2.1</td></tr>
-<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
-<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Software Version</th><td>v1.0.0</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0</td></tr>
 <tr><th>Classification</th><td>Confidential — Architecture</td></tr>
 <tr><th>Owner</th><td>Platform Architecture</td></tr>
 <tr><th>Status</th><td>Released</td></tr>
 <tr><th>Last Updated</th><td>2026-06-30</td></tr>
 <tr><th>Document Type</th><td>Architecture reference</td></tr>
 </tbody></table>
-  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial architecture bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>RC1 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Sprint 21 — QynSight Operations Intelligence: QynSight becomes a live AI consumer reusing the shared runtime; UUID‑only `/api/qynsight/intelligence/*` surface.</td></tr></tbody></table></div>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026</td><td>Initial architecture bible (through Sprint 19).</td></tr><tr><td>2.0</td><td>2026-06-29</td><td>v1.0.0 alignment: native QynSight engines, QynCore internal communication model, Integrations = external only, shared platform AI.</td></tr><tr><td>2.1</td><td>2026-06-30</td><td>Sprint 21 — QynSight Operations Intelligence: QynSight becomes a live AI consumer reusing the shared runtime; UUID‑only `/api/qynsight/intelligence/*` surface.</td></tr></tbody></table></div>
   <div class="tp-spacer"></div>
-  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Architecture. This document is part of Documentation Pack v3.0 and reflects v1.0.0 (GA).</div>
 </section>
 
 <nav class="toc">
@@ -131,7 +131,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#16-security-boundaries"><span class="toc-text">16. Security boundaries</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#17-deployment-architecture"><span class="toc-text">17. Deployment architecture</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#18-current-limitations"><span class="toc-text">18. Current limitations</span><span class="toc-dots"></span></a></li>
-<li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (RC1.1)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-v1-0-0"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (v1.0.0)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-21-qynsight-operations-intelligence-additive-intelligence-layer"><span class="toc-text">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#ai-adapter-platform-qynasset-asset-intelligence-sprint-22"><span class="toc-text">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-23-automation-platform-amp-incident-workspace"><span class="toc-text">Sprint 23 — Automation Platform &amp;amp; Incident Workspace</span><span class="toc-dots"></span></a></li>
@@ -143,7 +143,7 @@ body{margin:0}
 <main class="content">
 <h1>05 — Quenyx Platform Architecture Bible</h1>
 <p><strong>Audience:</strong> Architects, senior engineers, auditors.
-<strong>Status basis:</strong> v1.0.0 RC1. Diagrams reflect the <strong>current</strong> production code.</p>
+<strong>Status basis:</strong> v1.0.0. Diagrams reflect the <strong>current</strong> production code.</p>
 <hr />
 <h2 id="1-platform-architecture-high-level">1. Platform architecture (high level)</h2>
 <p>Quenyx vOPS HUB is a <strong>monorepo</strong> with three runtimes — a Laravel API backend, a React SPA frontend,
@@ -251,7 +251,7 @@ additionally tracks module AI‑readiness in <code>config/quenyx_ai.php</code> +
 <blockquote>
 <p><strong><code>QynCore</code> and <code>Integrations</code> are not business modules.</strong> <code>QynCore</code> is the <strong>platform core</strong> —
 the internal services layer through which modules communicate (see §6.1). <code>Integrations</code> is a
-<strong>platform page</strong> for <strong>external</strong> systems only (see §6.2). As of <strong>RC1.1</strong>, the frontend business
+<strong>platform page</strong> for <strong>external</strong> systems only (see §6.2). As of <strong>v1.0.0</strong>, the frontend business
 catalog (<code>platformRegistry.ts</code>) and the AI module universe (<code>config/quenyx_ai.php</code>) no longer list
 <code>qynintegrations</code> as a business module, and <code>qyncore</code> is documented there as the platform core. The
 <code>qyncore</code> / <code>qynintegrations</code> keys are <strong>retained only as entitlement keys</strong> (plans, subscriptions,
@@ -426,12 +426,12 @@ surface).</li>
 CI/CloudQuenyx (see QA report).</li>
 <li>One low‑risk <strong>shadowed duplicate route</strong> (<code>/ai/chat</code>) noted in the QA report.</li>
 </ul>
-<h2 id="sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1">Sprint 20 — Unified AI Workspace (platform layer) — branded &quot;Quenyx AI&quot; (RC1.1)</h2>
+<h2 id="sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-v1-0-0">Sprint 20 — Unified AI Workspace (platform layer) — branded &quot;Quenyx AI&quot; (v1.0.0)</h2>
 <p>The <strong>Unified AI Workspace</strong> is a platform‑level capability (NOT a business module): a top‑level
 sidebar item beside Dashboard / Workspaces / Integrations. It does not touch <code>platformRegistry.ts</code>
 and the QynSight‑only sidebar flag is unchanged.</p>
 <blockquote>
-<p><strong>RC1.1:</strong> the surface is presented as <strong>Quenyx AI</strong> (enterprise AI control center). Routes are
+<p><strong>v1.0.0:</strong> the surface is presented as <strong>Quenyx AI</strong> (enterprise AI control center). Routes are
 unchanged for backward compatibility (<code>/api/ai/*</code>, SPA <code>/ai-workspace/*</code>); a branded <code>/quenyx-ai/*</code>
 alias in <code>App.tsx</code> redirects to the canonical routes. The provider list is catalog‑driven
 (<code>App\Services\Ai\AiProviderCatalog</code>): a declarative catalog of 14 providers where only those with a

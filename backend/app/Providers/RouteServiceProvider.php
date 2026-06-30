@@ -29,6 +29,25 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->ip());
         });
 
+        // GA HARDENING: dedicated brute-force protection for credential endpoints.
+        // Keyed by both the submitted email and the client IP so neither a single
+        // account nor a single host can be hammered. Tunable via config/auth.php.
+        RateLimiter::for('login', function (Request $request) {
+            $max = (int) config('auth.rate_limits.login.max_attempts', 5);
+            $email = strtolower((string) $request->input('email', ''));
+
+            return [
+                Limit::perMinute($max)->by('login:email:'.sha1($email)),
+                Limit::perMinute($max * 4)->by('login:ip:'.$request->ip()),
+            ];
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            $max = (int) config('auth.rate_limits.register.max_attempts', 10);
+
+            return Limit::perMinute($max)->by('register:ip:'.$request->ip());
+        });
+
         RateLimiter::for('compliance-corpus-read', function (Request $request) {
             $max = (int) config('compliance.corpus.rate_limits.read.max_attempts', 120);
 

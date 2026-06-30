@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal |
 > | Owner | Operations |
 > | Status | Released |
@@ -18,11 +18,11 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; native monitoring administration; Unified AI Workspace administration. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring administration; Unified AI Workspace administration. |
 > | 2.1 | 2026-06-30 | Added administration of QynSight Operations Intelligence (Sprint 21): entitlement + `can_use_ai` capability, audit, and rate limits. |
 
 **Audience:** Platform administrators.
-**Scope:** Admin tasks supported by the current product at v1.0.0 RC1 (including the Unified AI
+**Scope:** Admin tasks supported by the current product at v1.0.0 (including the Unified AI
 Workspace, Sprint 20).
 
 ---
@@ -104,7 +104,7 @@ Workspace, Sprint 20).
 
 ## Quenyx AI administration (Unified AI Workspace — Sprint 20)
 
-> **RC1.1:** this surface is now branded **Quenyx AI** in the UI (sidebar, header, breadcrumbs). The
+> **v1.0.0:** this surface is now branded **Quenyx AI** in the UI (sidebar, header, breadcrumbs). The
 > canonical SPA route stays `/ai-workspace/*` for backward compatibility; the branded `/quenyx-ai/*`
 > path redirects to it. Do not confuse Quenyx AI (the AI control center) with **Workspaces**
 > (tenant/project management).

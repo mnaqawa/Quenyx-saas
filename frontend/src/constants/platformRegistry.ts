@@ -82,6 +82,19 @@ export function isModuleTemporarilyVisible(key: string): boolean {
   return true
 }
 
+/**
+ * GA remediation: navigation-only visibility. A module is shown in the sidebar
+ * ONLY when it is a customer-facing business module AND it is production-ready
+ * (status !== 'comingSoon'). This prevents exposing placeholder/"Coming Soon"
+ * pages in navigation — e.g. QynShield, whose SPA surface is not yet shipped,
+ * is hidden until it is production-ready, without removing its entitlement key.
+ */
+export function isModuleNavigable(key: string): boolean {
+  if (!isModuleTemporarilyVisible(key)) return false
+  const config = modules.find((m) => m.key === key)
+  return config ? config.status !== 'comingSoon' : false
+}
+
 export const modules: ModuleConfig[] = [
   {
     key: 'qynsight',
@@ -132,7 +145,7 @@ export const modules: ModuleConfig[] = [
     description: 'Help desk operations for ticketing, SLA compliance, and customer satisfaction.',
     sidebar: { order: 5 },
   },
-  // NOTE (RC1.1): QynIntegrations has been removed as a business module. Integrations is a
+  // NOTE (v1.0.0): QynIntegrations has been removed as a business module. Integrations is a
   // platform capability/page for EXTERNAL systems only (top-level `/integrations` route), NOT a
   // Quenyx business module and NOT used for internal module-to-module communication (that is handled
   // by QynCore platform services). The `qynintegrations` entitlement key still exists on the backend

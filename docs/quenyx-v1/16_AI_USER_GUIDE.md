@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Public / External |
 > | Owner | Product |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; Quenyx AI as a shared platform; Unified AI Workspace. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; Quenyx AI as a shared platform; Unified AI Workspace. |
 
 **Audience:** All users.
 **Principle:** Quenyx AI is **governable**, **deterministic‑first**, **cited**, and **off by
@@ -32,7 +32,7 @@ A **shared AI platform** behind the HUB that explains compliance and operational
 free‑form chatbot. Business logic (deterministic engines) decides *what* is true; AI only helps
 *phrase* it, always with citations.
 
-> **RC1.1:** the workspace AI control center (Sprint 20's *Unified AI Workspace*) is now branded
+> **v1.0.0:** the workspace AI control center (Sprint 20's *Unified AI Workspace*) is now branded
 > **Quenyx AI** and opens from the top‑level sidebar (beside Integrations). It is distinct from
 > **Workspaces** (tenant/project management). Tabs are grouped into Workspace, Intelligence,
 > Operations, and Administration. Under **Operations → Providers** you can browse the provider catalog

@@ -6,7 +6,7 @@ use App\DataTransferObjects\Ai\AiSkillRequest;
 use App\Enums\Compliance\Evidence\ComplianceEvidenceStatus;
 use App\Exceptions\Ai\AiSkillException;
 use App\Models\Compliance\Evidence\ComplianceEvidence;
-use App\Services\Ai\Skills\EvidenceSkill;
+use App\Services\AI\Skills\EvidenceSkill;
 use App\Services\Compliance\Evidence\EvidenceLifecycleService;
 use App\Services\Compliance\Evidence\EvidenceValidationService;
 use Illuminate\Database\Eloquent\Collection;

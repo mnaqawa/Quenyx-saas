@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Automation;
 
 use App\Models\Automation\AutomationApproval;
-use App\Services\Ai\Workspace\AiWorkspaceContextResolver;
+use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use App\Services\Automation\ApprovalEngine;
 use App\Services\Automation\ExecutionHistory;
 use App\Services\EntitlementService;

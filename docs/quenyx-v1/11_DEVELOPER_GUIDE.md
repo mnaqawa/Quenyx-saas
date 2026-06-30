@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.1 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; QynCore internal communication; Unified AI Workspace patterns. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; QynCore internal communication; Unified AI Workspace patterns. |
 > | 2.1 | 2026-06-30 | Added the Operations Intelligence (Sprint 21) pattern: consuming the shared AI runtime from a module without duplicating AI logic. |
 
 **Audience:** New engineers.
@@ -138,7 +138,7 @@ quenyx-saas/
 
 ## Working on Quenyx AI (Unified AI Workspace — Sprint 20)
 
-> **RC1.1:** the UI label is **Quenyx AI**. The canonical SPA base stays `/ai-workspace/*` (a
+> **v1.0.0:** the UI label is **Quenyx AI**. The canonical SPA base stays `/ai-workspace/*` (a
 > `/quenyx-ai/*` alias in `App.tsx` redirects to it). The provider catalog is declared in
 > `App\Services\Ai\AiProviderCatalog`; `AiProviderRegistry` decides which entries are executable
 > (have an adapter) and which are platform‑configured. Keep new catalog entries non‑executable until a

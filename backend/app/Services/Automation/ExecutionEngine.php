@@ -11,6 +11,8 @@ use App\Models\Automation\AutomationExecution;
 use App\Models\Automation\AutomationExecutionStep;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Platform\EventBus\PlatformEventNames;
+use App\Services\Platform\EventBus\PublishesPlatformEvents;
 use Throwable;
 
 /**
@@ -24,6 +26,8 @@ use Throwable;
  */
 class ExecutionEngine
 {
+    use PublishesPlatformEvents;
+
     public function __construct(
         private readonly AutomationAdapterRegistry $adapters,
         private readonly ActionRegistry $actions,
@@ -122,6 +126,15 @@ class ExecutionEngine
         $execution->update(['status' => 'running', 'started_at' => now()]);
         $startedMs = (int) round(microtime(true) * 1000);
 
+        if ($project !== null) {
+            $this->publishPlatformEvent(PlatformEventNames::WORKFLOW_STARTED, $project, $user, [
+                'execution_uuid' => $execution->uuid,
+                'adapter' => $execution->adapter_key,
+                'action' => $execution->action_key,
+                'mode' => $execution->mode,
+            ], $execution->uuid);
+        }
+
         $result = null;
         $attempts = max(1, (int) $execution->max_retries + 1);
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
@@ -167,6 +180,24 @@ class ExecutionEngine
         ]);
 
         $this->learning->record($execution, $execution->context['recommendation_key'] ?? null);
+
+        if ($project !== null) {
+            $this->publishPlatformEvent(
+                $result->status === ExecutionResult::FAILED
+                    ? PlatformEventNames::WORKFLOW_FAILED
+                    : PlatformEventNames::WORKFLOW_COMPLETED,
+                $project,
+                $user,
+                [
+                    'execution_uuid' => $execution->uuid,
+                    'adapter' => $execution->adapter_key,
+                    'action' => $execution->action_key,
+                    'status' => $result->status,
+                    'duration_ms' => $durationMs,
+                ],
+                $execution->uuid,
+            );
+        }
 
         return $execution->fresh(['steps', 'approval']);
     }

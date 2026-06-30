@@ -1,6 +1,6 @@
 # ShieldObserve Engine Architecture
 
-> **⚠️ SUPERSEDED / LEGACY (pre‑RC1.1).** This describes the former **Nagios‑based** observe engine
+> **⚠️ SUPERSEDED / LEGACY (pre‑v1.0.0).** This describes the former **Nagios‑based** observe engine
 > accessed via the gateway. That runtime has been **removed**: QynSight monitoring is **native** and
 > owned by the Laravel scheduler (`observe:run-checks`), writing directly to `observe_services`
 > (`engine_key = 'native'`). The gateway no longer proxies a Nagios engine and returns `410 Gone` for

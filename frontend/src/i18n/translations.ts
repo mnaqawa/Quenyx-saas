@@ -9,10 +9,11 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.billing': 'Billing',
     'nav.integrations': 'Integrations',
     'nav.aiWorkspace': 'Quenyx AI',
+    'nav.help': 'Help & Docs',
     'nav.profile': 'Profile',
     'nav.projects': 'Workspaces',
 
-    // Sprint 20 — Unified AI Workspace (RC1.1: surfaced as "Quenyx AI")
+    // Sprint 20 — Unified AI Workspace (v1.0.0: surfaced as "Quenyx AI")
     'aiWorkspace.title': 'Quenyx AI',
     'aiWorkspace.subtitle': 'The enterprise AI control center for this workspace — conversations, skills, usage, providers and governance, powered by the Quenyx AI Platform.',
     'aiWorkspace.common.loading': 'Loading…',
@@ -133,7 +134,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.providers.model': 'Model (optional)',
     'aiWorkspace.providers.apiKeyPlaceholder': 'API key (leave blank to keep current)',
     'aiWorkspace.providers.secretHint': 'Secrets are encrypted at rest and never displayed again.',
-    // RC1.1 — enterprise provider governance
+    // v1.0.0 — enterprise provider governance
     'aiWorkspace.providers.subtitle': 'Configure and govern the AI providers available to this workspace.',
     'aiWorkspace.providers.type': 'Type',
     'aiWorkspace.providers.type.hosted': 'Hosted API',
@@ -160,7 +161,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.providers.lastUpdated': 'Last updated',
     'aiWorkspace.providers.defaultHint': 'The default provider is set via platform configuration (AI_PROVIDER, or OpenAI credentials).',
     'aiWorkspace.providers.testError': 'Could not run the connection test. Please try again.',
-    // RC1.1 — enriched overview
+    // v1.0.0 — enriched overview
     'aiWorkspace.overview.noProvider': 'No provider configured',
     'aiWorkspace.overview.noProviderHint': 'Configure a real AI provider (e.g. OpenAI) under Providers to enable live AI. Until then Quenyx AI runs in safe mode.',
     'aiWorkspace.overview.catalogProviders': 'Catalog providers',
@@ -178,7 +179,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.overview.safeMode': 'Safe mode',
     'aiWorkspace.overview.live': 'Live',
     'aiWorkspace.overview.manageProviders': 'Manage providers',
-    // RC1.1 — grouped navigation
+    // v1.0.0 — grouped navigation
     'aiWorkspace.group.workspace': 'Workspace',
     'aiWorkspace.group.intelligence': 'Intelligence',
     'aiWorkspace.group.operations': 'Operations',
@@ -1650,8 +1651,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.billing': 'الفوترة',
     'nav.integrations': 'التكاملات',
     'nav.aiWorkspace': 'Quenyx AI',
+    'nav.help': 'المساعدة والوثائق',
 
-    // Sprint 20 — Unified AI Workspace (RC1.1: تُعرض باسم "Quenyx AI")
+    // Sprint 20 — Unified AI Workspace (v1.0.0: تُعرض باسم "Quenyx AI")
     'aiWorkspace.title': 'Quenyx AI',
     'aiWorkspace.subtitle': 'مركز التحكم المؤسسي للذكاء الاصطناعي لمساحة العمل هذه — المحادثات والمهارات والاستخدام والمزوّدون والحوكمة، مدعوم بمنصة Quenyx للذكاء الاصطناعي.',
     'aiWorkspace.common.loading': 'جارٍ التحميل…',
@@ -1772,7 +1774,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.providers.model': 'النموذج (اختياري)',
     'aiWorkspace.providers.apiKeyPlaceholder': 'مفتاح API (اتركه فارغًا للإبقاء على الحالي)',
     'aiWorkspace.providers.secretHint': 'الأسرار مُشفّرة عند التخزين ولا تُعرض مرة أخرى أبدًا.',
-    // RC1.1 — حوكمة المزوّدين المؤسسية
+    // v1.0.0 — حوكمة المزوّدين المؤسسية
     'aiWorkspace.providers.subtitle': 'هيّئ واحكم مزوّدي الذكاء الاصطناعي المتاحين لمساحة العمل هذه.',
     'aiWorkspace.providers.type': 'النوع',
     'aiWorkspace.providers.type.hosted': 'واجهة مُستضافة',
@@ -1799,7 +1801,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.providers.lastUpdated': 'آخر تحديث',
     'aiWorkspace.providers.defaultHint': 'يُحدَّد المزوّد الافتراضي عبر إعدادات المنصة (AI_PROVIDER أو بيانات اعتماد OpenAI).',
     'aiWorkspace.providers.testError': 'تعذّر تشغيل اختبار الاتصال. يرجى المحاولة مرة أخرى.',
-    // RC1.1 — نظرة عامة مُحسّنة
+    // v1.0.0 — نظرة عامة مُحسّنة
     'aiWorkspace.overview.noProvider': 'لا يوجد مزوّد مُهيّأ',
     'aiWorkspace.overview.noProviderHint': 'هيّئ مزوّد ذكاء اصطناعي حقيقيًا (مثل OpenAI) من قسم المزوّدين لتفعيل الذكاء الاصطناعي الحي. حتى ذلك الحين يعمل Quenyx AI في الوضع الآمن.',
     'aiWorkspace.overview.catalogProviders': 'مزوّدو الكتالوج',
@@ -1817,7 +1819,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'aiWorkspace.overview.safeMode': 'الوضع الآمن',
     'aiWorkspace.overview.live': 'حي',
     'aiWorkspace.overview.manageProviders': 'إدارة المزوّدين',
-    // RC1.1 — تنقّل مُجمّع
+    // v1.0.0 — تنقّل مُجمّع
     'aiWorkspace.group.workspace': 'مساحة العمل',
     'aiWorkspace.group.intelligence': 'الذكاء',
     'aiWorkspace.group.operations': 'العمليات',

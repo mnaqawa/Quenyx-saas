@@ -10,6 +10,9 @@ use App\Models\ObserveAlertRule;
 use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveTargetHost;
+use App\Models\Project;
+use App\Services\Platform\EventBus\PlatformEventNames;
+use App\Services\Platform\EventBus\PublishesPlatformEvents;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -20,8 +23,13 @@ use Illuminate\Support\Facades\Schema;
  */
 class AlertEvaluationService
 {
+    use PublishesPlatformEvents;
+
     /** @var array<int, array<string, mixed>|null> */
     private array $capacityCache = [];
+
+    /** @var array<int, Project|null> per-run workspace cache (avoids repeated lookups). */
+    private array $workspaceCache = [];
 
     private bool $verbose = false;
 
@@ -319,6 +327,7 @@ class AlertEvaluationService
         $event = $this->openAlert($rule, $target, $value, $now);
         $evalState->update(['last_evaluated_at' => $now, 'last_value' => $value]);
         AlertOpened::dispatch($event);
+        $this->publishAlertEvent(PlatformEventNames::ALERT_CREATED, $event);
         $this->logEvaluatorDebug($rule, 'alert_opened', [
             'host_name' => $target['host_name'],
             'service_name' => $target['service_name'],
@@ -346,8 +355,38 @@ class AlertEvaluationService
             'status' => 'resolved',
             'resolved_at' => $now,
         ]);
-        AlertResolved::dispatch($openEvent->fresh());
+        $resolved = $openEvent->fresh();
+        AlertResolved::dispatch($resolved);
+        $this->publishAlertEvent(PlatformEventNames::ALERT_RESOLVED, $resolved ?? $openEvent);
         $stats['resolved']++;
+    }
+
+    /**
+     * Publish an alert lifecycle event onto the Platform Event Bus (GA remediation).
+     * Best-effort and workspace-aware; resolves the owning Project once per run.
+     */
+    private function publishAlertEvent(string $name, ObserveAlertEvent $event): void
+    {
+        $workspaceId = (int) $event->workspace_id;
+        if ($workspaceId <= 0) {
+            return;
+        }
+
+        if (! array_key_exists($workspaceId, $this->workspaceCache)) {
+            $this->workspaceCache[$workspaceId] = Project::find($workspaceId);
+        }
+        $project = $this->workspaceCache[$workspaceId];
+        if ($project === null) {
+            return;
+        }
+
+        $this->publishPlatformEvent($name, $project, null, [
+            'alert_event_id' => $event->id,
+            'severity' => $event->severity,
+            'host_name' => $event->host_name,
+            'service_name' => $event->service_name,
+            'status' => $event->status,
+        ]);
     }
 
     /**

@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.2 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Confidential — Architecture |
 > | Owner | AI Platform Engineering |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial AI platform bible (through Sprint 19). |
-> | 2.0 | 2026-06-29 | RC1 alignment: Quenyx AI documented as a shared platform layer (not "QynShield AI"); explicit future‑adapter list; Unified AI Workspace (Sprint 20). |
+> | 2.0 | 2026-06-29 | v1.0.0 alignment: Quenyx AI documented as a shared platform layer (not "QynShield AI"); explicit future‑adapter list; Unified AI Workspace (Sprint 20). |
 > | 2.1 | 2026-06-30 | QynSight becomes a live AI consumer: Operations Intelligence (Sprint 21) reuses the shared runtime (provider abstraction, prompt orchestration, conversation service, audit) with no duplicated AI logic. |
 > | 2.2 | 2026-06-30 | AI Adapter Platform (Sprint 22): generalised module AI into a discoverable `AiModuleAdapter` + `AiModuleAdapterRegistry`; shared `ModuleAiNarrator` (single provider-calling point); QynAsset becomes the second production adapter (Asset Intelligence). No per-module branching. |
 
@@ -200,7 +200,7 @@ visibility.
 
 ## Quenyx AI — Unified AI Workspace (Sprint 20)
 
-> **RC1.1:** surfaced in the UI as **Quenyx AI** (the enterprise AI control center). Internal/codename
+> **v1.0.0:** surfaced in the UI as **Quenyx AI** (the enterprise AI control center). Internal/codename
 > remains *Unified AI Workspace*; API (`/api/ai/*`) and SPA (`/ai-workspace/*`) paths are unchanged
 > and a branded `/quenyx-ai/*` alias redirects to them.
 
@@ -219,7 +219,7 @@ new AI logic:
 - **Prompt Templates** (`ai_prompt_templates`), **Provider Settings** (`ai_provider_settings`,
   encrypted, write‑only secrets), and **Permissions** (`ai_workspace_permissions`) add the missing
   governance concepts only.
-- **Provider catalog & governance (RC1.1)**: `App\Services\Ai\AiProviderCatalog` declares the
+- **Provider catalog & governance (v1.0.0)**: `App\Services\Ai\AiProviderCatalog` declares the
   customer‑visible provider catalog (OpenAI, Anthropic, Gemini, Azure OpenAI, OpenRouter, Mistral,
   Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, Custom OpenAI‑compatible). The
   catalog is **metadata only** — a provider is `executable` only when a real adapter exists in

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Ai\Providers;
+namespace App\Services\AI\Providers;
 
 use App\Contracts\Ai\AiProviderInterface;
 use App\DataTransferObjects\Ai\AiCompletionRequest;

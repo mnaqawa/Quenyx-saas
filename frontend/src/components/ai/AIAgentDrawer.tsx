@@ -183,6 +183,16 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
     }
   }, [open, seed, lastSeedId, activeAgent, send])
 
+  // Accessibility (GA remediation): close the drawer on Escape while it is open.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     void send(input, activeAgent)

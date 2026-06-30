@@ -5,8 +5,8 @@
 > | Field | Value |
 > |---|---|
 > | Document Version | 2.0 |
-> | Software Version | v1.0.0 RC1 |
-> | Applies To | Quenyx vOPS HUB v1.0.0 RC1 |
+> | Software Version | v1.0.0 |
+> | Applies To | Quenyx vOPS HUB v1.0.0 |
 > | Classification | Confidential — Investor |
 > | Owner | Executive Office |
 > | Status | Released |
@@ -18,7 +18,7 @@
 > | Version | Date | Notes |
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
-> | 2.0 | 2026-06-29 | Aligned to v1.0.0 RC1; roadmap Phases 1–4 / Sprints 20–25. |
+> | 2.0 | 2026-06-29 | Aligned to v1.0.0; roadmap Phases 1–4 / Sprints 20–25. |
 
 **Audience:** Investors.
 **Format:** 25–35 slide outline. **No fabricated numbers** — any figure is marked *(ASSUMPTION —
@@ -26,7 +26,7 @@ to be validated)*.
 
 ---
 
-1. **Title** — Quenyx vOPS HUB · the Virtual Operations Center · v1.0.0 RC1 (Phases 1–3 complete; Phase 4 underway).
+1. **Title** — Quenyx vOPS HUB · the Virtual Operations Center · v1.0.0 (Phases 1–3 complete; Phase 4 underway).
 2. **One‑liner** — Operations + compliance + governable AI on one platform.
 3. **Problem** — Operational blind spots, manual unprovable compliance, unsafe generic AI.
 4. **Market pain** — Tool sprawl; regulators (e.g., NCA ECC) demand evidence; LLMs hallucinate.
