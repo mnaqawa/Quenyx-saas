@@ -126,5 +126,22 @@ into the AI core.
 
 ---
 
+## Automation standards (Sprint 23)
+
+These extend the standards above for any code that executes actions:
+
+- **Registry-driven, never hardcoded.** Execution goes through the `AutomationAdapterRegistry` and
+  `ActionRegistry`. No module embeds its own execution logic; future runners register, they don't fork.
+- **Safe by default.** Dry-run is the default. Live, destructive, or side-effecting actions require:
+  the global live switch ON, the runner enabled, the target allowlisted (HTTP), and human approval.
+- **Honest results.** Adapters return `dry_run` or `skipped` when they cannot truly run — they never
+  fabricate output, mirroring the platform's "no fake data" rule.
+- **Reversible & audited.** Prefer `supportsRollback()`; every execution, approval, and rollback is
+  audited; UUID-only, workspace-isolated, RBAC-gated.
+- **Evidence-based AI, no auto-execution.** AI may draft/recommend (citing auditable learning records)
+  but never auto-executes. Learning is inspectable history — **no model training, no hidden state.**
+
+---
+
 > **The standard, in one line:** *Deterministic, provenance‑backed, fail‑closed, UUID‑first,
-> AI‑as‑renderer — with no fake data and no fabricated claims, ever.*
+> AI‑as‑renderer — with no fake data, no fabricated claims, and no unapproved actions, ever.*

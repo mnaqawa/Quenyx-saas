@@ -267,4 +267,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sprint 22 — QynAsset Asset Intelligence (second production AI adapter; reuses the Quenyx AI runtime) — see routes/qynasset-intelligence.php
     require base_path('routes/qynasset-intelligence.php');
+
+    // Sprint 23 — QynRun Enterprise Automation Platform (registry-driven, safe-by-default execution) — see routes/qynrun-automation.php
+    require base_path('routes/qynrun-automation.php');
+
+    // Sprint 23 — QynReact Incident Workspace (cross-module orchestration via the AI adapter registry) — see routes/qynreact-incident.php
+    require base_path('routes/qynreact-incident.php');
 });

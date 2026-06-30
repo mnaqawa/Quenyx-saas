@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QynRun Guide (Enterprise Automation) — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "QynRun Guide (Enterprise Automation)"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Confidential — Product"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Confidential — Product</div>
+  <div class="tp-title">QynRun Guide (Enterprise Automation)</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v1.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>1.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Confidential — Product</td></tr>
+<tr><th>Owner</th><td>QynRun Engineering</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
+<tr><th>Document Type</th><td>Module guide</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026-06-30</td><td>Initial QynRun guide (Sprint 23): automation workflows, runbooks, executions, approvals, learning, and AI-assisted runbook drafting on the shared Automation Platform.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Product. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-what-qynrun-is"><span class="toc-text">1. What QynRun is</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-library-registry-driven"><span class="toc-text">2. Library (registry-driven)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-workflows"><span class="toc-text">3. Workflows</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-runbooks-incl-ai-assisted-drafting"><span class="toc-text">4. Runbooks (incl. AI-assisted drafting)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-executions-approvals-rollback"><span class="toc-text">5. Executions, approvals, rollback</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#6-automation-learning"><span class="toc-text">6. Automation Learning</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#7-api-workspace-scoped-uuid-only"><span class="toc-text">7. API (workspace-scoped, UUID-only)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#8-safety-summary"><span class="toc-text">8. Safety summary</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>25 — QynRun Guide (Enterprise Automation)</h1>
+<p><strong>Audience:</strong> Operators and SREs using QynRun.
+<strong>Scope:</strong> QynRun — the operator surface over the shared <strong>Automation Platform</strong> (see guide 24) and the <strong>third production AI adapter</strong> on the Quenyx AI Platform.</p>
+<hr />
+<h2 id="1-what-qynrun-is">1. What QynRun is</h2>
+<p>QynRun lets you <strong>author, run, approve, and learn from automation</strong> — safely. It consumes the shared Automation Platform, so its execution, approval, rollback, audit, and learning are platform capabilities, not QynRun-specific code.</p>
+<p>UI: <code>/app/workspaces/:id/qynrun/automation</code> with tabs: <strong>Overview, Library, Workflows, Runbooks, Executions, Approvals, Learning</strong>, plus the contextual <strong>✨ Automation Copilot</strong>.</p>
+<h2 id="2-library-registry-driven">2. Library (registry-driven)</h2>
+<p>The <strong>Library</strong> tab shows the live <strong>execution adapters</strong> (with <code>operational</code>/<code>planned</code> state) and the <strong>action catalog</strong> discovered from the registry. Destructive actions are clearly marked <em>Requires approval</em>. Nothing here is hardcoded in the UI — it reflects whatever is registered.</p>
+<h2 id="3-workflows">3. Workflows</h2>
+<p>A workflow is a data-only definition: <strong>trigger → conditions → actions → approval → execution → verification → notification → audit</strong>, with trigger types <code>manual | scheduled | event | api</code>. Running a workflow dispatches its actions through the shared Execution Engine (dry-run by default; live runs require approval per action).</p>
+<h2 id="4-runbooks-incl-ai-assisted-drafting">4. Runbooks (incl. AI-assisted drafting)</h2>
+<p>Runbooks are named, ordered step sets. <strong>Draft Runbook</strong> asks Quenyx AI to draft an <strong>editable</strong> runbook for a problem (&quot;High CPU&quot;, &quot;Disk Full&quot;, &quot;Apache Down&quot;, &quot;Database Latency&quot;, &quot;Service Failure&quot;, &quot;VPN Failure&quot;). The draft is diagnostic-first, flags destructive steps as requiring approval, and is <strong>never auto-executed</strong> — you review, edit, and save it.</p>
+<h2 id="5-executions-approvals-rollback">5. Executions, approvals, rollback</h2>
+<ul>
+<li><strong>Executions</strong> lists every run with status (<code>dry_run</code>, <code>succeeded</code>, <code>failed</code>, <code>skipped</code>, <code>rolled_back</code>, …) and mode.</li>
+<li><strong>Approvals</strong> lists live actions awaiting a decision; approving runs them, rejecting cancels them. Requires <code>administerAi</code>.</li>
+<li><strong>Rollback</strong> is available on a succeeded, rollback-capable execution.</li>
+</ul>
+<h2 id="6-automation-learning">6. Automation Learning</h2>
+<p>The <strong>Learning</strong> tab shows aggregated, auditable outcomes per action (success rate, average duration). These feed AI recommendations — <strong>no self-training</strong>, everything inspectable.</p>
+<h2 id="7-api-workspace-scoped-uuid-only">7. API (workspace-scoped, UUID-only)</h2>
+<p>Base: <code>/api/qynrun</code>. Reads/dry-run require <code>accessAi</code>; approvals, live runs, rollback, deletes require <code>administerAi</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/automation/adapters</code></td>
+<td>Registered execution adapters + <code>live_execution_enabled</code>.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/actions</code></td>
+<td>Action catalog.</td>
+</tr>
+<tr>
+<td>GET/POST</td>
+<td><code>/automation/workflows</code></td>
+<td>List / create workflows.</td>
+</tr>
+<tr>
+<td>GET/PUT/DELETE</td>
+<td><code>/automation/workflows/{uuid}</code></td>
+<td>Read / update / delete.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/workflows/{uuid}/run</code></td>
+<td>Run (`mode=dry_run</td>
+</tr>
+<tr>
+<td>GET/POST</td>
+<td><code>/automation/runbooks</code></td>
+<td>List / create runbooks.</td>
+</tr>
+<tr>
+<td>GET/PUT/DELETE</td>
+<td><code>/automation/runbooks/{uuid}</code></td>
+<td>Read / update / delete.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/runbooks/{uuid}/run</code></td>
+<td>Run.</td>
+</tr>
+<tr>
+<td>GET/POST</td>
+<td><code>/automation/executions</code></td>
+<td>History / ad-hoc dispatch.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/executions/{uuid}</code></td>
+<td>Execution detail + steps.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/executions/{uuid}/rollback</code></td>
+<td>Rollback.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/executions/{uuid}/feedback</code></td>
+<td>Operator feedback (learning).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/approvals</code></td>
+<td>Pending approvals.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/approvals/{uuid}/decide</code></td>
+<td>Approve / reject.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/learning</code></td>
+<td>Aggregated outcomes.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/intelligence/overview</code></td>
+<td>Automation dashboard.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/copilot</code></td>
+<td>Automation Copilot (reuses Quenyx AI conversations).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/runbooks/suggest</code></td>
+<td>AI-assisted editable runbook draft.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/executions/{uuid}/explain</code></td>
+<td>Explain an execution.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-safety-summary">8. Safety summary</h2>
+<p>Dry-run by default · approval gate for live · HTTP allowlist · per-runner enable flags · rollback · workspace isolation · RBAC · UUID-only · full audit · EN/AR UI. See guide 24 for the platform-level detail.</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

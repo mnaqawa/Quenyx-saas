@@ -63,6 +63,8 @@ const Services = lazy(() => import('./pages/observe/Services'))
 const Targets = lazy(() => import('./pages/observe/Targets'))
 const OperationsIntelligence = lazy(() => import('./pages/observe/OperationsIntelligence'))
 const AssetIntelligence = lazy(() => import('./pages/asset/AssetIntelligence'))
+const AutomationDashboard = lazy(() => import('./pages/automation/AutomationDashboard'))
+const IncidentWorkspace = lazy(() => import('./pages/incident/IncidentWorkspace'))
 
 function ObserveSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<ObservePageSkeleton />}>{children}</Suspense>
@@ -235,6 +237,23 @@ function App() {
               element={
                 <ObserveSuspense>
                   <AssetIntelligence />
+                </ObserveSuspense>
+              }
+            />
+            {/* Sprint 23 — QynRun Automation Platform + QynReact Incident Workspace. */}
+            <Route
+              path="app/workspaces/:id/qynrun/automation"
+              element={
+                <ObserveSuspense>
+                  <AutomationDashboard />
+                </ObserveSuspense>
+              }
+            />
+            <Route
+              path="app/workspaces/:id/qynreact/incidents"
+              element={
+                <ObserveSuspense>
+                  <IncidentWorkspace />
                 </ObserveSuspense>
               }
             />

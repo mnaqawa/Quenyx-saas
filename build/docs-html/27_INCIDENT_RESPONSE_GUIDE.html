@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Incident Response Guide — Quenyx vOPS HUB</title>
+<style>:root{
+  --brand:#2563eb; --brand2:#6366f1; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --soft:#f8fafc; --code:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:var(--ink);font-size:11pt;line-height:1.55}
+body{margin:0}
+
+@page{
+  size:A4; margin:18mm 16mm 16mm 16mm;
+  @top-right{ content: "Incident Response Guide"; font-size:8pt; color:#94a3b8; }
+  @bottom-left{ content: "Quenyx vOPS HUB · v1.0.0 RC1"; font-size:8pt; color:#94a3b8; }
+  @bottom-center{ content: "Confidential — Product"; font-size:8pt; color:#94a3b8; letter-spacing:.06em; }
+  @bottom-right{ content: "Page " counter(page) " / " counter(pages); font-size:8pt; color:#94a3b8; }
+}
+@page :first{
+  margin:0;
+  @top-right{content:none} @bottom-left{content:none} @bottom-center{content:none} @bottom-right{content:none}
+}
+
+/* ---- Title page ---- */
+.title-page{ page:first; break-after:page; height:297mm; width:210mm; position:relative;
+  background:linear-gradient(160deg,#0f172a 0%,#1e293b 48%,#312e81 100%); color:#fff;
+  padding:34mm 24mm; display:flex; flex-direction:column; }
+.title-page .logo{height:42px;width:auto}
+.title-page .logo text{fill:#ffffff}
+.tp-brandbar{display:flex;align-items:center;gap:14px}
+.tp-product{font-size:11pt;letter-spacing:.32em;color:#cbd5e1;text-transform:uppercase;margin-top:2px}
+.tp-spacer{flex:1}
+.tp-class{display:inline-block;align-self:flex-start;border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:5px 14px;font-size:9pt;letter-spacing:.12em;text-transform:uppercase;color:#e2e8f0}
+.tp-title{font-size:30pt;font-weight:800;line-height:1.12;margin:10px 0 6px}
+.tp-sub{font-size:12pt;color:#cbd5e1;margin-bottom:26px}
+.tp-meta{width:100%;border-collapse:collapse;font-size:9.5pt;color:#e2e8f0}
+.tp-meta th{ text-align:left;width:42%;padding:5px 10px 5px 0;color:#93c5fd;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.tp-meta td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.tp-foot{font-size:8.5pt;color:#94a3b8;border-top:1px solid rgba(255,255,255,.18);padding-top:10px}
+
+/* ---- TOC ---- */
+.toc{break-after:page}
+.toc h2{color:var(--brand);border:none;font-size:17pt;margin:0 0 14px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:3px 0}
+.toc a{display:flex;align-items:baseline;text-decoration:none;color:var(--ink)}
+.toc .toc-l2{font-weight:600;margin-top:9px;border-left:3px solid var(--brand);padding-left:10px}
+.toc .toc-l3{padding-left:26px;font-weight:400;color:#334155;font-size:10pt}
+.toc .toc-text{white-space:normal}
+.toc .toc-dots{display:none}
+
+/* ---- Content ---- */
+.content{padding-top:2mm}
+.content h1{font-size:20pt;color:var(--ink);margin:0 0 8px}
+.content h2{font-size:15pt;color:#0f172a;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--brand);break-after:avoid}
+.content h3{font-size:12.5pt;color:#1e293b;margin:15px 0 6px;break-after:avoid}
+.content h4{font-size:11pt;color:#334155;margin:12px 0 5px}
+.content p{margin:7px 0}
+.content a{color:var(--brand);text-decoration:none}
+.content ul,.content ol{margin:7px 0;padding-left:22px}
+.content li{margin:3px 0}
+.content blockquote{margin:10px 0;padding:8px 14px;background:var(--soft);
+  border-left:4px solid var(--brand);color:#334155;border-radius:0 6px 6px 0}
+.content blockquote p{margin:4px 0}
+.content code{background:var(--code);padding:1px 5px;border-radius:4px;font-family:"Cascadia Code",Consolas,monospace;font-size:9.5pt}
+.content pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;
+  font-size:8.8pt;line-height:1.45;break-inside:avoid}
+.content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.content table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.3pt;break-inside:avoid}
+.content th{background:var(--brand);color:#fff;text-align:left;padding:6px 9px;font-weight:600}
+.content td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+.content tr:nth-child(even) td{background:var(--soft)}
+.content hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.content img{max-width:100%}
+.mermaid{break-inside:avoid;text-align:center;margin:12px 0}
+.rev{border-collapse:collapse;margin-top:6px;font-size:9pt;color:#e2e8f0}
+.rev th{color:#93c5fd;text-align:left;padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.rev td{padding:3px 12px 3px 0;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}</style>
+</head>
+<body>
+<section class="title-page">
+  <div class="tp-brandbar"><svg class="logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quenyx">
+  <defs><linearGradient id="qg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#6366f1"/>
+  </linearGradient></defs>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#qg)" stroke-width="4"/>
+  <line x1="36" y1="36" x2="46" y2="46" stroke="url(#qg)" stroke-width="5" stroke-linecap="round"/>
+  <text x="58" y="32" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="#0f172a" letter-spacing="1.5">QUENYX</text>
+</svg><div class="tp-product">vOPS&nbsp;HUB</div></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-class">Confidential — Product</div>
+  <div class="tp-title">Incident Response Guide</div>
+  <div class="tp-sub">Quenyx vOPS HUB — v1.0.0 RC1 · Document v1.0</div>
+  <table class="tp-meta"><tbody><tr><th>Document Version</th><td>1.0</td></tr>
+<tr><th>Software Version</th><td>v1.0.0 RC1</td></tr>
+<tr><th>Applies To</th><td>Quenyx vOPS HUB v1.0.0 RC1</td></tr>
+<tr><th>Classification</th><td>Confidential — Product</td></tr>
+<tr><th>Owner</th><td>SRE / Operations</td></tr>
+<tr><th>Status</th><td>Released</td></tr>
+<tr><th>Last Updated</th><td>2026-06-30</td></tr>
+<tr><th>Document Type</th><td>Operational playbook</td></tr>
+</tbody></table>
+  <div style="margin-top:14px"><div style="color:#93c5fd;font-size:9pt;font-weight:600;letter-spacing:.04em;margin-bottom:4px">REVISION HISTORY</div><table class="rev"><thead><tr><th>Version</th><th>Date</th><th>Notes</th></tr></thead><tbody><tr><td>1.0</td><td>2026-06-30</td><td>Initial incident response playbook (Sprint 23) using QynReact + the shared Automation Platform.</td></tr></tbody></table></div>
+  <div class="tp-spacer"></div>
+  <div class="tp-foot">© Quenyx vOPS HUB. Confidential — Product. This document is part of Documentation Pack v2.0 and reflects v1.0.0 RC1.</div>
+</section>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol><li class="toc-l2"><a href="#1-lifecycle"><span class="toc-text">1. Lifecycle</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#2-step-by-step"><span class="toc-text">2. Step-by-step</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#3-safety-rules-non-negotiable"><span class="toc-text">3. Safety rules (non-negotiable)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#4-roles"><span class="toc-text">4. Roles</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#5-after-action"><span class="toc-text">5. After-action</span><span class="toc-dots"></span></a></li>
+</ol>
+</nav>
+
+<main class="content">
+<h1>27 — Incident Response Guide</h1>
+<p><strong>Audience:</strong> On-call engineers and incident commanders.
+<strong>Scope:</strong> The end-to-end incident lifecycle using QynReact (guide 26), QynRun automation (guide 25), and the shared Automation Platform (guide 24).</p>
+<hr />
+<h2 id="1-lifecycle">1. Lifecycle</h2>
+<pre><code>Detect (alert / manual)
+   ↓ open incident (QynReact)
+Triage  → review cross-module context (QynSight + QynAsset)
+   ↓
+Investigate → Incident Copilot (grounded Q&amp;A) + Recommend
+   ↓
+Mitigate → run a runbook / action via QynRun (dry-run → approve → live)
+   ↓
+Resolve → set resolution, status = resolved
+   ↓
+Learn → AI-drafted postmortem (editable) + automation learning updated
+</code></pre>
+<h2 id="2-step-by-step">2. Step-by-step</h2>
+<ol>
+<li><strong>Open</strong> an incident (<code>POST /api/qynreact/incidents</code>) with a title and severity. Link an <code>alert_uuid</code> / <code>asset_uuid</code> when known (deterministic UUIDv5 from QynSight/QynAsset).</li>
+<li><strong>Open the workspace</strong> (<code>GET /incidents/{uuid}</code>). Review the <strong>Cross-module</strong> section — Operations &amp; Asset Intelligence are reused, never re-collected.</li>
+<li><strong>Investigate</strong> with the <strong>Incident Copilot</strong> and <strong>Recommend</strong>. Recommendations cite cross-module evidence and historical automation success rates.</li>
+<li><strong>Mitigate</strong> in QynRun:
+<ul>
+<li>Start with a <strong>dry-run</strong> to preview the plan.</li>
+<li>For a real fix, dispatch <strong>live</strong> → the action enters <strong>Approvals</strong> → an authorized operator approves → it runs.</li>
+<li>Use <strong>Rollback</strong> if a successful live action must be undone.</li>
+</ul>
+</li>
+<li><strong>Document</strong> the timeline (<code>POST /incidents/{uuid}/timeline</code>) and set the <strong>resolution</strong>.</li>
+<li><strong>Postmortem</strong> — generate an editable draft (<code>POST /incidents/{uuid}/postmortem</code>), review the root-cause <strong>hypothesis</strong>, finalize action items, and save.</li>
+</ol>
+<h2 id="3-safety-rules-non-negotiable">3. Safety rules (non-negotiable)</h2>
+<ul>
+<li>No automatic destructive actions — <strong>every live action requires approval</strong>.</li>
+<li>Dry-run is always available and is the default.</li>
+<li>AI never fabricates: missing data (e.g. Knowledge until QynKnow is connected) is reported honestly.</li>
+<li>Everything is workspace-scoped, UUID-only, RBAC-gated, and fully audited.</li>
+</ul>
+<h2 id="4-roles">4. Roles</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Minimum role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>View incidents / dry-run / copilot</td>
+<td><code>accessAi</code> + <code>can_use_ai</code> (for AI)</td>
+</tr>
+<tr>
+<td>Approve live actions / rollback</td>
+<td><code>administerAi</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-after-action">5. After-action</h2>
+<p>Automation outcomes are captured as auditable learning records; future recommendations cite them. Review the QynRun <strong>Learning</strong> tab periodically to spot low-success actions and refine runbooks.</p>
+
+</main>
+
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/mermaid.min.js"></script>
+<script src="file:///C:/Users/E16/Desktop/Repo/Quenyx-saas/scripts/docs/assets/paged.polyfill.min.js"></script>
+<script>
+  window.PagedConfig = { auto: false };
+  (async function(){
+    try{
+      if (window.mermaid){
+        mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose', flowchart:{useMaxWidth:true} });
+        await mermaid.run({ querySelector: '.mermaid' });
+      }
+    }catch(e){ console.error('mermaid', e); }
+    try{
+      if (window.PagedPolyfill){ await window.PagedPolyfill.preview(); }
+    }catch(e){ console.error('paged', e); }
+    document.body.setAttribute('data-pdf-ready','1');
+    document.title = document.title + ' [READY]';
+  })();
+</script>
+</body>
+</html>

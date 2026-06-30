@@ -311,3 +311,23 @@ hard‑coded module list.
 **Adding a module = two steps:** implement an `AiModuleAdapter` (reusing the module's domain services
 and `ModuleAiNarrator`), then register it. Nothing else in the platform changes. See the **AI Adapter
 Developer Guide (doc 23)**.
+
+---
+
+## Sprint 23 — QynRun & QynReact adapters + cross-module orchestration
+
+Two new production adapters register the same way (no platform change): **`qynrun`** (Enterprise
+Automation) and **`qynreact`** (Incident Intelligence) — bringing the registry to four production
+adapters (QynSight, QynAsset, QynRun, QynReact). Both narrate exclusively through the shared
+`ModuleAiNarrator`; no AI/provider/orchestration logic is duplicated.
+
+**Cross-module intelligence (no branching).** QynReact's `CrossModuleOrchestrator` realizes the flow
+*Alert → Asset → Incident → Automation → Knowledge → Resolution* by iterating the **AI Adapter
+Registry** and asking each entitled module to `buildContext()`. It excludes the calling module
+(`qynreact`) to avoid recursion. A future module joins incident reasoning automatically once it
+registers an adapter — there is still no `if (module == …)` anywhere.
+
+**Automation Learning as AI evidence.** QynRun/QynReact recommendations cite the auditable
+`AutomationLearningService` aggregates (success/failure/rollback rates, typical duration). There is
+**no model training and no hidden state** — the "learning" is inspectable, workspace-scoped history.
+See the **Automation Platform Guide (doc 24)**, **QynRun Guide (doc 25)**, **QynReact Guide (doc 26)**.

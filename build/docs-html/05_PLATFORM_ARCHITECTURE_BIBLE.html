@@ -134,6 +134,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#sprint-20-unified-ai-workspace-platform-layer-branded-quot-quenyx-ai-quot-rc1-1"><span class="toc-text">Sprint 20 — Unified AI Workspace (platform layer) — branded &amp;quot;Quenyx AI&amp;quot; (RC1.1)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#sprint-21-qynsight-operations-intelligence-additive-intelligence-layer"><span class="toc-text">Sprint 21 — QynSight Operations Intelligence (additive intelligence layer)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#ai-adapter-platform-qynasset-asset-intelligence-sprint-22"><span class="toc-text">AI Adapter Platform + QynAsset Asset Intelligence (Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#sprint-23-automation-platform-amp-incident-workspace"><span class="toc-text">Sprint 23 — Automation Platform &amp;amp; Incident Workspace</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -501,6 +502,32 @@ Services in <code>App\Services\Asset\Intelligence\*</code>; UUID‑only via <cod
 <code>routes/qynasset-intelligence.php</code>. License/lifecycle‑date facts have no source and are reported as
 <strong>not collected</strong> — never fabricated. See Docs 22 and 23.</li>
 </ul>
+<hr />
+<h2 id="sprint-23-automation-platform-amp-incident-workspace">Sprint 23 — Automation Platform &amp; Incident Workspace</h2>
+<p><strong>Automation Platform (shared).</strong> A registry-driven automation layer under
+<code>App\Services\Automation\*</code>, designed so every future module consumes it instead of duplicating
+execution logic. Core pieces:</p>
+<ul>
+<li><strong><code>AutomationAdapterRegistry</code></strong> + <strong><code>ExecutionAdapter</code></strong> contract — dynamic registration of runners
+(Script, REST, Webhook, SSH, PowerShell shipped; Docker/Kubernetes/OCI/AWS/Azure/GCP register as
+<code>PlannedExecutionAdapter</code>s). No hardcoded execution; the UI Library reflects the registry.</li>
+<li><strong><code>ActionRegistry</code></strong> — catalog of reusable actions (schema + <code>destructive</code>/<code>rollback</code> flags).</li>
+<li><strong><code>ExecutionEngine</code></strong> — dry-run by default, approval gate for live, timeout/retry, per-step
+recording, audit, and learning. DTOs: <code>ExecutionContext</code>, <code>ExecutionResult</code> (immutable).</li>
+<li><strong><code>WorkflowEngine</code> / <code>RunbookEngine</code></strong> — validate data-only definitions and dispatch via the
+Execution Engine. <strong><code>ApprovalEngine</code></strong>, <strong><code>RollbackEngine</code></strong>, <strong><code>ExecutionHistory</code></strong>,
+<strong><code>AutomationAuditLogger</code></strong>, <strong><code>AutomationLearningService</code></strong> complete the platform.</li>
+</ul>
+<p><strong>Safety envelope.</strong> Global <code>automation.live_execution</code> master switch (default OFF), HTTP host
+allowlist, per-runner enable flags, mandatory human approval for live, adapter <code>rollback</code>, workspace
+isolation, RBAC (<code>accessAi</code> read / <code>administerAi</code> privileged), UUID-only, full audit. Adapters never
+fabricate — they return <code>dry_run</code> or honestly <code>skipped</code>.</p>
+<p><strong>QynRun</strong> is the operator surface (<code>App\Http\Controllers\Automation\*</code>,
+<code>routes/qynrun-automation.php</code>); <strong>QynReact</strong> is the <strong>Incident Workspace</strong>
+(<code>App\Services\Incident\*</code>, <code>routes/qynreact-incident.php</code>) that aggregates Timeline, cross-module
+context (<code>CrossModuleOrchestrator</code> over the AI Adapter Registry — never module-branch), Automation,
+Knowledge, Evidence, Resolution, and Postmortem. New tables in
+<code>2026_06_30_010000_create_automation_and_incident_tables.php</code>. See Docs 24–27.</p>
 
 </main>
 

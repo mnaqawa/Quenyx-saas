@@ -53,6 +53,8 @@ $docs = @(
     'docs\quenyx-v1\19_SECURITY_WHITEPAPER.md', 'docs\quenyx-v1\20_COMPLIANCE_WHITEPAPER.md',
     'docs\quenyx-v1\21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md',
     'docs\quenyx-v1\22_QYNASSET_GUIDE.md', 'docs\quenyx-v1\23_AI_ADAPTER_DEVELOPER_GUIDE.md',
+    'docs\quenyx-v1\24_AUTOMATION_PLATFORM_GUIDE.md', 'docs\quenyx-v1\25_QYNRUN_GUIDE.md',
+    'docs\quenyx-v1\26_QYNREACT_GUIDE.md', 'docs\quenyx-v1\27_INCIDENT_RESPONSE_GUIDE.md',
     'docs\OBSERVE_RUNBOOK.md'
 )
 if ($Only) { $docs = $docs | Where-Object { $n = [IO.Path]::GetFileNameWithoutExtension($_); $Only -contains $n } }

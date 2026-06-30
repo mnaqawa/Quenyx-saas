@@ -130,6 +130,8 @@ body{margin:0}
 <li class="toc-l2"><a href="#17-quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">17. Quenyx AI (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#18-qynsight-operations-intelligence-sprint-21"><span class="toc-text">18. QynSight Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#19-qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">19. QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19b-qynrun-automation-platform-sprint-23"><span class="toc-text">19b. QynRun — Automation Platform (Sprint 23)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#19c-qynreact-incident-workspace-sprint-23"><span class="toc-text">19c. QynReact — Incident Workspace (Sprint 23)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#20-notes-on-examples"><span class="toc-text">20. Notes on examples</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
@@ -680,6 +682,163 @@ UUID-only):</p>
 <p>Asset UUIDs are deterministic UUIDv5 (<code>AssetEntityId</code>) over the discovered host; <strong>no numeric ids are
 exposed</strong>. Inventory, hardware, lifecycle, and license facts are <strong>real or honestly absent</strong> — never
 fabricated.</p>
+<h2 id="19b-qynrun-automation-platform-sprint-23">19b. QynRun — Automation Platform (Sprint 23)</h2>
+<p>Base <code>/api/qynrun</code>. Workspace-scoped, UUID-only. Reads/dry-run require <code>accessAi</code>; approvals, live
+runs, rollback, and deletes require <code>administerAi</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/automation/adapters</code></td>
+<td>Registered execution adapters; includes <code>live_execution_enabled</code>.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/actions</code></td>
+<td>Action catalog (schema, <code>destructive</code>, <code>rollback</code>).</td>
+</tr>
+<tr>
+<td>GET / POST</td>
+<td><code>/automation/workflows</code></td>
+<td>List / create.</td>
+</tr>
+<tr>
+<td>GET / PUT / DELETE</td>
+<td><code>/automation/workflows/{uuid}</code></td>
+<td>Read / update / delete.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/workflows/{uuid}/run</code></td>
+<td><code>mode=dry_run|live</code>.</td>
+</tr>
+<tr>
+<td>GET / POST</td>
+<td><code>/automation/runbooks</code></td>
+<td>List / create.</td>
+</tr>
+<tr>
+<td>GET / PUT / DELETE</td>
+<td><code>/automation/runbooks/{uuid}</code></td>
+<td>Read / update / delete.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/runbooks/{uuid}/run</code></td>
+<td>Run.</td>
+</tr>
+<tr>
+<td>GET / POST</td>
+<td><code>/automation/executions</code></td>
+<td>History / ad-hoc dispatch.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/executions/{uuid}</code></td>
+<td>Detail + steps.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/executions/{uuid}/rollback</code></td>
+<td>Rollback a succeeded, rollback-capable run.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/executions/{uuid}/feedback</code></td>
+<td>Operator feedback (learning).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/approvals</code></td>
+<td>Pending approvals.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/automation/approvals/{uuid}/decide</code></td>
+<td><code>decision=approve|reject</code>.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/automation/learning</code></td>
+<td>Aggregated, auditable outcomes.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/intelligence/overview</code></td>
+<td>Automation dashboard payload.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/copilot</code></td>
+<td><code>{ workspace, message, conversation? }</code> — reuses Quenyx AI conversations.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/runbooks/suggest</code></td>
+<td>AI-assisted <strong>editable</strong> runbook draft (never auto-executed).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/intelligence/executions/{uuid}/explain</code></td>
+<td>Explain an execution.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19c-qynreact-incident-workspace-sprint-23">19c. QynReact — Incident Workspace (Sprint 23)</h2>
+<p>Base <code>/api/qynreact</code>. Workspace-scoped, UUID-only, <code>accessAi</code>; AI surfaces require <code>can_use_ai</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET / POST</td>
+<td><code>/incidents</code></td>
+<td>List / open.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/incidents/{uuid}</code></td>
+<td>Unified workspace (timeline, cross-module, automation, …).</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/incidents/{uuid}</code></td>
+<td>Update status / resolution / postmortem.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/incidents/{uuid}/timeline</code></td>
+<td>Add timeline entry.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/incidents/{uuid}/copilot</code></td>
+<td><code>{ workspace, message, conversation? }</code>.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/incidents/{uuid}/recommend</code></td>
+<td>Evidence-based response actions.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/incidents/{uuid}/postmortem</code></td>
+<td>Editable postmortem draft.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="20-notes-on-examples">20. Notes on examples</h2>
 <p>Example request/response shapes are representative of the controllers' contracts. For exact current
 fields, call the endpoint against a seeded workspace, or read the corresponding controller/resource

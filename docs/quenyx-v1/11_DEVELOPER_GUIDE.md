@@ -210,3 +210,23 @@ That's it — the discovery APIs (`/api/ai/adapters`, `/api/ai/actions`), capabi
 the AI Workspace surface your module automatically. Reference implementation: **QynAsset**
 (`app/Services/Asset/Intelligence/*`, `QynAssetAiAdapter`, `routes/qynasset-intelligence.php`). Full
 walkthrough in the **AI Adapter Developer Guide (Doc 23)**.
+
+---
+
+## Adding an execution adapter (Automation Platform, Sprint 23)
+
+Execution adapters plug into the **Automation Platform** the same way AI adapters plug into the AI
+registry — no core change. To add a runner (e.g. Docker, AWS):
+
+1. Implement `App\Contracts\Automation\ExecutionAdapter` (or extend `AbstractExecutionAdapter` /
+   `AbstractHttpExecutionAdapter`). Declare `key()`, `capabilities()`, `parameterSchema()`,
+   `supportsRollback()`, `isOperational()`, and `execute()` / `rollback()`.
+2. **Be honest & safe:** return `ExecutionResult::dryRun(...)` unless `liveAllowed()` is true, the
+   target passes the allowlist, and the runner is enabled in `config/automation.php`. If a live runner
+   isn't provisioned, return `ExecutionResult::skipped(...)` — never fabricate output.
+3. Register it in `AppServiceProvider::boot()` via `AutomationAdapterRegistry::register(...)`. Add
+   actions to `config('automation.actions')` (mark `destructive` / `rollback`).
+
+The Execution Engine handles dry-run defaulting, approval gating, retries, audit, and learning for
+you. The Library UI, workflows, and runbooks pick up the new adapter automatically. See the
+**Automation Platform Guide (Doc 24)**.

@@ -126,6 +126,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#quenyx-ai-administration-unified-ai-workspace-sprint-20"><span class="toc-text">Quenyx AI administration (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-administration-sprint-21"><span class="toc-text">QynSight Operations Intelligence administration (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l3"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#automation-platform-administration-sprint-23"><span class="toc-text">Automation Platform administration (Sprint 23)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -282,6 +283,24 @@ capabilities honestly report &quot;not collected&quot; rather than fabricating v
 via <code>GET /api/ai/adapters</code> (entitlement‑filtered). Every AI action remains audited, provider‑logged,
 conversation‑logged, and rate‑limited.</li>
 </ul>
+<hr />
+<h2 id="automation-platform-administration-sprint-23">Automation Platform administration (Sprint 23)</h2>
+<p>QynRun/QynReact run on the shared Automation Platform. Administration is <strong>safe by default</strong>:</p>
+<ul>
+<li><strong>Live execution master switch.</strong> <code>automation.live_execution</code> (env <code>AUTOMATION_LIVE_EXECUTION</code>)
+defaults to <strong>OFF</strong>. While OFF, every action is dry-run only — no side effects are possible.</li>
+<li><strong>Per-runner enable flags.</strong> Script, SSH, and PowerShell runners each have their own enable flag in
+<code>config/automation.php</code>; until enabled they honestly report <code>skipped</code> for live requests.</li>
+<li><strong>HTTP allowlist.</strong> REST/Webhook actions only reach hosts in <code>automation.allowed_hosts</code>.</li>
+<li><strong>Approval gate.</strong> No destructive/live action runs without human approval. Approving, rejecting,
+rolling back, and deleting require <code>administerAi</code>; viewing and dry-run require <code>accessAi</code>.</li>
+<li><strong>Rollback.</strong> Successful, rollback-capable executions can be undone from the Executions view.</li>
+<li><strong>Auditing &amp; learning.</strong> All automation events are written via <code>AutomationAuditLogger</code>; outcomes are
+captured as auditable learning records (no model training, no hidden state) and inform — but never
+auto-trigger — AI recommendations.</li>
+</ul>
+<p>All automation and incident data is workspace-isolated and UUID-only. See the <strong>Automation Platform
+Guide (Doc 24)</strong> and <strong>Incident Response Guide (Doc 27)</strong>.</p>
 
 </main>
 

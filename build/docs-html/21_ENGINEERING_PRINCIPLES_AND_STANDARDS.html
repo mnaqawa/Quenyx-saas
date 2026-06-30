@@ -126,6 +126,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#13-release-standards"><span class="toc-text">13. Release standards</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#14-security-by-design"><span class="toc-text">14. Security‑by‑design</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#ai-adapter-platform-principles-sprint-22"><span class="toc-text">AI Adapter Platform principles (Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#automation-standards-sprint-23"><span class="toc-text">Automation standards (Sprint 23)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -217,9 +218,24 @@ a data source are exposed but reported as <em>not collected</em> — never fabri
 capability‑gated, audited, provider/conversation‑logged, rate‑limited, and UUID‑only.</li>
 </ul>
 <hr />
+<h2 id="automation-standards-sprint-23">Automation standards (Sprint 23)</h2>
+<p>These extend the standards above for any code that executes actions:</p>
+<ul>
+<li><strong>Registry-driven, never hardcoded.</strong> Execution goes through the <code>AutomationAdapterRegistry</code> and
+<code>ActionRegistry</code>. No module embeds its own execution logic; future runners register, they don't fork.</li>
+<li><strong>Safe by default.</strong> Dry-run is the default. Live, destructive, or side-effecting actions require:
+the global live switch ON, the runner enabled, the target allowlisted (HTTP), and human approval.</li>
+<li><strong>Honest results.</strong> Adapters return <code>dry_run</code> or <code>skipped</code> when they cannot truly run — they never
+fabricate output, mirroring the platform's &quot;no fake data&quot; rule.</li>
+<li><strong>Reversible &amp; audited.</strong> Prefer <code>supportsRollback()</code>; every execution, approval, and rollback is
+audited; UUID-only, workspace-isolated, RBAC-gated.</li>
+<li><strong>Evidence-based AI, no auto-execution.</strong> AI may draft/recommend (citing auditable learning records)
+but never auto-executes. Learning is inspectable history — <strong>no model training, no hidden state.</strong></li>
+</ul>
+<hr />
 <blockquote>
 <p><strong>The standard, in one line:</strong> <em>Deterministic, provenance‑backed, fail‑closed, UUID‑first,
-AI‑as‑renderer — with no fake data and no fabricated claims, ever.</em></p>
+AI‑as‑renderer — with no fake data, no fabricated claims, and no unapproved actions, ever.</em></p>
 </blockquote>
 
 </main>

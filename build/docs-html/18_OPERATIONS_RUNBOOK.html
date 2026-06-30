@@ -129,6 +129,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#quenyx-ai-unified-ai-workspace-sprint-20-operations"><span class="toc-text">Quenyx AI (Unified AI Workspace — Sprint 20) — operations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynsight-operations-intelligence-sprint-21-operations"><span class="toc-text">QynSight Operations Intelligence (Sprint 21) — operations</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#qynasset-asset-intelligence-ai-adapter-platform-sprint-22"><span class="toc-text">QynAsset Asset Intelligence + AI Adapter Platform (Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#automation-amp-incident-operations-sprint-23"><span class="toc-text">Automation &amp;amp; Incident operations (Sprint 23)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -307,6 +308,25 @@ Quenyx AI never fabricates those facts.</li>
 <code>ai_adapter_discovery_%</code>); recent investigations also surface on the Asset Intelligence dashboard.</li>
 <li><strong>No duplicated AI</strong>: QynAsset reuses the shared <code>ModuleAiNarrator</code>/provider runtime; there is no
 separate provider, prompt, reasoning, or RAG engine to operate.</li>
+</ul>
+<hr />
+<h2 id="automation-amp-incident-operations-sprint-23">Automation &amp; Incident operations (Sprint 23)</h2>
+<ul>
+<li><strong>Enabling live automation</strong>: live execution is OFF by default. To allow real actions, set
+<code>AUTOMATION_LIVE_EXECUTION=true</code>, enable the specific runner flag(s), and populate
+<code>automation.allowed_hosts</code> for HTTP actions. Re-run config cache. Verify by dispatching a dry-run
+first, then a live action — confirm it lands in <strong>Approvals</strong> before it runs.</li>
+<li><strong>Approving / rolling back</strong>: live actions wait in <code>GET /api/qynrun/automation/approvals</code>; an
+<code>administerAi</code> operator decides. To undo a successful, rollback-capable run, call
+<code>POST /automation/executions/{uuid}/rollback</code>.</li>
+<li><strong>Triage an incident</strong>: open the QynReact workspace (<code>GET /api/qynreact/incidents/{uuid}</code>), review
+cross-module context, use Copilot/Recommend, mitigate via QynRun, then draft an editable postmortem.</li>
+<li><strong>Auditing</strong>: automation events are written via <code>AutomationAuditLogger</code> (<code>action LIKE 'automation_%'</code>); incident actions under <code>incident_*</code>. Outcomes are captured as auditable learning
+records — no model training, no hidden state.</li>
+<li><strong>Stuck/long runs</strong>: executions honor <code>automation.default_timeout</code> and retry policy; check
+<code>automation_executions</code> / <code>automation_execution_steps</code> for status and step-level detail.</li>
+<li><strong>No duplicated automation</strong>: QynRun/QynReact and all future modules consume the shared Automation
+Platform — there is no module-specific execution engine to operate. See Docs 24–27.</li>
 </ul>
 
 </main>

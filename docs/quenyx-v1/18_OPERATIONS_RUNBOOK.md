@@ -209,3 +209,24 @@ php artisan config:cache
   `ai_adapter_discovery_%`); recent investigations also surface on the Asset Intelligence dashboard.
 - **No duplicated AI**: QynAsset reuses the shared `ModuleAiNarrator`/provider runtime; there is no
   separate provider, prompt, reasoning, or RAG engine to operate.
+
+---
+
+## Automation & Incident operations (Sprint 23)
+
+- **Enabling live automation**: live execution is OFF by default. To allow real actions, set
+  `AUTOMATION_LIVE_EXECUTION=true`, enable the specific runner flag(s), and populate
+  `automation.allowed_hosts` for HTTP actions. Re-run config cache. Verify by dispatching a dry-run
+  first, then a live action — confirm it lands in **Approvals** before it runs.
+- **Approving / rolling back**: live actions wait in `GET /api/qynrun/automation/approvals`; an
+  `administerAi` operator decides. To undo a successful, rollback-capable run, call
+  `POST /automation/executions/{uuid}/rollback`.
+- **Triage an incident**: open the QynReact workspace (`GET /api/qynreact/incidents/{uuid}`), review
+  cross-module context, use Copilot/Recommend, mitigate via QynRun, then draft an editable postmortem.
+- **Auditing**: automation events are written via `AutomationAuditLogger` (`action LIKE
+  'automation_%'`); incident actions under `incident_*`. Outcomes are captured as auditable learning
+  records — no model training, no hidden state.
+- **Stuck/long runs**: executions honor `automation.default_timeout` and retry policy; check
+  `automation_executions` / `automation_execution_steps` for status and step-level detail.
+- **No duplicated automation**: QynRun/QynReact and all future modules consume the shared Automation
+  Platform — there is no module-specific execution engine to operate. See Docs 24–27.

@@ -174,3 +174,24 @@ provision, no new provider to configure, and no new secret to manage.
 - **Adapter discovery**: administrators/integrators can inspect which AI modules a workspace can use
   via `GET /api/ai/adapters` (entitlement‑filtered). Every AI action remains audited, provider‑logged,
   conversation‑logged, and rate‑limited.
+
+---
+
+## Automation Platform administration (Sprint 23)
+
+QynRun/QynReact run on the shared Automation Platform. Administration is **safe by default**:
+
+- **Live execution master switch.** `automation.live_execution` (env `AUTOMATION_LIVE_EXECUTION`)
+  defaults to **OFF**. While OFF, every action is dry-run only — no side effects are possible.
+- **Per-runner enable flags.** Script, SSH, and PowerShell runners each have their own enable flag in
+  `config/automation.php`; until enabled they honestly report `skipped` for live requests.
+- **HTTP allowlist.** REST/Webhook actions only reach hosts in `automation.allowed_hosts`.
+- **Approval gate.** No destructive/live action runs without human approval. Approving, rejecting,
+  rolling back, and deleting require `administerAi`; viewing and dry-run require `accessAi`.
+- **Rollback.** Successful, rollback-capable executions can be undone from the Executions view.
+- **Auditing & learning.** All automation events are written via `AutomationAuditLogger`; outcomes are
+  captured as auditable learning records (no model training, no hidden state) and inform — but never
+  auto-trigger — AI recommendations.
+
+All automation and incident data is workspace-isolated and UUID-only. See the **Automation Platform
+Guide (Doc 24)** and **Incident Response Guide (Doc 27)**.

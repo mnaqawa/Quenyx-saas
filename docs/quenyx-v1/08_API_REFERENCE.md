@@ -318,6 +318,47 @@ Asset UUIDs are deterministic UUIDv5 (`AssetEntityId`) over the discovered host;
 exposed**. Inventory, hardware, lifecycle, and license facts are **real or honestly absent** — never
 fabricated.
 
+## 19b. QynRun — Automation Platform (Sprint 23)
+
+Base `/api/qynrun`. Workspace-scoped, UUID-only. Reads/dry-run require `accessAi`; approvals, live
+runs, rollback, and deletes require `administerAi`.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/automation/adapters` | Registered execution adapters; includes `live_execution_enabled`. |
+| GET | `/automation/actions` | Action catalog (schema, `destructive`, `rollback`). |
+| GET / POST | `/automation/workflows` | List / create. |
+| GET / PUT / DELETE | `/automation/workflows/{uuid}` | Read / update / delete. |
+| POST | `/automation/workflows/{uuid}/run` | `mode=dry_run\|live`. |
+| GET / POST | `/automation/runbooks` | List / create. |
+| GET / PUT / DELETE | `/automation/runbooks/{uuid}` | Read / update / delete. |
+| POST | `/automation/runbooks/{uuid}/run` | Run. |
+| GET / POST | `/automation/executions` | History / ad-hoc dispatch. |
+| GET | `/automation/executions/{uuid}` | Detail + steps. |
+| POST | `/automation/executions/{uuid}/rollback` | Rollback a succeeded, rollback-capable run. |
+| POST | `/automation/executions/{uuid}/feedback` | Operator feedback (learning). |
+| GET | `/automation/approvals` | Pending approvals. |
+| POST | `/automation/approvals/{uuid}/decide` | `decision=approve\|reject`. |
+| GET | `/automation/learning` | Aggregated, auditable outcomes. |
+| GET | `/intelligence/overview` | Automation dashboard payload. |
+| POST | `/intelligence/copilot` | `{ workspace, message, conversation? }` — reuses Quenyx AI conversations. |
+| POST | `/intelligence/runbooks/suggest` | AI-assisted **editable** runbook draft (never auto-executed). |
+| POST | `/intelligence/executions/{uuid}/explain` | Explain an execution. |
+
+## 19c. QynReact — Incident Workspace (Sprint 23)
+
+Base `/api/qynreact`. Workspace-scoped, UUID-only, `accessAi`; AI surfaces require `can_use_ai`.
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET / POST | `/incidents` | List / open. |
+| GET | `/incidents/{uuid}` | Unified workspace (timeline, cross-module, automation, …). |
+| PUT | `/incidents/{uuid}` | Update status / resolution / postmortem. |
+| POST | `/incidents/{uuid}/timeline` | Add timeline entry. |
+| POST | `/incidents/{uuid}/copilot` | `{ workspace, message, conversation? }`. |
+| POST | `/incidents/{uuid}/recommend` | Evidence-based response actions. |
+| POST | `/incidents/{uuid}/postmortem` | Editable postmortem draft. |
+
 ## 20. Notes on examples
 
 Example request/response shapes are representative of the controllers' contracts. For exact current

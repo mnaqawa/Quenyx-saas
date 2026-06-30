@@ -128,6 +128,7 @@ body{margin:0}
 <li class="toc-l2"><a href="#working-on-quenyx-ai-unified-ai-workspace-sprint-20"><span class="toc-text">Working on Quenyx AI (Unified AI Workspace — Sprint 20)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l2"><a href="#consuming-the-ai-runtime-from-a-module-operations-intelligence-sprint-21"><span class="toc-text">Consuming the AI runtime from a module — Operations Intelligence (Sprint 21)</span><span class="toc-dots"></span></a></li>
 <li class="toc-l3"><a href="#adding-ai-to-a-module-the-ai-adapter-platform-sprint-22"><span class="toc-text">Adding AI to a module (the AI Adapter Platform — Sprint 22)</span><span class="toc-dots"></span></a></li>
+<li class="toc-l2"><a href="#adding-an-execution-adapter-automation-platform-sprint-23"><span class="toc-text">Adding an execution adapter (Automation Platform, Sprint 23)</span><span class="toc-dots"></span></a></li>
 </ol>
 </nav>
 
@@ -316,6 +317,23 @@ provider/prompt/reasoning/RAG logic.</li>
 the AI Workspace surface your module automatically. Reference implementation: <strong>QynAsset</strong>
 (<code>app/Services/Asset/Intelligence/*</code>, <code>QynAssetAiAdapter</code>, <code>routes/qynasset-intelligence.php</code>). Full
 walkthrough in the <strong>AI Adapter Developer Guide (Doc 23)</strong>.</p>
+<hr />
+<h2 id="adding-an-execution-adapter-automation-platform-sprint-23">Adding an execution adapter (Automation Platform, Sprint 23)</h2>
+<p>Execution adapters plug into the <strong>Automation Platform</strong> the same way AI adapters plug into the AI
+registry — no core change. To add a runner (e.g. Docker, AWS):</p>
+<ol>
+<li>Implement <code>App\Contracts\Automation\ExecutionAdapter</code> (or extend <code>AbstractExecutionAdapter</code> /
+<code>AbstractHttpExecutionAdapter</code>). Declare <code>key()</code>, <code>capabilities()</code>, <code>parameterSchema()</code>,
+<code>supportsRollback()</code>, <code>isOperational()</code>, and <code>execute()</code> / <code>rollback()</code>.</li>
+<li><strong>Be honest &amp; safe:</strong> return <code>ExecutionResult::dryRun(...)</code> unless <code>liveAllowed()</code> is true, the
+target passes the allowlist, and the runner is enabled in <code>config/automation.php</code>. If a live runner
+isn't provisioned, return <code>ExecutionResult::skipped(...)</code> — never fabricate output.</li>
+<li>Register it in <code>AppServiceProvider::boot()</code> via <code>AutomationAdapterRegistry::register(...)</code>. Add
+actions to <code>config('automation.actions')</code> (mark <code>destructive</code> / <code>rollback</code>).</li>
+</ol>
+<p>The Execution Engine handles dry-run defaulting, approval gating, retries, audit, and learning for
+you. The Library UI, workflows, and runbooks pick up the new adapter automatically. See the
+<strong>Automation Platform Guide (Doc 24)</strong>.</p>
 
 </main>
 

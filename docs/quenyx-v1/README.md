@@ -88,6 +88,10 @@ Each document has a Markdown source (editable source of truth) and a branded PDF
 | 21 | [Engineering Principles & Standards](./21_ENGINEERING_PRINCIPLES_AND_STANDARDS.md) | [PDF](../pdf/21_ENGINEERING_PRINCIPLES_AND_STANDARDS.pdf) | Engineering org | How we build |
 | 22 | [QynAsset Guide](./22_QYNASSET_GUIDE.md) | [PDF](../pdf/22_QYNASSET_GUIDE.pdf) | QynAsset users | Asset Intelligence module |
 | 23 | [AI Adapter Developer Guide](./23_AI_ADAPTER_DEVELOPER_GUIDE.md) | [PDF](../pdf/23_AI_ADAPTER_DEVELOPER_GUIDE.pdf) | Module engineers | Add AI to any module |
+| 24 | [Automation Platform Guide](./24_AUTOMATION_PLATFORM_GUIDE.md) | [PDF](../pdf/24_AUTOMATION_PLATFORM_GUIDE.pdf) | Platform engineers, SREs | Shared, registry-driven automation |
+| 25 | [QynRun Guide](./25_QYNRUN_GUIDE.md) | [PDF](../pdf/25_QYNRUN_GUIDE.pdf) | QynRun users | Enterprise Automation module |
+| 26 | [QynReact Guide](./26_QYNREACT_GUIDE.md) | [PDF](../pdf/26_QYNREACT_GUIDE.pdf) | Incident responders | Unified Incident Workspace |
+| 27 | [Incident Response Guide](./27_INCIDENT_RESPONSE_GUIDE.md) | [PDF](../pdf/27_INCIDENT_RESPONSE_GUIDE.pdf) | On-call, SRE | Incident lifecycle playbook |
 | QA | [QA Audit Report](./QA_AUDIT_REPORT.md) | — | Eng leadership, auditors | Track‑B audit results |
 
 ---

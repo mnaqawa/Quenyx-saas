@@ -341,3 +341,33 @@ Sprint 22 generalised module AI into a **reusable adapter framework** and added 
   Services in `App\Services\Asset\Intelligence\*`; UUID‑only via `AssetEntityId`; API in
   `routes/qynasset-intelligence.php`. License/lifecycle‑date facts have no source and are reported as
   **not collected** — never fabricated. See Docs 22 and 23.
+
+---
+
+## Sprint 23 — Automation Platform & Incident Workspace
+
+**Automation Platform (shared).** A registry-driven automation layer under
+`App\Services\Automation\*`, designed so every future module consumes it instead of duplicating
+execution logic. Core pieces:
+
+- **`AutomationAdapterRegistry`** + **`ExecutionAdapter`** contract — dynamic registration of runners
+  (Script, REST, Webhook, SSH, PowerShell shipped; Docker/Kubernetes/OCI/AWS/Azure/GCP register as
+  `PlannedExecutionAdapter`s). No hardcoded execution; the UI Library reflects the registry.
+- **`ActionRegistry`** — catalog of reusable actions (schema + `destructive`/`rollback` flags).
+- **`ExecutionEngine`** — dry-run by default, approval gate for live, timeout/retry, per-step
+  recording, audit, and learning. DTOs: `ExecutionContext`, `ExecutionResult` (immutable).
+- **`WorkflowEngine` / `RunbookEngine`** — validate data-only definitions and dispatch via the
+  Execution Engine. **`ApprovalEngine`**, **`RollbackEngine`**, **`ExecutionHistory`**,
+  **`AutomationAuditLogger`**, **`AutomationLearningService`** complete the platform.
+
+**Safety envelope.** Global `automation.live_execution` master switch (default OFF), HTTP host
+allowlist, per-runner enable flags, mandatory human approval for live, adapter `rollback`, workspace
+isolation, RBAC (`accessAi` read / `administerAi` privileged), UUID-only, full audit. Adapters never
+fabricate — they return `dry_run` or honestly `skipped`.
+
+**QynRun** is the operator surface (`App\Http\Controllers\Automation\*`,
+`routes/qynrun-automation.php`); **QynReact** is the **Incident Workspace**
+(`App\Services\Incident\*`, `routes/qynreact-incident.php`) that aggregates Timeline, cross-module
+context (`CrossModuleOrchestrator` over the AI Adapter Registry — never module-branch), Automation,
+Knowledge, Evidence, Resolution, and Postmortem. New tables in
+`2026_06_30_010000_create_automation_and_incident_tables.php`. See Docs 24–27.
