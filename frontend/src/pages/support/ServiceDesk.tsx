@@ -157,7 +157,7 @@ export default function ServiceDesk() {
                 </div>
               ) : null}
 
-              <CollaborationPanel workspaceUuid={workspaceUuid} entityType="ticket" entityUuid={selected.uuid} />
+              {workspaceUuid ? <CollaborationPanel workspaceUuid={workspaceUuid} entityType="ticket" entityUuid={selected.uuid} /> : null}
             </div>
           )}
         </div>

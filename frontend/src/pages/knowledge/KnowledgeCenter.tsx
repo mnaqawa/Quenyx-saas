@@ -235,7 +235,7 @@ export default function KnowledgeCenter() {
         </div>
       ) : null}
 
-      {tab === 'graph' ? <KnowledgeGraphView workspaceUuid={workspaceUuid} /> : null}
+      {tab === 'graph' && workspaceUuid ? <KnowledgeGraphView workspaceUuid={workspaceUuid} /> : null}
 
       <AiCopilotDrawer
         open={copilotOpen}
