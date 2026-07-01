@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { queryAiAgent } from '../../services/aiAgentService'
+import { useLanguage } from '../../i18n/LanguageContext'
 import type {
   AIAgentContext,
   AIAgentQueryRequest,
@@ -76,6 +77,7 @@ function formatTimestamp(ms: number): string {
 }
 
 export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }: AIAgentDrawerProps) {
+  const { t } = useLanguage()
   const [activeAgent, setActiveAgent] = useState<AIAgentType>(defaultAgent ?? 'performance_analyst')
   const [conversations, setConversations] =
     useState<Record<AIAgentType, ChatMessage[]>>(EMPTY_CONVERSATIONS)
@@ -223,14 +225,14 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
         className="fixed inset-y-0 end-0 z-50 flex h-full w-full max-w-full flex-col border-s border-white/10 bg-[#0f151d] text-white shadow-2xl sm:w-[440px] sm:max-w-[90vw]"
         role="dialog"
         aria-modal="true"
-        aria-label="AI Agent"
+        aria-label={t('ai.askQuenyx')}
         data-drawer-panel="true"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="rounded-lg bg-orange-500/20 px-2 py-1 text-xs font-semibold text-orange-200">
-              AI Agent
+              {t('ai.askQuenyx')}
             </span>
             <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -241,7 +243,7 @@ export function AIAgentDrawer({ open, onClose, workspaceId, defaultAgent, seed }
             type="button"
             onClick={onClose}
             className="rounded-lg border border-white/10 px-2 py-1 text-sm text-white/60 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-            aria-label="Close AI Agent"
+            aria-label={t('common.close')}
           >
             ✕
           </button>

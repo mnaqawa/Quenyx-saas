@@ -8,6 +8,11 @@ import { routesByModule, getVisibleModuleRoutes, isModuleReady, getModuleBasePat
 import { AIAgentDrawer } from '../components/ai/AIAgentDrawer'
 import { ProductTourProvider, useProductTour } from '../tour/ProductTour'
 import { useOnboarding } from '../onboarding/OnboardingContext'
+import { ModuleIcon } from '../components/icons/ModuleIcons'
+import { WorkspaceSelector } from '../components/layout/WorkspaceSelector'
+import { GlobalSearchBar } from '../components/layout/GlobalSearchBar'
+import { NotificationBell } from '../components/layout/NotificationBell'
+import { CommandPalette, useCommandPaletteShortcut } from '../components/layout/CommandPalette'
 
 function AppLayout() {
   return (
@@ -28,6 +33,7 @@ function AppLayoutInner() {
   const { startTour } = useProductTour()
   const { isOnboarded } = useOnboarding()
   const [isAiAgentOpen, setIsAiAgentOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isModulesExpanded, setIsModulesExpanded] = useState(true)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -121,8 +127,13 @@ function AppLayoutInner() {
     if (path === '/app/workspaces' || path === '/app/projects') {
       return location.pathname.startsWith('/app/workspaces') || location.pathname.startsWith('/app/projects')
     }
+    if (path === '/help-center') {
+      return location.pathname.startsWith('/help-center')
+    }
     return location.pathname === path
   }
+
+  useCommandPaletteShortcut(() => setIsCommandPaletteOpen(true))
 
   const handleLogout = async () => {
     try {
@@ -199,23 +210,6 @@ function AppLayoutInner() {
           >
             {t('nav.projects')}
           </Link>
-          {/*
-            Platform-level capabilities (NOT business modules and unaffected by
-            HIDE_NON_QYNSIGHT_MODULES): Integrations is the platform page for EXTERNAL systems only,
-            and AI Workspace is the shared, platform-wide Quenyx AI surface. Internal module-to-module
-            communication is handled by QynCore platform services, never via Integrations.
-          */}
-          <Link
-            to="/integrations"
-            className={[
-              'rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/integrations')
-                ? 'bg-white/10 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            {t('nav.integrations')}
-          </Link>
           <Link
             to="/ai-workspace"
             className={[
@@ -228,23 +222,19 @@ function AppLayoutInner() {
             {t('nav.aiWorkspace')}
           </Link>
           <Link
-            to="/getting-started"
+            to="/integrations"
             className={[
-              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/getting-started')
+              'rounded-md px-3 py-2 text-sm font-medium transition',
+              isActive('/integrations')
                 ? 'bg-white/10 text-white'
                 : 'text-white/70 hover:bg-white/10 hover:text-white',
             ].join(' ')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            {t('nav.help')}
+            {t('nav.integrations')}
           </Link>
         </nav>
-        <nav className="flex flex-col gap-1 px-4 pb-6" data-tour="tour-modules">
+        <div className="mx-4 border-t border-white/10" aria-hidden />
+        <nav className="flex flex-col gap-1 px-4 py-4" data-tour="tour-modules">
           <button
             type="button"
             onClick={() => setIsModulesExpanded((prev) => !prev)}
@@ -287,7 +277,12 @@ function AppLayoutInner() {
                       : 'text-white/60 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <span>QynSight</span>
+                  <span className="flex items-center gap-2.5">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/10">
+                      <ModuleIcon moduleKey="qynsight" size={12} className="text-white/80" />
+                    </span>
+                    <span>QynSight</span>
+                  </span>
                   <svg
                     width="12"
                     height="12"
@@ -394,11 +389,8 @@ function AppLayoutInner() {
                         `}
                       >
                         <span className="flex items-center gap-2.5">
-                          <span
-                            aria-hidden="true"
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold uppercase text-white/70"
-                          >
-                            {moduleConfig.displayName.replace(/^Qyn/i, '').charAt(0) || moduleConfig.displayName.charAt(0)}
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/10">
+                            <ModuleIcon moduleKey={moduleConfig.key} size={12} className="text-white/80" />
                           </span>
                           <span>{moduleConfig.displayName}</span>
                         </span>
@@ -427,6 +419,25 @@ function AppLayoutInner() {
                 .filter((item) => item !== null)} {/* Remove null items from map */}
             </>
           )}
+        </nav>
+        <div className="mx-4 border-t border-white/10" aria-hidden />
+        <nav className="px-4 py-3">
+          <Link
+            to="/help-center"
+            className={[
+              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition',
+              isActive('/help-center')
+                ? 'bg-white/10 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+            ].join(' ')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 opacity-70">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {t('nav.helpCenter')}
+          </Link>
         </nav>
         </div>
         <div className="relative mt-auto border-t border-white/10 px-3 py-3" ref={userMenuRef}>
@@ -537,23 +548,26 @@ function AppLayoutInner() {
         ].join(' ')}
       >
         <div className="border-b border-white/5 px-4 py-4 md:px-6">
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="inline-flex items-center justify-center rounded-md border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
-              aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 6h16M4 12h16M4 18h10"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen((prev) => !prev)}
+                className="inline-flex shrink-0 items-center justify-center rounded-md border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                aria-label={isSidebarOpen ? t('nav.hideSidebar') : t('nav.showSidebar')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 6h16M4 12h16M4 18h10"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <GlobalSearchBar onFocus={() => setIsCommandPaletteOpen(true)} />
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={startTour}
@@ -566,53 +580,19 @@ function AppLayoutInner() {
                 </svg>
                 {t('tour.button')}
               </button>
-              <div className="flex items-center gap-2 text-xs text-white/70" data-tour="tour-workspace">
-                <span className="text-white/50">{t('nav.workspace')}:</span>
-                <select
-                  value={selectedWorkspaceId ?? ''}
-                  onChange={(event) => {
-                    const workspaceId = event.target.value
-                    if (workspaceId) {
-                      setSelectedWorkspaceId(workspaceId)
-                      navigate('/dashboard')
-                    }
-                  }}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white"
-                  title={workspacesError || undefined}
-                >
-                  {isLoadingWorkspaces ? (
-                    <option value="">Loading workspaces...</option>
-                  ) : workspacesError && !workspacesError.includes('Unauthenticated') ? (
-                    <option value="">Error loading workspaces</option>
-                  ) : workspaces.length === 0 ? (
-                    <option value="">No workspaces</option>
-                  ) : !selectedWorkspaceId ? (
-                    <option value="">Select a workspace</option>
-                  ) : null}
-                  {selectedWorkspaceId && !workspaces.some((w) => String(w.id) === String(selectedWorkspaceId)) ? (
-                    <option value={selectedWorkspaceId}>Workspace {selectedWorkspaceId}</option>
-                  ) : null}
-                  {workspaces.map((workspace) => (
-                    <option key={workspace.id} value={String(workspace.id)} className="bg-slate-900 text-white">
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <WorkspaceSelector />
+              <NotificationBell />
               <LanguageSwitcher />
               <button
                 type="button"
                 data-tour="tour-ai-agent"
                 onClick={() => setIsAiAgentOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/25"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
                 </svg>
-                AI Agent
-                <span className="rounded-full bg-orange-500/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-100">
-                  new
-                </span>
+                {t('ai.askQuenyx')}
               </button>
             </div>
           </div>
@@ -625,6 +605,11 @@ function AppLayoutInner() {
         open={isAiAgentOpen}
         onClose={() => setIsAiAgentOpen(false)}
         workspaceId={selectedWorkspaceId ? Number(selectedWorkspaceId) : null}
+      />
+      <CommandPalette
+        open={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onAskAi={() => setIsAiAgentOpen(true)}
       />
     </div>
   )

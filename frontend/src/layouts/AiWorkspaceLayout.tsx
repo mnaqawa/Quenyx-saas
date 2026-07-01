@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { PageHeader } from '../components/observe/PageHeader'
 import { useLanguage } from '../i18n/LanguageContext'
 
-type TabGroup = 'workspace' | 'intelligence' | 'operations' | 'administration'
+type TabGroup = 'workspace' | 'ai' | 'administration'
 
 interface TabDef {
   key: string
@@ -11,10 +11,6 @@ interface TabDef {
   group: TabGroup
 }
 
-/**
- * Quenyx AI surfaces (Sprint 20), grouped for an enterprise control-center layout (v1.0.0). Routes
- * remain under /ai-workspace/* for backward compatibility; /quenyx-ai/* redirects here.
- */
 const TABS: TabDef[] = [
   { key: 'overview', path: '/ai-workspace/overview', labelKey: 'aiWorkspace.nav.overview', group: 'workspace' },
   { key: 'chat', path: '/ai-workspace/chat', labelKey: 'aiWorkspace.nav.chat', group: 'workspace' },
@@ -22,21 +18,25 @@ const TABS: TabDef[] = [
   { key: 'history', path: '/ai-workspace/history', labelKey: 'aiWorkspace.nav.history', group: 'workspace' },
   { key: 'activity', path: '/ai-workspace/activity', labelKey: 'aiWorkspace.nav.activity', group: 'workspace' },
 
-  { key: 'skills', path: '/ai-workspace/skills', labelKey: 'aiWorkspace.nav.skills', group: 'intelligence' },
-  { key: 'capabilities', path: '/ai-workspace/capabilities', labelKey: 'aiWorkspace.nav.capabilities', group: 'intelligence' },
-  { key: 'memory', path: '/ai-workspace/memory', labelKey: 'aiWorkspace.nav.memory', group: 'intelligence' },
-  { key: 'templates', path: '/ai-workspace/prompt-templates', labelKey: 'aiWorkspace.nav.templates', group: 'intelligence' },
+  { key: 'skills', path: '/ai-workspace/skills', labelKey: 'aiWorkspace.nav.skills', group: 'ai' },
+  { key: 'capabilities', path: '/ai-workspace/capabilities', labelKey: 'aiWorkspace.nav.capabilities', group: 'ai' },
+  { key: 'memory', path: '/ai-workspace/memory', labelKey: 'aiWorkspace.nav.memory', group: 'ai' },
+  { key: 'templates', path: '/ai-workspace/prompt-templates', labelKey: 'aiWorkspace.nav.templates', group: 'ai' },
 
-  { key: 'usage', path: '/ai-workspace/usage', labelKey: 'aiWorkspace.nav.usage', group: 'operations' },
-  { key: 'costs', path: '/ai-workspace/costs', labelKey: 'aiWorkspace.nav.costs', group: 'operations' },
-  { key: 'providers', path: '/ai-workspace/providers', labelKey: 'aiWorkspace.nav.providers', group: 'operations' },
-
+  { key: 'providers', path: '/ai-workspace/providers', labelKey: 'aiWorkspace.nav.providers', group: 'administration' },
   { key: 'permissions', path: '/ai-workspace/permissions', labelKey: 'aiWorkspace.nav.permissions', group: 'administration' },
-  { key: 'administration', path: '/ai-workspace/administration', labelKey: 'aiWorkspace.nav.administration', group: 'administration' },
+  { key: 'usage', path: '/ai-workspace/usage', labelKey: 'aiWorkspace.nav.usage', group: 'administration' },
+  { key: 'costs', path: '/ai-workspace/costs', labelKey: 'aiWorkspace.nav.costs', group: 'administration' },
   { key: 'notifications', path: '/ai-workspace/notifications', labelKey: 'aiWorkspace.nav.notifications', group: 'administration' },
 ]
 
-const GROUP_ORDER: TabGroup[] = ['workspace', 'intelligence', 'operations', 'administration']
+const GROUP_ORDER: TabGroup[] = ['workspace', 'ai', 'administration']
+
+const GROUP_I18N: Record<TabGroup, string> = {
+  workspace: 'aiWorkspace.group.workspace',
+  ai: 'aiWorkspace.group.intelligence',
+  administration: 'aiWorkspace.group.administration',
+}
 
 export default function AiWorkspaceLayout() {
   const { t } = useLanguage()
@@ -46,40 +46,41 @@ export default function AiWorkspaceLayout() {
     location.pathname === path || location.pathname.startsWith(`${path}/`)
 
   return (
-    <div>
-      <PageHeader title={t('aiWorkspace.title')} subtitle={t('aiWorkspace.subtitle')} />
-
-      <nav className="mb-6 -mx-1 overflow-x-auto pb-3" aria-label={t('aiWorkspace.title')}>
-        <div className="flex min-w-max items-stretch gap-4 px-1">
-          {GROUP_ORDER.map((group, gi) => (
-            <div key={group} className="flex items-center gap-2">
-              {gi > 0 ? <span className="mx-1 h-6 w-px bg-white/10" aria-hidden /> : null}
-              <span className="hidden text-[10px] font-semibold uppercase tracking-wider text-white/30 lg:inline">
-                {t(`aiWorkspace.group.${group}`)}
-              </span>
-              <div className="flex gap-1.5">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <aside className="w-full shrink-0 lg:w-56 xl:w-60" aria-label={t('aiWorkspace.navLabel')}>
+        <nav className="space-y-5 rounded-2xl border border-white/10 bg-[#0f151d] p-3">
+          {GROUP_ORDER.map((group) => (
+            <div key={group}>
+              <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                {t(GROUP_I18N[group])}
+              </p>
+              <ul className="space-y-0.5">
                 {TABS.filter((tab) => tab.group === group).map((tab) => (
-                  <Link
-                    key={tab.key}
-                    to={tab.path}
-                    aria-current={isActive(tab.path) ? 'page' : undefined}
-                    className={[
-                      'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition',
-                      isActive(tab.path)
-                        ? 'bg-sky-500 text-white shadow-sm shadow-sky-500/30'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white',
-                    ].join(' ')}
-                  >
-                    {t(tab.labelKey)}
-                  </Link>
+                  <li key={tab.key}>
+                    <Link
+                      to={tab.path}
+                      aria-current={isActive(tab.path) ? 'page' : undefined}
+                      className={[
+                        'block rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500',
+                        isActive(tab.path)
+                          ? 'bg-sky-500/20 text-white'
+                          : 'text-white/65 hover:bg-white/5 hover:text-white',
+                      ].join(' ')}
+                    >
+                      {t(tab.labelKey)}
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
-        </div>
-      </nav>
+        </nav>
+      </aside>
 
-      <Outlet />
+      <div className="min-w-0 flex-1">
+        <PageHeader title={t('aiWorkspace.title')} subtitle={t('aiWorkspace.subtitle')} />
+        <Outlet />
+      </div>
     </div>
   )
 }

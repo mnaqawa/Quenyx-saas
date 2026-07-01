@@ -121,22 +121,21 @@ function Integrations() {
   }
 
   return (
-    <div className="space-y-8" data-tour="tour-integrations">
-      <div className="space-y-1 text-center">
+    <div className="space-y-10" data-tour="tour-integrations">
+      <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-white">{t('integrations.title')}</h1>
         <p className="text-sm text-white/60">{t('integrations.subtitle')}</p>
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Agents</h2>
-        <p className="text-xs text-white/60">
-          Install agents on servers and workstations for cross-network monitoring, asset discovery (ShieldInventory),
-          vulnerability assessment, and QynSight. Works across firewalls—only outbound HTTPS required.
-        </p>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.agents')}</h2>
+        <p className="text-xs text-white/60">{t('integrations.agentsDesc')}</p>
         <Agents embedded />
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.installed')}</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {integrations.map((integration) => (
           <div
             key={integration.id}
@@ -190,8 +189,11 @@ function Integrations() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      </section>
 
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.marketplace')}</h2>
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] px-6 py-10 text-center text-white">
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-lg">
           +
@@ -207,9 +209,10 @@ function Integrations() {
           {t('integrations.browse')}
         </button>
       </div>
+      </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">Infrastructure Map (Observe)</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.monitoring')}</h2>
         <p className="text-xs text-white/60">
           Use an external integration to feed nodes and connections into the{' '}
           <Link to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/infrastructure-map` : '#'} className="text-sky-300 hover:underline">
@@ -278,7 +281,8 @@ function Integrations() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-white">{t('integrations.apiConfig')}</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.credentials')}</h2>
+        <h3 className="text-sm font-medium text-white/80">{t('integrations.apiConfig')}</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
             <h3 className="text-sm font-semibold">{t('integrations.apiKeys')}</h3>

@@ -1,14 +1,14 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Outlet, useLocation, useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { getRouteConfigFromPath } from '../constants/platformRegistry'
 import { ObserveModuleUnavailable } from '../components/observe/ObserveModuleUnavailable'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useObserveAccess } from '../hooks/useObserveAccess'
+import { Breadcrumbs } from '../components/layout/Breadcrumbs'
 
 export default function ObserveLayout() {
   const location = useLocation()
-  const navigate = useNavigate()
   const { id: routeWorkspaceId } = useParams<{ id: string }>()
   const { t } = useLanguage()
   const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
@@ -46,27 +46,14 @@ export default function ObserveLayout() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6" data-tour="tour-observe-content">
-      <div className="flex items-center gap-1.5 text-xs text-white/40 mt-2">
-        <button
-          onClick={() => navigate('/app/workspaces')}
-          className="hover:text-white/60 transition"
-        >
-          {t('observe.breadcrumb.workspaces')}
-        </button>
-        <span>/</span>
-        <button
-          onClick={() => navigate(`/app/workspaces/${workspaceId}/observe/overview`)}
-          className="hover:text-white/60 transition"
-        >
-          {t('observe.breadcrumb.qynsight')}
-        </button>
-        {currentPageTitle && currentPageTitle !== 'QynSight' && (
-          <>
-            <span>/</span>
-            <span className="text-white/50">{currentPageTitle}</span>
-          </>
-        )}
-      </div>
+      <Breadcrumbs
+        className="mt-2"
+        items={[
+          { label: t('observe.breadcrumb.workspaces'), to: '/app/workspaces' },
+          { label: t('observe.breadcrumb.qynsight'), to: `/app/workspaces/${workspaceId}/observe/overview` },
+          ...(currentPageTitle && currentPageTitle !== 'QynSight' ? [{ label: currentPageTitle }] : []),
+        ]}
+      />
       <Outlet />
     </div>
   )

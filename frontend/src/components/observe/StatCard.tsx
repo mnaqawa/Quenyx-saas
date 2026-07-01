@@ -15,11 +15,16 @@ interface StatCardProps {
 
 export function StatCard({ title, value, detail, trend, percentage, icon }: StatCardProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+    <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white transition hover:border-white/15">
+      <div className="flex items-start justify-between gap-3">
+        {icon ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/55">
+            {icon}
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-white/50">{title}</p>
-          <p className="mt-1 text-2xl font-semibold">{value}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
           {detail && <p className="mt-1 text-xs text-white/60">{detail}</p>}
           {trend && (
             <div className="mt-2 flex items-center gap-1 text-xs">
@@ -38,7 +43,6 @@ export function StatCard({ title, value, detail, trend, percentage, icon }: Stat
             </div>
           )}
         </div>
-        {icon && <div className="ml-4">{icon}</div>}
       </div>
     </div>
   )

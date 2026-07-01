@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import Integrations from './pages/Integrations'
 import GettingStarted from './pages/GettingStarted'
+import HelpCenter from './pages/HelpCenter'
 import Profile from './pages/Profile'
 import WorkspacesPage from './pages/WorkspacesPage'
 import WorkspaceDetailsPage from './pages/WorkspaceDetailsPage'
@@ -143,7 +144,8 @@ function App() {
             {/* v1.0.0 — preferred branded alias; redirects to the canonical /ai-workspace/* routes. */}
             <Route path="quenyx-ai/*" element={<QuenyxAiRedirect />} />
             <Route path="getting-started" element={<GettingStarted />} />
-            <Route path="help" element={<Navigate to="/getting-started" replace />} />
+            <Route path="help-center" element={<HelpCenter />} />
+            <Route path="help" element={<Navigate to="/help-center" replace />} />
             <Route path="profile" element={<Profile />} />
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
               {observeRoutes.find((r) => r.key === 'overview') && (
