@@ -140,7 +140,7 @@ export default function AiChat() {
             disabled={sending || input.trim() === ''}
             className="rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 disabled:opacity-40"
           >
-            {sending ? t('aiWorkspace.chat.sending') : t('aiWorkspace.chat.send')}
+            {sending ? t('aiWorkspace.chat.sendingLong') : t('aiWorkspace.chat.send')}
           </button>
         </div>
       </Card>

@@ -48,6 +48,23 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 class ApiClient {
   private static readonly REQUEST_TIMEOUT_MS = 30_000
+  /** Knowledge-base / reasoning model calls (File Search + gpt-5) routinely exceed 30s. */
+  private static readonly AI_REQUEST_TIMEOUT_MS = 180_000
+
+  private static resolveTimeoutMs(endpoint: string, explicit?: number): number {
+    if (explicit !== undefined) {
+      return explicit
+    }
+    if (
+      (endpoint.includes('/api/ai/conversations/') && endpoint.includes('/messages')) ||
+      endpoint.includes('/api/ai-agent/query') ||
+      endpoint.includes('/intelligence/copilot')
+    ) {
+      return ApiClient.AI_REQUEST_TIMEOUT_MS
+    }
+
+    return ApiClient.REQUEST_TIMEOUT_MS
+  }
 
   private baseUrl: string
 
@@ -55,8 +72,9 @@ class ApiClient {
     this.baseUrl = baseUrl
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
+    const { timeoutMs: explicitTimeout, ...fetchOptions } = options
 
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -74,12 +92,21 @@ class ApiClient {
     }
 
     const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), ApiClient.REQUEST_TIMEOUT_MS)
+    const timeoutMs = ApiClient.resolveTimeoutMs(endpoint, explicitTimeout)
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
+    if (fetchOptions.signal) {
+      if (fetchOptions.signal.aborted) {
+        controller.abort()
+      } else {
+        fetchOptions.signal.addEventListener('abort', () => controller.abort(), { once: true })
+      }
+    }
 
     const config: RequestInit = {
-      ...options,
+      ...fetchOptions,
       headers: mergedHeaders,
-      signal: options.signal ?? controller.signal,
+      signal: controller.signal,
     }
 
     try {
@@ -275,7 +302,10 @@ class ApiClient {
           const timeoutError = new Error('Request timed out') as RequestError
           timeoutError.status = 504
           timeoutError.url = url
-          timeoutError.userMessage = 'Request timed out'
+          timeoutError.userMessage =
+            timeoutMs > ApiClient.REQUEST_TIMEOUT_MS
+              ? 'AI request timed out — the knowledge base search took too long. Please try again or ask a shorter question.'
+              : 'Request timed out'
           throw timeoutError
         }
         if (
@@ -317,7 +347,12 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET', headers })
   }
 
-  async post<T>(endpoint: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+    timeoutMs?: number
+  ): Promise<T> {
     if (import.meta.env.DEV && body) {
       console.log('POST Request Body:', body)
     }
@@ -325,6 +360,7 @@ class ApiClient {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
       headers,
+      timeoutMs,
     })
   }
 

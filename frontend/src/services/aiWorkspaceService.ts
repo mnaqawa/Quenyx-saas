@@ -52,10 +52,15 @@ export const aiWorkspaceService = {
     uuid: string,
     body: { message: string; provider?: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }
   ): Promise<AiSendMessageResponse> {
-    return apiClient.post<AiSendMessageResponse>(`${BASE}/conversations/${uuid}/messages`, {
-      workspace: workspaceUuid,
-      ...body,
-    })
+    return apiClient.post<AiSendMessageResponse>(
+      `${BASE}/conversations/${uuid}/messages`,
+      {
+        workspace: workspaceUuid,
+        ...body,
+      },
+      undefined,
+      180_000
+    )
   },
 
   // --- Activity / Notifications ---

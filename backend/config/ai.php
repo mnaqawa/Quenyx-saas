@@ -77,7 +77,7 @@ return [
 
         // When OPENAI_VECTOR_STORE_ID is set, workspace chat uses File Search (same KB as Ask Quenyx AI).
         'knowledge_enabled' => (bool) env('AI_WORKSPACE_KNOWLEDGE_ENABLED', true),
-        'file_search_max_results' => (int) env('AI_WORKSPACE_FILE_SEARCH_MAX_RESULTS', 5),
+        'file_search_max_results' => (int) env('AI_WORKSPACE_FILE_SEARCH_MAX_RESULTS', 3),
         'max_history_messages' => (int) env('AI_WORKSPACE_MAX_HISTORY_MESSAGES', 20),
 
         // Optional pricing per 1,000 tokens.
@@ -181,7 +181,8 @@ return [
         'max_tokens' => (int) env('AI_MAX_TOKENS', 2048),
         // gpt-5 / o-series reasoning models need a higher ceiling so visible text is not truncated.
         'max_tokens_reasoning' => (int) env('AI_MAX_TOKENS_REASONING', 4096),
-        'timeout' => (int) env('AI_TIMEOUT', 60),
+        'timeout' => (int) env('AI_TIMEOUT', 180),
+        'knowledge_timeout' => (int) env('AI_KNOWLEDGE_TIMEOUT', 180),
     ],
 
     /*

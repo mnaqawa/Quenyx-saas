@@ -97,12 +97,18 @@ export async function queryAiAgent(
   signal?: AbortSignal
 ): Promise<AIAgentQueryResponse> {
   const token = getAuthToken()
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 180_000)
+  if (signal) {
+    if (signal.aborted) controller.abort()
+    else signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
 
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}/api/ai-agent/query`, {
       method: 'POST',
-      signal,
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -111,12 +117,21 @@ export async function queryAiAgent(
       body: JSON.stringify(body),
     })
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    window.clearTimeout(timeoutId)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new AiAgentError(
+        'AI request timed out — the knowledge base search took too long. Please try again.',
+        'timeout',
+        504
+      )
+    }
     throw new AiAgentError(
       'Could not reach the AI agent. Check your connection and try again.',
       'network_error',
       0
     )
+  } finally {
+    window.clearTimeout(timeoutId)
   }
 
   let json: unknown = null

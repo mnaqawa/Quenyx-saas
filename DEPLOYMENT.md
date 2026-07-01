@@ -210,8 +210,8 @@ server {
         proxy_cache_bypass $http_upgrade;
 
         proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+        proxy_send_timeout 180s;
+        proxy_read_timeout 180s;
     }
 }
 ```
@@ -246,6 +246,7 @@ server {
        location ~ \.php$ {
            include snippets/fastcgi-php.conf;
            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+           fastcgi_read_timeout 180s;
        }
 
        location ~ /\.(?!well-known).* { deny all; }

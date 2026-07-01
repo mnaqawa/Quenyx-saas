@@ -88,6 +88,8 @@ class AiConversationController extends AiWorkspaceBaseController
 
     public function storeMessage(Request $request, string $uuid): JsonResponse
     {
+        @set_time_limit((int) config('ai.defaults.knowledge_timeout', 180));
+
         $project = $this->workspace($request);
         $this->requireCapability($project, $request, 'can_use_ai');
 

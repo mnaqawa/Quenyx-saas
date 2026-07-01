@@ -4,6 +4,8 @@ import { createProxyMiddleware } from 'http-proxy-middleware'
 import { hashToken } from './cache'
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'
+/** AI knowledge-base (File Search + gpt-5) routinely exceeds 35s; keep above AI_KNOWLEDGE_TIMEOUT (180s). */
+const GATEWAY_PROXY_TIMEOUT_MS = Number(process.env.GATEWAY_PROXY_TIMEOUT_MS || 190_000)
 
 // QynSight observe APIs are served natively by the Laravel backend (observe:run-checks).
 // OBSERVE_ENGINE_URL was used for a legacy split-engine deployment and MUST NOT be set in
@@ -31,8 +33,8 @@ export function createBackendProxy() {
     target: BACKEND_BASE_URL,
     changeOrigin: true,
     xfwd: true,
-    proxyTimeout: 35000,
-    timeout: 35000,
+    proxyTimeout: GATEWAY_PROXY_TIMEOUT_MS,
+    timeout: GATEWAY_PROXY_TIMEOUT_MS,
     selfHandleResponse: false,
     followRedirects: false,
     agent: keepAliveAgent,

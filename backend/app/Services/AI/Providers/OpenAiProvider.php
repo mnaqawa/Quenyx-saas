@@ -151,8 +151,18 @@ class OpenAiProvider implements AiProviderInterface
     private function execute(AiCompletionRequest $request): AiCompletionResponse
     {
         $payload = $this->buildPayload($request, false);
+        $useFileSearch = $request->useFileSearch || ! empty($request->metadata['use_file_search']);
 
-        $response = $this->client()->post('/responses', $payload);
+        try {
+            $response = $this->client(timeout: $useFileSearch ? $this->knowledgeTimeout() : null)
+                ->post('/responses', $payload);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new AiProviderException(
+                'The AI request timed out while contacting OpenAI. Please retry — knowledge-base searches can take up to two minutes.',
+                'timeout',
+                504,
+            );
+        }
 
         if ($response->failed()) {
             throw new AiProviderException(
@@ -205,7 +215,8 @@ class OpenAiProvider implements AiProviderInterface
             $payload['temperature'] = $request->temperature ?? (float) config('ai.defaults.temperature', 0.0);
         }
 
-        $this->applyModelSpecificOptions($payload, $model, $request->responseFormat === 'json');
+        $useFileSearch = $request->useFileSearch || ! empty($request->metadata['use_file_search']);
+        $this->applyModelSpecificOptions($payload, $model, $request->responseFormat === 'json', $useFileSearch);
 
         if ($instructions !== null && $instructions !== '') {
             $payload['instructions'] = $instructions;
@@ -327,8 +338,16 @@ class OpenAiProvider implements AiProviderInterface
     private function clientTimeout(): int
     {
         return max(
-            (int) config('ai.defaults.timeout', 60),
-            (int) config('openai.request_timeout', 60),
+            (int) config('ai.defaults.timeout', 180),
+            (int) config('openai.request_timeout', 180),
+        );
+    }
+
+    private function knowledgeTimeout(): int
+    {
+        return max(
+            $this->clientTimeout(),
+            (int) config('ai.defaults.knowledge_timeout', 180),
         );
     }
 
@@ -346,14 +365,15 @@ class OpenAiProvider implements AiProviderInterface
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function applyModelSpecificOptions(array &$payload, string $model, bool $jsonResponse): void
+    private function applyModelSpecificOptions(array &$payload, string $model, bool $jsonResponse, bool $fileSearch = false): void
     {
         $normalized = strtolower(trim($model));
         if (! str_starts_with($normalized, 'gpt-5')) {
             return;
         }
 
-        $payload['reasoning'] = ['effort' => 'medium'];
+        // File Search + medium reasoning routinely exceeds 60s; low effort is faster and still accurate for KB Q&A.
+        $payload['reasoning'] = ['effort' => $fileSearch ? 'low' : 'medium'];
         if (! $jsonResponse) {
             $payload['text'] = ['verbosity' => 'medium'];
         }

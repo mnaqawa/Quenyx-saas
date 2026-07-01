@@ -111,8 +111,8 @@ location /api/ {
     
     # Timeouts
     proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
+    proxy_send_timeout 180s;
+    proxy_read_timeout 180s;
 }
 ```
 
