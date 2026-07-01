@@ -29,6 +29,7 @@ class AiConversationResource extends JsonResource
             'total_tokens' => (int) $this->total_tokens,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'title' => is_array($this->metadata) ? ($this->metadata['title'] ?? null) : null,
             'messages' => AiConversationMessageResource::collection($this->whenLoaded('messages')),
         ];
     }

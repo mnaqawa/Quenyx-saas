@@ -24,11 +24,11 @@ export default function AiConversations() {
       {(rows) => (
         <div className="space-y-3">
           {rows.map((c) => (
-            <Link key={c.uuid} to={`/ai-workspace/conversations/${c.uuid}`}>
+            <Link key={c.uuid} to={`/ai-workspace/chat/${c.uuid}`}>
               <Card className="flex items-center justify-between transition hover:border-sky-400/40">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-white">
-                    {typeof c.uuid === 'string' ? c.uuid.slice(0, 8) : ''} · {c.provider}
+                    {c.title?.trim() || `${c.uuid.slice(0, 8)}…`} · {c.provider}
                   </p>
                   <p className="text-xs text-white/50">
                     {t('aiWorkspace.conversations.messages')}: {formatNumber(c.message_count)} ·{' '}

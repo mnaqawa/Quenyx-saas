@@ -119,22 +119,24 @@ class AiConversationController extends AiWorkspaceBaseController
             return $this->fail($e->getMessage(), $e->errorCode(), $e->httpStatus());
         }
 
-        $promptLogging = (bool) config('ai.feature_flags.prompt_logging', false);
+        $persistContent = $this->shouldPersistMessages();
 
         $this->conversations->recordMessage(
             $conversation,
             'user',
-            $promptLogging ? (string) $validated['message'] : null,
+            $persistContent ? (string) $validated['message'] : null,
             new AiUsage(),
             $response->mocked,
         );
         $assistantMessage = $this->conversations->recordMessage(
             $conversation,
             'assistant',
-            $promptLogging ? $response->content : null,
+            $persistContent ? $response->content : null,
             $response->usage,
             $response->mocked,
         );
+
+        $this->ensureConversationTitle($conversation, (string) $validated['message']);
 
         return $this->ok([
             'conversation_uuid' => $conversation->uuid,
@@ -215,7 +217,7 @@ class AiConversationController extends AiWorkspaceBaseController
      */
     private function loadConversationHistory(AiConversation $conversation): array
     {
-        if (! (bool) config('ai.feature_flags.prompt_logging', false)) {
+        if (! $this->shouldPersistMessages()) {
             return [];
         }
 
@@ -233,5 +235,27 @@ class AiConversationController extends AiWorkspaceBaseController
         }
 
         return $turns;
+    }
+
+    private function shouldPersistMessages(): bool
+    {
+        return (bool) config('ai.workspace.persist_messages', true)
+            || (bool) config('ai.feature_flags.prompt_logging', false);
+    }
+
+    private function ensureConversationTitle(AiConversation $conversation, string $firstUserMessage): void
+    {
+        $metadata = is_array($conversation->metadata) ? $conversation->metadata : [];
+        if (! empty($metadata['title'])) {
+            return;
+        }
+
+        $title = trim($firstUserMessage);
+        if ($title === '') {
+            return;
+        }
+
+        $metadata['title'] = mb_strlen($title) > 80 ? mb_substr($title, 0, 77).'…' : $title;
+        $conversation->update(['metadata' => $metadata]);
     }
 }

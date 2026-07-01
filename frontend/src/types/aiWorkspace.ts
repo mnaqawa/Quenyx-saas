@@ -61,6 +61,7 @@ export interface AiConversationMessage {
 
 export interface AiConversation {
   uuid: string
+  title?: string | null
   provider: string
   model: string | null
   status: string

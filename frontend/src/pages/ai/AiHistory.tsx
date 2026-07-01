@@ -30,11 +30,13 @@ export default function AiHistory() {
           {rows.map((c) => (
             <Link
               key={c.uuid}
-              to={`/ai-workspace/conversations/${c.uuid}`}
+              to={`/ai-workspace/chat/${c.uuid}`}
               className="flex items-center justify-between px-4 py-3 transition hover:bg-white/5"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm text-white">{c.provider} · {c.model ?? t('aiWorkspace.common.notSet')}</p>
+                <p className="truncate text-sm text-white">
+                  {c.title?.trim() || `${c.uuid.slice(0, 8)}…`} · {c.provider}
+                </p>
                 <p className="text-xs text-white/40">
                   {formatNumber(c.message_count)} {t('aiWorkspace.conversations.messages')} · {formatNumber(c.total_tokens)} {t('aiWorkspace.conversations.tokens')}
                 </p>

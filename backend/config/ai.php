@@ -80,6 +80,9 @@ return [
         'file_search_max_results' => (int) env('AI_WORKSPACE_FILE_SEARCH_MAX_RESULTS', 3),
         'max_history_messages' => (int) env('AI_WORKSPACE_MAX_HISTORY_MESSAGES', 20),
 
+        // Store workspace chat message content so users can resume conversations (independent of global AI_PROMPT_LOGGING).
+        'persist_messages' => (bool) env('AI_WORKSPACE_PERSIST_MESSAGES', true),
+
         // Optional pricing per 1,000 tokens.
         // [prompt, completion] price pair (floats). Leave empty for token-only mode.
         // Example: 'openai' => ['prompt' => 0.005, 'completion' => 0.015].

@@ -126,6 +126,7 @@ function App() {
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<ObserveSuspense><AiOverview /></ObserveSuspense>} />
               <Route path="chat" element={<ObserveSuspense><AiChat /></ObserveSuspense>} />
+              <Route path="chat/:uuid" element={<ObserveSuspense><AiChat /></ObserveSuspense>} />
               <Route path="conversations" element={<ObserveSuspense><AiConversations /></ObserveSuspense>} />
               <Route path="conversations/:uuid" element={<ObserveSuspense><AiConversationDetail /></ObserveSuspense>} />
               <Route path="history" element={<ObserveSuspense><AiHistory /></ObserveSuspense>} />

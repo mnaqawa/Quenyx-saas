@@ -16,9 +16,17 @@ export default function AiConversationDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to="/ai-workspace/conversations" className="text-xs text-sky-300 hover:underline">
-        ← {t('aiWorkspace.nav.conversations')}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link to="/ai-workspace/conversations" className="text-xs text-sky-300 hover:underline">
+          ← {t('aiWorkspace.nav.conversations')}
+        </Link>
+        <Link
+          to={`/ai-workspace/chat/${uuid}`}
+          className="rounded-full bg-sky-500 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-400"
+        >
+          {t('aiWorkspace.chat.continueChat')}
+        </Link>
+      </div>
       <AiView hasWorkspace={hasWorkspace} loading={loading} error={error} data={data} onRetry={reload}>
         {(c) => (
           <div className="space-y-4">
