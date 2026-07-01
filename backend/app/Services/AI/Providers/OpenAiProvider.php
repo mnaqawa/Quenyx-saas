@@ -197,10 +197,15 @@ class OpenAiProvider implements AiProviderInterface
             'input' => count($input) === 1 && ($input[0]['role'] ?? '') === 'user'
                 ? (string) $input[0]['content']
                 : $input,
-            'temperature' => $request->temperature ?? (float) config('ai.defaults.temperature', 0.0),
             'max_output_tokens' => $request->maxTokens ?? (int) config('ai.defaults.max_tokens', 1024),
             'stream' => $stream,
         ];
+
+        if ($this->supportsTemperature($model)) {
+            $payload['temperature'] = $request->temperature ?? (float) config('ai.defaults.temperature', 0.0);
+        }
+
+        $this->applyModelSpecificOptions($payload, $model, $request->responseFormat === 'json');
 
         if ($instructions !== null && $instructions !== '') {
             $payload['instructions'] = $instructions;
@@ -296,6 +301,33 @@ class OpenAiProvider implements AiProviderInterface
         }
 
         return $request;
+    }
+
+    /**
+     * gpt-5* and o-series reasoning models reject the temperature parameter on the Responses API.
+     */
+    private function supportsTemperature(string $model): bool
+    {
+        $normalized = strtolower(trim($model));
+
+        return ! str_starts_with($normalized, 'gpt-5')
+            && ! preg_match('/^o\d/', $normalized);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function applyModelSpecificOptions(array &$payload, string $model, bool $jsonResponse): void
+    {
+        $normalized = strtolower(trim($model));
+        if (! str_starts_with($normalized, 'gpt-5')) {
+            return;
+        }
+
+        $payload['reasoning'] = ['effort' => 'low'];
+        if (! $jsonResponse) {
+            $payload['text'] = ['verbosity' => 'low'];
+        }
     }
 
     /**
