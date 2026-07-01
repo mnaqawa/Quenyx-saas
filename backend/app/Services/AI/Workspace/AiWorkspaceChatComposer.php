@@ -24,7 +24,9 @@ class AiWorkspaceChatComposer
     /**
      * @param  array<string, mixed>  $validated
      */
-    public function compose(Project $project, array $validated): AiCompletionRequest
+     * @param  list<array{role: string, content: string}>  $priorTurns
+     */
+    public function compose(Project $project, array $validated, array $priorTurns = []): AiCompletionRequest
     {
         $userPrompt = (string) $validated['message'];
         $format = $validated['response_format'] ?? 'text';
@@ -32,8 +34,23 @@ class AiWorkspaceChatComposer
 
         $messages = [
             AiMessage::system($useKnowledge ? $this->knowledgeSystemPrompt() : $this->genericSystemPrompt()),
-            AiMessage::user($userPrompt),
         ];
+
+        $maxHistory = (int) config('ai.workspace.max_history_messages', 20);
+        foreach (array_slice($priorTurns, -$maxHistory) as $turn) {
+            $role = (string) ($turn['role'] ?? '');
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            if ($role === 'assistant') {
+                $messages[] = AiMessage::assistant($content);
+            } elseif ($role === 'user') {
+                $messages[] = AiMessage::user($content);
+            }
+        }
+
+        $messages[] = AiMessage::user($userPrompt);
 
         return new AiCompletionRequest(
             messages: $messages,
@@ -42,7 +59,8 @@ class AiWorkspaceChatComposer
             maxTokens: $this->resolveMaxOutputTokens(),
             responseFormat: $format,
             stream: false,
-            metadata: $useKnowledge ? ['use_file_search' => true] : [],
+            metadata: [],
+            useFileSearch: $useKnowledge,
         );
     }
 

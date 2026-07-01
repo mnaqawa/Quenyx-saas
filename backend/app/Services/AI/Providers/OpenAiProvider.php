@@ -217,11 +217,13 @@ class OpenAiProvider implements AiProviderInterface
                 : ['type' => 'json_object']];
         }
 
-        if ($request->metadata !== []) {
-            $payload['metadata'] = $request->metadata;
+        $useFileSearch = $request->useFileSearch || ! empty($request->metadata['use_file_search']);
+        $apiMetadata = $this->sanitizeApiMetadata($request->metadata);
+        if ($apiMetadata !== []) {
+            $payload['metadata'] = $apiMetadata;
         }
 
-        if (! empty($request->metadata['use_file_search'])) {
+        if ($useFileSearch) {
             $this->attachFileSearchTool($payload);
         }
 
@@ -258,6 +260,15 @@ class OpenAiProvider implements AiProviderInterface
 
         if (($json['status'] ?? null) === 'incomplete' && $text !== '') {
             $text .= "\n\n[Note: response was truncated by the model output limit. Retry or increase AI_MAX_TOKENS_REASONING.]";
+        }
+
+        $text = trim($text);
+        if ($text === '') {
+            throw new AiProviderException(
+                'The AI returned an empty answer. The model may have used the entire token budget on reasoning — retry or increase AI_MAX_TOKENS_REASONING.',
+                'empty_response',
+                502,
+            );
         }
 
         $structured = null;
@@ -365,7 +376,11 @@ class OpenAiProvider implements AiProviderInterface
     {
         $vectorStoreId = trim((string) config('openai.vector_store_id', ''));
         if ($vectorStoreId === '') {
-            return;
+            throw new AiProviderException(
+                'Vector store is not configured. Set OPENAI_VECTOR_STORE_ID.',
+                'vector_store_missing',
+                500,
+            );
         }
 
         $payload['tools'] = [[
@@ -374,9 +389,31 @@ class OpenAiProvider implements AiProviderInterface
             'max_num_results' => (int) config('ai.workspace.file_search_max_results', 5),
             'ranking_options' => [
                 'ranker' => 'auto',
-                'score_threshold' => 0.2,
+                'score_threshold' => 0.3,
             ],
         ]];
+    }
+
+    /**
+     * OpenAI Responses API metadata accepts string values only (max 16 keys).
+     *
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, string>
+     */
+    private function sanitizeApiMetadata(array $metadata): array
+    {
+        $internal = ['use_file_search'];
+        $out = [];
+        foreach ($metadata as $key => $value) {
+            if (! is_string($key) || in_array($key, $internal, true)) {
+                continue;
+            }
+            if (is_string($value) && $value !== '') {
+                $out[$key] = $value;
+            }
+        }
+
+        return $out;
     }
 
     /**

@@ -97,14 +97,18 @@ class AiConversationController extends AiWorkspaceBaseController
             'provider' => ['sometimes', 'nullable', 'string', 'max:64'],
             'response_format' => ['sometimes', 'nullable', 'in:text,json'],
             'ai_context' => ['sometimes', 'nullable', 'array'],
+            'history' => ['sometimes', 'nullable', 'array', 'max:40'],
+            'history.*.role' => ['required_with:history', 'in:user,assistant'],
+            'history.*.content' => ['required_with:history', 'string', 'max:8000'],
         ]);
 
-        $conversation = $this->conversations->findForProject($project, $uuid);
+        $conversation = $this->conversations->findForProjectWithMessages($project, $uuid);
         abort_if($conversation === null, 404, 'Conversation not found.');
 
         try {
             $provider = $this->execution->resolveProvider($project, $validated['provider'] ?? null);
-            $completionRequest = $this->buildRequest($validated, $provider, $project);
+            $priorTurns = $this->resolvePriorTurns($conversation, $validated);
+            $completionRequest = $this->buildRequest($validated, $provider, $project, $priorTurns);
             $this->auditLogger->log($request->user(), $project, 'ai_conversation_message', 'ai.conversations.messages', $provider->key(), [
                 'conversation_uuid' => $conversation->uuid,
             ]);
@@ -147,8 +151,9 @@ class AiConversationController extends AiWorkspaceBaseController
 
     /**
      * @param  array<string, mixed>  $validated
+     * @param  list<array{role: string, content: string}>  $priorTurns
      */
-    private function buildRequest(array $validated, AiProviderInterface $provider, Project $project): AiCompletionRequest
+    private function buildRequest(array $validated, AiProviderInterface $provider, Project $project, array $priorTurns = []): AiCompletionRequest
     {
         $userPrompt = (string) $validated['message'];
         $format = $validated['response_format'] ?? 'text';
@@ -157,7 +162,7 @@ class AiConversationController extends AiWorkspaceBaseController
             $prompt = $this->orchestrator->buildPrompt($validated['ai_context'], $userPrompt);
             $messages = $prompt->toMessages();
         } else {
-            return $this->chatComposer->compose($project, $validated);
+            return $this->chatComposer->compose($project, $validated, $priorTurns);
         }
 
         return new AiCompletionRequest(
@@ -167,6 +172,64 @@ class AiConversationController extends AiWorkspaceBaseController
             maxTokens: (int) config('ai.defaults.max_tokens_reasoning', 4096),
             responseFormat: $format,
             stream: false,
+            useFileSearch: $this->chatComposer->knowledgeBaseEnabled(),
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return list<array{role: string, content: string}>
+     */
+    private function resolvePriorTurns(AiConversation $conversation, array $validated): array
+    {
+        $fromDb = $this->loadConversationHistory($conversation);
+        if ($fromDb !== []) {
+            return $fromDb;
+        }
+
+        $history = $validated['history'] ?? [];
+        if (! is_array($history)) {
+            return [];
+        }
+
+        $turns = [];
+        foreach ($history as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $role = (string) ($item['role'] ?? '');
+            $content = trim((string) ($item['content'] ?? ''));
+            if ($content === '' || ! in_array($role, ['user', 'assistant'], true)) {
+                continue;
+            }
+            $turns[] = ['role' => $role, 'content' => $content];
+        }
+
+        return $turns;
+    }
+
+    /**
+     * @return list<array{role: string, content: string}>
+     */
+    private function loadConversationHistory(AiConversation $conversation): array
+    {
+        if (! (bool) config('ai.feature_flags.prompt_logging', false)) {
+            return [];
+        }
+
+        $turns = [];
+        foreach ($conversation->messages as $message) {
+            $role = (string) $message->role;
+            if (! in_array($role, ['user', 'assistant'], true)) {
+                continue;
+            }
+            $content = trim((string) ($message->content ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $turns[] = ['role' => $role, 'content' => $content];
+        }
+
+        return $turns;
     }
 }

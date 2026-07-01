@@ -255,6 +255,7 @@ class ApiClient {
         e.errors = fail.errors ?? null
         e.status = response.status
         e.url = url
+        e.userMessage = message
         throw e
       }
 

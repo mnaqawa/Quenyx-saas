@@ -21,7 +21,8 @@ class AiWorkspaceChatComposerTest extends TestCase
         $request = $composer->compose($project, ['message' => 'What is NCA ECC?']);
 
         $this->assertTrue($composer->knowledgeBaseEnabled());
-        $this->assertSame(['use_file_search' => true], $request->metadata);
+        $this->assertTrue($request->useFileSearch);
+        $this->assertSame([], $request->metadata);
         $this->assertSame(4096, $request->maxTokens);
         $this->assertStringContainsString('File Search', $request->messages[0]->content);
     }

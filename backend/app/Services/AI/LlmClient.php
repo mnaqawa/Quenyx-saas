@@ -60,15 +60,19 @@ class LlmClient
         }
 
         try {
+            $payload = [
+                'model' => $this->model,
+                'messages' => $messages,
+                'max_tokens' => $this->maxTokens,
+            ];
+            if ($this->supportsTemperature($this->model)) {
+                $payload['temperature'] = $temperature ?? $this->temperature;
+            }
+
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
                 ->timeout($this->timeout)
-                ->post($this->baseUrl.'/chat/completions', [
-                    'model' => $this->model,
-                    'messages' => $messages,
-                    'temperature' => $temperature ?? $this->temperature,
-                    'max_tokens' => $this->maxTokens,
-                ]);
+                ->post($this->baseUrl.'/chat/completions', $payload);
         } catch (Throwable $e) {
             Log::error('LlmClient.chat transport error', ['message' => $e->getMessage()]);
             throw AiException::upstream($e->getMessage());
@@ -113,17 +117,21 @@ class LlmClient
         }
 
         try {
+            $payload = [
+                'model' => $this->model,
+                'messages' => $messages,
+                'max_tokens' => $this->maxTokens,
+                'stream' => true,
+            ];
+            if ($this->supportsTemperature($this->model)) {
+                $payload['temperature'] = $temperature ?? $this->temperature;
+            }
+
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
                 ->timeout($this->timeout)
                 ->withOptions(['stream' => true])
-                ->post($this->baseUrl.'/chat/completions', [
-                    'model' => $this->model,
-                    'messages' => $messages,
-                    'temperature' => $temperature ?? $this->temperature,
-                    'max_tokens' => $this->maxTokens,
-                    'stream' => true,
-                ]);
+                ->post($this->baseUrl.'/chat/completions', $payload);
         } catch (Throwable $e) {
             Log::error('LlmClient.stream transport error', ['message' => $e->getMessage()]);
             throw AiException::upstream($e->getMessage());
@@ -165,5 +173,13 @@ class LlmClient
         }
 
         return $full;
+    }
+
+    private function supportsTemperature(string $model): bool
+    {
+        $normalized = strtolower(trim($model));
+
+        return ! str_starts_with($normalized, 'gpt-5')
+            && ! preg_match('/^o\d/', $normalized);
     }
 }

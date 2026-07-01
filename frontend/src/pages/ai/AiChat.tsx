@@ -38,6 +38,10 @@ export default function AiChat() {
       mocked: false,
       created_at: new Date().toISOString(),
     }
+    const priorHistory = messages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content ?? '',
+    }))
     setMessages((prev) => [...prev, userMsg])
     setInput('')
 
@@ -48,7 +52,10 @@ export default function AiChat() {
         convUuid = conv.uuid
         setConversationUuid(convUuid)
       }
-      const res = await aiWorkspaceService.sendMessage(workspaceUuid, convUuid, { message: text })
+      const res = await aiWorkspaceService.sendMessage(workspaceUuid, convUuid, {
+        message: text,
+        history: priorHistory,
+      })
       setRuntimeMode(res.runtime_mode ?? (res.mocked ? 'mock' : res.ai_enabled ? 'live' : 'disabled'))
       setMessages((prev) => [
         ...prev,
@@ -64,6 +71,8 @@ export default function AiChat() {
         },
       ])
     } catch (err: unknown) {
+      setMessages((prev) => prev.filter((m) => m.uuid !== userMsg.uuid))
+      setInput(text)
       const reqErr = err as { userMessage?: string; message?: string }
       setError(reqErr.userMessage ?? (err instanceof Error ? err.message : t('aiWorkspace.chat.sendError')))
     } finally {

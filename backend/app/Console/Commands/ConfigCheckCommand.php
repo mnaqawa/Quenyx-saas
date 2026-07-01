@@ -134,6 +134,16 @@ class ConfigCheckCommand extends Command
                 $errors[] = 'AI provider is openai but OPENAI_API_KEY is missing from config.';
             }
 
+            if ($key !== '' && $key !== 'mock') {
+                $vectorStoreId = trim((string) config('openai.vector_store_id', ''));
+                if (
+                    (bool) config('ai.workspace.knowledge_enabled', true)
+                    && $vectorStoreId === ''
+                ) {
+                    $warnings[] = 'OPENAI_VECTOR_STORE_ID is not set — workspace chat and Ask Quenyx AI knowledge base will not work.';
+                }
+            }
+
             if ($key !== '' && $key !== 'mock' && ! $registry->has($key)) {
                 $errors[] = "AI provider '{$key}' has no executable adapter.";
             }

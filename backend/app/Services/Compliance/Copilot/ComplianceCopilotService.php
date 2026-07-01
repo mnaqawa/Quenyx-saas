@@ -287,15 +287,14 @@ class ComplianceCopilotService
                 stream: false,
             ));
         } catch (AiProviderException $e) {
-            // Fall back to a safe empty answer; the citation verifier will not block an empty answer,
-            // and the warning surfaces the provider failure.
             return [
-                'answer_en' => '',
+                'answer_en' => 'Unable to reach the AI provider: '.$e->getMessage(),
                 'answer_ar' => '',
                 'citations' => $corpusCitations,
                 'provider' => $requested ?? $this->registry->defaultKey(),
                 'usage' => new AiUsage(),
                 'mocked' => false,
+                'provider_error' => $e->errorCode(),
             ];
         }
 

@@ -24,6 +24,7 @@ final readonly class AiCompletionRequest
         public ?array $jsonSchema = null,
         public bool $stream = false,
         public array $metadata = [],
+        public bool $useFileSearch = false,
     ) {}
 
     /**

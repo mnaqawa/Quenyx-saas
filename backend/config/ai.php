@@ -78,6 +78,7 @@ return [
         // When OPENAI_VECTOR_STORE_ID is set, workspace chat uses File Search (same KB as Ask Quenyx AI).
         'knowledge_enabled' => (bool) env('AI_WORKSPACE_KNOWLEDGE_ENABLED', true),
         'file_search_max_results' => (int) env('AI_WORKSPACE_FILE_SEARCH_MAX_RESULTS', 5),
+        'max_history_messages' => (int) env('AI_WORKSPACE_MAX_HISTORY_MESSAGES', 20),
 
         // Optional pricing per 1,000 tokens.
         // [prompt, completion] price pair (floats). Leave empty for token-only mode.
