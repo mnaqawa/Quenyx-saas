@@ -24,15 +24,32 @@ function EnterpriseHealthBanner({
   t,
 }: {
   score: number | null
-  label: 'ready' | 'calculating' | 'no_data'
+  label: 'ready' | 'no_data' | 'loading'
   t: (k: string) => string
 }) {
-  const display =
-    label === 'ready' && score !== null
-      ? `${score}`
-      : label === 'calculating'
-        ? t('enterpriseDashboard.healthCalculating')
-        : t('enterpriseDashboard.healthNoData')
+  if (label === 'loading') {
+    return (
+      <div className="mb-6 rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f151d] to-[#121820] p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('enterpriseDashboard.enterpriseHealth')}</p>
+        <p className="mt-2 text-sm text-white/50">{t('common.loading')}</p>
+      </div>
+    )
+  }
+
+  if (label === 'no_data') {
+    return (
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f151d] to-[#121820] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('enterpriseDashboard.enterpriseHealth')}</p>
+          <p className="mt-1 text-sm text-white/60">{t('enterpriseDashboard.enterpriseHealthDesc')}</p>
+        </div>
+        <div className="text-end">
+          <p className="text-lg font-semibold text-white/55">{t('enterpriseDashboard.healthNoData')}</p>
+          <p className="mt-1 max-w-xs text-xs text-white/40">{t('enterpriseDashboard.healthNoDataHint')}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f151d] to-[#121820] p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -41,8 +58,8 @@ function EnterpriseHealthBanner({
         <p className="mt-1 text-sm text-white/60">{t('enterpriseDashboard.enterpriseHealthDesc')}</p>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-semibold tabular-nums text-white">{display}</span>
-        {label === 'ready' && score !== null ? <span className="text-sm text-white/45">/ 100</span> : null}
+        <span className="text-4xl font-semibold tabular-nums text-white">{score}</span>
+        <span className="text-sm text-white/45">/ 100</span>
       </div>
     </div>
   )

@@ -20,7 +20,7 @@ export interface ModuleCardData {
 
 export interface EnterpriseHealth {
   score: number | null
-  label: 'ready' | 'calculating' | 'no_data'
+  label: 'ready' | 'no_data' | 'loading'
 }
 
 export interface EnterpriseDashboardSnapshot {
@@ -79,7 +79,7 @@ export function useEnterpriseDashboard(
 
   const [snapshot, setSnapshot] = useState<EnterpriseDashboardSnapshot>(() => ({
     loading: true,
-    enterpriseHealth: { score: null, label: 'no_data' },
+    enterpriseHealth: { score: null, label: 'loading' },
     infrastructure: { status: 'loading' },
     assets: { status: 'loading' },
     automation: { status: 'loading' },
@@ -115,7 +115,11 @@ export function useEnterpriseDashboard(
       return
     }
 
-    setSnapshot((prev) => ({ ...prev, loading: true }))
+    setSnapshot((prev) => ({
+      ...prev,
+      loading: true,
+      enterpriseHealth: { score: null, label: 'loading' },
+    }))
 
     const [
       executive,
@@ -191,13 +195,9 @@ export function useEnterpriseDashboard(
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null
 
     const enterpriseHealth: EnterpriseHealth =
-      executive && scores.length > 0
+      scores.length > 0
         ? { score: avgScore, label: 'ready' }
-        : executive
-          ? { score: null, label: 'calculating' }
-          : allowedByKey.qynva
-            ? { score: null, label: 'no_data' }
-            : { score: null, label: 'no_data' }
+        : { score: null, label: 'no_data' }
 
     setSnapshot({
       loading: false,
