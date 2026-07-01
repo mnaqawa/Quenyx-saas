@@ -13,6 +13,7 @@ export interface AiWorkspacePermissions {
 export type AiRuntimeMode = 'live' | 'disabled' | 'no_provider' | 'mock'
 
 export interface AiWorkspaceSummary {
+  runtime_resolver?: string
   ai_enabled: boolean
   workspace_enabled: boolean
   runtime_mode: AiRuntimeMode

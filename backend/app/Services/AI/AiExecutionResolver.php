@@ -30,16 +30,22 @@ class AiExecutionResolver
     ) {}
 
     /**
-     * Tri-state AI_ENABLED env: null = unset (auto-enable when a real provider is configured).
+     * Tri-state AI_ENABLED: null = unset (auto-enable when a real provider is configured).
+     * Always read from config (never env()) so php artisan config:cache works in production.
      */
     public function explicitEnabledFlag(): ?bool
     {
-        $raw = env('AI_ENABLED');
+        $raw = config('ai.feature_flags.enabled');
+
         if ($raw === null || $raw === '') {
             return null;
         }
 
-        return filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if (is_bool($raw)) {
+            return $raw;
+        }
+
+        return filter_var((string) $raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
     }
 
     public function isExplicitlyDisabled(): bool
@@ -70,7 +76,7 @@ class AiExecutionResolver
             return true;
         }
 
-        return filter_var(env('AI_MOCK_ALLOWED', false), FILTER_VALIDATE_BOOLEAN);
+        return filter_var(config('ai.feature_flags.mock_allowed', false), FILTER_VALIDATE_BOOLEAN);
     }
 
   /**
@@ -200,6 +206,7 @@ class AiExecutionResolver
         $platformOpenAi = $this->registry->isConfigured('openai');
 
         return [
+            'runtime_resolver' => 'v2',
             'runtime_mode' => $mode,
             'ai_enabled' => $mode === self::MODE_LIVE,
             'ai_execution_allowed' => $this->isExecutionAllowed(),

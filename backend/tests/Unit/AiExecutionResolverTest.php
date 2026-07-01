@@ -34,9 +34,7 @@ class AiExecutionResolverTest extends TestCase
     {
         $this->simulateProduction();
         config(['ai.providers.openai.api_key' => 'sk-test-key']);
-        putenv('AI_ENABLED=false');
-        $_ENV['AI_ENABLED'] = 'false';
-        $_SERVER['AI_ENABLED'] = 'false';
+        config(['ai.feature_flags.enabled' => false]);
 
         $resolver = app(AiExecutionResolver::class);
 

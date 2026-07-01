@@ -19,6 +19,11 @@ use App\Services\AI\Skills\RecommendationSkill;
 | gated behind feature flags. Models are NEVER hardcoded — they come from env.
 */
 
+$aiEnabledRaw = env('AI_ENABLED');
+$aiEnabledTriState = ($aiEnabledRaw === null || $aiEnabledRaw === '')
+    ? null
+    : filter_var($aiEnabledRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
 return [
 
     /*
@@ -37,7 +42,9 @@ return [
     | Mock is never the silent production default — see AiExecutionResolver.
     */
     'feature_flags' => [
-        'enabled' => env('AI_ENABLED'),
+        // null = unset (auto-enable when OpenAI / another provider is configured). false = admin disabled.
+        'enabled' => $aiEnabledTriState,
+        'mock_allowed' => (bool) env('AI_MOCK_ALLOWED', false),
         'streaming_enabled' => (bool) env('AI_STREAMING_ENABLED', false),
         'persist_conversations' => (bool) env('AI_PERSIST_CONVERSATIONS', false),
         // When false, user/assistant prompt CONTENT is never written to storage.

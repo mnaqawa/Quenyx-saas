@@ -112,8 +112,8 @@ class ConfigCheckCommand extends Command
         $registry = app(AiProviderRegistry::class);
         $execution = app(AiExecutionResolver::class);
 
-        $provider = is_string(env('AI_PROVIDER')) && env('AI_PROVIDER') !== ''
-            ? env('AI_PROVIDER')
+        $provider = is_string(config('ai.default')) && config('ai.default') !== ''
+            ? (string) config('ai.default')
             : $registry->defaultKey();
 
         $mode = $execution->runtimeMode();
@@ -124,12 +124,14 @@ class ConfigCheckCommand extends Command
             return;
         }
 
+        $openAiKey = (string) config('ai.providers.openai.api_key', '');
+
         if ($mode === AiExecutionResolver::MODE_LIVE) {
             $key = $execution->resolveProviderKey();
             $this->line('  <info>OK</info> AI live execution ('.$key.')');
 
-            if ($key === 'openai' && empty(env('OPENAI_API_KEY'))) {
-                $errors[] = 'AI provider is openai but OPENAI_API_KEY is missing.';
+            if ($key === 'openai' && $openAiKey === '') {
+                $errors[] = 'AI provider is openai but OPENAI_API_KEY is missing from config.';
             }
 
             if ($key !== '' && $key !== 'mock' && ! $registry->has($key)) {
@@ -162,8 +164,8 @@ class ConfigCheckCommand extends Command
                 $this->line('  <info>OK</info> No AI provider configured.');
             }
 
-            if ($provider === 'openai' && empty(env('OPENAI_API_KEY'))) {
-                $errors[] = 'AI_PROVIDER=openai requires OPENAI_API_KEY.';
+            if ($provider === 'openai' && $openAiKey === '') {
+                $errors[] = 'AI_PROVIDER=openai requires OPENAI_API_KEY in backend/.env (then config:cache).';
             }
         }
     }

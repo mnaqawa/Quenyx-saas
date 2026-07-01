@@ -107,6 +107,29 @@ OPENAI_MODEL=gpt-4o-mini
 
 Run `php artisan quenyx:config-check --strict` before go-live.
 
+**After deploy, verify the AI fix is live** (in browser DevTools → Network → `workspace/summary`):
+
+| Field | Old (broken) | Fixed |
+|---|---|---|
+| `runtime_resolver` | missing | `"v2"` |
+| `runtime_mode` | missing / wrong | `"live"` when OpenAI configured |
+| Mock chat text | `ai.feature_flags.enabled` | real OpenAI reply or clear 503 error |
+
+If `runtime_resolver` is missing, production is still on pre-`f743bc3` code — pull, rebuild frontend, and restart PHP-FPM.
+
+**Production `.env` checklist:**
+
+```env
+# Remove AI_ENABLED=false if present — it blocks live AI even when OpenAI is configured.
+# Either omit AI_ENABLED entirely (auto-enables when OPENAI_API_KEY is set) or:
+AI_ENABLED=true
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+After any `.env` change: `php artisan config:clear && php artisan config:cache` and restart PHP-FPM.
+
 **Changing public domain (e.g. `dev.quenyx.com` → `cloud.quenyx.com`):**
 
 Laravel caches config — updating `.env` alone is not enough until you re-cache. Also update every layer that references the old hostname:
