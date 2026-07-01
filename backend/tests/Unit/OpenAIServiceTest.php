@@ -116,7 +116,7 @@ class OpenAIServiceTest extends TestCase
             $tool = $parameters['tools'][0] ?? [];
 
             return $method === 'create'
-                && ($parameters['max_output_tokens'] ?? null) === 600
+                && ($parameters['max_output_tokens'] ?? null) === 4096
                 && ! array_key_exists('temperature', $parameters)
                 && ($parameters['reasoning']['effort'] ?? null) === 'low'
                 && ($parameters['text']['verbosity'] ?? null) === 'low'
@@ -154,7 +154,7 @@ class OpenAIServiceTest extends TestCase
             $tool = $parameters['tools'][0] ?? [];
 
             return $method === 'create'
-                && ($parameters['max_output_tokens'] ?? null) === 300
+                && ($parameters['max_output_tokens'] ?? null) === 1500
                 && ($tool['max_num_results'] ?? null) === 2
                 && str_contains((string) ($parameters['instructions'] ?? ''), 'Quick mode');
         });

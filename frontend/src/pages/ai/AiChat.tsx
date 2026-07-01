@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
-import { useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
+import { useAiResource, useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
 import { AiError, Card, NoWorkspaceNotice } from '../../components/ai/workspace/shared'
 import type { AiConversationMessage, AiRuntimeMode } from '../../types/aiWorkspace'
 
@@ -12,6 +12,7 @@ import type { AiConversationMessage, AiRuntimeMode } from '../../types/aiWorkspa
 export default function AiChat() {
   const { t } = useLanguage()
   const { workspaceUuid, hasWorkspace } = useAiWorkspaceUuid()
+  const summary = useAiResource((uuid) => aiWorkspaceService.getSummary(uuid))
   const [conversationUuid, setConversationUuid] = useState<string | null>(null)
   const [messages, setMessages] = useState<AiConversationMessage[]>([])
   const [input, setInput] = useState('')
@@ -72,6 +73,16 @@ export default function AiChat() {
 
   return (
     <div className="space-y-4">
+      {summary.data?.summary.knowledge_base_enabled ? (
+        <div className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs text-emerald-100">
+          {t('aiWorkspace.chat.knowledgeActive')}
+        </div>
+      ) : summary.data && summary.data.summary.runtime_mode === 'live' ? (
+        <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-100">
+          {t('aiWorkspace.chat.knowledgeMissing')}
+        </div>
+      ) : null}
+
       {runtimeMode === 'mock' ? (
         <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-100">
           {t('aiWorkspace.chat.mockedNotice')}

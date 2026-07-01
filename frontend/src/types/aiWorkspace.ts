@@ -16,6 +16,7 @@ export interface AiWorkspaceSummary {
   runtime_resolver?: string
   ai_enabled: boolean
   workspace_enabled: boolean
+  knowledge_base_enabled?: boolean
   runtime_mode: AiRuntimeMode
   ai_execution_allowed: boolean
   explicitly_disabled: boolean
@@ -77,6 +78,7 @@ export interface AiSendMessageResponse {
   message_uuid: string
   ai_enabled: boolean
   runtime_mode: AiRuntimeMode
+  knowledge_base?: boolean
   content: string
   mocked: boolean
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number }

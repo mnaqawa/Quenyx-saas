@@ -30,6 +30,7 @@ class AiWorkspaceService
         private readonly AiProviderRegistry $registry,
         private readonly AiProviderCatalog $catalog,
         private readonly AiExecutionResolver $execution,
+        private readonly AiWorkspaceChatComposer $chatComposer,
     ) {}
 
     /**
@@ -85,6 +86,7 @@ class AiWorkspaceService
             $this->execution->workspaceSummaryFields($project),
             [
                 'workspace_enabled' => (bool) config('ai.feature_flags.workspace_enabled', true),
+                'knowledge_base_enabled' => $this->chatComposer->knowledgeBaseEnabled(),
                 'conversation_count' => (int) ($totals->conversation_count ?? 0),
                 'message_count' => (int) ($totals->message_count ?? 0),
                 'prompt_tokens' => (int) ($totals->prompt_tokens ?? 0),

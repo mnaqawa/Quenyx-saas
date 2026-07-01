@@ -22,8 +22,8 @@ class OpenAIService
     private const MAX_CONTEXT_CHARS = 8000;
 
     /** Output token ceilings (standard vs. quick mode). */
-    private const MAX_OUTPUT_TOKENS = 600;
-    private const MAX_OUTPUT_TOKENS_QUICK = 300;
+    private const MAX_OUTPUT_TOKENS = 4096;
+    private const MAX_OUTPUT_TOKENS_QUICK = 1500;
 
     /** Sampling temperature (low = focused/deterministic). */
     private const TEMPERATURE = 0.2;
@@ -47,7 +47,8 @@ Platform facts (background — do NOT repeat unless the user explicitly asks abo
 - Nagios is legacy and deprecated. Never recommend Nagios or Nagios plugins as the monitoring runtime.
 
 Answering rules:
-- Answer in a maximum of 8 bullet points. Be short, direct, and operational.
+- When the user requests a specific language, respond entirely in that language with complete sentences — do not stop mid-sentence.
+- Answer in a maximum of 8 bullet points unless the user asks for a detailed or language-specific response; then use complete paragraphs.
 - Do not repeat the platform background above unless the user explicitly asks about it.
 - For monitoring/operational questions, prioritize the provided QynSight operational context (JSON) over File Search; only consult the knowledge base when the context is insufficient.
 - Use the knowledge base (File Search) only when it is actually needed to answer.
@@ -142,7 +143,7 @@ TXT;
         if ($this->supportsTemperature($model)) {
             $payload['temperature'] = self::TEMPERATURE;
         }
-        $this->applyModelSpecificOptions($payload, $model);
+        $this->applyModelSpecificOptions($payload, $model, $quick);
 
         $startedAt = microtime(true);
         SafeLog::info('ai-agent.request.start', [
@@ -177,6 +178,10 @@ TXT;
         }
 
         $answer = trim((string) ($response->outputText ?? ''));
+        $status = (string) ($response->status ?? '');
+        if ($status === 'incomplete' && $answer !== '') {
+            $answer .= "\n\n[Note: response was truncated by the model output limit. Retry or ask for a shorter answer.]";
+        }
         $totalTokens = $response->usage?->totalTokens ?? null;
         $this->logFinish($agentType, $model, $quick, $startedAt, $totalTokens, 'ok');
 
@@ -240,7 +245,7 @@ TXT;
      *
      * @param array<string, mixed> $payload
      */
-    private function applyModelSpecificOptions(array &$payload, string $model): void
+    private function applyModelSpecificOptions(array &$payload, string $model, bool $quick = false): void
     {
         $normalized = strtolower(trim($model));
         if (! str_starts_with($normalized, 'gpt-5')) {
@@ -248,11 +253,17 @@ TXT;
         }
 
         $payload['reasoning'] = [
-            'effort' => 'low',
+            'effort' => $quick ? 'low' : 'medium',
         ];
-        $payload['text'] = [
-            'verbosity' => 'low',
-        ];
+        if (! $quick) {
+            $payload['text'] = [
+                'verbosity' => 'medium',
+            ];
+        } elseif ($quick) {
+            $payload['text'] = [
+                'verbosity' => 'low',
+            ];
+        }
     }
 
     /**

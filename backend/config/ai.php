@@ -75,7 +75,11 @@ return [
         'max_conversations' => (int) env('AI_WORKSPACE_MAX_CONVERSATIONS', 50),
         'max_activity' => (int) env('AI_WORKSPACE_MAX_ACTIVITY', 50),
 
-        // Optional pricing per 1,000 tokens. Keys are provider keys; each maps to a
+        // When OPENAI_VECTOR_STORE_ID is set, workspace chat uses File Search (same KB as Ask Quenyx AI).
+        'knowledge_enabled' => (bool) env('AI_WORKSPACE_KNOWLEDGE_ENABLED', true),
+        'file_search_max_results' => (int) env('AI_WORKSPACE_FILE_SEARCH_MAX_RESULTS', 5),
+
+        // Optional pricing per 1,000 tokens.
         // [prompt, completion] price pair (floats). Leave empty for token-only mode.
         // Example: 'openai' => ['prompt' => 0.005, 'completion' => 0.015].
         'pricing' => [
@@ -173,8 +177,10 @@ return [
     */
     'defaults' => [
         'temperature' => (float) env('AI_TEMPERATURE', 0.0),
-        'max_tokens' => (int) env('AI_MAX_TOKENS', 1024),
-        'timeout' => (int) env('AI_TIMEOUT', 30),
+        'max_tokens' => (int) env('AI_MAX_TOKENS', 2048),
+        // gpt-5 / o-series reasoning models need a higher ceiling so visible text is not truncated.
+        'max_tokens_reasoning' => (int) env('AI_MAX_TOKENS_REASONING', 4096),
+        'timeout' => (int) env('AI_TIMEOUT', 60),
     ],
 
     /*

@@ -221,6 +221,12 @@ class OpenAiProvider implements AiProviderInterface
             $payload['metadata'] = $request->metadata;
         }
 
+        if (! empty($request->metadata['use_file_search'])) {
+            $this->attachFileSearchTool($payload);
+        }
+
+        $payload['max_output_tokens'] = $this->resolveMaxOutputTokens($model, (int) $payload['max_output_tokens']);
+
         return $payload;
     }
 
@@ -248,6 +254,10 @@ class OpenAiProvider implements AiProviderInterface
 
         if ($text === '' && isset($json['output_text'])) {
             $text = (string) $json['output_text'];
+        }
+
+        if (($json['status'] ?? null) === 'incomplete' && $text !== '') {
+            $text .= "\n\n[Note: response was truncated by the model output limit. Retry or increase AI_MAX_TOKENS_REASONING.]";
         }
 
         $structured = null;
@@ -292,7 +302,7 @@ class OpenAiProvider implements AiProviderInterface
         $baseUrl = rtrim((string) ($this->config['base_url'] ?? 'https://api.openai.com/v1'), '/');
 
         $request = Http::baseUrl($baseUrl)
-            ->timeout($timeout ?? (int) config('ai.defaults.timeout', 30))
+            ->timeout($timeout ?? $this->clientTimeout())
             ->withToken($apiKey)
             ->acceptJson();
 
@@ -301,6 +311,14 @@ class OpenAiProvider implements AiProviderInterface
         }
 
         return $request;
+    }
+
+    private function clientTimeout(): int
+    {
+        return max(
+            (int) config('ai.defaults.timeout', 60),
+            (int) config('openai.request_timeout', 60),
+        );
     }
 
     /**
@@ -324,10 +342,41 @@ class OpenAiProvider implements AiProviderInterface
             return;
         }
 
-        $payload['reasoning'] = ['effort' => 'low'];
+        $payload['reasoning'] = ['effort' => 'medium'];
         if (! $jsonResponse) {
-            $payload['text'] = ['verbosity' => 'low'];
+            $payload['text'] = ['verbosity' => 'medium'];
         }
+    }
+
+    private function resolveMaxOutputTokens(string $model, int $requested): int
+    {
+        $normalized = strtolower(trim($model));
+        if (str_starts_with($normalized, 'gpt-5') || preg_match('/^o\d/', $normalized)) {
+            return max($requested, (int) config('ai.defaults.max_tokens_reasoning', 4096));
+        }
+
+        return max($requested, (int) config('ai.defaults.max_tokens', 2048));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function attachFileSearchTool(array &$payload): void
+    {
+        $vectorStoreId = trim((string) config('openai.vector_store_id', ''));
+        if ($vectorStoreId === '') {
+            return;
+        }
+
+        $payload['tools'] = [[
+            'type' => 'file_search',
+            'vector_store_ids' => [$vectorStoreId],
+            'max_num_results' => (int) config('ai.workspace.file_search_max_results', 5),
+            'ranking_options' => [
+                'ranker' => 'auto',
+                'score_threshold' => 0.2,
+            ],
+        ]];
     }
 
     /**

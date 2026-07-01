@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Ai\Workspace;
 
 use App\Contracts\Ai\AiProviderInterface;
 use App\DataTransferObjects\Ai\AiCompletionRequest;
-use App\DataTransferObjects\Ai\AiMessage;
 use App\DataTransferObjects\Ai\AiUsage;
 use App\Exceptions\Ai\AiProviderException;
 use App\Http\Resources\Ai\AiConversationResource;
@@ -15,6 +14,7 @@ use App\Services\AI\AiAccessAuditLogger;
 use App\Services\AI\AiExecutionResolver;
 use App\Services\AI\AiProviderRegistry;
 use App\Services\AI\CompliancePromptOrchestrator;
+use App\Services\AI\Workspace\AiWorkspaceChatComposer;
 use App\Services\AI\Workspace\AiWorkspaceContextResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,6 +37,7 @@ class AiConversationController extends AiWorkspaceBaseController
         private readonly CompliancePromptOrchestrator $orchestrator,
         private readonly AiConversationRepository $conversations,
         private readonly AiAccessAuditLogger $auditLogger,
+        private readonly AiWorkspaceChatComposer $chatComposer,
     ) {
         parent::__construct($context);
     }
@@ -103,7 +104,7 @@ class AiConversationController extends AiWorkspaceBaseController
 
         try {
             $provider = $this->execution->resolveProvider($project, $validated['provider'] ?? null);
-            $completionRequest = $this->buildRequest($validated, $provider);
+            $completionRequest = $this->buildRequest($validated, $provider, $project);
             $this->auditLogger->log($request->user(), $project, 'ai_conversation_message', 'ai.conversations.messages', $provider->key(), [
                 'conversation_uuid' => $conversation->uuid,
             ]);
@@ -134,6 +135,7 @@ class AiConversationController extends AiWorkspaceBaseController
             'message_uuid' => $assistantMessage->uuid,
             'ai_enabled' => $this->execution->isLiveExecution($project),
             'runtime_mode' => $this->execution->runtimeMode($project),
+            'knowledge_base' => $this->chatComposer->knowledgeBaseEnabled(),
             'content' => $response->content,
             'mocked' => $response->mocked,
             'usage' => $response->usage->toArray(),
@@ -146,7 +148,7 @@ class AiConversationController extends AiWorkspaceBaseController
     /**
      * @param  array<string, mixed>  $validated
      */
-    private function buildRequest(array $validated, AiProviderInterface $provider): AiCompletionRequest
+    private function buildRequest(array $validated, AiProviderInterface $provider, Project $project): AiCompletionRequest
     {
         $userPrompt = (string) $validated['message'];
         $format = $validated['response_format'] ?? 'text';
@@ -155,17 +157,14 @@ class AiConversationController extends AiWorkspaceBaseController
             $prompt = $this->orchestrator->buildPrompt($validated['ai_context'], $userPrompt);
             $messages = $prompt->toMessages();
         } else {
-            $messages = [
-                AiMessage::system('You are the Quenyx AI assistant. Answer only from provided context and never invent facts.'),
-                AiMessage::user($userPrompt),
-            ];
+            return $this->chatComposer->compose($project, $validated);
         }
 
         return new AiCompletionRequest(
             messages: $messages,
             model: null,
             temperature: (float) config('ai.defaults.temperature', 0.0),
-            maxTokens: (int) config('ai.defaults.max_tokens', 1024),
+            maxTokens: (int) config('ai.defaults.max_tokens_reasoning', 4096),
             responseFormat: $format,
             stream: false,
         );
