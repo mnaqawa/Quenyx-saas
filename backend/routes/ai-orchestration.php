@@ -8,9 +8,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | QCIF Sprint 9 — AI Orchestration Platform (workspace-scoped only)
 |--------------------------------------------------------------------------
-| Infrastructure endpoints only. AI execution is OFF by default — responses are
-| mocked until ai.feature_flags.enabled is true. No business AI (gap assessment,
-| evidence intelligence, copilot) is implemented here.
+| Infrastructure endpoints only. Provider selection uses AiExecutionResolver — live when OpenAI (or
+| another runnable provider) is configured; mock only in local/testing. No business AI here.
 | Auth: sanctum (outer group) + project membership (ProjectPolicy::view)
 | + QynShield entitlement (project.qynshield) + audit logging + rate limit.
 */

@@ -82,8 +82,10 @@ Workspace, Sprint 20).
 ## 9. AI settings
 
 - AI is configured via **environment variables**, not a UI toggle today (see Doc 10 §11).
-- Defaults are safe: mock provider, AI off, no prompt logging, no conversation persistence, RAG off,
-  no tenant‑evidence indexing. Change only deliberately.
+- Defaults are safe: when `AI_ENABLED` is unset, live execution **auto-enables** when `OPENAI_API_KEY` is
+  set; set `AI_ENABLED=false` to disable live AI by administrator choice (returns an error, not silent mock
+  in production). Mock is only used in local/testing or when `AI_MOCK_ALLOWED=true`. No prompt logging, no
+  conversation persistence, RAG off, no tenant‑evidence indexing. Change only deliberately.
 
 ## 10. Audit logs
 
@@ -127,8 +129,10 @@ grouped into **Workspace** (Overview, Chat, Conversations, History, Activity), *
   credentials), not per‑workspace. The catalog lists OpenAI, Anthropic, Gemini, Azure OpenAI,
   OpenRouter, Mistral, Cohere, xAI Grok, Ollama, LM Studio, vLLM, LiteLLM, Hugging Face, and a Custom
   OpenAI‑compatible API; today **only OpenAI is executable** — others are configurable but not yet
-  executable, and the **mock** provider is hidden outside local/testing. AI execution still requires
-  the platform AI flags.
+  executable, and the **mock** provider is hidden outside local/testing. Live execution uses
+  `AiExecutionResolver` (workspace default → platform default → first runnable provider). Set
+  `AI_ENABLED=false` to disable live AI; the Overview shows **Disabled by administrator**, not
+  “OpenAI enabled”.
 - **Permissions** (Administration → Permissions): per‑role matrix (`Use AI`, `Manage templates`,
   `Manage providers`, `View costs`, `Administer`). Rows are additive overrides on top of role
   defaults; the `owner` row is always full and locked.

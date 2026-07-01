@@ -3,11 +3,11 @@ import { useLanguage } from '../../i18n/LanguageContext'
 import { aiWorkspaceService } from '../../services/aiWorkspaceService'
 import { useAiWorkspaceUuid } from '../../hooks/useAiWorkspace'
 import { AiError, Card, NoWorkspaceNotice } from '../../components/ai/workspace/shared'
-import type { AiConversationMessage } from '../../types/aiWorkspace'
+import type { AiConversationMessage, AiRuntimeMode } from '../../types/aiWorkspace'
 
 /**
- * AI Chat — creates a real conversation on first send and streams turns through the platform AI
- * runtime. When AI is disabled (default) the backend mock provider answers, clearly flagged.
+ * AI Chat — creates a real conversation on first send and runs through the platform AI runtime.
+ * Live providers are used when configured; mock is only shown in local/testing or explicit safe mode.
  */
 export default function AiChat() {
   const { t } = useLanguage()
@@ -17,7 +17,7 @@ export default function AiChat() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mockedNotice, setMockedNotice] = useState(false)
+  const [runtimeMode, setRuntimeMode] = useState<AiRuntimeMode | null>(null)
 
   if (!hasWorkspace || !workspaceUuid) return <NoWorkspaceNotice />
 
@@ -48,7 +48,7 @@ export default function AiChat() {
         setConversationUuid(convUuid)
       }
       const res = await aiWorkspaceService.sendMessage(workspaceUuid, convUuid, { message: text })
-      setMockedNotice(res.mocked)
+      setRuntimeMode(res.runtime_mode ?? (res.mocked ? 'mock' : res.ai_enabled ? 'live' : 'disabled'))
       setMessages((prev) => [
         ...prev,
         {
@@ -71,7 +71,7 @@ export default function AiChat() {
 
   return (
     <div className="space-y-4">
-      {mockedNotice ? (
+      {runtimeMode === 'mock' ? (
         <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-100">
           {t('aiWorkspace.chat.mockedNotice')}
         </div>

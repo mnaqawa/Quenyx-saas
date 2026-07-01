@@ -10,11 +10,19 @@ export interface AiWorkspacePermissions {
   can_administer: boolean
 }
 
+export type AiRuntimeMode = 'live' | 'disabled' | 'no_provider' | 'mock'
+
 export interface AiWorkspaceSummary {
   ai_enabled: boolean
   workspace_enabled: boolean
+  runtime_mode: AiRuntimeMode
+  ai_execution_allowed: boolean
+  explicitly_disabled: boolean
+  mock_active: boolean
+  platform_openai_configured: boolean
   has_provider: boolean
   default_provider: string | null
+  executing_provider: string | null
   conversation_count: number
   message_count: number
   prompt_tokens: number
@@ -24,6 +32,8 @@ export interface AiWorkspaceSummary {
   catalog_provider_count: number
   executable_provider_count: number
   configured_provider_count: number
+  platform_configured_provider_count: number
+  workspace_credentials_provider_count: number
   enabled_provider_count: number
   skills_loaded: number
   capabilities_loaded: number
@@ -65,6 +75,7 @@ export interface AiSendMessageResponse {
   conversation_uuid: string
   message_uuid: string
   ai_enabled: boolean
+  runtime_mode: AiRuntimeMode
   content: string
   mocked: boolean
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
@@ -168,6 +179,8 @@ export interface AiProvider {
   platform_configured: boolean
   /** @deprecated kept for backward compatibility; equals `executable`. */
   implemented: boolean
+  workspace_credentials_configured: boolean
+  runnable: boolean
   enabled: boolean
   model: string | null
   secret_configured: boolean

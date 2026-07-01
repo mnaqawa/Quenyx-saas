@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\AI;
 
-use App\Contracts\Ai\AiProviderInterface;
 use App\DataTransferObjects\Ai\AiCompletionRequest;
 use App\Exceptions\Ai\AiProviderException;
 use App\Models\Project;
@@ -37,6 +36,7 @@ class ModuleAiNarrator
 
     public function __construct(
         private readonly AiProviderRegistry $registry,
+        private readonly AiExecutionResolver $execution,
         private readonly CompliancePromptOrchestrator $orchestrator,
         private readonly AiAccessAuditLogger $auditLogger,
     ) {}
@@ -65,10 +65,11 @@ class ModuleAiNarrator
         array $citations = [],
         array $auditMetadata = [],
     ): array {
-        $aiEnabled = (bool) config('ai.feature_flags.enabled', false);
+        $live = $this->execution->isLiveExecution($project);
+        $runtimeMode = $this->execution->runtimeMode($project);
 
         try {
-            $provider = $this->resolveProvider();
+            $provider = $this->execution->resolveProvider($project);
 
             $aiContext = [
                 'context_type' => $contextType,
@@ -98,7 +99,8 @@ class ModuleAiNarrator
 
             return [
                 'available' => true,
-                'ai_enabled' => $aiEnabled,
+                'ai_enabled' => $live,
+                'runtime_mode' => $runtimeMode,
                 'provider' => $provider->key(),
                 'model' => $response->model,
                 'mocked' => $response->mocked,
@@ -111,20 +113,12 @@ class ModuleAiNarrator
             // Never fail the whole request — the deterministic evidence is still useful.
             return [
                 'available' => false,
-                'ai_enabled' => $aiEnabled,
+                'ai_enabled' => $live,
+                'runtime_mode' => $runtimeMode,
                 'error' => $e->getMessage(),
                 'error_code' => $e->errorCode(),
                 'generated_at' => now()->toIso8601String(),
             ];
         }
-    }
-
-    private function resolveProvider(): AiProviderInterface
-    {
-        if (! (bool) config('ai.feature_flags.enabled', false)) {
-            return $this->registry->get('mock');
-        }
-
-        return $this->registry->get(null);
     }
 }

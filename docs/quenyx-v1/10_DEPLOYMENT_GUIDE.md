@@ -124,14 +124,15 @@ Without it, monitoring shows "Last poll: never".
 
 ## 11. AI / RAG / Copilot environment (opt‑in)
 
-All AI is **off by default**. Enable deliberately:
+All AI is **off by default** unless a real provider is configured. Enable deliberately:
 
 | Var | Default | Effect |
 |---|---|---|
-| `AI_PROVIDER` | `mock` | `openai` to use real models |
-| `AI_ENABLED` | `false` | master switch for real model calls |
+| `AI_PROVIDER` | unset | `openai` to pin provider; unset + `OPENAI_API_KEY` auto-selects OpenAI |
+| `AI_ENABLED` | unset | unset = auto-enable when OpenAI key present; `false` = administrator disabled; `true` = force on |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_EMBEDDINGS_MODEL` | unset | provider config (models from env only) |
-| `COPILOT_ENABLED` | `true` | Copilot on (still mock unless `AI_ENABLED`) |
+| `AI_MOCK_ALLOWED` | `false` | emergency only — allow mock in production |
+| `COPILOT_ENABLED` | `true` | Copilot on (uses same execution resolver as Quenyx AI) |
 | `AI_PROMPT_LOGGING_ENABLED` | `false` | store prompt content (keep off) |
 | `AI_CONVERSATION_PERSISTENCE_ENABLED` | `false` | persist conversations (keep off) |
 | `AI_COPILOT_RAG_ENABLED` / `RAG_ENABLED` / `EMBEDDINGS_ENABLED` | `false` | RAG runtime |

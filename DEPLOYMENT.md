@@ -96,6 +96,17 @@ GATEWAY_BASE_URL=https://your-public-domain.com
 
 After changing `.env`, run `php artisan config:clear` (or `php artisan config:cache` in production).
 
+**Quenyx AI (production GA):**
+
+```env
+AI_ENABLED=          # unset = auto-enable when OPENAI_API_KEY is set; false = disabled by admin
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+Run `php artisan quenyx:config-check --strict` before go-live.
+
 **Changing public domain (e.g. `dev.quenyx.com` → `cloud.quenyx.com`):**
 
 Laravel caches config — updating `.env` alone is not enough until you re-cache. Also update every layer that references the old hostname:
@@ -455,7 +466,7 @@ Before going live:
 | Item | Action |
 |------|--------|
 | **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx`, `DB_PASSWORD` |
-| **Config validation** | Run `php artisan quenyx:config-check` (use `--strict` in CI). It must pass before go-live |
+| **Config validation** | Run `php artisan quenyx:config-check` (use `--strict` in CI). Validates AI_ENABLED, AI_PROVIDER, OPENAI_API_KEY, and blocks silent mock in production |
 | **CORS** | Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s) (no `*`); set `SANCTUM_STATEFUL_DOMAINS`. `CORS_SUPPORTS_CREDENTIALS=true` requires an explicit origin |
 | **Token expiry** | `SANCTUM_TOKEN_EXPIRATION_MINUTES` set (default 7 days). Schedule runs `sanctum:prune-expired` daily |
 | **Security headers** | `SECURITY_HEADERS_ENABLED=true`; HSTS enabled (served over HTTPS). CSP/Referrer/Permissions policies applied by `SecurityHeaders` middleware |

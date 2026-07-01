@@ -50,13 +50,14 @@ provider class makes a direct model/HTTP call.
 
 ## 3. OpenAI provider 🟡
 
-`OpenAiProvider` implements the provider interface for OpenAI (chat + embeddings). Active only when
-`AI_PROVIDER=openai` and `AI_ENABLED=true`; otherwise it is never invoked.
+`OpenAiProvider` implements the provider interface for OpenAI (chat + embeddings). It is selected by
+`AiExecutionResolver` when `OPENAI_API_KEY` is set and AI is not explicitly disabled (`AI_ENABLED=false`).
 
-## 4. Mock provider 🟢
+## 4. Mock provider 🟡
 
-`MockAiProvider` is the **default** (`ai.default = mock`). It returns deterministic mock responses so
-the entire platform runs with **zero external calls** — ideal for demos, tests, and safe defaults.
+`MockAiProvider` is used **only** in `local`/`testing`, when no real provider is configured, or when
+`AI_MOCK_ALLOWED=true`. It is **never** the silent production default. It returns deterministic safe-mode
+responses so the platform can be exercised without external calls.
 
 ## 5. Provider registry
 

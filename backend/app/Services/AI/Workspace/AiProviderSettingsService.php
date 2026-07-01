@@ -188,6 +188,9 @@ class AiProviderSettingsService
         ];
 
         $executable = $this->registry->has($key);
+        $platformConfigured = $this->registry->isConfigured($key);
+        $workspaceCredentials = $setting?->hasSecret() ?? false;
+        $enabled = $setting !== null ? (bool) $setting->enabled : $platformConfigured;
 
         return [
             'uuid' => $this->providerUuid($project, $key),
@@ -198,15 +201,15 @@ class AiProviderSettingsService
             'endpoint' => $meta['endpoint'],
             'docs_url' => $meta['docs_url'] ?? null,
             'is_default' => $key === $defaultKey,
-            // True only when a real adapter exists AND credentials are present at platform level.
             'executable' => $executable,
-            'platform_configured' => $this->registry->isConfigured($key),
-            // Legacy field kept for backward compatibility (== executable).
+            'platform_configured' => $platformConfigured,
+            'workspace_credentials_configured' => $workspaceCredentials,
             'implemented' => $executable,
-            'enabled' => $setting?->enabled ?? false,
+            'enabled' => $enabled,
+            'runnable' => $executable && $enabled && ($platformConfigured || $workspaceCredentials),
             'model' => $setting?->model,
-            'secret_configured' => $setting?->hasSecret() ?? false,
-            'configured' => $setting !== null,
+            'secret_configured' => $workspaceCredentials,
+            'configured' => $platformConfigured || $workspaceCredentials,
             'updated_at' => $setting?->updated_at?->toIso8601String(),
         ];
     }

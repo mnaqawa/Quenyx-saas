@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Platform\Health;
 
 use App\Models\Project;
+use App\Services\AI\AiExecutionResolver;
+use App\Services\AI\AiProviderRegistry;
 use App\Services\Automation\AutomationAdapterRegistry;
 use App\Services\Knowledge\KnowledgeSourceRegistry;
 use App\Services\Platform\EventBus\PlatformEventBus;
@@ -58,13 +60,15 @@ class PlatformHealthService
      */
     private function aiPlatform(): array
     {
-        $enabled = (bool) config('ai.feature_flags.enabled', false);
+        $execution = app(AiExecutionResolver::class);
+        $mode = $execution->runtimeMode();
         $adapters = count($this->aiRegistry->all());
 
         return [
             'status' => $adapters > 0 ? 'operational' : 'degraded',
-            'ai_enabled' => $enabled,
-            'mode' => $enabled ? 'live_provider' : 'mock (safe default)',
+            'ai_enabled' => $execution->isLiveExecution(),
+            'runtime_mode' => $mode,
+            'executing_provider' => $execution->resolveProviderKey(),
             'registered_adapters' => $adapters,
             'adapters' => array_keys($this->aiRegistry->all()),
         ];
@@ -136,13 +140,24 @@ class PlatformHealthService
      */
     private function providerHealth(): array
     {
-        $enabled = (bool) config('ai.feature_flags.enabled', false);
-        $default = (string) config('ai.default_provider', 'mock');
+        $execution = app(AiExecutionResolver::class);
+        $registry = app(AiProviderRegistry::class);
+        $mode = $execution->runtimeMode();
+        $key = $execution->resolveProviderKey();
+
+        $note = match ($mode) {
+            AiExecutionResolver::MODE_LIVE => 'Live provider configured and executable.',
+            AiExecutionResolver::MODE_DISABLED => 'AI execution disabled by administrator (AI_ENABLED=false).',
+            AiExecutionResolver::MODE_MOCK => 'Mock provider (local/testing or AI_MOCK_ALLOWED).',
+            default => 'No provider configured at platform level.',
+        };
 
         return [
             'status' => 'operational',
-            'active_provider' => $enabled ? $default : 'mock',
-            'note' => $enabled ? 'Live provider configured.' : 'AI disabled — deterministic mock provider in use (production-safe).',
+            'runtime_mode' => $mode,
+            'active_provider' => $key ?? $registry->defaultKey(),
+            'platform_openai_configured' => $registry->isConfigured('openai'),
+            'note' => $note,
         ];
     }
 

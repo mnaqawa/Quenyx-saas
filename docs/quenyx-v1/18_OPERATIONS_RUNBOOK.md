@@ -104,15 +104,13 @@ and a Linux host (adjust paths).
 ## 13. Emergency: disable AI
 
 ```bash
-# In backend/.env
+# In backend/.env — disables ALL live AI execution (chat returns 503, not silent mock in production)
 AI_ENABLED=false
-AI_PROVIDER=mock
-RAG_ENABLED=false
-AI_COPILOT_RAG_ENABLED=false
-php artisan config:cache   # or config:clear in dev
+php artisan config:cache
 ```
 
-This forces mock mode — **no external model calls** — while keeping deterministic features working.
+This stops external model calls while keeping deterministic features working. Do **not** set
+`AI_PROVIDER=mock` in production — use `AI_ENABLED=false` instead.
 
 ## 14. Emergency: disable a module
 
@@ -152,14 +150,13 @@ php artisan config:cache
 
 - **Enable/disable** the surface: `AI_WORKSPACE_ENABLED` (default `true`). When `false`, all
   `/api/ai/*` workspace endpoints return 404 and the sidebar item leads to an empty surface.
-- **Safe by default**: with `AI_ENABLED=false` (default), chat uses the mock provider; nothing reaches
-  an external model. No raw provider secrets are stored — `ai_provider_settings.settings` is encrypted
-  (depends on a valid `APP_KEY`; rotating `APP_KEY` invalidates stored secrets, which must be re‑entered).
-- **Default provider (v1.0.0)**: leave `AI_PROVIDER` unset to let the registry resolve it safely
-  (OpenAI when `OPENAI_API_KEY` is set; `mock` only in local/testing; otherwise none). Set
-  `AI_PROVIDER` explicitly to override. The provider **catalog** is informational; only providers with
-  a real adapter (today OpenAI) are executable. The **Test connection** action / `POST
-  /api/ai/providers/{uuid}/test` runs a genuine `health()` for executable providers and is audited.
+- **Live execution (v1.0.0 GA)**: leave `AI_ENABLED` unset to auto-enable when `OPENAI_API_KEY` is set.
+  Set `AI_ENABLED=false` to disable by administrator choice (Overview shows **Disabled by administrator**).
+  Mock is never used silently in production. Validate with `php artisan quenyx:config-check --strict`.
+  Leave `AI_PROVIDER` unset to auto-select OpenAI when configured, or set `AI_PROVIDER=openai` explicitly.
+  The provider **catalog** is informational; only providers with a real adapter (today OpenAI) are executable.
+  The **Test connection** action / `POST /api/ai/providers/{uuid}/test` runs a genuine `health()` for
+  executable providers and is audited.
 - **Cost tracking** shows currency only when `ai.workspace.pricing` is configured; otherwise it is
   token‑only by design (no fabricated amounts).
 - **Auditing**: AI conversations, provider/template/permission changes are written to `audit_logs`

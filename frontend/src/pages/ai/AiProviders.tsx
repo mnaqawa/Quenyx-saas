@@ -126,15 +126,20 @@ export default function AiProviders() {
                     <Badge tone={p.enabled ? 'emerald' : 'slate'}>
                       {p.enabled ? t('aiWorkspace.common.enabled') : t('aiWorkspace.common.disabled')}
                     </Badge>
+                    {p.runnable ? (
+                      <Badge tone="emerald">{t('aiWorkspace.providers.runnable')}</Badge>
+                    ) : null}
                     <Badge tone={p.configured ? 'sky' : 'slate'}>
                       {p.configured ? t('aiWorkspace.providers.configured') : t('aiWorkspace.providers.unconfigured')}
-                    </Badge>
-                    <Badge tone={p.secret_configured ? 'emerald' : 'slate'}>
-                      {p.secret_configured ? t('aiWorkspace.providers.secretSet') : t('aiWorkspace.providers.noSecret')}
                     </Badge>
                     {p.platform_configured ? (
                       <Badge tone="emerald">{t('aiWorkspace.providers.platformConfigured')}</Badge>
                     ) : null}
+                    {p.workspace_credentials_configured ? (
+                      <Badge tone="sky">{t('aiWorkspace.providers.workspaceCredentials')}</Badge>
+                    ) : (
+                      <Badge tone="slate">{t('aiWorkspace.providers.noWorkspaceCredentials')}</Badge>
+                    )}
                   </div>
 
                   {/* Capabilities */}

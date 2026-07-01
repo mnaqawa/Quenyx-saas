@@ -11,6 +11,7 @@ use App\Models\Ai\AiConversation;
 use App\Models\Project;
 use App\Repositories\Ai\AiConversationRepository;
 use App\Services\AI\AiAccessAuditLogger;
+use App\Services\AI\AiExecutionResolver;
 use App\Services\AI\AiProviderRegistry;
 use App\Services\AI\CompliancePromptOrchestrator;
 use Illuminate\Http\JsonResponse;
@@ -21,15 +22,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Workspace-scoped AI Orchestration API (QCIF Sprint 9). Infrastructure only — NO business
  * AI (no gap assessment, evidence intelligence, or copilot logic lives here).
  *
- * AI execution is OFF by default: until ai.feature_flags.enabled is true, every request is
- * served by the mock provider and no external model is contacted. Provider selection is fully
- * config/registry-driven (no provider hardcoding). All corpus/DB access is delegated (the
- * orchestrator never queries the corpus; only the repository touches the database).
+ * AI execution is resolved by AiExecutionResolver: live when a real provider is configured and AI is
+ * not explicitly disabled (AI_ENABLED=false). Mock is never used silently in production.
  */
 class AiOrchestrationController extends Controller
 {
     public function __construct(
         private readonly AiProviderRegistry $registry,
+        private readonly AiExecutionResolver $execution,
         private readonly CompliancePromptOrchestrator $orchestrator,
         private readonly AiConversationRepository $conversations,
         private readonly AiAccessAuditLogger $auditLogger,
@@ -42,7 +42,7 @@ class AiOrchestrationController extends Controller
         $validated = $this->validateInput($request);
 
         try {
-            $provider = $this->resolveProvider($request);
+            $provider = $this->execution->resolveProvider($project, $request->input('provider'));
             $completionRequest = $this->buildRequest($validated, stream: false);
 
             $this->auditLogger->log(
@@ -65,7 +65,8 @@ class AiOrchestrationController extends Controller
             'success' => true,
             'data' => array_merge(
                 ['conversation_uuid' => $conversation?->uuid],
-                ['ai_enabled' => $this->aiEnabled()],
+                ['ai_enabled' => $this->execution->isLiveExecution($project)],
+                ['runtime_mode' => $this->execution->runtimeMode($project)],
                 $response->toArray(),
                 ['generated_at' => now()->toIso8601String()],
             ),
@@ -79,7 +80,10 @@ class AiOrchestrationController extends Controller
         $validated = $this->validateInput($request);
 
         try {
-            $provider = $this->resolveProvider($request, requireStreaming: true);
+            $provider = $this->execution->resolveProvider($project, $request->input('provider'));
+            if (! (bool) config('ai.feature_flags.streaming_enabled', false)) {
+                throw new AiProviderException('AI streaming is disabled.', 'ai_streaming_disabled', 503);
+            }
             $completionRequest = $this->buildRequest($validated, stream: true);
         } catch (AiProviderException $e) {
             return $this->error($e->getMessage(), $e->errorCode(), $e->httpStatus());
@@ -130,19 +134,6 @@ class AiOrchestrationController extends Controller
             'conversation' => ['sometimes', 'nullable', 'string', 'max:64'],
             'ai_context' => ['sometimes', 'nullable', 'array'],
         ]);
-    }
-
-    private function resolveProvider(Request $request, bool $requireStreaming = false): AiProviderInterface
-    {
-        // Feature flag is the master switch: when AI is disabled (or, for streaming, when
-        // streaming is disabled) the mock provider is used regardless of the requested key.
-        if (! $this->aiEnabled() || ($requireStreaming && ! (bool) config('ai.feature_flags.streaming_enabled', false))) {
-            return $this->registry->get('mock');
-        }
-
-        $requested = $request->input('provider');
-
-        return $this->registry->get(is_string($requested) && $requested !== '' ? $requested : null);
     }
 
     /**
@@ -209,11 +200,6 @@ class AiOrchestrationController extends Controller
         );
 
         return $conversation;
-    }
-
-    private function aiEnabled(): bool
-    {
-        return (bool) config('ai.feature_flags.enabled', false);
     }
 
     private function flush(): void

@@ -8,6 +8,7 @@ use App\Models\Ai\AiPromptTemplate;
 use App\Models\Ai\AiProviderSetting;
 use App\Models\AuditLog;
 use App\Models\Project;
+use App\Services\AI\AiExecutionResolver;
 use App\Services\AI\AiProviderCatalog;
 use App\Services\AI\AiProviderRegistry;
 use Illuminate\Support\Facades\Schema;
@@ -28,6 +29,7 @@ class AiWorkspaceService
         private readonly AiCostCalculator $costs,
         private readonly AiProviderRegistry $registry,
         private readonly AiProviderCatalog $catalog,
+        private readonly AiExecutionResolver $execution,
     ) {}
 
     /**
@@ -53,31 +55,54 @@ class AiWorkspaceService
 
         $lastActivity = (clone $conversations)->max('updated_at');
 
-        $defaultKey = $this->registry->defaultKey();
+        $catalogKeys = $this->catalog->visibleKeys();
         $savedSettings = AiProviderSetting::query()->where('project_id', $project->id)->get();
+        $savedByKey = $savedSettings->keyBy('provider');
 
-        return [
-            'ai_enabled' => (bool) config('ai.feature_flags.enabled', false),
-            'workspace_enabled' => (bool) config('ai.feature_flags.workspace_enabled', true),
-            'has_provider' => $defaultKey !== '',
-            'default_provider' => $defaultKey !== '' ? $defaultKey : null,
-            'conversation_count' => (int) ($totals->conversation_count ?? 0),
-            'message_count' => (int) ($totals->message_count ?? 0),
-            'prompt_tokens' => (int) ($totals->prompt_tokens ?? 0),
-            'completion_tokens' => (int) ($totals->completion_tokens ?? 0),
-            'total_tokens' => (int) ($totals->total_tokens ?? 0),
-            'template_count' => AiPromptTemplate::query()->where('project_id', $project->id)->count(),
-            // Provider governance counts (real config + workspace state, never fabricated).
-            'catalog_provider_count' => count($this->catalog->visibleKeys()),
-            'executable_provider_count' => count(array_filter($this->catalog->visibleKeys(), fn (string $k) => $this->registry->has($k))),
-            'configured_provider_count' => $savedSettings->filter(fn ($s) => $s->hasSecret())->count(),
-            'enabled_provider_count' => $savedSettings->where('enabled', true)->count(),
-            // Loaded intelligence (from config — the AI runtime catalog).
-            'skills_loaded' => $this->loadedSkillCount(),
-            'capabilities_loaded' => count(AiCapability::cases()),
-            'pricing_configured' => $this->hasAnyPricing(),
-            'last_activity_at' => $lastActivity ? \Illuminate\Support\Carbon::parse($lastActivity)->toIso8601String() : null,
-        ];
+        $platformConfiguredCount = count(array_filter(
+            $catalogKeys,
+            fn (string $k): bool => $this->registry->isConfigured($k),
+        ));
+        $workspaceCredentialsCount = $savedSettings->filter(fn ($s) => $s->hasSecret())->count();
+        $configuredCount = count(array_filter(
+            $catalogKeys,
+            fn (string $k): bool => $this->registry->isConfigured($k)
+                || ($savedByKey->get($k)?->hasSecret() ?? false),
+        ));
+        $enabledCount = count(array_filter(
+            $catalogKeys,
+            function (string $k) use ($savedByKey): bool {
+                $setting = $savedByKey->get($k);
+                if ($setting !== null) {
+                    return (bool) $setting->enabled;
+                }
+
+                return $this->registry->isConfigured($k);
+            },
+        ));
+
+        return array_merge(
+            $this->execution->workspaceSummaryFields($project),
+            [
+                'workspace_enabled' => (bool) config('ai.feature_flags.workspace_enabled', true),
+                'conversation_count' => (int) ($totals->conversation_count ?? 0),
+                'message_count' => (int) ($totals->message_count ?? 0),
+                'prompt_tokens' => (int) ($totals->prompt_tokens ?? 0),
+                'completion_tokens' => (int) ($totals->completion_tokens ?? 0),
+                'total_tokens' => (int) ($totals->total_tokens ?? 0),
+                'template_count' => AiPromptTemplate::query()->where('project_id', $project->id)->count(),
+                'catalog_provider_count' => count($catalogKeys),
+                'executable_provider_count' => count(array_filter($catalogKeys, fn (string $k): bool => $this->registry->has($k))),
+                'configured_provider_count' => $configuredCount,
+                'platform_configured_provider_count' => $platformConfiguredCount,
+                'workspace_credentials_provider_count' => $workspaceCredentialsCount,
+                'enabled_provider_count' => $enabledCount,
+                'skills_loaded' => $this->loadedSkillCount(),
+                'capabilities_loaded' => count(AiCapability::cases()),
+                'pricing_configured' => $this->hasAnyPricing(),
+                'last_activity_at' => $lastActivity ? \Illuminate\Support\Carbon::parse($lastActivity)->toIso8601String() : null,
+            ],
+        );
     }
 
     /**

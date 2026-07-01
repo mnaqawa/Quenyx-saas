@@ -10,6 +10,7 @@ use App\Exceptions\Ai\AiProviderException;
 use App\DataTransferObjects\Compliance\Retrieval\RetrievalQuery;
 use App\DataTransferObjects\Compliance\Reasoning\ComplianceReasoningContext;
 use App\Enums\Compliance\Retrieval\ComplianceRetrievalMode;
+use App\Services\AI\AiExecutionResolver;
 use App\Services\AI\AiProviderRegistry;
 use App\Services\AI\CompliancePromptOrchestrator;
 use App\Services\AI\Skills\AiSkillRouter;
@@ -45,6 +46,7 @@ class ComplianceCopilotService
         private readonly AiSkillRouter $router,
         private readonly CompliancePromptOrchestrator $orchestrator,
         private readonly AiProviderRegistry $registry,
+        private readonly AiExecutionResolver $execution,
         private readonly ComplianceCopilotResponseValidator $validator,
         private readonly ComplianceCopilotCitationVerifier $citationVerifier,
         private readonly ComplianceRetrievalService $retrieval,
@@ -645,6 +647,6 @@ class ComplianceCopilotService
 
     private function aiEnabled(): bool
     {
-        return (bool) config('ai.feature_flags.enabled', false);
+        return $this->execution->isLiveExecution(null);
     }
 }

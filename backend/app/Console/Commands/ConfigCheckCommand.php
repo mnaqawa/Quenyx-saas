@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AI\AiExecutionResolver;
+use App\Services\AI\AiProviderRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -75,6 +77,8 @@ class ConfigCheckCommand extends Command
             $errors[] = 'Database connection failed: '.$e->getMessage();
         }
 
+        $this->validateAiConfig($isProd, $errors, $warnings);
+
         foreach ($warnings as $w) {
             $this->warn('  WARN  '.$w);
         }
@@ -97,5 +101,70 @@ class ConfigCheckCommand extends Command
         $this->info('Config check passed'.($warnings !== [] ? ' (with warnings)' : '').'.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  list<string>  $errors
+     * @param  list<string>  $warnings
+     */
+    private function validateAiConfig(bool $isProd, array &$errors, array &$warnings): void
+    {
+        $registry = app(AiProviderRegistry::class);
+        $execution = app(AiExecutionResolver::class);
+
+        $provider = is_string(env('AI_PROVIDER')) && env('AI_PROVIDER') !== ''
+            ? env('AI_PROVIDER')
+            : $registry->defaultKey();
+
+        $mode = $execution->runtimeMode();
+
+        if ($execution->isExplicitlyDisabled()) {
+            $this->line('  <info>OK</info> AI execution disabled by administrator (AI_ENABLED=false).');
+
+            return;
+        }
+
+        if ($mode === AiExecutionResolver::MODE_LIVE) {
+            $key = $execution->resolveProviderKey();
+            $this->line('  <info>OK</info> AI live execution ('.$key.')');
+
+            if ($key === 'openai' && empty(env('OPENAI_API_KEY'))) {
+                $errors[] = 'AI provider is openai but OPENAI_API_KEY is missing.';
+            }
+
+            if ($key !== '' && $key !== 'mock' && ! $registry->has($key)) {
+                $errors[] = "AI provider '{$key}' has no executable adapter.";
+            }
+
+            return;
+        }
+
+        if ($mode === AiExecutionResolver::MODE_MOCK) {
+            if ($isProd && ! $execution->allowsMock()) {
+                $errors[] = 'Mock AI is active in production without AI_MOCK_ALLOWED — configure OPENAI_API_KEY or set AI_ENABLED=false.';
+            } elseif ($isProd) {
+                $warnings[] = 'Mock AI is allowed in production (AI_MOCK_ALLOWED=true or misconfiguration).';
+            } else {
+                $this->line('  <info>OK</info> AI mock mode (local/testing).');
+            }
+
+            return;
+        }
+
+        if ($mode === AiExecutionResolver::MODE_NO_PROVIDER) {
+            if ($isProd) {
+                if ($this->option('strict')) {
+                    $errors[] = 'No AI provider configured in production (set OPENAI_API_KEY and AI_PROVIDER=openai).';
+                } else {
+                    $warnings[] = 'No AI provider configured (set OPENAI_API_KEY and AI_PROVIDER=openai for live AI).';
+                }
+            } else {
+                $this->line('  <info>OK</info> No AI provider configured.');
+            }
+
+            if ($provider === 'openai' && empty(env('OPENAI_API_KEY'))) {
+                $errors[] = 'AI_PROVIDER=openai requires OPENAI_API_KEY.';
+            }
+        }
     }
 }

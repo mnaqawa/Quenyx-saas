@@ -20,15 +20,13 @@ use Tests\TestCase;
  */
 class AiOrchestrationPlatformTest extends TestCase
 {
-    public function test_default_provider_is_mock_and_ai_is_disabled_by_default(): void
+    public function test_default_provider_is_mock_in_testing_when_no_openai_key(): void
     {
-        $this->assertFalse((bool) config('ai.feature_flags.enabled'));
-        // v1.0.0: ai.default is no longer hardcoded to "mock"; with AI_PROVIDER unset it is null and the
-        // registry resolves the default safely (mock only in local/testing, never as a prod default).
+        $this->assertNull(config('ai.feature_flags.enabled'));
         $this->assertNull(config('ai.default'));
 
         $registry = new AiProviderRegistry();
-        $this->assertSame('mock', $registry->defaultKey()); // testing environment
+        $this->assertSame('mock', $registry->defaultKey());
 
         $provider = $registry->default();
         $this->assertInstanceOf(MockAiProvider::class, $provider);
@@ -61,8 +59,8 @@ class AiOrchestrationPlatformTest extends TestCase
 
         $this->assertTrue($response->mocked);
         $this->assertSame('mock', $response->provider);
-        $this->assertNull($response->model);
-        $this->assertSame(0, $response->usage->totalTokens);
+        $this->assertStringContainsString('[mock]', $response->content);
+        $this->assertStringContainsString('Safe mode', $response->content);
     }
 
     public function test_mock_capabilities_are_advertised(): void

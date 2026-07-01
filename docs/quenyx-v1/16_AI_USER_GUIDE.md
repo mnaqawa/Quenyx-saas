@@ -52,7 +52,8 @@ free‑form chatbot. Business logic (deterministic engines) decides *what* is tr
 
 ## 3. What is feature‑flagged 🟡
 
-- **Real‑model AI** (`AI_ENABLED` / `AI_PROVIDER=openai`) — off by default.
+- **Real‑model AI** — unset `AI_ENABLED` auto-enables when `OPENAI_API_KEY` is set; `AI_ENABLED=false`
+  disables live execution; `AI_PROVIDER=openai` selects OpenAI.
 - **RAG** (`RAG_ENABLED`, `AI_COPILOT_RAG_ENABLED`, `EMBEDDINGS_ENABLED`) — off; metadata‑only with
   deterministic fallback when on.
 - **Demo mode** (`AI_COPILOT_DEMO_MODE`) — surfaces reasoning trace + citations + sources.
@@ -73,18 +74,20 @@ result. AI renders this output; it does not invent it.
 
 - It **cannot** answer without a citable source.
 - It **cannot** access tenant evidence embeddings (not indexed by default).
-- It **cannot** call a model unless an operator enabled it (`AI_ENABLED`).
+- It **cannot** call a model when the administrator disabled AI (`AI_ENABLED=false`) or no provider is
+  configured.
 - It is **not** an autonomous agent and does **not** take actions on your infrastructure.
 
 ## 7. Mock mode vs AI mode
 
-| | Mock mode (default) | AI mode (`AI_ENABLED=true`) |
+| | Mock mode (local/testing) | Live mode (OpenAI configured) |
 |---|---|---|
 | Model calls | none | OpenAI provider |
-| Output | deterministic mock phrasing | model‑phrased, still cited + reasoning‑gated |
-| Safety | maximal (no external calls) | governed by the same guardrails |
+| Output | deterministic safe-mode phrasing | model‑phrased, still cited + reasoning‑gated |
+| When | no provider / dev only | `OPENAI_API_KEY` set and AI not disabled |
 
-Mock mode is safe for demos and produces real, cited structure without contacting any model.
+Mock mode is for local development only. Production with OpenAI configured uses the real provider
+automatically unless `AI_ENABLED=false`.
 
 ## 8. Prompt logging policy
 

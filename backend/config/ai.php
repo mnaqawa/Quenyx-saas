@@ -32,11 +32,12 @@ return [
     'default' => env('AI_PROVIDER'),
 
     /*
-    | Feature flags. Until 'enabled' is true, the orchestration API returns mocked
-    | responses and no real provider is invoked.
+    | Feature flags. AI_ENABLED=false explicitly disables live execution. When AI_ENABLED is unset,
+    | live execution auto-enables when a real provider (e.g. OpenAI with OPENAI_API_KEY) is configured.
+    | Mock is never the silent production default — see AiExecutionResolver.
     */
     'feature_flags' => [
-        'enabled' => (bool) env('AI_ENABLED', false),
+        'enabled' => env('AI_ENABLED'),
         'streaming_enabled' => (bool) env('AI_STREAMING_ENABLED', false),
         'persist_conversations' => (bool) env('AI_PERSIST_CONVERSATIONS', false),
         // When false, user/assistant prompt CONTENT is never written to storage.

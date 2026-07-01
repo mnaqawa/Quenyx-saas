@@ -44,8 +44,9 @@ class MockAiProvider implements AiProviderInterface
 
     public function stream(AiCompletionRequest $request): iterable
     {
+        $content = $this->mockContent();
         yield new AiStreamChunk('[mock] ');
-        yield new AiStreamChunk('AI execution is disabled.');
+        yield new AiStreamChunk($content);
         yield new AiStreamChunk('', true, new AiUsage(0, 0, 0));
     }
 
@@ -73,7 +74,7 @@ class MockAiProvider implements AiProviderInterface
 
     private function mockResponse(AiCompletionRequest $request): AiCompletionResponse
     {
-        $content = '[mock] AI execution is disabled. Enable it via the ai.feature_flags.enabled flag to use a real provider.';
+        $content = $this->mockContent();
         $structured = $request->responseFormat === 'json' ? ['mock' => true, 'message' => $content] : null;
 
         return new AiCompletionResponse(
@@ -88,5 +89,10 @@ class MockAiProvider implements AiProviderInterface
             mocked: true,
             metadata: ['mocked' => true],
         );
+    }
+
+    private function mockContent(): string
+    {
+        return '[mock] Safe mode — no live AI provider is available. Configure OPENAI_API_KEY (and AI_PROVIDER=openai) for live execution, or use local/testing for automatic mock.';
     }
 }

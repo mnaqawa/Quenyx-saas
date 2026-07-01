@@ -12,6 +12,7 @@ use App\Models\Ai\AiConversation;
 use App\Models\Project;
 use App\Repositories\Ai\AiConversationRepository;
 use App\Services\AI\AiAccessAuditLogger;
+use App\Services\AI\AiExecutionResolver;
 use App\Services\AI\AiProviderRegistry;
 use App\Services\AI\CompliancePromptOrchestrator;
 use App\Services\AI\Workspace\AiWorkspaceContextResolver;
@@ -32,6 +33,7 @@ class AiConversationController extends AiWorkspaceBaseController
     public function __construct(
         AiWorkspaceContextResolver $context,
         private readonly AiProviderRegistry $registry,
+        private readonly AiExecutionResolver $execution,
         private readonly CompliancePromptOrchestrator $orchestrator,
         private readonly AiConversationRepository $conversations,
         private readonly AiAccessAuditLogger $auditLogger,
@@ -60,12 +62,13 @@ class AiConversationController extends AiWorkspaceBaseController
             'title' => ['sometimes', 'nullable', 'string', 'max:160'],
         ]);
 
-        $provider = $this->resolveProvider($request);
         $metadata = ! empty($validated['title']) ? ['title' => $validated['title']] : [];
+        $providerKey = $this->execution->resolveProviderKey($project, $validated['provider'] ?? null)
+            ?? ($this->registry->defaultKey() !== '' ? $this->registry->defaultKey() : 'unconfigured');
 
-        $conversation = $this->conversations->start($project, $request->user(), $provider->key(), null, $metadata);
+        $conversation = $this->conversations->start($project, $request->user(), $providerKey, null, $metadata);
 
-        $this->auditLogger->log($request->user(), $project, 'ai_conversation_created', 'ai.conversations.store', $provider->key(), [
+        $this->auditLogger->log($request->user(), $project, 'ai_conversation_created', 'ai.conversations.store', $providerKey, [
             'conversation_uuid' => $conversation->uuid,
         ]);
 
@@ -99,7 +102,7 @@ class AiConversationController extends AiWorkspaceBaseController
         abort_if($conversation === null, 404, 'Conversation not found.');
 
         try {
-            $provider = $this->resolveProvider($request);
+            $provider = $this->execution->resolveProvider($project, $validated['provider'] ?? null);
             $completionRequest = $this->buildRequest($validated, $provider);
             $this->auditLogger->log($request->user(), $project, 'ai_conversation_message', 'ai.conversations.messages', $provider->key(), [
                 'conversation_uuid' => $conversation->uuid,
@@ -129,7 +132,8 @@ class AiConversationController extends AiWorkspaceBaseController
         return $this->ok([
             'conversation_uuid' => $conversation->uuid,
             'message_uuid' => $assistantMessage->uuid,
-            'ai_enabled' => (bool) config('ai.feature_flags.enabled', false),
+            'ai_enabled' => $this->execution->isLiveExecution($project),
+            'runtime_mode' => $this->execution->runtimeMode($project),
             'content' => $response->content,
             'mocked' => $response->mocked,
             'usage' => $response->usage->toArray(),
@@ -137,17 +141,6 @@ class AiConversationController extends AiWorkspaceBaseController
             'model' => $response->model,
             'generated_at' => now()->toIso8601String(),
         ], 201);
-    }
-
-    private function resolveProvider(Request $request): AiProviderInterface
-    {
-        if (! (bool) config('ai.feature_flags.enabled', false)) {
-            return $this->registry->get('mock');
-        }
-
-        $requested = $request->input('provider');
-
-        return $this->registry->get(is_string($requested) && $requested !== '' ? $requested : null);
     }
 
     /**
