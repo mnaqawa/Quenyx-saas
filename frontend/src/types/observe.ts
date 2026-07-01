@@ -348,6 +348,7 @@ export interface CapacityDiagnostics {
   metrics_history_available: boolean
   total_samples: number
   hosts_with_metrics: number
+  configured_target_hosts?: number
   oldest_sample_at: string | null
   newest_sample_at: string | null
   supported_metrics: string[]

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BillingIntegration;
 use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
+use App\Models\ObserveTargetHost;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
@@ -30,7 +31,7 @@ class CapacityPlanningService
 
         if (! Schema::hasTable('observe_metrics_history')) {
             $empty = $this->emptyPayload($range);
-            $empty['diagnostics'] = $this->buildDiagnostics(collect());
+            $empty['diagnostics'] = $this->enrichDiagnostics($this->buildDiagnostics(collect()), $workspaceId);
 
             return $empty;
         }
@@ -61,7 +62,7 @@ class CapacityPlanningService
 
         if ($rows->isEmpty()) {
             $empty = $this->emptyPayload($range);
-            $empty['diagnostics'] = $this->buildDiagnostics($rows);
+            $empty['diagnostics'] = $this->enrichDiagnostics($this->buildDiagnostics($rows), $workspaceId);
 
             return $empty;
         }
@@ -110,7 +111,7 @@ class CapacityPlanningService
             $dataConfidence,
             $options
         );
-        $diagnostics = $this->buildDiagnostics($rows);
+        $diagnostics = $this->enrichDiagnostics($this->buildDiagnostics($rows), $workspaceId);
         $advisor = $this->buildStructuredAdvisor(
             $riskScore,
             $healthStatus,
@@ -1473,6 +1474,39 @@ class CapacityPlanningService
     }
 
     /**
+     * @param  array<string, mixed>  $diagnostics
+     * @return array<string, mixed>
+     */
+    private function enrichDiagnostics(array $diagnostics, int $workspaceId): array
+    {
+        $configured = $this->configuredTargetHostCount($workspaceId);
+        $diagnostics['configured_target_hosts'] = $configured;
+
+        if ($configured === 0 && ($diagnostics['total_samples'] ?? 0) === 0) {
+            $reasons = $diagnostics['insufficient_data_reasons'] ?? [];
+            $hint = 'No hosts configured in Service Checks & Hosts.';
+            if (! in_array($hint, $reasons, true)) {
+                $reasons[] = $hint;
+            }
+            $diagnostics['insufficient_data_reasons'] = $reasons;
+        }
+
+        return $diagnostics;
+    }
+
+    private function configuredTargetHostCount(int $workspaceId): int
+    {
+        if (! Schema::hasTable('observe_targets_hosts')) {
+            return 0;
+        }
+
+        return (int) ObserveTargetHost::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('enabled', true)
+            ->count();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function emptyDiagnostics(): array
@@ -1484,6 +1518,7 @@ class CapacityPlanningService
             'oldest_sample_at' => null,
             'newest_sample_at' => null,
             'supported_metrics' => ['cpu', 'memory', 'storage'],
+            'configured_target_hosts' => 0,
             'insufficient_data_reasons' => Schema::hasTable('observe_metrics_history')
                 ? ['No metric samples in the selected range.']
                 : ['observe_metrics_history table is not migrated.'],

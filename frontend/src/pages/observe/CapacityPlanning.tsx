@@ -134,24 +134,6 @@ export default function CapacityPlanning() {
     })
   }, [load, markUpdated])
 
-  const statusLabel = useCallback(
-    (status: CapacityStatus): string => {
-      switch (status) {
-        case 'critical':
-          return t('cap.status.critical')
-        case 'warning':
-          return t('cap.status.warning')
-        case 'healthy':
-          return t('cap.status.healthy')
-        case 'stable':
-          return t('cap.status.stable')
-        default:
-          return t('cap.insufficientHistory')
-      }
-    },
-    [t],
-  )
-
   const priorityLabel = useCallback(
     (priority: 'high' | 'medium' | 'low') => {
       if (priority === 'high') return t('cap.priority.high')
@@ -211,7 +193,37 @@ export default function CapacityPlanning() {
   const summary = data?.summary
   const health = data?.health
   const historySamples = data?.meta?.history_points ?? data?.diagnostics?.total_samples ?? 0
-  const hasCapacityData = historySamples > 0 || data?.meta.data_available === true
+  const configuredHosts = data?.diagnostics?.configured_target_hosts ?? 0
+  const hasCapacityData = historySamples > 0 || data?.meta?.data_available === true
+  const noDataLabel = t('cap.noDataYet')
+  const buildingHistoryLabel = t('cap.insufficientHistory')
+  const emptyValueLabel = hasCapacityData ? buildingHistoryLabel : noDataLabel
+
+  const statusLabelFor = useCallback(
+    (status: CapacityStatus): string => {
+      if (status === 'insufficient_data') {
+        return hasCapacityData ? buildingHistoryLabel : noDataLabel
+      }
+      switch (status) {
+        case 'critical':
+          return t('cap.status.critical')
+        case 'warning':
+          return t('cap.status.warning')
+        case 'healthy':
+          return t('cap.status.healthy')
+        case 'stable':
+          return t('cap.status.stable')
+        default:
+          return noDataLabel
+      }
+    },
+    [buildingHistoryLabel, hasCapacityData, noDataLabel, t],
+  )
+
+  const emptyStateDescription =
+    configuredHosts === 0
+      ? t('cap.noDataYetNoHostsDesc')
+      : t('cap.noDataYetDesc')
 
   const historicalForecast = (data?.overview.forecast ?? []).filter((p) => !p.projected)
   const projectedForecast = data?.overview.forecast ?? []
@@ -369,30 +381,30 @@ export default function CapacityPlanning() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CapacitySummaryCard
           title={t('cap.kpi.cpuRunway')}
-          value={formatRunway(summary?.cpu_runway_months ?? null, summary?.statuses.cpu ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
+          value={formatRunway(summary?.cpu_runway_months ?? null, summary?.statuses.cpu ?? 'insufficient_data', t('cap.months'), emptyValueLabel, t('cap.runway.stable'))}
           status={summary?.statuses.cpu ?? 'insufficient_data'}
-          statusLabel={statusLabel(summary?.statuses.cpu ?? 'insufficient_data')}
+          statusLabel={statusLabelFor(summary?.statuses.cpu ?? 'insufficient_data')}
           detail={summary?.statuses.cpu === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.memoryRunway')}
-          value={formatRunway(summary?.memory_runway_months ?? null, summary?.statuses.memory ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
+          value={formatRunway(summary?.memory_runway_months ?? null, summary?.statuses.memory ?? 'insufficient_data', t('cap.months'), emptyValueLabel, t('cap.runway.stable'))}
           status={summary?.statuses.memory ?? 'insufficient_data'}
-          statusLabel={statusLabel(summary?.statuses.memory ?? 'insufficient_data')}
+          statusLabel={statusLabelFor(summary?.statuses.memory ?? 'insufficient_data')}
           detail={summary?.statuses.memory === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.storageRunway')}
-          value={formatRunway(summary?.storage_runway_months ?? null, summary?.statuses.storage ?? 'insufficient_data', t('cap.months'), t('cap.insufficientHistory'), t('cap.runway.stable'))}
+          value={formatRunway(summary?.storage_runway_months ?? null, summary?.statuses.storage ?? 'insufficient_data', t('cap.months'), emptyValueLabel, t('cap.runway.stable'))}
           status={summary?.statuses.storage ?? 'insufficient_data'}
-          statusLabel={statusLabel(summary?.statuses.storage ?? 'insufficient_data')}
+          statusLabel={statusLabelFor(summary?.statuses.storage ?? 'insufficient_data')}
           detail={summary?.statuses.storage === 'stable' ? t('cap.runway.stableDetail') : undefined}
         />
         <CapacitySummaryCard
           title={t('cap.kpi.riskScore')}
-          value={formatRisk(summary?.capacity_risk_score ?? null, t('cap.insufficientHistory'))}
+          value={formatRisk(summary?.capacity_risk_score ?? null, emptyValueLabel)}
           status={summary?.statuses.risk ?? 'insufficient_data'}
-          statusLabel={statusLabel(summary?.statuses.risk ?? 'insufficient_data')}
+          statusLabel={statusLabelFor(summary?.statuses.risk ?? 'insufficient_data')}
         />
       </div>
 
@@ -403,7 +415,7 @@ export default function CapacityPlanning() {
           {!hasCapacityData ? (
             <EmptyState
               title={t('cap.noDataYet')}
-              description={t('cap.noDataYetDesc')}
+              description={emptyStateDescription}
             />
           ) : (
             <CapacityHealthPanel health={health} labels={healthLabels} />
@@ -416,7 +428,7 @@ export default function CapacityPlanning() {
           {!hasCapacityData ? (
             <EmptyState
               title={t('cap.noDataYet')}
-              description={t('cap.noDataYetDesc')}
+              description={emptyStateDescription}
             />
           ) : (
             <>
@@ -440,8 +452,8 @@ export default function CapacityPlanning() {
                 subtitle={t('cap.forecastDesc')}
                 badge={rangeOptions.find((o) => o.value === range)?.label}
                 hasData={hasForecast}
-                emptyTitle={t('cap.collecting.title')}
-                emptyDescription={t('cap.noHistoryDesc')}
+                emptyTitle={hasCapacityData ? t('cap.collecting.title') : t('cap.noDataYet')}
+                emptyDescription={hasCapacityData ? t('cap.noHistoryDesc') : emptyStateDescription}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={projectedForecast} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -469,8 +481,8 @@ export default function CapacityPlanning() {
                 title={t('cap.growthTitle')}
                 subtitle={t('cap.growthDesc')}
                 hasData={growthTrends.length > 0}
-                emptyTitle={t('cap.collecting.title')}
-                emptyDescription={t('cap.noHistoryDesc')}
+                emptyTitle={hasCapacityData ? t('cap.collecting.title') : t('cap.noDataYet')}
+                emptyDescription={hasCapacityData ? t('cap.noHistoryDesc') : emptyStateDescription}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -591,6 +603,7 @@ export default function CapacityPlanning() {
             historyAvailable: t('cap.diagnostics.historyAvailable'),
             totalSamples: t('cap.diagnostics.totalSamples'),
             hostsWithMetrics: t('cap.diagnostics.hostsWithMetrics'),
+            configuredHosts: t('cap.diagnostics.configuredHosts'),
             oldestSample: t('cap.diagnostics.oldestSample'),
             newestSample: t('cap.diagnostics.newestSample'),
             supportedMetrics: t('cap.diagnostics.supportedMetrics'),

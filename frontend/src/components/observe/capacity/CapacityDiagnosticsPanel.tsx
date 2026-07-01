@@ -7,6 +7,7 @@ interface CapacityDiagnosticsPanelProps {
     historyAvailable: string
     totalSamples: string
     hostsWithMetrics: string
+    configuredHosts: string
     oldestSample: string
     newestSample: string
     supportedMetrics: string
@@ -32,6 +33,10 @@ export function CapacityDiagnosticsPanel({ diagnostics, labels }: CapacityDiagno
         <div>
           <dt className="text-white/45">{labels.hostsWithMetrics}</dt>
           <dd className="tabular-nums">{diagnostics.hosts_with_metrics}</dd>
+        </div>
+        <div>
+          <dt className="text-white/45">{labels.configuredHosts}</dt>
+          <dd className="tabular-nums">{diagnostics.configured_target_hosts ?? 0}</dd>
         </div>
         <div>
           <dt className="text-white/45">{labels.oldestSample}</dt>

@@ -261,6 +261,22 @@ class ObserveTargetsController extends Controller
 
         // Sanitize and validate hosts; resolve service_key -> check_command + overrides -> check_args
         $hostsData = $request->input('hosts', []);
+        $existingHostCount = ObserveTargetHost::where('workspace_id', $project->id)->count();
+        if ($existingHostCount > 0 && count($hostsData) === 0 && ! $request->boolean('confirm_empty')) {
+            SafeLog::warning('Observe targets save rejected: empty host list would remove configured targets', [
+                'workspace_id' => $project->id,
+                'existing_hosts' => $existingHostCount,
+                'user_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Saving an empty host list would remove all configured hosts. Re-add your hosts or send confirm_empty=true to proceed intentionally.',
+                'code' => 'empty_targets_blocked',
+                'existing_host_count' => $existingHostCount,
+            ], 409);
+        }
+
         $sanitizedHostNames = [];
         $errors = [];
 
