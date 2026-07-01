@@ -4,12 +4,14 @@ import { createProxyMiddleware } from 'http-proxy-middleware'
 import { hashToken } from './cache'
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'
-const OBSERVE_ENGINE_URL = process.env.OBSERVE_ENGINE_URL || ''
 
-/** True if path (under /api) is an observe API (QynSight microservice). */
-function isObservePath(req: Request): boolean {
-  const path = (req.url || req.path || '').split('?')[0]
-  return /^\/?(workspaces|projects)\/[^/]+\/observe(\/|$)/.test(path)
+// QynSight observe APIs are served natively by the Laravel backend (observe:run-checks).
+// OBSERVE_ENGINE_URL was used for a legacy split-engine deployment and MUST NOT be set in
+// production — if set, observe routes were proxied to a stale service (empty hosts, 60s hangs).
+if (process.env.OBSERVE_ENGINE_URL) {
+  console.warn(
+    '[gateway] OBSERVE_ENGINE_URL is set but IGNORED. All /api/* traffic including observe goes to BACKEND_BASE_URL. Unset OBSERVE_ENGINE_URL in production.'
+  )
 }
 
 // Create keep-alive agent for better connection reuse
@@ -22,17 +24,15 @@ const keepAliveAgent = new http.Agent({
 
 /**
  * Create proxy middleware for forwarding requests to backend.
- * When OBSERVE_ENGINE_URL is set, observe API requests (/api/workspaces/:id/observe/*, /api/projects/:id/observe/*)
- * are sent to the observe engine service; all other /api requests go to BACKEND_BASE_URL.
+ * All /api traffic (including QynSight observe) is sent to BACKEND_BASE_URL.
  */
 export function createBackendProxy() {
   return createProxyMiddleware({
     target: BACKEND_BASE_URL,
-    router: (req: Request) => (OBSERVE_ENGINE_URL && isObservePath(req) ? OBSERVE_ENGINE_URL : BACKEND_BASE_URL),
     changeOrigin: true,
     xfwd: true,
-    proxyTimeout: 60000,
-    timeout: 60000,
+    proxyTimeout: 35000,
+    timeout: 35000,
     selfHandleResponse: false,
     followRedirects: false,
     agent: keepAliveAgent,
@@ -92,7 +92,7 @@ export function createBackendProxy() {
       }
       
       console.error(
-        `[HPM] Proxy error: ${err.message} | ` +
+        `[${new Date().toISOString()}] [HPM] Proxy error: ${err.message} | ` +
         `Method: ${method} | ` +
         `URL: ${url} | ` +
         `Target: ${target} | ` +

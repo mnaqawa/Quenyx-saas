@@ -9,7 +9,7 @@ use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
+use App\Support\SafeLog;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
@@ -95,7 +95,7 @@ class AuthController extends Controller
                 throw $e;
             }
         } catch (\Exception $e) {
-            Log::error('AuthController@register failed', [
+            SafeLog::error('AuthController@register failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -117,7 +117,7 @@ class AuthController extends Controller
         // Safe login telemetry (never log plaintext credentials).
         $email = (string) $request->input('email', '');
         $maskedEmail = $email !== '' ? preg_replace('/(^.).*(@.*$)/', '$1***$2', $email) : null;
-        Log::info('Login request received', [
+        SafeLog::info('Login request received', [
             'has_email' => $request->has('email'),
             'has_password' => $request->has('password'),
             'email_masked' => $maskedEmail,
@@ -142,7 +142,7 @@ class AuthController extends Controller
             // same as the "wrong password" path instead of returning immediately.
             Hash::check($credentials['password'], self::DUMMY_PASSWORD_HASH);
 
-            Log::warning('Login failed', [
+            SafeLog::warning('Login failed', [
                 'reason' => 'user_not_found',
                 'email_masked' => $maskedEmail,
             ]);
@@ -153,7 +153,7 @@ class AuthController extends Controller
         }
 
         if (!Hash::check($credentials['password'], $user->password)) {
-            Log::warning('Login failed', [
+            SafeLog::warning('Login failed', [
                 'reason' => 'password_mismatch',
                 'email_masked' => $maskedEmail,
                 'user_id' => $user->id,
@@ -167,7 +167,7 @@ class AuthController extends Controller
         try {
             $token = $user->createToken('api')->plainTextToken;
         } catch (\Throwable $e) {
-            Log::error('Login token creation failed', [
+            SafeLog::error('Login token creation failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);

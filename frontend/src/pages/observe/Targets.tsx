@@ -796,7 +796,7 @@ export default function Targets() {
     )
   }
 
-  if (loading) {
+  if (loading && hosts.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-sm text-white/60">{t('targets.loading')}</div>

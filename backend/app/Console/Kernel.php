@@ -18,22 +18,23 @@ class Kernel extends ConsoleKernel
         // QynSight engine: run native checks; due services only (respects per-service interval)
         $schedule->command('observe:run-checks')
             ->everyTwoMinutes()
+            ->when(fn () => array_key_exists('observe:run-checks', \Illuminate\Support\Facades\Artisan::all()))
             ->withoutOverlapping(120)
             ->appendOutputTo(storage_path('logs/scheduler.log'));
 
         $schedule->command('observe:evaluate-alerts')
             ->everyMinute()
+            ->when(fn () => array_key_exists('observe:evaluate-alerts', \Illuminate\Support\Facades\Artisan::all()))
             ->withoutOverlapping(90)
             ->onFailure(function () {
-                \Illuminate\Support\Facades\Log::error('observe:evaluate-alerts scheduler run failed');
+                \App\Support\SafeLog::error('observe:evaluate-alerts scheduler run failed');
             })
             ->appendOutputTo(storage_path('logs/scheduler.log'));
 
-        // GA HARDENING: prune expired/revoked personal access tokens daily so the
-        // personal_access_tokens table does not accumulate dead rows once token
-        // expiration is enabled (see config/sanctum.php).
+        // GA HARDENING: prune expired/revoked personal access tokens daily (when Sanctum provides the command).
         $schedule->command('sanctum:prune-expired --hours=24')
             ->daily()
+            ->when(fn () => array_key_exists('sanctum:prune-expired', \Illuminate\Support\Facades\Artisan::all()))
             ->appendOutputTo(storage_path('logs/scheduler.log'));
     }
 

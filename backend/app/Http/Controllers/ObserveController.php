@@ -144,6 +144,43 @@ class ObserveController extends Controller
         // Fetch all matching services (native engine only)
         $deduped = $query->get()->values();
 
+        // When checks have not run yet, show configured targets as pending so the Services UI is not empty.
+        if ($deduped->isEmpty()) {
+            $pending = $this->pendingServicesFromTargets(
+                $project,
+                $q,
+                $statusParam,
+                $problemsOnly,
+                $limit
+            );
+            if ($pending !== null) {
+                $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
+                $monitoringConfigured = true;
+                $lastPollAt = $nativeMeta?->last_poll_at?->toIso8601String();
+                $engineUnreachable = $nativeMeta && trim((string) ($nativeMeta->error ?? '')) !== '';
+                $engineUnreachableReason = $engineUnreachable
+                    ? (trim((string) ($nativeMeta->error ?? '')) ?: 'Monitoring engine could not be reached.')
+                    : null;
+                $staleThresholdSeconds = max(60, (int) config('observe.stale_threshold_seconds', 300));
+                $pollAt = $nativeMeta?->last_poll_at;
+                $stale = ! $engineUnreachable
+                    && ($pollAt === null || $pollAt->lt(now()->subSeconds($staleThresholdSeconds)));
+
+                return response()->json([
+                    'success' => true,
+                    'data' => array_merge($pending, [
+                        'last_poll_at' => $lastPollAt,
+                        'source_timestamp' => $lastPollAt,
+                        'engine_unreachable' => $engineUnreachable,
+                        'engine_unreachable_reason' => $engineUnreachableReason,
+                        'stale' => $stale,
+                        'monitoring_configured' => $monitoringConfigured,
+                        'meta' => ['source' => 'targets_pending'],
+                    ]),
+                ]);
+            }
+        }
+
         // Sort by host name first (group by host), then by severity within each host
         $severityOrder = fn ($s) => match ($s->state) {
             'critical' => 1,
@@ -1063,5 +1100,126 @@ class ObserveController extends Controller
             }
         }
         return ['nodes' => $nodes, 'connections' => $connections];
+    }
+
+    /**
+     * Build pending service rows from configured targets when native checks have not populated observe_services yet.
+     *
+     * @return array{hostTotals: array<string, int>, serviceTotals: array<string, int>, items: array<int, array<string, mixed>>}|null
+     */
+    private function pendingServicesFromTargets(
+        Project $project,
+        mixed $q,
+        mixed $statusParam,
+        bool $problemsOnly,
+        int $limit
+    ): ?array {
+        $targets = ObserveTargetHost::with(['services' => fn ($q) => $q->where('enabled', true)])
+            ->where('workspace_id', $project->id)
+            ->where('enabled', true)
+            ->orderBy('name')
+            ->get();
+
+        if ($targets->isEmpty()) {
+            return null;
+        }
+
+        $prefix = 'ws' . $project->id . '-';
+        $stateCode = fn (string $state): int => match ($state) {
+            'ok' => 0,
+            'warning' => 1,
+            'critical' => 2,
+            'unknown' => 3,
+            'pending' => 4,
+            'unreachable' => 9,
+            default => 4,
+        };
+
+        $rows = [];
+        foreach ($targets as $host) {
+            $hostName = $prefix . $host->name;
+            if ($host->services->isEmpty()) {
+                $rows[] = [
+                    'host' => $hostName,
+                    'service' => 'Host alive',
+                    'status' => 'pending',
+                ];
+                continue;
+            }
+            foreach ($host->services as $service) {
+                $rows[] = [
+                    'host' => $hostName,
+                    'service' => $service->name,
+                    'status' => 'pending',
+                ];
+            }
+        }
+
+        if ($q && trim((string) $q) !== '') {
+            $term = strtolower(trim((string) $q));
+            $rows = array_values(array_filter(
+                $rows,
+                fn (array $row) => str_contains(strtolower($row['host']), $term)
+                    || str_contains(strtolower($row['service']), $term)
+            ));
+        }
+
+        if ($statusParam) {
+            $statuses = is_array($statusParam) ? $statusParam : explode(',', (string) $statusParam);
+            $statuses = array_map(fn ($s) => trim((string) $s), $statuses);
+            $rows = array_values(array_filter($rows, fn (array $row) => in_array($row['status'], $statuses, true)));
+        }
+
+        if ($problemsOnly) {
+            $rows = array_values(array_filter(
+                $rows,
+                fn (array $row) => in_array($row['status'], ['warning', 'critical', 'unknown', 'unreachable'], true)
+            ));
+        }
+
+        $items = array_slice(array_map(function (array $row) use ($stateCode) {
+            return [
+                'host' => $row['host'],
+                'service' => $row['service'],
+                'status' => $row['status'],
+                'state_code' => $stateCode($row['status']),
+                'lastCheckAt' => '',
+                'nextCheckAt' => '',
+                'durationSec' => 0,
+                'attempt' => '0/3',
+                'currentAttempt' => 0,
+                'maxAttempts' => 3,
+                'stateType' => '',
+                'info' => 'Awaiting first check',
+                'status_information' => 'Awaiting first check',
+                'pluginOutput' => '',
+                'longPluginOutput' => '',
+                'perfData' => '',
+                'checkCommand' => '',
+                'checkLatencySec' => null,
+                'executionTimeSec' => null,
+                'lastStateChangeAt' => '',
+            ];
+        }, $rows), 0, $limit);
+
+        $hostNames = array_unique(array_column($rows, 'host'));
+
+        return [
+            'hostTotals' => [
+                'up' => 0,
+                'down' => 0,
+                'unreachable' => 0,
+                'pending' => count($hostNames),
+            ],
+            'serviceTotals' => [
+                'ok' => 0,
+                'warning' => 0,
+                'critical' => 0,
+                'unknown' => 0,
+                'pending' => count($rows),
+                'unreachable' => 0,
+            ],
+            'items' => $items,
+        ];
     }
 }

@@ -51,6 +51,10 @@ php artisan route:cache
 php artisan view:cache
 ```
 
+**Note:** `view:cache` requires `backend/resources/views/` to exist (a placeholder `welcome.blade.php` is included). If deploy fails with *directory does not exist*, pull latest backend or create the directory before caching.
+
+**QynSight / observe routing:** Do **not** set `OBSERVE_ENGINE_URL` on the gateway. All `/api/*` traffic (including observe) must go to `BACKEND_BASE_URL` only. Legacy split-engine routing caused empty hosts and 60s hangs.
+
 Set `SEED_ADMIN_PASSWORD` in backend `.env` before running seeds.
 Seed admin login will be: `admin@quenyx.test` / `<SEED_ADMIN_PASSWORD>`.
 

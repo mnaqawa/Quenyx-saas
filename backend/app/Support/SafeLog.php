@@ -37,12 +37,25 @@ final class SafeLog
     /**
      * @param  array<string, mixed>  $context
      */
+    public static function debug(string $message, array $context = []): void
+    {
+        self::write('debug', $message, $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
     public static function write(string $level, string $message, array $context = []): void
     {
+        $context = array_merge([
+            'logged_at' => now()->toIso8601String(),
+            'logged_at_local' => now()->format('Y-m-d H:i:s T'),
+        ], $context);
+
         try {
             Log::log($level, $message, $context);
         } catch (Throwable $e) {
-            error_log("[{$level}] {$message} (log write failed: {$e->getMessage()})");
+            error_log("[{$level}] {$message} @ {$context['logged_at_local']} (log write failed: {$e->getMessage()})");
         }
     }
 }

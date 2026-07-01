@@ -11,16 +11,18 @@ const PORT = process.env.GATEWAY_PORT || 4000
 // Request logging middleware (before body parsing to avoid consuming stream)
 app.use((req: Request, res: Response, next) => {
   const startTime = Date.now()
-  
+  const startedAt = new Date().toISOString()
+
   res.on('finish', () => {
     const duration = Date.now() - startTime
     const status = res.statusCode
     const method = req.method
     const path = req.path
-    
-    console.log(`${method} ${path} ${status} ${duration}ms`)
+    const finishedAt = new Date().toISOString()
+
+    console.log(`[${finishedAt}] ${method} ${path} ${status} ${duration}ms (started ${startedAt})`)
   })
-  
+
   next()
 })
 
@@ -64,9 +66,7 @@ app.get('/ready', async (req: Request, res: Response) => {
 app.listen(PORT, () => {
   console.log(`Gateway server running on port ${PORT}`)
   console.log(`Backend URL: ${process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000'}`)
-  if (process.env.OBSERVE_ENGINE_URL) {
-    console.log(`Observe engine (QynSight) URL: ${process.env.OBSERVE_ENGINE_URL}`)
-  }
+  console.log(`QynSight observe APIs: proxied to BACKEND_BASE_URL (native Laravel)`)
   console.log(`Entitlements cache TTL: ${process.env.ENTITLEMENTS_CACHE_TTL_MS || 30000}ms`)
 })
 

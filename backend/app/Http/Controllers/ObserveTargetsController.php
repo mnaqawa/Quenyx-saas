@@ -14,7 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Jobs\RunObserveChecksJob;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Support\SafeLog;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
@@ -156,7 +156,7 @@ class ObserveTargetsController extends Controller
                         );
                         $configuredSecrets = $secrets->configuredSecretKeys($check_args, $definition);
                         if (config('app.debug')) {
-                            Log::debug('ObserveTargets GET overrides', [
+                            SafeLog::debug('ObserveTargets GET overrides', [
                                 'workspace_id' => $project->id,
                                 'service_id' => $service->id,
                                 'service_name' => $service->name,
@@ -186,6 +186,12 @@ class ObserveTargetsController extends Controller
                     'updated_at' => $host->updated_at->toIso8601String(),
                 ];
             });
+
+        SafeLog::info('Observe targets listed', [
+            'workspace_id' => $project->id,
+            'host_count' => $hosts->count(),
+            'user_id' => $request->user()?->id,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -288,7 +294,7 @@ class ObserveTargetsController extends Controller
                 $serviceData['check_args'] = $normalizedCheckArgs;
 
                 if (config('app.debug')) {
-                    Log::debug('ObserveTargets PUT check_args assigned (validation loop)', [
+                    SafeLog::debug('ObserveTargets PUT check_args assigned (validation loop)', [
                         'workspace_id' => $project->id,
                         'service_name' => $serviceData['name'] ?? null,
                         'service_key' => $serviceKey ?? null,
@@ -403,7 +409,7 @@ class ObserveTargetsController extends Controller
                         }
 
                         if (config('app.debug')) {
-                            Log::debug('ObserveTargets PUT overrides (before save)', [
+                            SafeLog::debug('ObserveTargets PUT overrides (before save)', [
                                 'workspace_id' => $project->id,
                                 'service_name' => $serviceData['name'] ?? null,
                                 'service_key_to_store' => $serviceKeyToStore,
@@ -426,7 +432,7 @@ class ObserveTargetsController extends Controller
                             $updateData['retry_interval'] = isset($serviceData['retry_interval']) ? (int) $serviceData['retry_interval'] : null;
                         }
                         if (config('app.debug')) {
-                            Log::debug('ObserveTargets PUT (before save)', [
+                            SafeLog::debug('ObserveTargets PUT (before save)', [
                                 'workspace_id' => $project->id,
                                 'service_name' => $serviceData['name'] ?? null,
                                 'service_key' => $serviceKeyToStore,
@@ -450,7 +456,7 @@ class ObserveTargetsController extends Controller
                         $storedDecoded = $afterSave ? ($afterSave->check_args ?? []) : [];
 
                         if (config('app.debug')) {
-                            Log::debug('ObserveTargets PUT overrides (after save)', [
+                            SafeLog::debug('ObserveTargets PUT overrides (after save)', [
                                 'workspace_id' => $project->id,
                                 'service_id' => $service->id,
                                 'service_name' => $service->name,
@@ -501,7 +507,7 @@ class ObserveTargetsController extends Controller
                         $nmapService->runScan($host);
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('Nmap port scan failed', ['host_id' => $hostId, 'error' => $e->getMessage()]);
+                    SafeLog::warning('Nmap port scan failed', ['host_id' => $hostId, 'error' => $e->getMessage()]);
                 }
             }
 
@@ -564,7 +570,7 @@ class ObserveTargetsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('ObserveTargetsController@update failed', [
+            SafeLog::error('ObserveTargetsController@update failed', [
                 'workspace_id' => $project->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

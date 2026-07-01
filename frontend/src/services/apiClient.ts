@@ -47,6 +47,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 class ApiClient {
+  private static readonly REQUEST_TIMEOUT_MS = 30_000
+
   private baseUrl: string
 
   constructor(baseUrl: string) {
@@ -71,13 +73,18 @@ class ApiClient {
       mergedHeaders.Authorization = `Bearer ${token}`
     }
 
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), ApiClient.REQUEST_TIMEOUT_MS)
+
     const config: RequestInit = {
       ...options,
       headers: mergedHeaders,
+      signal: options.signal ?? controller.signal,
     }
 
     try {
       const response = await fetch(url, config)
+      window.clearTimeout(timeoutId)
 
       // Log request details for debugging (only in development)
       if (import.meta.env.DEV) {
@@ -261,7 +268,15 @@ class ApiClient {
 
       throw new Error(`Invalid API response: success=${String((data as { success?: unknown }).success)}`)
     } catch (raw: unknown) {
+      window.clearTimeout(timeoutId)
       if (raw instanceof Error) {
+        if (raw.name === 'AbortError') {
+          const timeoutError = new Error('Request timed out') as RequestError
+          timeoutError.status = 504
+          timeoutError.url = url
+          timeoutError.userMessage = 'Request timed out'
+          throw timeoutError
+        }
         if (
           raw.message.includes('Failed to fetch') ||
           raw.message.includes('NetworkError') ||
