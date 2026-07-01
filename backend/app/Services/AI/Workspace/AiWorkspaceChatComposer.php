@@ -23,7 +23,6 @@ class AiWorkspaceChatComposer
 
     /**
      * @param  array<string, mixed>  $validated
-     */
      * @param  list<array{role: string, content: string}>  $priorTurns
      */
     public function compose(Project $project, array $validated, array $priorTurns = []): AiCompletionRequest
