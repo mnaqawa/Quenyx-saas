@@ -152,7 +152,7 @@ export function useEnterpriseDashboard(
     const hostTotals = observeData?.hostTotals
     const serviceTotals = observeData?.serviceTotals
     const hostCount = hostTotals
-      ? hostTotals.ok + hostTotals.warning + hostTotals.critical + hostTotals.unknown + hostTotals.pending
+      ? hostTotals.up + hostTotals.down + hostTotals.unreachable + hostTotals.pending
       : 0
     const problems = serviceTotals
       ? serviceTotals.warning + serviceTotals.critical + serviceTotals.unknown

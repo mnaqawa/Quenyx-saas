@@ -50,7 +50,7 @@ export function WorkspaceSelector() {
   const hostCount = useMemo(() => {
     const ht = observeData?.hostTotals
     if (!ht) return 0
-    return ht.ok + ht.warning + ht.critical + ht.unknown + ht.pending
+    return ht.up + ht.down + ht.unreachable + ht.pending
   }, [observeData?.hostTotals])
 
   const problemCount = useMemo(() => {

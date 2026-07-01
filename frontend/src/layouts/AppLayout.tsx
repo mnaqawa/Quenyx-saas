@@ -29,7 +29,7 @@ function AppLayoutInner() {
     () => (typeof window === 'undefined' ? true : window.innerWidth >= 768),
   )
   const { t } = useLanguage()
-  const { workspaces, selectedWorkspaceId, setSelectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey, isLoadingWorkspaces, workspacesError } = useWorkspaceContext()
+  const { selectedWorkspaceId, modulesWithAccess, isLoadingModules, modulesError, allowedByKey } = useWorkspaceContext()
   const { startTour } = useProductTour()
   const { isOnboarded } = useOnboarding()
   const [isAiAgentOpen, setIsAiAgentOpen] = useState(false)
