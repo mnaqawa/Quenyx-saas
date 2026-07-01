@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -75,7 +75,7 @@ export default function CapacityPlanning() {
   const [range, setRange] = useState<CapacityPlanningRange>('30d')
   const [activeTab, setActiveTab] = useState<CapacityTab>('overview')
   const [data, setData] = useState<CapacityPlanningResponse | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -121,8 +121,17 @@ export default function CapacityPlanning() {
     { defaultInterval: 'off', storageKey: 'qynsight_capacity_auto_refresh' },
   )
 
+  const hasLoadedRef = useRef(false)
+
   useEffect(() => {
-    void load(false).then(() => markUpdated())
+    hasLoadedRef.current = false
+  }, [wsId])
+
+  useEffect(() => {
+    void load(!hasLoadedRef.current).then(() => {
+      hasLoadedRef.current = true
+      markUpdated()
+    })
   }, [load, markUpdated])
 
   const statusLabel = useCallback(

@@ -255,12 +255,16 @@ export function useAlertRules(refreshKey = 0) {
   const [rules, setRules] = useState<AlertRule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
     if (!selectedWorkspaceId) {
       setRules([])
       setLoading(false)
       setError(false)
+      prevWorkspaceRef.current = selectedWorkspaceId
+      hasLoadedRef.current = false
       return
     }
 
@@ -269,12 +273,22 @@ export function useAlertRules(refreshKey = 0) {
         setRules(alertRulesFixture)
         setLoading(false)
         setError(false)
+        hasLoadedRef.current = true
       }, 300)
       return () => clearTimeout(timer)
     }
 
+    const workspaceChanged = prevWorkspaceRef.current !== selectedWorkspaceId
+    prevWorkspaceRef.current = selectedWorkspaceId
+    if (workspaceChanged) {
+      hasLoadedRef.current = false
+    }
+    const isBackground = !workspaceChanged && hasLoadedRef.current
+
     let cancelled = false
-    setLoading(true)
+    if (!isBackground) {
+      setLoading(true)
+    }
     setError(false)
     observeService
       .getAlertRules(Number(selectedWorkspaceId))
@@ -282,6 +296,7 @@ export function useAlertRules(refreshKey = 0) {
         if (!cancelled) {
           setRules(Array.isArray(data) ? data : [])
           setError(false)
+          hasLoadedRef.current = true
         }
       })
       .catch(() => {
@@ -301,12 +316,16 @@ export function useAlertSummary(refreshKey = 0) {
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
     if (!selectedWorkspaceId) {
       setSummary(null)
       setLoading(false)
       setError(false)
+      prevWorkspaceRef.current = selectedWorkspaceId
+      hasLoadedRef.current = false
       return
     }
 
@@ -315,12 +334,22 @@ export function useAlertSummary(refreshKey = 0) {
         setSummary(alertSummaryFixture)
         setLoading(false)
         setError(false)
+        hasLoadedRef.current = true
       }, 200)
       return () => clearTimeout(timer)
     }
 
+    const workspaceChanged = prevWorkspaceRef.current !== selectedWorkspaceId
+    prevWorkspaceRef.current = selectedWorkspaceId
+    if (workspaceChanged) {
+      hasLoadedRef.current = false
+    }
+    const isBackground = !workspaceChanged && hasLoadedRef.current
+
     let cancelled = false
-    setLoading(true)
+    if (!isBackground) {
+      setLoading(true)
+    }
     setError(false)
     observeService
       .getAlertSummary(Number(selectedWorkspaceId))
@@ -328,6 +357,7 @@ export function useAlertSummary(refreshKey = 0) {
         if (!cancelled) {
           setSummary(data ?? null)
           setError(false)
+          hasLoadedRef.current = true
         }
       })
       .catch(() => {
@@ -554,15 +584,30 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
   const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoading, setTargetsLoading] = useState(true)
   const [targetsError, setTargetsError] = useState(false)
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasTargetsRef = useRef(false)
 
   useEffect(() => {
     if (!workspaceId) {
       setTargets([])
       setTargetsLoading(false)
       setTargetsError(false)
+      prevWorkspaceRef.current = workspaceId
+      hasTargetsRef.current = false
       return
     }
-    setTargetsLoading(true)
+
+    const workspaceChanged = prevWorkspaceRef.current !== workspaceId
+    prevWorkspaceRef.current = workspaceId
+    if (workspaceChanged) {
+      hasTargetsRef.current = false
+      setTargets([])
+    }
+    const isBackground = !workspaceChanged && hasTargetsRef.current
+
+    if (!isBackground) {
+      setTargetsLoading(true)
+    }
     setTargetsError(false)
     let cancelled = false
     observeService
@@ -571,6 +616,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
         if (!cancelled) {
           setTargets(extractTargetsList(list))
           setTargetsError(false)
+          hasTargetsRef.current = true
         }
       })
       .catch(() => {
@@ -625,7 +671,12 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     })
   }, [targets, hostToStatus])
 
-  return { hosts, loading: targetsLoading || servicesLoading, error: !!servicesError || targetsError }
+  return {
+    hosts,
+    servicesData,
+    loading: (targetsLoading && targets.length === 0) || (servicesLoading && servicesData == null),
+    error: !!servicesError || targetsError,
+  }
 }
 
 /** Infrastructure Map: connections + optional integration-sourced topology from Observe API */
@@ -639,35 +690,52 @@ export function useObserveConnections(
   const [data, setData] = useState<import('../types/observe').InfrastructureConnectionsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
     if (!workspaceId) {
       setData(null)
       setLoading(false)
       setError(null)
+      prevWorkspaceRef.current = workspaceId
+      hasLoadedRef.current = false
       return
     }
-    setData(null)
-    setLoading(true)
-    setError(null)
+
+    const workspaceChanged = prevWorkspaceRef.current !== workspaceId
+    prevWorkspaceRef.current = workspaceId
+    if (workspaceChanged) {
+      setData(null)
+      hasLoadedRef.current = false
+    }
+    const isBackground = !workspaceChanged && hasLoadedRef.current
+
     let cancelled = false
     const fetchConnections = () => {
       observeService
         .getInfrastructureConnections(Number(workspaceId), includeIntegrations)
         .then((res) => {
-          if (!cancelled) setData(res)
+          if (!cancelled) {
+            setData(res)
+            hasLoadedRef.current = true
+          }
         })
         .catch((err) => {
           if (!cancelled) {
             setError(err instanceof Error ? err.message : 'Failed to load connections')
-            setData(null)
+            if (!hasLoadedRef.current) {
+              setData(null)
+            }
           }
         })
         .finally(() => {
           if (!cancelled) setLoading(false)
         })
     }
-    setLoading(true)
+    if (!isBackground) {
+      setLoading(true)
+    }
     setError(null)
     fetchConnections()
     const id = refetchIntervalMs > 0 ? window.setInterval(fetchConnections, refetchIntervalMs) : 0
@@ -691,15 +759,26 @@ export function useObservePortScans(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasLoadedRef = useRef(false)
 
-  const fetchScans = useCallback(() => {
+  const fetchScans = useCallback((background = false) => {
     if (!workspaceId) return
+    if (!background) {
+      setLoading(true)
+    }
+    setError(null)
     observeService
       .getPortScans(Number(workspaceId))
-      .then((res) => setData(Array.isArray(res) ? res : []))
+      .then((res) => {
+        setData(Array.isArray(res) ? res : [])
+        hasLoadedRef.current = true
+      })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Failed to load port scans')
-        setData([])
+        if (!hasLoadedRef.current) {
+          setData([])
+        }
       })
       .finally(() => setLoading(false))
   }, [workspaceId])
@@ -709,28 +788,20 @@ export function useObservePortScans(
       setData([])
       setLoading(false)
       setError(null)
+      prevWorkspaceRef.current = workspaceId
+      hasLoadedRef.current = false
       return
     }
-    setLoading(true)
-    setError(null)
-    let cancelled = false
-    observeService
-      .getPortScans(Number(workspaceId))
-      .then((res) => {
-        if (!cancelled) setData(Array.isArray(res) ? res : [])
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load port scans')
-          setData([])
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    const id = refetchIntervalMs > 0 ? window.setInterval(fetchScans, refetchIntervalMs) : 0
+    const workspaceChanged = prevWorkspaceRef.current !== workspaceId
+    prevWorkspaceRef.current = workspaceId
+    if (workspaceChanged) {
+      hasLoadedRef.current = false
+      setData([])
+    }
+    const isBackground = !workspaceChanged && hasLoadedRef.current
+    fetchScans(isBackground)
+    const id = refetchIntervalMs > 0 ? window.setInterval(() => fetchScans(true), refetchIntervalMs) : 0
     return () => {
-      cancelled = true
       if (id) window.clearInterval(id)
     }
   }, [workspaceId, refetchIntervalMs, refreshKey, externalRefreshKey, fetchScans])
@@ -787,6 +858,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
   // Track the last workspace so we only blank the view when it actually changes,
   // not on every live poll/refresh (which caused the UI to "flap").
   const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
+  const hasDataRef = useRef(false)
 
   useEffect(() => {
     if (!workspaceId) {
@@ -794,16 +866,18 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
       setLoading(false)
       setError(null)
       prevWorkspaceRef.current = workspaceId
+      hasDataRef.current = false
       return
     }
 
     const workspaceChanged = prevWorkspaceRef.current !== workspaceId
     prevWorkspaceRef.current = workspaceId
 
-    // Only clear data when switching workspaces so we never show another workspace's data.
-    // On live refreshes we keep the previous data visible and update it in place.
     if (workspaceChanged) {
       setData(null)
+      hasDataRef.current = false
+      setLoading(true)
+    } else if (!hasDataRef.current) {
       setLoading(true)
     }
     setError(null)
@@ -862,6 +936,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
           }
 
           setData(filtered)
+          hasDataRef.current = true
         } else {
           // Use real API via observeService (backend returns { success, data: { items, hostTotals, ... } })
           const response = await observeService.getServices(Number(workspaceId), {
@@ -871,6 +946,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
             problemsOnly,
           })
           setData(response)
+          hasDataRef.current = true
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load services'
@@ -886,6 +962,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
         )
       } finally {
         setLoading(false)
+        hasDataRef.current = true
       }
     }
 

@@ -211,8 +211,6 @@ export default function Targets() {
   const lastFetchAtRef = useRef(0)
   const MIN_TARGETS_FETCH_MS = 2000
 
-  const workspaceId = id || selectedWorkspaceId
-
   const isDirty = useMemo(
     () => serializeHosts(hosts) !== savedSnapshot,
     [hosts, savedSnapshot],

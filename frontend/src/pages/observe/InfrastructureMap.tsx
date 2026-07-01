@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
-import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
+import { useObserveMapHosts, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
@@ -435,13 +435,7 @@ export default function InfrastructureMap() {
   } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
 
   // Observe module: real data only from QynSight microservice APIs (no fixtures / no hardcoded dynamic data)
-  const { hosts, loading, error: topologyError } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
-  const { data: servicesData } = useObserveServices({
-    workspaceId: selectedWorkspaceId ?? null,
-    limit: 500,
-    realDataOnly: true,
-    refreshKey,
-  })
+  const { hosts, loading, error: topologyError, servicesData } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
   const { data: apiConnectionsData } = useObserveConnections(selectedWorkspaceId, {
     includeIntegrations: true,
     refreshKey,
@@ -873,7 +867,7 @@ export default function InfrastructureMap() {
     URL.revokeObjectURL(url)
   }, [diagram.nodePositions, layerFiltered.hostsFiltered, layerFiltered.networksFiltered, hostsFilteredByZone, zoneFilter, designLevel, getNodePosition, t])
 
-  if (loading) {
+  if (loading && hosts.length === 0) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-sm text-white/60">{t('map.loading')}</div>

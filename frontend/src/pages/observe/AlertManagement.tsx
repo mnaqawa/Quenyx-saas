@@ -189,7 +189,9 @@ export default function AlertManagement() {
     }
   }
 
-  if ((rulesLoading || summaryLoading) && !rulesError && !summaryError) {
+  const hasLoadedOnce = rules.length > 0 || summary !== null || rulesError || summaryError
+
+  if ((rulesLoading || summaryLoading) && !hasLoadedOnce) {
     return <div className="text-sm text-white/60">{t('agents.loading')}</div>
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Area,
@@ -79,6 +79,7 @@ export default function PerformanceAnalytics() {
   const [aiOpen, setAiOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const historyLoadedRef = useRef(false)
 
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
@@ -108,22 +109,35 @@ export default function PerformanceAnalytics() {
   }, [loading, data, refreshKey, markUpdated])
 
   useEffect(() => {
+    historyLoadedRef.current = false
+  }, [wsId, range])
+
+  useEffect(() => {
     if (!wsId) {
       setHistory(null)
       setHistoryError(null)
+      setHistoryLoading(false)
       return
     }
+    const isBackground = historyLoadedRef.current
     let cancelled = false
-    setHistoryLoading(true)
+    if (!isBackground) {
+      setHistoryLoading(true)
+    }
     setHistoryError(null)
     observeService
       .getPerformanceHistory(wsId, range)
       .then((res) => {
-        if (!cancelled) setHistory(res)
+        if (!cancelled) {
+          setHistory(res)
+          historyLoadedRef.current = true
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setHistory(null)
+          if (!historyLoadedRef.current) {
+            setHistory(null)
+          }
           setHistoryError(err instanceof Error ? err.message : t('common.errorGeneric'))
         }
       })
@@ -133,7 +147,7 @@ export default function PerformanceAnalytics() {
     return () => {
       cancelled = true
     }
-  }, [range, t, wsId, refreshKey])
+  }, [range, wsId, refreshKey, t])
 
   const serviceHostMap = useMemo(() => {
     const items = data?.items ?? []
