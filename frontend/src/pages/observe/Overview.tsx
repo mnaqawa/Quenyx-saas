@@ -4,7 +4,7 @@ import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { StatCard } from '../../components/observe/StatCard'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { observeService } from '../../services/observeService'
@@ -14,7 +14,7 @@ import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 
 export default function Overview() {
   const { t } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const [refreshKey, setRefreshKey] = useState(0)
   const [recentAlerts, setRecentAlerts] = useState<AlertHistoryEvent[]>([])

@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Jobs\RunObserveChecksJob;
 use Illuminate\Support\Facades\DB;
 use App\Support\SafeLog;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
@@ -131,11 +132,20 @@ class ObserveTargetsController extends Controller
         $this->authorize('view', $project);
 
         $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
-        $hosts = ObserveTargetHost::where('workspace_id', $project->id)
+        $hostRows = ObserveTargetHost::where('workspace_id', $project->id)
             ->with(['services' => fn ($q) => $q->orderBy('name')])
             ->orderBy('name')
-            ->get()
-            ->map(function ($host) use ($definitionsByCommand, $project) {
+            ->get();
+
+        if ($hostRows->isEmpty()) {
+            $this->backfillTargetsFromNativeServices($project);
+            $hostRows = ObserveTargetHost::where('workspace_id', $project->id)
+                ->with(['services' => fn ($q) => $q->orderBy('name')])
+                ->orderBy('name')
+                ->get();
+        }
+
+        $hosts = $hostRows->map(function ($host) use ($definitionsByCommand, $project) {
                 return [
                     'id' => $host->id,
                     'name' => $host->name,
@@ -187,11 +197,15 @@ class ObserveTargetsController extends Controller
                 ];
             });
 
-        SafeLog::info('Observe targets listed', [
-            'workspace_id' => $project->id,
-            'host_count' => $hosts->count(),
-            'user_id' => $request->user()?->id,
-        ]);
+        $logKey = 'observe_targets_list_log_' . $project->id . '_' . ($request->user()?->id ?? 'guest');
+        if (! Cache::has($logKey)) {
+            SafeLog::info('Observe targets listed', [
+                'workspace_id' => $project->id,
+                'host_count' => $hosts->count(),
+                'user_id' => $request->user()?->id,
+            ]);
+            Cache::put($logKey, true, now()->addSeconds(15));
+        }
 
         return response()->json([
             'success' => true,
@@ -561,13 +575,19 @@ class ObserveTargetsController extends Controller
                     ];
                 });
 
+            SafeLog::info('Observe targets saved', [
+                'workspace_id' => $project->id,
+                'host_count' => $hosts->count(),
+                'user_id' => $request->user()?->id,
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Targets saved. Checks run by QynSight engine.',
                 'data' => [
                     'targets' => $hosts,
                 ],
-            ]);
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
 
         } catch (\Exception $e) {
             SafeLog::error('ObserveTargetsController@update failed', [
@@ -852,5 +872,86 @@ class ObserveTargetsController extends Controller
             ->mapWithKeys(fn ($d) => [strtolower(trim($d->check_command ?? '')) => $d->service_key])
             ->all();
         return array_merge($fallback, $fromDb);
+    }
+
+    /**
+     * When observe_targets_hosts is empty but native observe_services has rows, recreate target hosts
+     * so the Hosts UI and workspace cards show configured monitoring (legacy/migration recovery).
+     */
+    private function backfillTargetsFromNativeServices(Project $project): int
+    {
+        if (! Schema::hasTable('observe_services')) {
+            return 0;
+        }
+
+        if (ObserveTargetHost::where('workspace_id', $project->id)->exists()) {
+            return 0;
+        }
+
+        $prefix = 'ws' . $project->id . '-';
+        $rows = ObserveService::where('workspace_id', $project->id)
+            ->where('engine_key', 'native')
+            ->where('host_name', 'like', $prefix . '%')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return 0;
+        }
+
+        $created = 0;
+        $allowedCommands = $this->getAllowedServiceCheckCommands();
+
+        DB::transaction(function () use ($project, $prefix, $rows, &$created, $allowedCommands) {
+            foreach ($rows->groupBy('host_name') as $scopedHostName => $services) {
+                $shortName = str_starts_with((string) $scopedHostName, $prefix)
+                    ? substr((string) $scopedHostName, strlen($prefix))
+                    : (string) $scopedHostName;
+                if ($shortName === '') {
+                    continue;
+                }
+
+                $host = ObserveTargetHost::create([
+                    'workspace_id' => $project->id,
+                    'name' => $shortName,
+                    'address' => $shortName,
+                    'check_command' => 'check-host-alive',
+                    'tags' => ['backfill' => 'observe_services'],
+                    'enabled' => true,
+                    'source' => 'backfill',
+                ]);
+
+                foreach ($services->unique('service_name') as $service) {
+                    $serviceName = (string) $service->service_name;
+                    if ($serviceName === '' || strcasecmp($serviceName, 'Host-Alive') === 0) {
+                        continue;
+                    }
+                    $checkCommand = trim((string) ($service->check_command ?? ''));
+                    if ($checkCommand === '' || ! in_array($checkCommand, $allowedCommands, true)) {
+                        $checkCommand = 'check_ping';
+                    }
+
+                    ObserveTargetService::create([
+                        'workspace_id' => $project->id,
+                        'host_id' => $host->id,
+                        'name' => $serviceName,
+                        'check_command' => $checkCommand,
+                        'check_args' => [],
+                        'enabled' => true,
+                    ]);
+                }
+
+                app(DefaultMonitoringProfileService::class)->attachToHost($host, $project->id);
+                $created++;
+            }
+        });
+
+        if ($created > 0) {
+            SafeLog::info('Observe targets backfilled from native services', [
+                'workspace_id' => $project->id,
+                'host_count' => $created,
+            ]);
+        }
+
+        return $created;
     }
 }

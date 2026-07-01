@@ -12,7 +12,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
@@ -138,7 +138,7 @@ const Icons = {
 export default function RealTimeMonitoring() {
   const navigate = useNavigate()
   const { t } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
 
   const [isLive, setIsLive] = useState(true)
   const [selectedHost, setSelectedHost] = useState<string>('')

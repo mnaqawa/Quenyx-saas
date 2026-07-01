@@ -96,6 +96,36 @@ GATEWAY_BASE_URL=https://your-public-domain.com
 
 After changing `.env`, run `php artisan config:clear` (or `php artisan config:cache` in production).
 
+**Changing public domain (e.g. `dev.quenyx.com` → `cloud.quenyx.com`):**
+
+Laravel caches config — updating `.env` alone is not enough until you re-cache. Also update every layer that references the old hostname:
+
+| Layer | What to set |
+|-------|-------------|
+| **backend `.env`** | `APP_URL=https://cloud.quenyx.com` and `GATEWAY_BASE_URL=https://cloud.quenyx.com` (same public origin when nginx serves SPA + `/api`) |
+| **CORS** | `CORS_ALLOWED_ORIGINS=https://cloud.quenyx.com` (not the old dev hostname) |
+| **Session (HTTPS prod)** | `SESSION_SECURE_COOKIE=true`, `SESSION_SAME_SITE=lax` |
+| **Sanctum (if cookie SPA)** | `SANCTUM_STATEFUL_DOMAINS=cloud.quenyx.com` |
+| **nginx** | `server_name cloud.quenyx.com;` and TLS cert for the new name |
+| **Frontend build** | Leave `VITE_API_BASE_URL` **empty** for same-origin `/api` **or** set it to `https://cloud.quenyx.com` — then **`npm run build`** again (old builds embed the previous URL) |
+| **Gateway** | No public URL needed in gateway `.env`; keep `BACKEND_BASE_URL=http://127.0.0.1:8000`. Do **not** set `OBSERVE_ENGINE_URL`. |
+
+```bash
+cd backend
+php artisan config:clear
+php artisan config:cache
+php artisan route:cache
+php artisan quenyx:config-check
+
+cd ../frontend
+# ensure .env.production or build env has VITE_API_BASE_URL= (empty) or https://cloud.quenyx.com
+npm run build
+sudo systemctl reload nginx
+sudo systemctl restart quenyx-gateway php8.2-fpm
+```
+
+Users who logged in on `dev.quenyx.com` should clear site data or log in again on `cloud.quenyx.com` (tokens in `localStorage` are origin-scoped).
+
 **Agent binaries (for Install Agent download):**
 
 The route `GET /api/agents/download/{platform}` serves the agent binary. When a binary is missing, the server can build it on demand (requires Go). Configure in `backend/.env`:

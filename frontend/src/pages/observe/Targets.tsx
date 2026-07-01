@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
@@ -188,8 +187,7 @@ function mergeResponseWithCurrent(
 
 export default function Targets() {
   const { t } = useLanguage()
-  const { id } = useParams<{ id: string }>()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const workspaceId = useObserveWorkspaceId()
   const [hosts, setHosts] = useState<TargetHost[]>([])
   const [definitions, setDefinitions] = useState<ServiceDefinition[]>([])
   const [loading, setLoading] = useState(true)
@@ -209,6 +207,9 @@ export default function Targets() {
   const [savedSnapshot, setSavedSnapshot] = useState('[]')
   const isDirtyRef = useRef(false)
   const serviceListEndRef = useRef<HTMLDivElement>(null)
+  const fetchInFlightRef = useRef(false)
+  const lastFetchAtRef = useRef(0)
+  const MIN_TARGETS_FETCH_MS = 2000
 
   const workspaceId = id || selectedWorkspaceId
 
@@ -236,6 +237,14 @@ export default function Targets() {
     if (!workspaceId) return
     const force = options?.force === true
     const background = options?.background === true
+    const now = Date.now()
+    if (background && !force && now - lastFetchAtRef.current < MIN_TARGETS_FETCH_MS) {
+      return
+    }
+    if (fetchInFlightRef.current) {
+      return
+    }
+    fetchInFlightRef.current = true
     try {
       if (!force && isDirtyRef.current) {
         setError(null)
@@ -265,13 +274,19 @@ export default function Targets() {
         setDefinitions(defsResponse)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('targets.error.loadFailed'))
+      setError(err instanceof Error ? err.message : 'Failed to load targets')
     } finally {
       if (!background) {
         setLoading(false)
       }
+      fetchInFlightRef.current = false
+      lastFetchAtRef.current = Date.now()
     }
-  }, [workspaceId, t])
+  }, [workspaceId])
+
+  const bumpRefreshKey = useCallback(() => {
+    setDataRefreshKey((k) => k + 1)
+  }, [])
 
   const {
     interval,
@@ -279,9 +294,7 @@ export default function Targets() {
     markUpdated,
     refreshNow,
     secondsAgo,
-  } = useObserveAutoRefresh(() => {
-    setDataRefreshKey((k) => k + 1)
-  }, !!workspaceId)
+  } = useObserveAutoRefresh(bumpRefreshKey, !!workspaceId)
 
   useEffect(() => {
     const isBackground = dataRefreshKey > 0

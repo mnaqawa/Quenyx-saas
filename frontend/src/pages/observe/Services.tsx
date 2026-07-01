@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, Fragment, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
@@ -71,7 +71,7 @@ function formatDateTime(dateString: string | null | undefined, locale: string): 
 
 export default function Services() {
   const { t, language } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   

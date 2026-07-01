@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 
 export type ObserveAutoRefreshInterval = '15' | '30' | '60' | '300' | 'off'
 
@@ -55,12 +55,15 @@ export function useObserveAutoRefresh(
     onRefresh()
   }, [onRefresh])
 
+  const onRefreshRef = useRef(onRefresh)
+  onRefreshRef.current = onRefresh
+
   useEffect(() => {
     if (!enabled || interval === 'off') return
     const ms = Number(interval) * 1000
-    const id = window.setInterval(() => onRefresh(), ms)
+    const id = window.setInterval(() => onRefreshRef.current(), ms)
     return () => window.clearInterval(id)
-  }, [enabled, interval, onRefresh])
+  }, [enabled, interval])
 
   useEffect(() => {
     const id = window.setInterval(() => setAgeTick((n) => n + 1), 1000)

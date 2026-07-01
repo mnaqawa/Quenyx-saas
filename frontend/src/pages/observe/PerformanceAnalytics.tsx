@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { useObserveServices } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
@@ -69,7 +69,7 @@ const formatPercent = (value: number | null): string => (value == null ? '—' :
 export default function PerformanceAnalytics() {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
 
   const [activeTab, setActiveTab] = useState<'overview' | MetricKind>('overview')
   const [range, setRange] = useState<PerformanceHistoryRange>('24h')

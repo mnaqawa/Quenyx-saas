@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiButton'
@@ -68,7 +69,8 @@ function trendDirection(change: number | null | undefined, t: (key: string) => s
 
 export default function CapacityPlanning() {
   const { t } = useLanguage()
-  const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
+  const { selectedWorkspaceRole } = useWorkspaceContext()
 
   const [range, setRange] = useState<CapacityPlanningRange>('30d')
   const [activeTab, setActiveTab] = useState<CapacityTab>('overview')

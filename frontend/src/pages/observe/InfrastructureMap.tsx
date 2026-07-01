@@ -6,7 +6,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { useObserveMapHosts, useObserveServices, useObserveConnections, useObservePortScans } from '../../hooks/useObserveData'
 import { observeService } from '../../services/observeService'
 import { PageHeader } from '../../components/observe/PageHeader'
@@ -373,7 +373,7 @@ function LLDTopology({
 export default function InfrastructureMap() {
   const { t } = useLanguage()
   const hostsLabel = t('map.hostsLink')
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
   const [activeTab, setActiveTab] = useState<'topology' | 'devices' | 'connections' | 'ports' | 'health'>('topology')
   const [viewType, setViewType] = useState<string>(VIEW_OPTIONS[0])
   const [layerFilter, setLayerFilter] = useState<string>(LAYER_OPTIONS[0])

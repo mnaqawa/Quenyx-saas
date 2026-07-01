@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from './useObserveWorkspaceId'
 import {
   realTimeMetricsFixture,
   systemInfoFixture,
@@ -59,9 +59,13 @@ function extractTargetsList(list: unknown): Array<{ name: string; address: strin
   return []
 }
 
+function useWorkspaceIdFromContext(): string | null {
+  return useObserveWorkspaceId()
+}
+
 // Real-time Monitoring hooks
 export function useRealTimeMetrics() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [metrics, setMetrics] = useState<RealTimeMetrics | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -93,7 +97,7 @@ export function useRealTimeMetrics() {
 }
 
 export function useSystemInfo() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -125,7 +129,7 @@ export function useSystemInfo() {
 }
 
 export function usePerformanceThresholds() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [thresholds, setThresholds] = useState<Array<{ metric: string; warning: string; critical: string }>>([])
 
   useEffect(() => {
@@ -142,7 +146,7 @@ export function usePerformanceThresholds() {
 
 // Performance Analytics hooks
 export function usePerformanceMetrics(timeRange?: string) {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -175,7 +179,7 @@ export function usePerformanceMetrics(timeRange?: string) {
 
 // Infrastructure Map hooks
 export function useNetworkTopology() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [topology, setTopology] = useState<NetworkNode[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -208,7 +212,7 @@ export function useNetworkTopology() {
 
 // Capacity Planning hooks
 export function useCapacityPlanning(range: CapacityPlanningRange = '30d') {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [data, setData] = useState<CapacityPlanningResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -247,7 +251,7 @@ export function useCapacityMetrics(range?: string) {
 
 // Alert Management hooks
 export function useAlertRules(refreshKey = 0) {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [rules, setRules] = useState<AlertRule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -293,7 +297,7 @@ export function useAlertRules(refreshKey = 0) {
 }
 
 export function useAlertSummary(refreshKey = 0) {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [summary, setSummary] = useState<AlertSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -340,7 +344,7 @@ export function useAlertSummary(refreshKey = 0) {
 
 // Instance Management hooks
 export function useInstances(status?: string) {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -376,7 +380,7 @@ export function useInstances(status?: string) {
 }
 
 export function useInstanceSummary() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [summary, setSummary] = useState<InstanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -409,7 +413,7 @@ export function useInstanceSummary() {
 
 // Reports hooks
 export function useReports() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -441,7 +445,7 @@ export function useReports() {
 }
 
 export function useReportSummary() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [summary, setSummary] = useState<ReportSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -474,7 +478,7 @@ export function useReportSummary() {
 
 // Data Sources hooks
 export function useDataSources() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [sources, setSources] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -506,7 +510,7 @@ export function useDataSources() {
 }
 
 export function useDataSourceSummary() {
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useWorkspaceIdFromContext()
   const [summary, setSummary] = useState<DataSourceSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -866,10 +870,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
             limit,
             problemsOnly,
           })
-          const payload = response && typeof response === 'object' && 'data' in response
-            ? (response as { data: ObserveServicesResponse }).data
-            : (response as ObserveServicesResponse)
-          setData(payload)
+          setData(response)
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load services'

@@ -9,7 +9,7 @@ import { StatusBadge } from '../../components/observe/StatusBadge'
 import { AlertHistoryFilterBar } from '../../components/observe/AlertHistoryFilterBar'
 import { toApiDateTime } from '../../components/observe/dateTimeApi'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { useObserveWorkspaceId } from '../../hooks/useObserveWorkspaceId'
 import { observeService } from '../../services/observeService'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { formatReadableAlertCondition } from '../../lib/alertConditionLabels'
@@ -105,7 +105,7 @@ function historyConditionText(
 
 export default function AlertManagement() {
   const { t } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const selectedWorkspaceId = useObserveWorkspaceId()
   const [activeTab, setActiveTab] = useState('rules')
   const [history, setHistory] = useState<AlertHistoryEvent[]>([])
   const [historyError, setHistoryError] = useState<string | null>(null)
