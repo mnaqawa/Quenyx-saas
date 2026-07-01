@@ -47,6 +47,18 @@ class CapacityPlanningService
             ->orderBy('recorded_at')
             ->get(['host_name', 'service_name', 'metric', 'value', 'recorded_at']);
 
+        $historicalFallback = false;
+        if ($rows->isEmpty()) {
+            // Use any stored history for this workspace when the selected window is empty.
+            $rows = ObserveMetricHistory::query()
+                ->where('workspace_id', $workspaceId)
+                ->whereIn('metric', ['cpu', 'memory', 'disk'])
+                ->orderBy('recorded_at')
+                ->limit(50000)
+                ->get(['host_name', 'service_name', 'metric', 'value', 'recorded_at']);
+            $historicalFallback = $rows->isNotEmpty();
+        }
+
         if ($rows->isEmpty()) {
             $empty = $this->emptyPayload($range);
             $empty['diagnostics'] = $this->buildDiagnostics($rows);
@@ -121,7 +133,7 @@ class CapacityPlanningService
             $workspaceId
         );
 
-        $dataAvailable = ! empty($forecast) || ! empty($topRisks) || $advisor['available'];
+        $dataAvailable = $historyPoints > 0;
 
         $health = [
             'health_status' => $healthStatus,
@@ -211,6 +223,7 @@ class CapacityPlanningService
                 'last_updated' => $to->toIso8601String(),
                 'range' => $range,
                 'history_points' => $historyPoints,
+                'historical_fallback' => $historicalFallback,
             ],
         ];
     }

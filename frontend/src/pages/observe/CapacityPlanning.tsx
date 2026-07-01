@@ -25,8 +25,6 @@ import { TopCapacityRisksTable } from '../../components/observe/capacity/TopCapa
 import { InsightCard } from '../../components/observe/capacity/InsightCard'
 import { CapacityDiagnosticsPanel } from '../../components/observe/capacity/CapacityDiagnosticsPanel'
 import { EmptyState } from '../../components/observe/capacity/EmptyState'
-import { buildCollectingPanelProps } from '../../lib/collectingHistoricalDataUtils'
-import { CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
@@ -85,23 +83,27 @@ export default function CapacityPlanning() {
   const wsId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
 
-  const load = useCallback(() => {
+  const load = useCallback((background = false) => {
     if (!wsId) {
       setData(null)
       setError(null)
       return Promise.resolve()
     }
-    setLoading(true)
+    if (!background) {
+      setLoading(true)
+    }
     setError(null)
     return observeService
       .getCapacityPlanning(wsId, range)
       .then((res) => setData(res))
       .catch((err: unknown) => {
         setData(null)
-        setError(err instanceof Error ? err.message : t('common.errorGeneric'))
+        setError(err instanceof Error ? err.message : 'Failed to load capacity planning data')
       })
-      .finally(() => setLoading(false))
-  }, [range, t, wsId])
+      .finally(() => {
+        if (!background) setLoading(false)
+      })
+  }, [range, wsId])
 
   const {
     interval,
@@ -111,14 +113,14 @@ export default function CapacityPlanning() {
     secondsAgo,
   } = useObserveAutoRefresh(
     () => {
-      void load().then(() => markUpdated())
+      void load(true).then(() => markUpdated())
     },
     !!wsId,
     { defaultInterval: 'off', storageKey: 'qynsight_capacity_auto_refresh' },
   )
 
   useEffect(() => {
-    void load().then(() => markUpdated())
+    void load(false).then(() => markUpdated())
   }, [load, markUpdated])
 
   const statusLabel = useCallback(
@@ -197,7 +199,8 @@ export default function CapacityPlanning() {
 
   const summary = data?.summary
   const health = data?.health
-  const hasCapacityData = data?.meta.data_available === true
+  const historySamples = data?.meta?.history_points ?? data?.diagnostics?.total_samples ?? 0
+  const hasCapacityData = historySamples > 0 || data?.meta.data_available === true
 
   const historicalForecast = (data?.overview.forecast ?? []).filter((p) => !p.projected)
   const projectedForecast = data?.overview.forecast ?? []
@@ -297,7 +300,7 @@ export default function CapacityPlanning() {
             onIntervalChange={setInterval}
             secondsAgo={secondsAgo}
             onRefresh={() => {
-              void load().then(() => markUpdated())
+              void load(false).then(() => markUpdated())
               refreshNow()
             }}
             refreshing={loading}
@@ -344,7 +347,7 @@ export default function CapacityPlanning() {
           <span>{error}</span>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void load(false)}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1 text-xs font-semibold"
           >
             {t('cap.retry')}
@@ -387,8 +390,9 @@ export default function CapacityPlanning() {
       {activeTab === 'overview' && (
         <div className="space-y-4">
           {!hasCapacityData ? (
-            <CollectingHistoricalDataPanel
-              {...buildCollectingPanelProps(data?.diagnostics, data?.meta?.history_points, data?.health?.data_confidence, t)}
+            <EmptyState
+              title={t('cap.noDataYet')}
+              description={t('cap.noDataYetDesc')}
             />
           ) : (
             <CapacityHealthPanel health={health} labels={healthLabels} />
@@ -399,8 +403,9 @@ export default function CapacityPlanning() {
       {activeTab === 'resource-analysis' && (
         <div className="space-y-4">
           {!hasCapacityData ? (
-            <CollectingHistoricalDataPanel
-              {...buildCollectingPanelProps(data?.diagnostics, data?.meta?.history_points, data?.health?.data_confidence, t)}
+            <EmptyState
+              title={t('cap.noDataYet')}
+              description={t('cap.noDataYetDesc')}
             />
           ) : (
             <>

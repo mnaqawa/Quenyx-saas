@@ -139,18 +139,16 @@ function WorkspaceCard({ item, isActive, roleBadgeClass, onOpen, onSwitch }: Wor
   useEffect(() => {
     let cancelled = false
     setLoadingMetrics(true)
-    observeService
-      .getServices(item.project.id, { limit: 1 })
-      .then((res) => {
-        const payload =
-          res && typeof res === 'object' && 'data' in res
-            ? (res as { data: typeof res }).data
-            : res
-        const ht = payload?.hostTotals
-        const st = payload?.serviceTotals
-        const hosts = ht ? ht.up + ht.down + ht.unreachable + ht.pending : 0
-        const alerts = st ? (st.warning ?? 0) + (st.critical ?? 0) : 0
-        if (!cancelled) setMetrics({ hosts, alerts })
+    Promise.all([
+      observeService.getTargetHosts(item.project.id),
+      observeService.getServices(item.project.id, { limit: 500 }),
+    ])
+      .then(([hosts, servicesRes]) => {
+        if (cancelled) return
+        const hostTotal = Array.isArray(hosts) ? hosts.length : 0
+        const items = servicesRes?.items ?? []
+        const alerts = items.filter((row) => row.status === 'warning' || row.status === 'critical').length
+        setMetrics({ hosts: hostTotal, alerts })
       })
       .catch(() => {
         if (!cancelled) setMetrics(null)
@@ -348,6 +346,7 @@ function WorkspacesPage() {
   }, [workspacesError, isLoadingWorkspaces]) // Removed refreshWorkspaces from dependencies
 
   const handleOpenWorkspace = (workspace: WorkspaceListItem) => {
+    setSelectedWorkspaceId(String(workspace.project.id))
     navigate(`/app/workspaces/${workspace.project.id}`)
   }
 

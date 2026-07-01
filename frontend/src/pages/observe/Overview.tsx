@@ -10,8 +10,6 @@ import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
 import { observeService } from '../../services/observeService'
 import { buildHostRuntimeMap, classifyHostHealth } from '../../lib/observeHostUtils'
 import type { AlertHistoryEvent, CapacityPlanningResponse } from '../../types/observe'
-import { buildCollectingPanelProps } from '../../lib/collectingHistoricalDataUtils'
-import { CollectingHistoricalDataPanel } from '../../components/observe/CollectingHistoricalDataPanel'
 import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 
 export default function Overview() {
@@ -120,15 +118,9 @@ export default function Overview() {
     return fromServices
   }, [capacity, hostMap, t])
 
-  const capacityPanel =
-    capacity && capacity.meta?.data_available !== true
-      ? buildCollectingPanelProps(
-          capacity.diagnostics,
-          capacity.meta?.history_points,
-          capacity.health?.data_confidence,
-          t,
-        )
-      : null
+  const capacityHistorySamples =
+    capacity?.meta?.history_points ?? capacity?.diagnostics?.total_samples ?? 0
+  const hasCapacityHistory = capacityHistorySamples > 0 || capacity?.meta?.data_available === true
 
   const basePath = wsId ? `/app/workspaces/${wsId}/observe` : '#'
 
@@ -258,15 +250,13 @@ export default function Overview() {
         </div>
       </div>
 
-      {capacityError && !capacityPanel && !capacity?.meta?.data_available ? (
+      {capacityError && !hasCapacityHistory ? (
         <ObserveLoadError
           message={t('observe.error.capacity')}
           retryLabel={t('observe.loadError.retry')}
           onRetry={refreshAll}
         />
-      ) : capacityPanel ? (
-        <CollectingHistoricalDataPanel {...capacityPanel} />
-      ) : capacity?.meta?.data_available ? (
+      ) : hasCapacityHistory ? (
         <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-white">{t('overview.capacitySummary')}</h3>
@@ -275,12 +265,16 @@ export default function Overview() {
             </Link>
           </div>
           <p className="text-sm text-white/70">
-            {capacity.health?.recommended_action ?? capacity.health?.primary_risk ?? t('cap.health.title')}
+            {capacity?.health?.recommended_action ?? capacity?.health?.primary_risk ?? t('cap.health.title')}
           </p>
           <p className="mt-2 text-xs text-white/50">
-            {t('cap.health.dataConfidence')}: {capacity.health?.data_confidence ?? '—'} · {t('cap.kpi.riskScore')}:{' '}
+            {t('cap.health.dataConfidence')}: {capacity?.health?.data_confidence ?? '—'} · {t('cap.kpi.riskScore')}:{' '}
             {riskScore ?? '—'}
           </p>
+        </div>
+      ) : capacity && !capacityError ? (
+        <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-sm text-white/60">
+          {t('cap.noDataYet')}
         </div>
       ) : null}
 

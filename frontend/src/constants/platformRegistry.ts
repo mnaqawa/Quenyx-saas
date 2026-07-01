@@ -61,24 +61,19 @@ const qynSightRoutes: RouteConfig[] = [
   { key: 'instance-management', label: 'Instance Management', i18nKey: 'nav.qynsight.instanceManagement', path: '/app/workspaces/:id/observe/instance-management', title: 'Instance Management', hidden: true },
 ]
 
-// Sprint 25 (v1.0 GA): the temporary "QynSight-only" sidebar gate has been REMOVED. Every customer
-// business module is now enabled across navigation, subscriptions, and workspace settings. QynCore and
-// the legacy `qynintegrations` entitlement key remain PLATFORM-ONLY (never navigable business modules):
-// QynCore backs billing/governance surfaces, and Integrations is a platform page for external systems.
-export const HIDE_NON_QYNSIGHT_MODULES = false
+// Staged rollout: only QynSight is customer-navigable until other modules are production-ready.
+// Routes and APIs remain registered for backward compatibility; this gate affects sidebar navigation only.
+export const HIDE_NON_QYNSIGHT_MODULES = true
 
 /** Keys that are platform capabilities, not customer-facing business modules — never shown in the module nav. */
 const PLATFORM_ONLY_MODULE_KEYS = ['qyncore', 'qynintegrations']
 
-// Retained for backward compatibility with callers that reference it; with the gate removed it lists all
-// business module keys (used only for staged rollouts in the past).
-export const ACTIVE_MODULE_KEYS = [
-  'qynsight', 'qynasset', 'qynrun', 'qynreact', 'qynknow',
-  'qynsupport', 'qynnotify', 'qynshield', 'qynbalance', 'qynva',
-]
+/** Business modules exposed in navigation while HIDE_NON_QYNSIGHT_MODULES is enabled. */
+export const ACTIVE_MODULE_KEYS = ['qynsight']
 
 export function isModuleTemporarilyVisible(key: string): boolean {
   if (PLATFORM_ONLY_MODULE_KEYS.includes(key)) return false
+  if (HIDE_NON_QYNSIGHT_MODULES) return key === 'qynsight'
   return true
 }
 

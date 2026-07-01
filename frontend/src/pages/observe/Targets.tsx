@@ -232,9 +232,10 @@ export default function Targets() {
     return map
   }, [definitions])
 
-  const reloadTargets = useCallback(async (options?: { force?: boolean }) => {
+  const reloadTargets = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
     if (!workspaceId) return
     const force = options?.force === true
+    const background = options?.background === true
     try {
       if (!force && isDirtyRef.current) {
         setError(null)
@@ -243,7 +244,9 @@ export default function Targets() {
         return
       }
 
-      setLoading(true)
+      if (!background) {
+        setLoading(true)
+      }
       setError(null)
       const [targetsResponse, defsResponse, servicesResponse] = await Promise.all([
         gatewayClient.get<TargetHost[] | { data?: TargetHost[]; targets?: TargetHost[] }>(
@@ -264,7 +267,9 @@ export default function Targets() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t('targets.error.loadFailed'))
     } finally {
-      setLoading(false)
+      if (!background) {
+        setLoading(false)
+      }
     }
   }, [workspaceId, t])
 
@@ -279,7 +284,8 @@ export default function Targets() {
   }, !!workspaceId)
 
   useEffect(() => {
-    void reloadTargets().then(() => markUpdated())
+    const isBackground = dataRefreshKey > 0
+    void reloadTargets({ background: isBackground }).then(() => markUpdated())
   }, [reloadTargets, dataRefreshKey, markUpdated])
 
   useEffect(() => {

@@ -96,21 +96,16 @@ export default function Services() {
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const { canRunOperations } = useObserveAccess()
 
-  // Sync state changes to URL query params
+  // Sync state changes to URL query params (omit searchParams from deps to avoid replace loops).
   useEffect(() => {
     const params = new URLSearchParams()
     if (searchQuery) params.set('q', searchQuery)
     if (selectedStatuses.length > 0) params.set('status', selectedStatuses.join(','))
     if (limit !== 100) params.set('limit', limit.toString())
     if (problemsOnly) params.set('problems', '1')
-    
-    // Only update URL if params changed (avoid infinite loop)
-    const currentParams = searchParams.toString()
-    const newParams = params.toString()
-    if (currentParams !== newParams) {
-      setSearchParams(params, { replace: true })
-    }
-  }, [searchQuery, selectedStatuses, limit, problemsOnly, setSearchParams, searchParams])
+
+    setSearchParams(params, { replace: true })
+  }, [searchQuery, selectedStatuses, limit, problemsOnly, setSearchParams])
 
   const [refreshKey, setRefreshKey] = useState(0)
   
@@ -220,7 +215,7 @@ export default function Services() {
     return host.startsWith(prefix) ? host.slice(prefix.length) : host
   }
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-sm text-white/60">{t('common.loading')}</div>

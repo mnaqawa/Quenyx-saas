@@ -1,4 +1,5 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
 import { getRouteConfigFromPath } from '../constants/platformRegistry'
 import { ObserveModuleUnavailable } from '../components/observe/ObserveModuleUnavailable'
@@ -8,11 +9,21 @@ import { useObserveAccess } from '../hooks/useObserveAccess'
 export default function ObserveLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { id: routeWorkspaceId } = useParams<{ id: string }>()
   const { t } = useLanguage()
-  const { selectedWorkspaceId } = useWorkspaceContext()
+  const { selectedWorkspaceId, setSelectedWorkspaceId } = useWorkspaceContext()
   const { isModuleLocked } = useObserveAccess()
 
-  if (!selectedWorkspaceId) {
+  // Keep context aligned with the workspace id in the URL so QynSight pages load the correct hosts/services.
+  useEffect(() => {
+    if (routeWorkspaceId && routeWorkspaceId !== selectedWorkspaceId) {
+      setSelectedWorkspaceId(routeWorkspaceId)
+    }
+  }, [routeWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId])
+
+  const workspaceId = routeWorkspaceId ?? selectedWorkspaceId
+
+  if (!workspaceId) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-10 text-center text-white">
         <p className="text-sm text-white/60">{t('observe.selectWorkspace')}</p>
@@ -44,7 +55,7 @@ export default function ObserveLayout() {
         </button>
         <span>/</span>
         <button
-          onClick={() => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/overview`)}
+          onClick={() => navigate(`/app/workspaces/${workspaceId}/observe/overview`)}
           className="hover:text-white/60 transition"
         >
           {t('observe.breadcrumb.qynsight')}
