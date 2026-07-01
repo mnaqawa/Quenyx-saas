@@ -63,7 +63,8 @@ export default function AiChat() {
         },
       ])
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('aiWorkspace.chat.sendError'))
+      const reqErr = err as { userMessage?: string; message?: string }
+      setError(reqErr.userMessage ?? (err instanceof Error ? err.message : t('aiWorkspace.chat.sendError')))
     } finally {
       setSending(false)
     }

@@ -60,7 +60,7 @@ class ConfigCheckCommand extends Command
         }
 
         // Gateway internal secret must be present (deployment relies on it).
-        if ($isProd && empty(env('GATEWAY_INTERNAL_SECRET'))) {
+        if ($isProd && empty(config('app.gateway_internal_secret'))) {
             $warnings[] = 'GATEWAY_INTERNAL_SECRET is empty.';
         }
 

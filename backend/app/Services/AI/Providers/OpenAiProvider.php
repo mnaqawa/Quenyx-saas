@@ -155,7 +155,11 @@ class OpenAiProvider implements AiProviderInterface
         $response = $this->client()->post('/responses', $payload);
 
         if ($response->failed()) {
-            throw new AiProviderException('OpenAI request failed: HTTP '.$response->status(), 'ai_provider_upstream', 502);
+            throw new AiProviderException(
+                $this->upstreamErrorMessage('OpenAI request failed', $response->status(), $response->json(), $response->body()),
+                'ai_provider_upstream',
+                $response->status() >= 500 ? 502 : 422,
+            );
         }
 
         return $this->parseResponse($response->json(), (string) $payload['model']);
@@ -171,13 +175,36 @@ class OpenAiProvider implements AiProviderInterface
             throw new AiProviderException('No OpenAI model configured.', 'ai_provider_misconfigured');
         }
 
+        $instructions = null;
+        $input = [];
+        foreach ($request->messagesArray() as $message) {
+            $role = (string) ($message['role'] ?? 'user');
+            $content = (string) ($message['content'] ?? '');
+            if ($role === 'system') {
+                $instructions = $instructions === null ? $content : $instructions."\n\n".$content;
+
+                continue;
+            }
+            $input[] = ['role' => $role, 'content' => $content];
+        }
+
+        if ($input === []) {
+            $input = $request->messagesArray();
+        }
+
         $payload = [
             'model' => $model,
-            'input' => $request->messagesArray(),
+            'input' => count($input) === 1 && ($input[0]['role'] ?? '') === 'user'
+                ? (string) $input[0]['content']
+                : $input,
             'temperature' => $request->temperature ?? (float) config('ai.defaults.temperature', 0.0),
             'max_output_tokens' => $request->maxTokens ?? (int) config('ai.defaults.max_tokens', 1024),
             'stream' => $stream,
         ];
+
+        if ($instructions !== null && $instructions !== '') {
+            $payload['instructions'] = $instructions;
+        }
 
         if ($request->responseFormat === 'json') {
             $payload['text'] = ['format' => $request->jsonSchema !== null
@@ -269,5 +296,21 @@ class OpenAiProvider implements AiProviderInterface
         }
 
         return $request;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $json
+     */
+    private function upstreamErrorMessage(string $prefix, int $status, ?array $json, string $body): string
+    {
+        $detail = null;
+        if (is_array($json)) {
+            $detail = $json['error']['message'] ?? $json['message'] ?? null;
+        }
+        if (! is_string($detail) || $detail === '') {
+            $detail = strlen($body) > 240 ? substr($body, 0, 240).'…' : $body;
+        }
+
+        return trim($prefix.' (HTTP '.$status.'): '.$detail);
     }
 }

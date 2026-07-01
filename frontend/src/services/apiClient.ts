@@ -183,10 +183,10 @@ class ApiClient {
         }
 
         if (response.status >= 500) {
-          const serverError = new Error('Service unavailable') as RequestError
+          const serverError = new Error(errorMessage || 'Service unavailable') as RequestError
           serverError.status = response.status
           serverError.url = url
-          serverError.userMessage = 'Service unavailable'
+          serverError.userMessage = errorMessage || 'Service unavailable'
           if (import.meta.env.DEV) {
             console.error('API Error (5xx):', { url, status: response.status, message: errorMessage })
           }
