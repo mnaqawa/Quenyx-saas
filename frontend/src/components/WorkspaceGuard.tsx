@@ -12,6 +12,8 @@ const WORKSPACE_OPTIONAL_PATHS = [
   '/',
   '/dashboard',
   '/getting-started',
+  '/help-center',
+  '/docs',
   '/app/workspaces',
   '/app/projects',
   '/profile',
@@ -45,6 +47,11 @@ function WorkspaceGuard() {
   // But still require selection for other workspace-scoped pages
   if (location.pathname.startsWith('/app/workspaces/') || location.pathname.startsWith('/app/projects/')) {
     // Allow access, but the page component will auto-select
+    return <Outlet />
+  }
+
+  // Documentation library (no workspace required).
+  if (location.pathname.startsWith('/docs')) {
     return <Outlet />
   }
 

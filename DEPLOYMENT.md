@@ -68,6 +68,8 @@ npm run build
 
 Static output: `frontend/dist/`. Nginx will serve this as the document root.
 
+`npm run build` also copies bundled HTML documentation from `build/docs-html/` into `frontend/dist/docs/` (API Reference, guides, release notes). Help Center links (`/docs`, `/docs/api`, `/docs/release-notes`) depend on this folder — ensure `build/docs-html` exists on the build host (run `scripts/docs/build-pdfs.ps1` if missing).
+
 ### 4. Gateway
 
 ```bash

@@ -6,6 +6,8 @@ import Subscriptions from './pages/Subscriptions'
 import Integrations from './pages/Integrations'
 import GettingStarted from './pages/GettingStarted'
 import HelpCenter from './pages/HelpCenter'
+import DocsIndex from './pages/docs/DocsIndex'
+import DocsViewer from './pages/docs/DocsViewer'
 import Profile from './pages/Profile'
 import WorkspacesPage from './pages/WorkspacesPage'
 import WorkspaceDetailsPage from './pages/WorkspaceDetailsPage'
@@ -147,6 +149,8 @@ function App() {
             <Route path="getting-started" element={<GettingStarted />} />
             <Route path="help-center" element={<HelpCenter />} />
             <Route path="help" element={<Navigate to="/help-center" replace />} />
+            <Route path="docs" element={<DocsIndex />} />
+            <Route path="docs/:slug" element={<DocsViewer />} />
             <Route path="profile" element={<Profile />} />
             <Route path="app/workspaces/:id/observe" element={<ObserveLayout />}>
               {observeRoutes.find((r) => r.key === 'overview') && (
