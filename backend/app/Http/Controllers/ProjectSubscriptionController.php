@@ -148,7 +148,7 @@ class ProjectSubscriptionController extends Controller
             // Authorize: user must own the project
             $this->authorize('view', $project);
 
-            $entitlements = $this->entitlementService->getEntitlements($project);
+            $entitlements = $this->entitlementService->getEntitlements($project, $request->user());
 
             return response()->json([
                 'success' => true,

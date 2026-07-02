@@ -47,7 +47,7 @@ class ProjectModuleController extends Controller
             // Authorize: user must own the project
             $this->authorize('view', $project);
 
-            $entitlements = $this->entitlementService->getEntitlements($project);
+            $entitlements = $this->entitlementService->getEntitlements($project, $request->user());
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
             // Get all modules from catalog and normalize legacy keys for backward compatibility.
@@ -102,7 +102,7 @@ class ProjectModuleController extends Controller
             // Authorize: user must own the project
             $this->authorize('view', $project);
 
-            $entitlements = $this->entitlementService->getEntitlements($project);
+            $entitlements = $this->entitlementService->getEntitlements($project, $request->user());
             $allowedModules = $entitlements['modules_allowed'] ?? [];
 
             // Get all modules from catalog and normalize legacy keys for backward compatibility.

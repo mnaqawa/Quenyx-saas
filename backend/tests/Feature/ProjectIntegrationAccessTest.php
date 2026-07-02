@@ -25,7 +25,7 @@ class ProjectIntegrationAccessTest extends TestCase
         ]);
     }
 
-    public function test_free_plan_owner_cannot_list_integrations(): void
+    public function test_free_plan_owner_can_list_integrations(): void
     {
         $this->artisan('db:seed', ['--class' => 'PlanSeeder']);
         $this->artisan('db:seed', ['--class' => 'ModuleSeeder']);
@@ -43,10 +43,8 @@ class ProjectIntegrationAccessTest extends TestCase
 
         $res = $this->getJson("/api/projects/{$project->id}/integrations");
 
-        $res->assertStatus(403)
-            ->assertJsonFragment([
-                'message' => 'Your current plan does not allow access to this module',
-            ]);
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true);
     }
 
     public function test_pro_plan_member_cannot_upsert_integration_configuration(): void

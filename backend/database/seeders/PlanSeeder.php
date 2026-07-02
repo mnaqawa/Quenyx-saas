@@ -23,6 +23,7 @@ class PlanSeeder extends Seeder
                 'features' => [
                     'modules_allowed' => [
                         'qyncore',
+                        'qynintegrations',
                     ],
                     'limits' => [
                         'projects' => 1,

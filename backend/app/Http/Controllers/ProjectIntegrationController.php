@@ -21,7 +21,7 @@ class ProjectIntegrationController extends Controller
     public function index(Project $project): JsonResponse
     {
         $this->authorize('view', $project);
-        if ($denied = $this->deniedWithoutIntegrationsModule($project)) {
+        if ($denied = $this->deniedWithoutIntegrationsModule(request())) {
             return $denied;
         }
 
@@ -57,7 +57,7 @@ class ProjectIntegrationController extends Controller
     public function showConfiguration(Project $project, Integration $integration): JsonResponse
     {
         $this->authorize('view', $project);
-        if ($denied = $this->deniedWithoutIntegrationsModule($project)) {
+        if ($denied = $this->deniedWithoutIntegrationsModule(request())) {
             return $denied;
         }
 
@@ -79,7 +79,7 @@ class ProjectIntegrationController extends Controller
     public function upsertConfiguration(Request $request, Project $project, Integration $integration): JsonResponse
     {
         $this->authorize('update', $project);
-        if ($denied = $this->deniedWithoutIntegrationsModule($project)) {
+        if ($denied = $this->deniedWithoutIntegrationsModule($request)) {
             return $denied;
         }
 
@@ -108,13 +108,12 @@ class ProjectIntegrationController extends Controller
     }
 
     /**
-     * Integrations are gated by the qynintegrations module (plan + overrides), matching gateway behavior.
+     * Integrations are gated by the user's profile plan (not workspace subscription).
      */
-    private function deniedWithoutIntegrationsModule(Project $project): ?JsonResponse
+    private function deniedWithoutIntegrationsModule(Request $request): ?JsonResponse
     {
-        $entitlements = $this->entitlementService->getEntitlements($project);
-        $allowed = $entitlements['modules_allowed'] ?? [];
-        if (! in_array(self::INTEGRATIONS_MODULE, $allowed, true)) {
+        $user = $request->user();
+        if (! $user || ! $this->entitlementService->userHasModuleAccess($user, self::INTEGRATIONS_MODULE)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your current plan does not allow access to this module',

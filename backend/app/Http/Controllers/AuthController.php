@@ -253,6 +253,25 @@ class AuthController extends Controller
         ]);
     }
 
+    public function entitlements(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $entitlementService = app(EntitlementService::class);
+
+        return response()->json([
+            'success' => true,
+            'data' => $entitlementService->getUserEntitlements($user),
+        ]);
+    }
+
     public function update(Request $request): JsonResponse
     {
         $user = $request->user();

@@ -172,9 +172,6 @@ function AppLayoutInner() {
         </div>
         <div data-tour="tour-nav">
         <nav className="flex flex-col gap-1 px-4 py-4">
-          <span className="px-3 pb-1 text-[11px] uppercase tracking-[0.2em] text-white/40">
-            {t('nav.menu')}
-          </span>
           {!isOnboarded && (
             <Link
               to="/getting-started"
@@ -420,25 +417,6 @@ function AppLayoutInner() {
             </>
           )}
         </nav>
-        <div className="mx-4 border-t border-white/10" aria-hidden />
-        <nav className="px-4 py-3">
-          <Link
-            to="/help-center"
-            className={[
-              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition',
-              isActive('/help-center')
-                ? 'bg-white/10 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
-            ].join(' ')}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 opacity-70">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            {t('nav.helpCenter')}
-          </Link>
-        </nav>
         </div>
         <div className="relative mt-auto border-t border-white/10 px-3 py-3" ref={userMenuRef}>
           {isUserMenuOpen && (
@@ -583,17 +561,22 @@ function AppLayoutInner() {
               <WorkspaceSelector />
               <NotificationBell />
               <LanguageSwitcher />
-              <button
-                type="button"
-                data-tour="tour-ai-agent"
-                onClick={() => setIsAiAgentOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
+              <Link
+                to="/help-center"
+                className={[
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition',
+                  isActive('/help-center')
+                    ? 'border-white/20 bg-white/10 text-white'
+                    : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white',
+                ].join(' ')}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-                {t('ai.askQuenyx')}
-              </button>
+                {t('nav.helpCenter')}
+              </Link>
             </div>
           </div>
         </div>

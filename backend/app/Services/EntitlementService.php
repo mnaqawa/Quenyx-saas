@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\Project;
 use App\Models\ProjectModuleOverride;
 use App\Models\ProjectSubscription;
+use App\Models\User;
 
 class EntitlementService
 {
@@ -35,12 +36,31 @@ class EntitlementService
     ];
 
     /**
+     * Platform capabilities gated by the user profile plan, not workspace subscription.
+     *
+     * @var array<int, string>
+     */
+    private const USER_LEVEL_MODULE_KEYS = [
+        'qynintegrations',
+    ];
+
+    /**
+     * @var array<string, int>
+     */
+    private const PLAN_RANK = [
+        'free' => 0,
+        'pro' => 1,
+        'enterprise' => 2,
+        'internal' => 3,
+    ];
+
+    /**
      * Get entitlements for a project based on its current plan + overrides
      *
      * @param Project $project
      * @return array{plan: array{key: string, name: string}, modules_allowed: array<string>, limits: array}
      */
-    public function getEntitlements(Project $project): array
+    public function getEntitlements(Project $project, ?User $user = null): array
     {
         $plan = $this->getEffectivePlan($project);
         $planModulesRaw = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
@@ -48,6 +68,7 @@ class EntitlementService
 
         // Get effective modules (plan + overrides)
         $effectiveModules = $this->getEffectiveModules($project, $planModules);
+        $effectiveModules = $this->mergeUserLevelModules($effectiveModules, $user);
 
         return [
             'plan' => [
@@ -192,6 +213,77 @@ class EntitlementService
     }
 
     /**
+     * @return array{plan: array{key: string, name: string}, modules_allowed: array<string>, limits: array}
+     */
+    public function getUserEntitlements(User $user): array
+    {
+        $plan = $this->getUserEffectivePlan($user);
+        $planModulesRaw = $plan->features['modules_allowed'] ?? $plan->features['modules'] ?? [];
+        $modulesAllowed = $this->normalizeModuleKeys(is_array($planModulesRaw) ? $planModulesRaw : []);
+
+        return [
+            'plan' => [
+                'key' => $plan->key,
+                'name' => $plan->name,
+            ],
+            'modules_allowed' => $modulesAllowed,
+            'limits' => $plan->features['limits'] ?? [],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getUserAllowedModules(User $user): array
+    {
+        return $this->getUserEntitlements($user)['modules_allowed'];
+    }
+
+    public function userHasModuleAccess(User $user, string $moduleKey): bool
+    {
+        $canonical = $this->canonicalModuleKey($moduleKey, null);
+        return in_array($canonical, $this->getUserAllowedModules($user), true);
+    }
+
+    /**
+     * Resolve the authenticated user's effective plan (profile-level), not workspace subscription.
+     */
+    public function getUserEffectivePlan(User $user): Plan
+    {
+        $preferences = is_array($user->preferences) ? $user->preferences : [];
+        $planKey = $preferences['plan_key'] ?? null;
+        if (is_string($planKey) && $planKey !== '') {
+            $plan = Plan::where('key', $planKey)->first();
+            if ($plan) {
+                return $plan;
+            }
+        }
+
+        $bestPlan = null;
+        $bestRank = -1;
+        $ownedProjectIds = $user->projects()->pluck('id');
+
+        if ($ownedProjectIds->isNotEmpty()) {
+            $subscriptions = ProjectSubscription::query()
+                ->whereIn('project_id', $ownedProjectIds)
+                ->where('status', 'active')
+                ->with('plan')
+                ->get();
+
+            foreach ($subscriptions as $subscription) {
+                $key = $subscription->plan->key ?? 'free';
+                $rank = self::PLAN_RANK[$key] ?? 0;
+                if ($rank > $bestRank) {
+                    $bestRank = $rank;
+                    $bestPlan = $subscription->plan;
+                }
+            }
+        }
+
+        return $bestPlan ?? $this->getFreePlan();
+    }
+
+    /**
      * Get the free plan (fallback)
      *
      * @return Plan
@@ -234,5 +326,25 @@ class EntitlementService
         }
 
         return self::MODULE_KEY_ALIASES[$candidate] ?? $candidate;
+    }
+
+    /**
+     * @param array<int, string> $effectiveModules
+     * @return array<int, string>
+     */
+    private function mergeUserLevelModules(array $effectiveModules, ?User $user): array
+    {
+        if ($user === null) {
+            return $effectiveModules;
+        }
+
+        $userModules = $this->getUserAllowedModules($user);
+        foreach (self::USER_LEVEL_MODULE_KEYS as $moduleKey) {
+            if (in_array($moduleKey, $userModules, true) && ! in_array($moduleKey, $effectiveModules, true)) {
+                $effectiveModules[] = $moduleKey;
+            }
+        }
+
+        return array_values(array_unique($effectiveModules));
     }
 }
