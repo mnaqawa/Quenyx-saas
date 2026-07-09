@@ -164,7 +164,7 @@ class ObserveController extends Controller
                 $staleThresholdSeconds = max(60, (int) config('observe.stale_threshold_seconds', 300));
                 $pollAt = $nativeMeta?->last_poll_at;
                 $stale = ! $engineUnreachable
-                    && ($pollAt === null || $pollAt->lt(now()->subSeconds($staleThresholdSeconds)));
+                    && $this->isObservePollStale($pollAt, $staleThresholdSeconds, false);
 
                 return response()->json([
                     'success' => true,
@@ -276,10 +276,7 @@ class ObserveController extends Controller
         $hasObservedServices = $deduped->isNotEmpty();
         $stale = $monitoringConfigured
             && ! $engineUnreachable
-            && (
-                ($pollAt === null && ! $hasObservedServices)
-                || ($pollAt !== null && $pollAt->lt(now()->subSeconds($staleThresholdSeconds)))
-            );
+            && $this->isObservePollStale($pollAt, $staleThresholdSeconds, $hasObservedServices);
 
         return response()
             ->json([
@@ -1225,5 +1222,21 @@ class ObserveController extends Controller
             ],
             'items' => $items,
         ];
+    }
+
+    /**
+     * Whether native observe poll data should be treated as stale.
+     */
+    private function isObservePollStale(?\Illuminate\Support\Carbon $pollAt, int $thresholdSeconds, bool $hasObservedServices = false): bool
+    {
+        if ($pollAt === null) {
+            return ! $hasObservedServices;
+        }
+
+        if ($pollAt->isFuture()) {
+            return false;
+        }
+
+        return $pollAt->lessThanOrEqualTo(now()->subSeconds($thresholdSeconds));
     }
 }

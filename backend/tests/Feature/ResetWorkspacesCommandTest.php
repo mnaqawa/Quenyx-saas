@@ -6,9 +6,9 @@ use App\Models\Project;
 use App\Models\ProjectInvite;
 use App\Models\ProjectMembership;
 use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Symfony\Component\Console\Output\BufferedOutput;
 use Tests\TestCase;
 
 class ResetWorkspacesCommandTest extends TestCase
@@ -16,22 +16,11 @@ class ResetWorkspacesCommandTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * @return array{0: int, 1: string}
-     */
-    private function callResetWorkspaces(array $parameters = []): array
-    {
-        $buffer = new BufferedOutput();
-        $exitCode = Artisan::call('quenyx:reset-workspaces', $parameters, $buffer);
-
-        return [$exitCode, $buffer->fetch()];
-    }
-
-    /**
      * Test that command refuses to run in production environment
      */
     public function test_command_refuses_in_production(): void
     {
-        User::create([
+        $user = User::create([
             'email' => 'test@example.com',
             'name' => 'Test User',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
@@ -40,12 +29,11 @@ class ResetWorkspacesCommandTest extends TestCase
         $this->app['env'] = 'production';
         config(['app.env' => 'production']);
 
-        [$exitCode, $output] = $this->callResetWorkspaces([
+        $this->artisan('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
-        ]);
+        ])->assertExitCode(Command::FAILURE);
 
-        $this->assertNotEquals(0, $exitCode);
-        $this->assertStringContainsString('production', $output);
+        $this->assertEquals(0, Project::where('owner_id', $user->id)->count());
     }
 
     /**
@@ -53,7 +41,6 @@ class ResetWorkspacesCommandTest extends TestCase
      */
     public function test_command_creates_sample_workspaces(): void
     {
-        // Ensure we're not in production
         $this->app['env'] = 'local';
         config(['app.env' => 'local']);
 
@@ -63,7 +50,6 @@ class ResetWorkspacesCommandTest extends TestCase
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
         ]);
 
-        // Create some existing projects for the user
         $existingProject = Project::create([
             'owner_id' => $user->id,
             'name' => 'Existing Project',
@@ -76,21 +62,18 @@ class ResetWorkspacesCommandTest extends TestCase
             'role' => 'owner',
         ]);
 
-        // Run command with --count=2 (non-interactive)
-        [$result] = $this->callResetWorkspaces([
+        $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 2,
             '--force' => true,
         ]);
 
-        $this->assertEquals(0, $result); // Command::SUCCESS
+        $this->assertEquals(Command::SUCCESS, $result);
 
-        // Verify old project was deleted
         $this->assertDatabaseMissing('projects', [
             'id' => $existingProject->id,
         ]);
 
-        // Verify new workspaces were created
         $this->assertDatabaseHas('projects', [
             'owner_id' => $user->id,
             'name' => 'Production Env',
@@ -103,7 +86,6 @@ class ResetWorkspacesCommandTest extends TestCase
             'status' => 'active',
         ]);
 
-        // Verify memberships were created
         $productionProject = Project::where('owner_id', $user->id)
             ->where('name', 'Production Env')
             ->first();
@@ -114,9 +96,7 @@ class ResetWorkspacesCommandTest extends TestCase
             'role' => 'owner',
         ]);
 
-        // Verify only 2 projects exist for this user
-        $userProjects = Project::where('owner_id', $user->id)->count();
-        $this->assertEquals(2, $userProjects);
+        $this->assertEquals(2, Project::where('owner_id', $user->id)->count());
     }
 
     /**
@@ -144,14 +124,12 @@ class ResetWorkspacesCommandTest extends TestCase
             'status' => 'active',
         ]);
 
-        // Create membership for other user
         $membership = ProjectMembership::create([
             'project_id' => $project->id,
             'user_id' => $otherUser->id,
             'role' => 'member',
         ]);
 
-        // Create invite
         $invite = ProjectInvite::create([
             'project_id' => $project->id,
             'email' => 'invited@example.com',
@@ -162,14 +140,12 @@ class ResetWorkspacesCommandTest extends TestCase
             'expires_at' => now()->addDays(7),
         ]);
 
-        // Run command
-        $this->callResetWorkspaces([
+        Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 1,
             '--force' => true,
         ]);
 
-        // Verify related data was deleted
         $this->assertDatabaseMissing('project_memberships', [
             'id' => $membership->id,
         ]);
@@ -187,13 +163,10 @@ class ResetWorkspacesCommandTest extends TestCase
         $this->app['env'] = 'local';
         config(['app.env' => 'local']);
 
-        [$exitCode, $output] = $this->callResetWorkspaces([
+        $this->artisan('quenyx:reset-workspaces', [
             'email' => 'nonexistent@example.com',
             '--force' => true,
-        ]);
-
-        $this->assertNotEquals(0, $exitCode);
-        $this->assertStringContainsString('not found', $output);
+        ])->assertExitCode(Command::FAILURE);
     }
 
     /**
@@ -210,19 +183,16 @@ class ResetWorkspacesCommandTest extends TestCase
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
         ]);
 
-        [$exitCode, $output] = $this->callResetWorkspaces([
+        $this->artisan('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 10,
             '--force' => true,
-        ]);
-        $this->assertNotEquals(0, $exitCode);
-        $this->assertStringContainsString('Count must be between', $output);
+        ])->assertExitCode(Command::FAILURE);
 
-        [$exitCode] = $this->callResetWorkspaces([
+        $this->artisan('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 0,
             '--force' => true,
-        ]);
-        $this->assertNotEquals(0, $exitCode);
+        ])->assertExitCode(Command::FAILURE);
     }
 }

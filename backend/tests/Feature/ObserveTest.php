@@ -305,38 +305,37 @@ class ObserveTest extends TestCase
     {
         config(['observe.stale_threshold_seconds' => 300]);
 
-        $now = Carbon::parse('2026-06-18T22:32:00Z');
-        Carbon::setTestNow($now);
-
         $meta = ObserveMeta::where('workspace_id', $this->workspace->id)
             ->where('engine_key', 'native')
             ->firstOrFail();
+        $recentPollAt = now()->subSeconds(30);
         $meta->forceFill([
-            'last_poll_at' => $now->copy()->subSeconds(30),
+            'last_poll_at' => $recentPollAt,
             'error' => null,
         ])->save();
+        $meta->refresh();
+
+        $this->assertTrue(
+            $recentPollAt->equalTo($meta->last_poll_at),
+            'last_poll_at should persist before services request'
+        );
 
         $response = $this->actingAs($this->user)
             ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");
 
         $response->assertStatus(200)
             ->assertJsonPath('data.stale', false);
-
-        Carbon::setTestNow();
     }
 
     public function test_services_stale_when_last_poll_exceeds_threshold(): void
     {
         config(['observe.stale_threshold_seconds' => 300]);
 
-        $now = Carbon::parse('2026-06-18T22:32:00Z');
-        Carbon::setTestNow($now);
-
         $meta = ObserveMeta::where('workspace_id', $this->workspace->id)
             ->where('engine_key', 'native')
             ->firstOrFail();
         $meta->forceFill([
-            'last_poll_at' => $now->copy()->subSeconds(400),
+            'last_poll_at' => now()->subSeconds(400),
             'error' => null,
         ])->save();
 
@@ -345,8 +344,6 @@ class ObserveTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('data.stale', true);
-
-        Carbon::setTestNow();
     }
 
     public function test_services_not_stale_when_monitoring_not_configured(): void
