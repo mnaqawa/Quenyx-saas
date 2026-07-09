@@ -29,8 +29,8 @@ class AuthSecurityTest extends TestCase
 
         $response->assertStatus(200);
 
-        Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context): bool {
-            if ($message !== 'Login request received') {
+        Log::shouldHaveReceived('log')->withArgs(function (string $level, string $message, array $context): bool {
+            if ($level !== 'info' || $message !== 'Login request received') {
                 return true;
             }
             if (array_key_exists('all_input', $context)) {

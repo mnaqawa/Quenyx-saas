@@ -2,9 +2,59 @@
 
 namespace Tests;
 
+use App\Models\Plan;
+use App\Models\Project;
+use App\Models\ProjectSubscription;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->resetTestingAiConfig();
+        $this->seedTestCatalog();
+    }
+
+    /**
+     * Prevent cached production config from leaking OpenAI keys into unit tests.
+     */
+    protected function resetTestingAiConfig(): void
+    {
+        config([
+            'ai.default' => env('AI_PROVIDER') ?: null,
+            'ai.feature_flags.enabled' => env('AI_ENABLED') !== '' ? env('AI_ENABLED') : null,
+            'ai.providers.openai.api_key' => env('OPENAI_API_KEY') ?: null,
+        ]);
+    }
+
+    /**
+     * Seed plans/modules for any test using RefreshDatabase so entitlement gates resolve.
+     */
+    protected function seedTestCatalog(): void
+    {
+        if (! in_array(RefreshDatabase::class, class_uses_recursive(static::class), true)) {
+            return;
+        }
+
+        $this->seed(\Database\Seeders\PlanSeeder::class);
+        $this->seed(\Database\Seeders\ModuleSeeder::class);
+    }
+
+    protected function subscribeProject(Project $project, string $planKey = 'enterprise'): ProjectSubscription
+    {
+        $plan = Plan::where('key', $planKey)->firstOrFail();
+
+        return ProjectSubscription::updateOrCreate(
+            ['project_id' => $project->id],
+            [
+                'plan_id' => $plan->id,
+                'status' => 'active',
+                'starts_at' => now(),
+            ]
+        );
+    }
 }

@@ -202,6 +202,8 @@ class FleetDashboardTest extends TestCase
         $this->seedPlans();
         [, $project] = $this->makeUserAndProject();
 
+        AgentGateway::query()->delete();
+
         $primary = AgentGateway::create([
             'id' => (string) Str::uuid(),
             'name' => 'Primary',

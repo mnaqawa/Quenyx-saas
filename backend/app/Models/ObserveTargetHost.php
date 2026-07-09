@@ -58,13 +58,14 @@ class ObserveTargetHost extends Model
 
     public function resolveRouteBinding($value, $field = null)
     {
-        $field = $field ?? $this->getRouteKeyName();
+        $query = $this->newQuery()->where(function ($q) use ($value) {
+            $q->where('uuid', $value);
+            if (is_numeric($value)) {
+                $q->orWhere('id', (int) $value);
+            }
+        });
 
-        return $this->newQuery()
-            ->where($field, $value)
-            ->when(! is_numeric($value), fn ($q) => $q->orWhere('uuid', $value))
-            ->when(is_numeric($value), fn ($q) => $q->orWhere('id', (int) $value))
-            ->firstOrFail();
+        return $query->firstOrFail();
     }
 
     public function getRouteKeyName(): string

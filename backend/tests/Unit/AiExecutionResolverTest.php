@@ -99,9 +99,18 @@ class AiExecutionResolverTest extends TestCase
 
     private function clearAiEnv(): void
     {
+        putenv('OPENAI_API_KEY');
+        unset($_ENV['OPENAI_API_KEY'], $_SERVER['OPENAI_API_KEY']);
+        putenv('AI_PROVIDER');
+        unset($_ENV['AI_PROVIDER'], $_SERVER['AI_PROVIDER']);
         putenv('AI_ENABLED');
         unset($_ENV['AI_ENABLED'], $_SERVER['AI_ENABLED']);
         putenv('AI_MOCK_ALLOWED');
         unset($_ENV['AI_MOCK_ALLOWED'], $_SERVER['AI_MOCK_ALLOWED']);
+        config([
+            'ai.default' => null,
+            'ai.feature_flags.enabled' => null,
+            'ai.providers.openai.api_key' => null,
+        ]);
     }
 }

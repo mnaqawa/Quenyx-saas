@@ -24,5 +24,9 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="OPENAI_API_KEY" value=""/>
+        <env name="AI_PROVIDER" value=""/>
+        <env name="AI_ENABLED" value=""/>
+        <env name="AGENT_REQUIRE_GATEWAY" value="false"/>
     </php>
 </phpunit>

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Plan;
 use App\Models\Project;
+use App\Models\ProjectSubscription;
 use App\Models\User;
 use App\Services\Platform\Context\EnterpriseContextEngine;
 use App\Services\Platform\EventBus\PlatformEventBus;
@@ -29,16 +30,18 @@ class EnterpriseIntelligenceTest extends TestCase
     {
         parent::setUp();
 
-        // A free plan that grants the Sprint 25 modules (self-contained; no seeder dependency).
-        Plan::create([
-            'key' => 'free',
-            'name' => 'Free',
-            'price_cents' => 0,
-            'features' => [
-                'modules_allowed' => ['qynva', 'qynbalance', 'qynknow', 'qynsight'],
-                'limits' => [],
-            ],
-        ]);
+        // Sprint 25 modules on the free plan for these tests (catalog is seeded in TestCase).
+        $freePlan = Plan::updateOrCreate(
+            ['key' => 'free'],
+            [
+                'name' => 'Free',
+                'price_cents' => 0,
+                'features' => [
+                    'modules_allowed' => ['qynva', 'qynbalance', 'qynknow', 'qynsight'],
+                    'limits' => [],
+                ],
+            ]
+        );
 
         $this->user = User::create([
             'name' => 'Operator User',
@@ -51,6 +54,15 @@ class EnterpriseIntelligenceTest extends TestCase
             'name' => 'Enterprise Workspace',
             'status' => 'active',
         ]);
+
+        ProjectSubscription::updateOrCreate(
+            ['project_id' => $this->workspace->id],
+            [
+                'plan_id' => $freePlan->id,
+                'status' => 'active',
+                'starts_at' => now(),
+            ]
+        );
     }
 
     public function test_event_bus_has_full_vocabulary_and_subscriber(): void

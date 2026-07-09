@@ -157,10 +157,24 @@ class ObserveTargetsController extends Controller
 
         if ($hostRows->isEmpty()) {
             $this->backfillTargetsFromNativeServices($project);
-            $hostRows = ObserveTargetHost::where('workspace_id', $project->id)
-                ->with(['services' => fn ($q) => $q->orderBy('name')])
-                ->orderBy('name')
-                ->get();
+            $hostQuery = ObserveTargetHost::where('workspace_id', $project->id)
+                ->with(['services' => fn ($q) => $q->orderBy('name')]);
+            if ($lifecycleFilter === 'archived') {
+                $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::ARCHIVED);
+            } elseif ($lifecycleFilter === 'suspended') {
+                $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::SUSPENDED);
+            } elseif ($lifecycleFilter === 'agent_removed') {
+                $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::AGENT_REMOVED);
+            } elseif ($lifecycleFilter === 'all') {
+                $hostQuery->visibleInList();
+            } else {
+                $hostQuery->visibleInList()
+                    ->where(function ($q) {
+                        $q->whereIn('lifecycle_status', \App\Constants\HostLifecycleStatus::defaultListFilter())
+                            ->orWhereNull('lifecycle_status');
+                    });
+            }
+            $hostRows = $hostQuery->orderBy('name')->get();
         }
 
         $hosts = $hostRows->map(function ($host) use ($definitionsByCommand, $project) {

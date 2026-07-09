@@ -238,7 +238,6 @@ class AgentTelemetryObserveBridge
         $existing = $existingForWorkspace[$engineServiceKey] ?? null;
         $saved = $this->persistResult($workspaceId, $hostName, 'Host-Alive', $engineServiceKey, $existing, $result, 300, $now);
         $existingForWorkspace[$engineServiceKey] = $saved;
-        $this->recordHistory($workspaceId, $hostName, 'Host-Alive', $result, $now);
 
         return 1;
     }

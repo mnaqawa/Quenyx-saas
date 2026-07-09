@@ -39,7 +39,8 @@ class AgentGatewayService
                 $inner->whereNull('workspace_id')->orWhere('workspace_id', $workspaceId);
             }))
             ->orderByDesc('is_primary')
-            ->orderBy('connected_agents')
+            ->orderBy('name')
+            ->orderBy('id')
             ->first();
 
         if (! $alternate) {

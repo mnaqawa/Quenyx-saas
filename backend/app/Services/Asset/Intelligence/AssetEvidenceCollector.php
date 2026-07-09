@@ -71,7 +71,7 @@ class AssetEvidenceCollector
             ->get()
             ->map(fn (PlatformAsset $asset): array => $this->describePlatformAsset($project, $asset, $agents));
 
-        return $hostAssets->merge($inventoryOnly)->values()->all();
+        return array_values(array_merge($hostAssets->all(), $inventoryOnly->all()));
     }
 
     /**

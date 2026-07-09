@@ -151,7 +151,7 @@ class AiExecutionResolver
             return 'mock';
         }
 
-        return $default !== '' ? $default : null;
+        return null;
     }
 
     /**
