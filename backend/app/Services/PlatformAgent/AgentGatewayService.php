@@ -4,7 +4,7 @@ namespace App\Services\PlatformAgent;
 
 use App\Models\Agent;
 use App\Models\AgentGateway;
-use App\Support\AgentGateway;
+use App\Support\AgentGateway as GatewayUrl;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -103,7 +103,7 @@ class AgentGatewayService
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'name' => 'Default Agent Gateway',
             'region' => config('agent.gateway_region', 'default'),
-            'endpoint_url' => AgentGateway::url(),
+            'endpoint_url' => GatewayUrl::url(),
             'version' => config('agent.gateway_version', '1.0.0'),
             'health_status' => 'healthy',
             'capacity' => (int) config('agent.gateway_capacity', 5000),

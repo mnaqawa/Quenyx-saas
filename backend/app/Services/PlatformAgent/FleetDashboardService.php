@@ -8,7 +8,6 @@ use App\Constants\AgentPolicyStatus;
 use App\Models\Agent;
 use App\Models\AgentPlugin;
 use App\Models\Project;
-use App\Support\AgentGateway;
 use Illuminate\Support\Carbon;
 
 /**

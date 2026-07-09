@@ -1,6 +1,16 @@
 # Running Tests
 
-This project uses PHPUnit for testing. Since Laravel 10 doesn't include the `php artisan test` command by default, use PHPUnit directly.
+This project uses PHPUnit. Use either:
+
+```bash
+php artisan test
+```
+
+or PHPUnit directly:
+
+```bash
+vendor/bin/phpunit
+```
 
 ## Prerequisites
 
@@ -78,19 +88,20 @@ EXIT;
 ## Running All Tests
 
 ```bash
-vendor/bin/phpunit
+php artisan test
 ```
 
 or
 
 ```bash
-./vendor/bin/phpunit
+vendor/bin/phpunit
 ```
 
 ## Running Specific Test Classes
 
 ```bash
-# Run ProfileTest only
+php artisan test --filter=ProfileTest
+# or
 vendor/bin/phpunit --filter ProfileTest
 
 # Run ProjectMembershipTest only
