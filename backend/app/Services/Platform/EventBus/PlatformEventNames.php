@@ -34,6 +34,8 @@ final class PlatformEventNames
     public const APPROVAL_REJECTED = 'ApprovalRejected';
     public const NOTIFICATION_SENT = 'NotificationSent';
     public const COMPLIANCE_ASSESSMENT_COMPLETED = 'ComplianceAssessmentCompleted';
+    public const AGENT_REVOKED = 'AgentRevoked';
+    public const HOST_MONITORING_DISABLED = 'HostMonitoringDisabled';
 
     /**
      * @return list<string>
@@ -62,6 +64,8 @@ final class PlatformEventNames
             self::APPROVAL_REJECTED,
             self::NOTIFICATION_SENT,
             self::COMPLIANCE_ASSESSMENT_COMPLETED,
+            self::AGENT_REVOKED,
+            self::HOST_MONITORING_DISABLED,
         ];
     }
 

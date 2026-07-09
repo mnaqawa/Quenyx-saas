@@ -131,11 +131,29 @@ class ObserveTargetsController extends Controller
     {
         $this->authorize('view', $project);
 
+        $lifecycleFilter = $request->query('lifecycle', 'default');
         $definitionsByCommand = $this->definitionsByCheckCommand($project->id);
-        $hostRows = ObserveTargetHost::where('workspace_id', $project->id)
-            ->with(['services' => fn ($q) => $q->orderBy('name')])
-            ->orderBy('name')
-            ->get();
+
+        $hostQuery = ObserveTargetHost::where('workspace_id', $project->id)
+            ->with(['services' => fn ($q) => $q->orderBy('name')]);
+
+        if ($lifecycleFilter === 'archived') {
+            $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::ARCHIVED);
+        } elseif ($lifecycleFilter === 'suspended') {
+            $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::SUSPENDED);
+        } elseif ($lifecycleFilter === 'agent_removed') {
+            $hostQuery->where('lifecycle_status', \App\Constants\HostLifecycleStatus::AGENT_REMOVED);
+        } elseif ($lifecycleFilter === 'all') {
+            $hostQuery->visibleInList();
+        } else {
+            $hostQuery->visibleInList()
+                ->where(function ($q) {
+                    $q->whereIn('lifecycle_status', \App\Constants\HostLifecycleStatus::defaultListFilter())
+                        ->orWhereNull('lifecycle_status');
+                });
+        }
+
+        $hostRows = $hostQuery->orderBy('name')->get();
 
         if ($hostRows->isEmpty()) {
             $this->backfillTargetsFromNativeServices($project);
@@ -154,6 +172,12 @@ class ObserveTargetsController extends Controller
                     'check_command' => $host->check_command,
                     'tags' => $host->tags ?? [],
                     'enabled' => $host->enabled,
+                    'lifecycle_status' => $host->lifecycle_status ?? 'active',
+                    'lifecycle_reason' => $host->lifecycle_reason,
+                    'lifecycle_changed_at' => $host->lifecycle_changed_at?->toIso8601String(),
+                    'uuid' => $host->uuid,
+                    'agent_id' => $host->agent_id,
+                    'source' => $host->source,
                     'services' => $host->services->map(function ($service) use ($definitionsByCommand, $project) {
                         $check_args = is_array($service->check_args) ? $service->check_args : [];
                         $service_key = $this->serviceKeyForResponse($service, $definitionsByCommand);

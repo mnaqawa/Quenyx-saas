@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Constants\AgentConstants;
 use App\Models\Agent;
 use App\Models\AgentEnrollmentToken;
+use App\Models\ObserveTargetHost;
 use App\Models\Project;
+use App\Services\PlatformAgent\AgentLifecycleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,6 +15,11 @@ use Illuminate\Validation\Rule;
 
 class AgentController extends Controller
 {
+    public function __construct(
+        private AgentLifecycleService $agentLifecycle
+    ) {
+    }
+
     /**
      * List agents for a workspace.
      * GET /api/workspaces/{project}/agents
@@ -147,9 +154,20 @@ class AgentController extends Controller
             return response()->json(['success' => false, 'message' => 'Agent not found'], 404);
         }
 
-        $agent->delete();
+        $linkedHosts = ObserveTargetHost::where('workspace_id', $project->id)
+            ->where('agent_id', $agent->id)
+            ->count();
 
-        return response()->json(['success' => true, 'data' => ['deleted' => true]]);
+        $this->agentLifecycle->delete($project, $agent, request()->user());
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deleted' => true,
+                'linked_hosts_marked' => $linkedHosts,
+                'host_lifecycle' => 'agent_removed',
+            ],
+        ]);
     }
 
     /**

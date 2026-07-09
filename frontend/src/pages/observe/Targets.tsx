@@ -20,6 +20,7 @@ import { observeService } from '../../services/observeService'
 import type { ObserveServiceRow, ServiceDefinition, ArgsSchemaEntry } from '../../types/observe'
 import { getRequestErrorFieldErrors } from '../../lib/requestError'
 import { parseTargetsResponse } from '../../lib/observeTargets'
+import { HostLifecycleMenu, lifecycleStatusClass, lifecycleStatusLabel } from '../../components/platform/HostLifecycleMenu'
 import {
   normalizeServiceIntervalsForUi,
   serviceIntervalsForApi,
@@ -29,6 +30,7 @@ import {
 
 interface TargetHost {
   id?: number
+  uuid?: string
   name: string
   address: string
   /** Optional public IP (e.g. for agent behind NAT). */
@@ -36,6 +38,10 @@ interface TargetHost {
   check_command: string
   tags: string[]
   enabled: boolean
+  lifecycle_status?: string
+  lifecycle_reason?: string | null
+  agent_id?: string | null
+  source?: string
   services: TargetService[]
   created_at?: string
   updated_at?: string
@@ -204,6 +210,7 @@ export default function Targets() {
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
   const [runtimeServices, setRuntimeServices] = useState<ObserveServiceRow[]>([])
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
+  const [lifecycleFilter, setLifecycleFilter] = useState<string>('default')
   const [savedSnapshot, setSavedSnapshot] = useState('[]')
   const isDirtyRef = useRef(false)
   const serviceListEndRef = useRef<HTMLDivElement>(null)
@@ -257,7 +264,7 @@ export default function Targets() {
       setError(null)
       const [targetsResponse, defsResponse, servicesResponse] = await Promise.all([
         gatewayClient.get<TargetHost[] | { data?: TargetHost[]; targets?: TargetHost[] }>(
-          `workspaces/${workspaceId}/observe/targets?_t=${Date.now()}`,
+          `workspaces/${workspaceId}/observe/targets?lifecycle=${lifecycleFilter}&_t=${Date.now()}`,
           { workspaceId: String(workspaceId), moduleKey: 'qynsight' }
         ),
         observeService.getServiceDefinitions(Number(workspaceId), { engine: 'native', status: 'active' }),
@@ -280,7 +287,7 @@ export default function Targets() {
       fetchInFlightRef.current = false
       lastFetchAtRef.current = Date.now()
     }
-  }, [workspaceId])
+  }, [workspaceId, lifecycleFilter])
 
   const bumpRefreshKey = useCallback(() => {
     setDataRefreshKey((k) => k + 1)
@@ -905,6 +912,23 @@ export default function Targets() {
       )}
 
       <div className="rounded-2xl border border-white/10 bg-[#0f151d] p-5 text-white">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <label className="text-xs text-white/50" htmlFor="lifecycle-filter">
+            Filter:
+          </label>
+          <select
+            id="lifecycle-filter"
+            value={lifecycleFilter}
+            onChange={(e) => setLifecycleFilter(e.target.value)}
+            className="rounded border border-white/15 bg-black/30 px-2 py-1 text-sm text-white"
+          >
+            <option value="default">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="archived">Archived</option>
+            <option value="agent_removed">Agent removed</option>
+            <option value="all">All visible</option>
+          </select>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -937,8 +961,12 @@ export default function Targets() {
                       <td className="px-3 py-2.5 font-medium">{host.name || '—'}</td>
                       <td className="px-3 py-2.5 text-white/70">{host.address || '—'}</td>
                       <td className="px-3 py-2.5 text-white/70">{os ?? t('hosts.osUnknown')}</td>
-                      <td className={`px-3 py-2.5 uppercase text-xs ${runtime?.status === 'critical' ? 'text-rose-300' : runtime?.status === 'warning' ? 'text-amber-300' : runtime?.status === 'ok' ? 'text-emerald-300' : 'text-white/60'}`}>
-                        {runtime?.status ?? t('targets.status.unknown')}
+                      <td className={`px-3 py-2.5 uppercase text-xs ${lifecycleStatusClass(host.lifecycle_status ?? runtime?.status)}`}>
+                        {['agent_removed', 'monitoring_disabled', 'suspended', 'archived'].includes(host.lifecycle_status ?? '')
+                          ? lifecycleStatusLabel(host.lifecycle_status)
+                          : host.lifecycle_reason
+                            ? lifecycleStatusLabel(host.lifecycle_status)
+                            : (runtime?.status ?? t('targets.status.unknown'))}
                       </td>
                       <td className="px-3 py-2.5">{runtime?.serviceCheckCount ?? host.services.length}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-white/70">
@@ -966,6 +994,16 @@ export default function Targets() {
                             >
                               {t('hosts.drawer.configure')}
                             </button>
+                          ) : null}
+                          {host.uuid && workspaceId ? (
+                            <HostLifecycleMenu
+                              workspaceId={workspaceId}
+                              hostUuid={host.uuid}
+                              hostName={host.name}
+                              lifecycleStatus={host.lifecycle_status}
+                              canEdit={canEdit}
+                              onChanged={() => void fetchTargets(true)}
+                            />
                           ) : null}
                         </div>
                       </td>

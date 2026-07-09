@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Agent extends Model
 {
+    use SoftDeletes;
     public $incrementing = false;
 
     protected $keyType = 'string';
@@ -39,6 +41,8 @@ class Agent extends Model
         'agent_secret_hash',
         'last_seen_at',
         'status',
+        'revoked_at',
+        'revoked_reason',
         'enrolled_at',
     ];
 
@@ -53,6 +57,7 @@ class Agent extends Model
         'vpn_detected' => 'boolean',
         'last_seen_at' => 'datetime',
         'enrolled_at' => 'datetime',
+        'revoked_at' => 'datetime',
     ];
 
     protected $hidden = ['agent_secret_hash'];

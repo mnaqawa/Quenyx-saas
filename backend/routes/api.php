@@ -216,6 +216,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/enrollment-tokens', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'createEnrollmentToken']);
         Route::get('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'show']);
         Route::put('/{agent}/permissions', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'updatePermissions']);
+        Route::post('/{agent}/revoke', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'revoke']);
+        Route::delete('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'destroy']);
+    });
+
+    // QynSight host lifecycle (workspace-scoped)
+    Route::prefix('workspaces/{project}/qynsight/hosts')->group(function () {
+        Route::post('/{host}/disable-monitoring', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'disableMonitoring']);
+        Route::post('/{host}/suspend', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'suspend']);
+        Route::post('/{host}/archive', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'archive']);
+        Route::post('/{host}/restore', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'restore']);
+        Route::delete('/{host}', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'destroy']);
+    });
+    Route::prefix('projects/{project}/qynsight/hosts')->group(function () {
+        Route::post('/{host}/disable-monitoring', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'disableMonitoring']);
+        Route::post('/{host}/suspend', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'suspend']);
+        Route::post('/{host}/archive', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'archive']);
+        Route::post('/{host}/restore', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'restore']);
+        Route::delete('/{host}', [\App\Http\Controllers\Observe\HostLifecycleController::class, 'destroy']);
     });
 
     // NOTE (GA remediation): The legacy QynSight AI routes that previously registered

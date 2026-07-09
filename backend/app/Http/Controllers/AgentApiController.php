@@ -221,6 +221,10 @@ class AgentApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        if ($agent->status === 'revoked' || $agent->revoked_at !== null) {
+            return response()->json(['success' => false, 'message' => 'Agent has been revoked'], 403);
+        }
+
         $agent->markSeen();
 
         $updates = [];

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Constants\HostLifecycleStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
  * Observe target host (workspace-defined host to monitor).
@@ -14,26 +17,60 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ObserveTargetHost extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     /** @var string */
     protected $table = 'observe_targets_hosts';
 
     protected $fillable = [
+        'uuid',
         'workspace_id',
         'name',
-        'address',      // Private IP (or hostname). For agent-enrolled hosts, updated from heartbeat when DHCP changes.
-        'public_ip',    // Public IP (optional). For agent-enrolled hosts, updated from heartbeat.
+        'address',
+        'public_ip',
         'agent_id',
         'source',
         'check_command',
         'tags',
         'enabled',
+        'lifecycle_status',
+        'lifecycle_reason',
+        'lifecycle_changed_at',
     ];
 
     protected $casts = [
         'tags' => 'array',
         'enabled' => 'boolean',
+        'lifecycle_changed_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (ObserveTargetHost $host) {
+            if (empty($host->uuid)) {
+                $host->uuid = (string) Str::uuid();
+            }
+            if (empty($host->lifecycle_status)) {
+                $host->lifecycle_status = HostLifecycleStatus::ACTIVE;
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?? $this->getRouteKeyName();
+
+        return $this->newQuery()
+            ->where($field, $value)
+            ->when(! is_numeric($value), fn ($q) => $q->orWhere('uuid', $value))
+            ->when(is_numeric($value), fn ($q) => $q->orWhere('id', (int) $value))
+            ->firstOrFail();
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     public function workspace(): BelongsTo
     {
@@ -53,5 +90,29 @@ class ObserveTargetHost extends Model
     public function portScans(): HasMany
     {
         return $this->hasMany(HostPortScan::class, 'host_id');
+    }
+
+    public function isMonitoringAllowed(): bool
+    {
+        $status = $this->lifecycle_status ?? HostLifecycleStatus::ACTIVE;
+
+        return ! in_array($status, HostLifecycleStatus::monitoringBlocked(), true)
+            && $this->deleted_at === null
+            && ($this->enabled ?? true);
+    }
+
+    public function scopeActiveMonitoring($query)
+    {
+        return $query
+            ->whereNull('deleted_at')
+            ->whereIn('lifecycle_status', HostLifecycleStatus::countsAsActive())
+            ->where('enabled', true);
+    }
+
+    public function scopeVisibleInList($query)
+    {
+        return $query
+            ->whereNull('deleted_at')
+            ->where('lifecycle_status', '!=', HostLifecycleStatus::DELETED);
     }
 }

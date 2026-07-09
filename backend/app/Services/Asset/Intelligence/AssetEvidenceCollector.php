@@ -8,6 +8,7 @@ use App\Models\Agent;
 use App\Models\AgentInventory;
 use App\Models\ObserveService;
 use App\Models\ObserveTargetHost;
+use App\Constants\HostLifecycleStatus;
 use App\Models\Project;
 use App\Services\CapacityPlanningService;
 use App\Support\Asset\AssetEntityId;
@@ -304,8 +305,10 @@ class AssetEvidenceCollector
 
         $lastSeen = $agent?->last_seen_at;
         $stale = $agent !== null && $lastSeen !== null && Carbon::parse($lastSeen)->lt(now()->subMinutes(self::STALE_MINUTES));
-        $inactive = ! (bool) $host->enabled
-            || ($agent !== null && ($agent->status !== 'online' || ($lastSeen !== null && Carbon::parse($lastSeen)->lt(now()->subHours(self::INACTIVE_HOURS)))));
+        $lifecycle = (string) ($host->lifecycle_status ?? HostLifecycleStatus::ACTIVE);
+        $inactive = in_array($lifecycle, array_merge(HostLifecycleStatus::monitoringBlocked(), [HostLifecycleStatus::ARCHIVED]), true)
+            || ! (bool) $host->enabled
+            || ($agent !== null && ($agent->status === 'revoked' || $agent->status !== 'online' || ($lastSeen !== null && Carbon::parse($lastSeen)->lt(now()->subHours(self::INACTIVE_HOURS)))));
 
         $serviceCount = ObserveService::query()
             ->where('workspace_id', $project->id)
@@ -320,6 +323,8 @@ class AssetEvidenceCollector
             'public_ip' => $host->public_ip,
             'source' => (string) $host->source,
             'enabled' => (bool) $host->enabled,
+            'lifecycle_status' => $lifecycle,
+            'lifecycle_reason' => $host->lifecycle_reason,
             'tags' => is_array($host->tags) ? $host->tags : [],
             'os' => $payload['os'] ?? ($agent?->os),
             'arch' => $payload['arch'] ?? ($agent?->arch),

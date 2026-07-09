@@ -125,4 +125,17 @@ Installer ships **core only**. Plugins enabled per capability policy without rei
 5. Rebuild Go agent binary
 6. Re-enroll or wait for next telemetry push on existing agents
 
-See also: `agent-gateway/README.md`, `agent/README.md`
+## Host & agent lifecycle (Sprint 27)
+
+| Action | Effect on agent | Effect on linked host |
+|--------|-----------------|----------------------|
+| **Revoke agent** | Secret invalidated, status revoked | `agent_removed`, checks disabled |
+| **Delete agent** | Soft-delete + revoke | `agent_removed`, history preserved |
+| **Disable monitoring** | — | `monitoring_disabled` |
+| **Suspend** | — | `suspended`, checks stopped |
+| **Archive** | — | Hidden from default list, asset kept |
+| **Restore** | — | Returns to `active` |
+| **Delete host** | — | Soft-delete; blocked if history exists (unless force) |
+
+Platform events: `AgentRevoked`, `HostMonitoringDisabled`
+

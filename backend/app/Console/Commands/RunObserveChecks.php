@@ -33,7 +33,11 @@ class RunObserveChecks extends Command
         $this->definitionsByKey = $this->loadDefinitionsByKey();
 
         $query = ObserveTargetHost::with(['services' => fn ($q) => $q->where('enabled', true)])
-            ->where('enabled', true);
+            ->visibleInList()
+            ->where(function ($q) {
+                $q->whereIn('lifecycle_status', \App\Constants\HostLifecycleStatus::defaultListFilter())
+                    ->orWhereNull('lifecycle_status');
+            });
         if ($workspaceId !== null && $workspaceId !== '') {
             $query->where('workspace_id', (int) $workspaceId);
         }

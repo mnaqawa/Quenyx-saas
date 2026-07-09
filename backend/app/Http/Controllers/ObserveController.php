@@ -219,7 +219,7 @@ class ObserveController extends Controller
         $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
 
         $monitoringConfigured = ObserveTargetHost::where('workspace_id', $project->id)
-            ->where('enabled', true)
+            ->activeMonitoring()
             ->exists()
             || ObserveService::where('workspace_id', $project->id)
                 ->where('engine_key', 'native')
@@ -748,7 +748,7 @@ class ObserveController extends Controller
             ->first();
 
         if ($meta?->last_poll_at) {
-            $hostCount = ObserveTargetHost::where('workspace_id', $project->id)->count();
+            $hostCount = ObserveTargetHost::where('workspace_id', $project->id)->activeMonitoring()->count();
             $sources[] = [
                 'id' => 'native-observe',
                 'name' => 'QynSight Native Checks',

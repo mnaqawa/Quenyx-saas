@@ -6,8 +6,10 @@ use App\Constants\AgentConstants;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentEnrollmentToken;
+use App\Models\ObserveTargetHost;
 use App\Models\Project;
 use App\Services\PlatformAgent\AgentCapabilityService;
+use App\Services\PlatformAgent\AgentLifecycleService;
 use App\Support\AgentGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,8 @@ use Illuminate\Validation\Rule;
 class PlatformAgentController extends Controller
 {
     public function __construct(
-        private AgentCapabilityService $capabilityService
+        private AgentCapabilityService $capabilityService,
+        private AgentLifecycleService $agentLifecycle
     ) {
     }
 
@@ -143,6 +146,48 @@ class PlatformAgentController extends Controller
                 'capability_matrix' => $this->capabilityService->buildCapabilityMatrix($agent->fresh(), $project),
             ],
         ]);
+    }
+
+    /**
+     * POST /api/platform/agents/{agent}/revoke
+     */
+    public function revoke(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('update', $project);
+
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+            'linked_host_action' => ['nullable', 'string', Rule::in(['agent_removed', 'monitoring_disabled'])],
+        ]);
+
+        $updated = $this->agentLifecycle->revoke($project, $agent, $request->user(), $validated['reason'] ?? null);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'agent' => $this->serializeAgent($updated, $project),
+                'linked_hosts_affected' => ObserveTargetHost::where('workspace_id', $project->id)
+                    ->where(function ($q) use ($agent) {
+                        $q->where('agent_id', $agent->id)
+                            ->orWhere('lifecycle_status', 'agent_removed');
+                    })
+                    ->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * DELETE /api/platform/agents/{agent}
+     */
+    public function destroy(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('update', $project);
+
+        $this->agentLifecycle->delete($project, $agent, $request->user());
+
+        return response()->json(['success' => true, 'data' => ['deleted' => true]]);
     }
 
   /**

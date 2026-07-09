@@ -6,7 +6,7 @@ import {
 } from '../services/integrationService'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import Agents from './observe/Agents'
+import PlatformAgents from './platform/PlatformAgents'
 
 const statusStyles: Record<string, string> = {
   connected: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30',
@@ -130,7 +130,7 @@ function Integrations() {
       <section className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white/45">{t('integrations.section.agents')}</h2>
         <p className="text-xs text-white/60">{t('integrations.agentsDesc')}</p>
-        <Agents embedded />
+        <PlatformAgents embedded />
       </section>
 
       <section className="space-y-4">

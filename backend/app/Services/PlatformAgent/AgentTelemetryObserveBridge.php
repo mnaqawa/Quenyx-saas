@@ -33,6 +33,10 @@ class AgentTelemetryObserveBridge
             return 0;
         }
 
+        if (! $host->isMonitoringAllowed()) {
+            return 0;
+        }
+
         $agent = Agent::find($host->agent_id);
         if (! $agent) {
             return 0;
@@ -94,6 +98,17 @@ class AgentTelemetryObserveBridge
             $this->recordHistory($workspaceId, $hostName, $service->name, $result, $collectedAt);
             $updated++;
         }
+
+        $worst = 'ok';
+        foreach ($services as $service) {
+            if (($service->check_source ?? '') === \App\Constants\AgentConstants::CHECK_SOURCE_PLATFORM_AGENT) {
+                $r = $this->evaluateTelemetry((string) ($service->service_key ?? $service->name), $payload, $service->check_args ?? []);
+                if ($r && in_array($r['state'], ['critical', 'warning', 'unknown'], true)) {
+                    $worst = $r['state'] === 'unknown' ? 'pending' : $r['state'];
+                }
+            }
+        }
+        app(\App\Services\PlatformAgent\HostLifecycleService::class)->updateHealthFromTelemetry($host, $worst);
 
         return $updated;
     }
