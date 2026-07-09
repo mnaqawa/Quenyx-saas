@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\App;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * When AGENT_REQUIRE_GATEWAY=true, block direct agent API access.
+ * When AGENT_REQUIRE_GATEWAY=true, block direct agent ingestion API access.
  * Agents must communicate via Quenyx Agent Gateway (QAG).
+ *
+ * Public installer downloads (/api/agents/download, /api/agents/availability) are exempt —
+ * they are fetched by admins from target hosts and do not carry the QAG header.
  */
 class EnsureAgentGateway
 {
@@ -18,6 +21,10 @@ class EnsureAgentGateway
         if (! config('agent.require_gateway', false)
             || App::runningUnitTests()
             || config('app.env') === 'testing') {
+            return $next($request);
+        }
+
+        if ($request->is('api/agents/download/*', 'api/agents/availability/*')) {
             return $next($request);
         }
 

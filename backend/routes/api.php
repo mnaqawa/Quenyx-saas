@@ -20,11 +20,14 @@ Route::get('/health', [HealthController::class, 'index']);
 // Readiness probe (GA): verifies DB/cache; returns 503 when not ready.
 Route::get('/health/ready', [HealthController::class, 'ready']);
 
-// Agent API (no user auth; uses enrollment token or agent secret)
-// In production, set AGENT_REQUIRE_GATEWAY=true so agents only reach Laravel via QAG.
-Route::middleware(['throttle:120,1', \App\Http\Middleware\EnsureAgentGateway::class])->group(function () {
+// Public agent installer endpoints (used from target hosts during enrollment — no QAG header).
+Route::middleware(['throttle:120,1'])->group(function () {
     Route::get('/agents/availability/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'availability']);
     Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
+});
+
+// Agent ingestion API (token-auth, no user). When AGENT_REQUIRE_GATEWAY=true, agents reach Laravel via QAG only.
+Route::middleware(['throttle:120,1', \App\Http\Middleware\EnsureAgentGateway::class])->group(function () {
     Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
     Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
     Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
