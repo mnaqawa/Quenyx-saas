@@ -173,7 +173,7 @@ class ResetWorkspacesCommandTest extends TestCase
         $this->app['env'] = 'local';
         config(['app.env' => 'local']);
 
-        $this->assertEquals(0, Artisan::call('quenyx:reset-workspaces', [
+        $this->assertNotEquals(0, Artisan::call('quenyx:reset-workspaces', [
             'email' => 'nonexistent@example.com',
             '--force' => true,
         ]));

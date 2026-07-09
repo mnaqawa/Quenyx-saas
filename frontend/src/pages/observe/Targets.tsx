@@ -929,7 +929,7 @@ export default function Targets() {
             <option value="all">All visible</option>
           </select>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-white/10 text-left text-xs text-white/60">

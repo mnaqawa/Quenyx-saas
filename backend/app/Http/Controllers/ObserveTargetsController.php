@@ -538,11 +538,15 @@ class ObserveTargetsController extends Controller
 
                     // Delete services that were removed
                     $servicesToDelete = array_diff($existingServiceIds, $newServiceIds);
-                    if (!empty($servicesToDelete)) {
+                    if (! empty($servicesToDelete)) {
                         ObserveTargetService::whereIn('id', $servicesToDelete)->delete();
                     }
 
-                    app(DefaultMonitoringProfileService::class)->attachToHost($host, $project->id);
+                    // Attach default profile only when the client did not supply explicit services
+                    // (manual hosts) or when this is an agent-enrolled host (telemetry checks).
+                    if ($host->agent_id || $servicesData === []) {
+                        app(DefaultMonitoringProfileService::class)->attachToHost($host, $project->id);
+                    }
                 }
 
                 // Delete hosts that were removed

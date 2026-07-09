@@ -30,6 +30,7 @@ abstract class TestCase extends BaseTestCase
             'agent.require_gateway' => false,
             'ai.feature_flags.workspace_enabled' => true,
             'openai.vector_store_id' => 'vs_test123',
+            'observe.stale_threshold_seconds' => 300,
         ]);
     }
 

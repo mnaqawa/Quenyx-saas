@@ -42,8 +42,8 @@ class ResetWorkspaces extends Command
     {
         // Safety check: refuse to run in production
         if (app()->environment('production') || config('app.env') === 'production') {
-            $this->error('This command cannot be run in production environment.');
-            $this->warn('Set APP_ENV to something other than "production" to use this command.');
+            $this->warn('This command cannot be run in production environment.');
+            $this->line('Set APP_ENV to something other than "production" to use this command.');
             return Command::FAILURE;
         }
 
@@ -52,14 +52,14 @@ class ResetWorkspaces extends Command
 
         // Validate count
         if ($count < 1 || $count > count(self::SAMPLE_WORKSPACES)) {
-            $this->error("Count must be between 1 and " . count(self::SAMPLE_WORKSPACES));
+            $this->warn('Count must be between 1 and '.count(self::SAMPLE_WORKSPACES));
             return Command::FAILURE;
         }
 
         // Find user
         $user = User::where('email', $email)->first();
-        if (!$user) {
-            $this->error("User with email '{$email}' not found.");
+        if (! $user) {
+            $this->warn("User with email '{$email}' not found.");
             return Command::FAILURE;
         }
 
