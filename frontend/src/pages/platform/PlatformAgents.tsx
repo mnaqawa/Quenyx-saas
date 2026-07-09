@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useWorkspaceContext } from '../workspaces/WorkspaceContext'
-import { PageHeader } from '../components/observe/PageHeader'
-import { agentService, type Agent, type EnrollmentTokenResponse } from '../services/agentService'
+import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
+import { PageHeader } from '../../components/observe/PageHeader'
+import { agentService, type Agent, type EnrollmentTokenResponse } from '../../services/agentService'
 import {
   platformAgentService,
   type PlatformAgentDetail,
   type PlatformAgentMetadata,
   type CapabilityMatrixEntry,
-} from '../services/platformAgentService'
+} from '../../services/platformAgentService'
+
+type PlatformPermissionInfo = PlatformAgentMetadata['permissions'][string]
 
 type Tab = 'agents' | 'enroll' | 'capabilities' | 'troubleshoot'
 
@@ -242,7 +244,7 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
           ) : null}
           {wizardStep === 2 && metadata ? (
             <div className="space-y-2">
-              {Object.entries(metadata.permissions).map(([key, p]) => (
+              {(Object.entries(metadata.permissions) as [string, PlatformPermissionInfo][]).map(([key, p]) => (
                 <label key={key} className="flex items-center gap-2 text-sm text-white/80">
                   <input
                     type="checkbox"

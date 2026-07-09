@@ -1002,7 +1002,7 @@ export default function Targets() {
                               hostName={host.name}
                               lifecycleStatus={host.lifecycle_status}
                               canEdit={canEdit}
-                              onChanged={() => void fetchTargets(true)}
+                              onChanged={() => void reloadTargets({ force: true, background: true })}
                             />
                           ) : null}
                         </div>
