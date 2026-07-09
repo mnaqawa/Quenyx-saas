@@ -6,6 +6,7 @@ use App\Contracts\Ai\AiProviderInterface;
 use App\Exceptions\Ai\AiProviderException;
 use App\Models\Ai\AiProviderSetting;
 use App\Models\Project;
+use Illuminate\Support\Facades\App;
 
 /**
  * Single source of truth for whether Quenyx AI may execute against a real provider,
@@ -72,7 +73,9 @@ class AiExecutionResolver
 
     public function allowsMock(): bool
     {
-        if (app()->environment(['local', 'testing'])) {
+        if (App::runningUnitTests()
+            || app()->environment(['local', 'testing'])
+            || config('app.env') === 'testing') {
             return true;
         }
 

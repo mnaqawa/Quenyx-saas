@@ -58,9 +58,7 @@ class AiExecutionResolverTest extends TestCase
 
     public function test_testing_without_provider_allows_mock(): void
     {
-        config(['ai.providers.openai.api_key' => null]);
-        config(['ai.default' => null]);
-        config(['ai.feature_flags.enabled' => null]);
+        $this->resetTestingAiConfig();
 
         $resolver = app(AiExecutionResolver::class);
 
@@ -93,7 +91,8 @@ class AiExecutionResolverTest extends TestCase
 
     private function simulateProduction(): void
     {
-        $this->app->detectEnvironment(static fn (): string => 'production');
+        $this->app['env'] = 'production';
+        config(['app.env' => 'production']);
     }
 
     private function clearAiEnv(): void

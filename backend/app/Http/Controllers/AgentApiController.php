@@ -202,7 +202,15 @@ class AgentApiController extends Controller
             }
 
             $this->resourceService->bootstrapOnRegister($agent, $targetHost?->id);
-            $this->gatewayService->refreshConnectedCounts();
+
+            try {
+                $this->gatewayService->refreshConnectedCounts();
+            } catch (\Throwable $gatewayError) {
+                Log::warning('Agent gateway connected count refresh failed after registration', [
+                    'agent_id' => $agentId,
+                    'message' => $gatewayError->getMessage(),
+                ]);
+            }
 
             Log::info('Agent registered', [
                 'agent_id' => $agentId,

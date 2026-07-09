@@ -28,6 +28,15 @@ class PlatformAgentOperationalMaturityTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * @param  array<string, string>  $extra
+     * @return array<string, string>
+     */
+    private function agentGatewayHeaders(array $extra = []): array
+    {
+        return array_merge(['X-Quenyx-Agent-Gateway' => '1'], $extra);
+    }
+
     private function makeUserAndProject(): array
     {
         $user = User::create([
@@ -64,7 +73,7 @@ class PlatformAgentOperationalMaturityTest extends TestCase
             'os' => 'linux',
             'arch' => 'amd64',
             'agent_version' => '1.0.0',
-        ]);
+        ], $this->agentGatewayHeaders());
 
         $response->assertOk();
         $secret = $response->json('data.agent_secret');
@@ -82,7 +91,7 @@ class PlatformAgentOperationalMaturityTest extends TestCase
             'agent_version' => '1.0.0',
             'policy_version' => '1.0.0',
             'queue_stats' => ['queued_events' => 2, 'dropped_events' => 0],
-        ], ['X-Agent-Secret' => $secret]);
+        ], $this->agentGatewayHeaders(['X-Agent-Secret' => $secret]));
 
         $response->assertOk()
             ->assertJsonPath('success', true)
@@ -105,7 +114,7 @@ class PlatformAgentOperationalMaturityTest extends TestCase
         $this->postJson("/api/agents/{$agentId}/heartbeat", [
             'agent_version' => '1.0.0',
             'policy_version' => '1.0.0',
-        ], ['X-Agent-Secret' => $secret])->assertOk();
+        ], $this->agentGatewayHeaders(['X-Agent-Secret' => $secret]))->assertOk();
 
         $agent = Agent::findOrFail($agentId);
         $this->assertNotNull($agent->health_score);
@@ -322,7 +331,7 @@ class PlatformAgentOperationalMaturityTest extends TestCase
                 'agent_version' => '1.0.0',
                 'plugins' => [],
             ],
-        ], ['X-Agent-Secret' => $secret])->assertOk();
+        ], $this->agentGatewayHeaders(['X-Agent-Secret' => $secret]))->assertOk();
 
         $user = User::find($project->owner_id);
         Sanctum::actingAs($user);

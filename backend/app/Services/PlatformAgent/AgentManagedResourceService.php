@@ -122,7 +122,7 @@ class AgentManagedResourceService
             }
 
             $isMonitoring = (bool) ($row['is_monitoring_target'] ?? ($type === AgentResourceType::LOCAL_HOST));
-            if (! $isMonitoring) {
+            if (! $isMonitoring && Schema::hasTable('platform_assets')) {
                 PlatformAsset::firstOrCreate(
                     [
                         'agent_id' => $agent->id,

@@ -63,7 +63,7 @@ func Run() error {
 }
 
 func printUsage() {
-	fmt.Println(`Quenyx Platform Agent (QPA) — outbound HTTPS to Quenyx Agent Gateway
+	fmt.Print(`Quenyx Platform Agent (QPA) — outbound HTTPS to Quenyx Agent Gateway
 
 Usage:
   quenyx-agent enroll --url=URL --workspace=ID --token=TOKEN

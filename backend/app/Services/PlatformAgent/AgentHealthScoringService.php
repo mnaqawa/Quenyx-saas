@@ -84,11 +84,20 @@ class AgentHealthScoringService
     public function persist(Agent $agent): array
     {
         $result = $this->compute($agent);
-        $agent->update([
-            'health_score' => $result['score'],
-            'health_level' => $result['level'],
-            'health_breakdown' => $result['breakdown'],
-        ]);
+
+        if (! Schema::hasColumn('agents', 'health_score')) {
+            return $result;
+        }
+
+        $updates = ['health_score' => $result['score']];
+        if (Schema::hasColumn('agents', 'health_level')) {
+            $updates['health_level'] = $result['level'];
+        }
+        if (Schema::hasColumn('agents', 'health_breakdown')) {
+            $updates['health_breakdown'] = $result['breakdown'];
+        }
+
+        $agent->update($updates);
 
         return $result;
     }

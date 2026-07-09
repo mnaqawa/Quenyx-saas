@@ -18,6 +18,10 @@ class AgentOfflineQueueService
      */
     public function recordQueueStats(Agent $agent, array $stats): void
     {
+        if (! Schema::hasColumn('agents', 'queue_stats')) {
+            return;
+        }
+
         $agent->update(['queue_stats' => $this->normalizeStats($stats)]);
     }
 

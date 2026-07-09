@@ -128,7 +128,12 @@ class OpenAIServiceTest extends TestCase
 
     public function test_temperature_is_sent_for_compatible_models(): void
     {
-        config(['openai.model' => 'gpt-4.1-mini']);
+        config([
+            'openai.api_key' => 'sk-test',
+            'openai.vector_store_id' => 'vs_test123',
+            'openai.model' => 'gpt-4.1-mini',
+            'openai.models.performance_analyst' => 'gpt-4.1-mini',
+        ]);
         $client = new ClientFake([
             CreateResponse::fake([
                 'model' => 'gpt-4.1-mini',

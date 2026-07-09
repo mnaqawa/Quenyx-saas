@@ -15,8 +15,22 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->applyTestingRuntimeOverrides();
         $this->resetTestingAiConfig();
         $this->seedTestCatalog();
+    }
+
+    /**
+     * Override cached production config so PHPUnit behaves deterministically.
+     */
+    protected function applyTestingRuntimeOverrides(): void
+    {
+        config([
+            'app.env' => 'testing',
+            'agent.require_gateway' => false,
+            'ai.feature_flags.workspace_enabled' => true,
+            'openai.vector_store_id' => 'vs_test123',
+        ]);
     }
 
     /**
@@ -28,6 +42,11 @@ abstract class TestCase extends BaseTestCase
             'ai.default' => null,
             'ai.feature_flags.enabled' => null,
             'ai.providers.openai.api_key' => null,
+            'openai.api_key' => null,
+            'openai.models.performance_analyst' => null,
+            'openai.models.anomaly_detector' => null,
+            'openai.models.compliance' => null,
+            'openai.models.capacity_planner' => null,
         ]);
     }
 

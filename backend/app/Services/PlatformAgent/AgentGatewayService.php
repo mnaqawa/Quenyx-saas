@@ -6,6 +6,7 @@ use App\Models\Agent;
 use App\Models\AgentGateway;
 use App\Support\AgentGateway as GatewayUrl;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Multi-gateway resolution and failover readiness.
@@ -57,6 +58,10 @@ class AgentGatewayService
 
     public function refreshConnectedCounts(): void
     {
+        if (! Schema::hasTable('agent_gateways')) {
+            return;
+        }
+
         $counts = Agent::query()
             ->whereNotNull('preferred_gateway_id')
             ->select('preferred_gateway_id', DB::raw('count(*) as total'))
@@ -94,8 +99,12 @@ class AgentGatewayService
             ->all();
     }
 
-    public function ensureDefaultExists(): AgentGateway
+    public function ensureDefaultExists(): ?AgentGateway
     {
+        if (! Schema::hasTable('agent_gateways')) {
+            return null;
+        }
+
         $existing = AgentGateway::where('is_primary', true)->first();
         if ($existing) {
             return $existing;

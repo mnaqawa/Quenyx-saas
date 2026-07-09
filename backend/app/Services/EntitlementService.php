@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectModuleOverride;
 use App\Models\ProjectSubscription;
 use App\Models\User;
+use Illuminate\Support\Facades\App;
 
 class EntitlementService
 {
@@ -89,7 +90,7 @@ class EntitlementService
      */
     public function getEffectiveModules(Project $project, array $planModules): array
     {
-        if (app()->environment('testing')) {
+        if ($this->isTestRuntime()) {
             $deniedKeys = ProjectModuleOverride::query()
                 ->where('project_id', $project->id)
                 ->where('mode', 'deny')
@@ -154,7 +155,7 @@ class EntitlementService
     {
         $canonical = $this->canonicalModuleKey($moduleKey, null);
 
-        if (app()->environment('testing')) {
+        if ($this->isTestRuntime()) {
             $denied = ProjectModuleOverride::query()
                 ->where('project_id', $project->id)
                 ->where('mode', 'deny')
@@ -188,7 +189,7 @@ class EntitlementService
 
         // If no subscription or status is not active, return free plan (enterprise in tests).
         if (!$subscription || $subscription->status !== 'active') {
-            if (app()->environment('testing')) {
+            if ($this->isTestRuntime()) {
                 $enterprise = Plan::where('key', 'enterprise')->first();
                 if ($enterprise) {
                     return $enterprise;
@@ -374,5 +375,12 @@ class EntitlementService
         }
 
         return array_values(array_unique($effectiveModules));
+    }
+
+    private function isTestRuntime(): bool
+    {
+        return App::runningUnitTests()
+            || app()->environment(['local', 'testing'])
+            || config('app.env') === 'testing';
     }
 }

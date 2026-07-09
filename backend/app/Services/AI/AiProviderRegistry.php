@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use App\Contracts\Ai\AiProviderInterface;
 use App\Exceptions\Ai\AiProviderException;
+use Illuminate\Support\Facades\App;
 
 /**
  * Resolves AI providers from config. This is the ONLY place that turns a provider key into a
@@ -15,6 +16,13 @@ class AiProviderRegistry
 {
     /** @var array<string, AiProviderInterface> */
     private array $resolved = [];
+
+    private function isDevOrTestRuntime(): bool
+    {
+        return App::runningUnitTests()
+            || app()->environment(['local', 'testing'])
+            || config('app.env') === 'testing';
+    }
 
     /**
      * Provider keys declared in config (implemented or future).
@@ -46,7 +54,7 @@ class AiProviderRegistry
             return 'openai';
         }
 
-        if (app()->environment(['local', 'testing'])) {
+        if ($this->isDevOrTestRuntime()) {
             return 'mock';
         }
 
@@ -80,7 +88,7 @@ class AiProviderRegistry
 
         return match ($key) {
             'openai' => ! empty($config['api_key']),
-            'mock' => app()->environment(['local', 'testing']),
+            'mock' => $this->isDevOrTestRuntime(),
             default => ! empty($config['api_key']) || ! empty($config['base_url']),
         };
     }

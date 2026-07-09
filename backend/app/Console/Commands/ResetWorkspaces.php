@@ -41,7 +41,7 @@ class ResetWorkspaces extends Command
     public function handle(): int
     {
         // Safety check: refuse to run in production
-        if (app()->environment('production')) {
+        if (app()->environment('production') || config('app.env') === 'production') {
             $this->error('This command cannot be run in production environment.');
             $this->warn('Set APP_ENV to something other than "production" to use this command.');
             return Command::FAILURE;
