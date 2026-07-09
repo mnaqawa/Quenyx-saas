@@ -29,6 +29,7 @@ Route::middleware(['throttle:120,1', \App\Http\Middleware\EnsureAgentGateway::cl
     Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
     Route::post('/agents/{agent}/inventory', [\App\Http\Controllers\AgentApiController::class, 'inventory']);
     Route::post('/agents/{agent}/evidence', [\App\Http\Controllers\AgentApiController::class, 'evidence']);
+    Route::post('/agents/{agent}/diagnostics', [\App\Http\Controllers\AgentApiController::class, 'diagnostics']);
 });
 
 Route::prefix('auth')->group(function () {
@@ -213,17 +214,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('platform/agents')->group(function () {
         Route::get('/metadata', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'metadata']);
         Route::get('/fleet', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'fleet']);
+        Route::get('/health', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'health']);
+        Route::get('/updates', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'updates']);
+        Route::get('/configuration', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'configuration']);
+        Route::get('/certificates', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'certificates']);
+        Route::get('/queue', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'queue']);
         Route::get('/installers', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'installers']);
         Route::get('/gateways', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'gateways']);
         Route::get('/', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'index']);
         Route::post('/enrollment-tokens', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'createEnrollmentToken']);
         Route::get('/{agent}/resources', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'resources']);
         Route::get('/{agent}/plugins', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'plugins']);
+        Route::get('/{agent}/diagnostics', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'diagnostics']);
+        Route::post('/{agent}/diagnostics/generate', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'generateDiagnostics']);
+        Route::get('/{agent}/diagnostics/{bundle}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'downloadDiagnostics']);
         Route::get('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'show']);
         Route::put('/{agent}/permissions', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'updatePermissions']);
         Route::post('/{agent}/revoke', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'revoke']);
         Route::delete('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'destroy']);
     });
+
+    Route::get('/platform/fleet/summary', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'fleetSummary']);
 
     // QynSight host lifecycle (workspace-scoped)
     Route::prefix('workspaces/{project}/qynsight/hosts')->group(function () {

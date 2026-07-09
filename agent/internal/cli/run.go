@@ -6,15 +6,19 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/quenyx/agent/internal/collector"
 	"github.com/quenyx/agent/internal/config"
+	"github.com/quenyx/agent/internal/configsync"
 	"github.com/quenyx/agent/internal/gateway"
 	"github.com/quenyx/agent/internal/heartbeat"
 	"github.com/quenyx/agent/internal/plugins"
 	"github.com/quenyx/agent/internal/policy"
+	"github.com/quenyx/agent/internal/queue"
+	"github.com/quenyx/agent/internal/update"
 	"github.com/quenyx/agent/internal/version"
 )
 
@@ -23,8 +27,11 @@ type agentRuntime struct {
 	cfg        *config.Config
 	plugins    *plugins.Manager
 	gw         *gateway.Client
+	queue      *queue.DiskQueue
+	updater    *update.Manager
 	bytesSent  uint64
 	bytesRecv  uint64
+	updateProg map[string]interface{}
 }
 
 func runAgent(cfgPath string) error {
@@ -41,14 +48,26 @@ func runAgent(cfgPath string) error {
 		cfg:     cfg,
 		plugins: plugins.NewManager(cfg.Permissions),
 		gw:      gateway.NewClient(cfg),
+		updater: update.NewManager(filepath.Join(filepath.Dir(cfgPath), "quenyx")),
+	}
+	queueDir := filepath.Join(filepath.Dir(cfgPath), "quenyx", "queue")
+	q, err := queue.Open(queueDir, 10000, 256)
+	if err != nil {
+		log.Printf("[qpa] offline queue warning: %v", err)
+	} else {
+		rt.queue = q
 	}
 
-	log.Printf("[qpa] status=started workspace_id=%d agent_id=%s version=%s permissions=%v",
-		cfg.WorkspaceID, cfg.AgentID, version.Agent, cfg.Permissions)
+	hbSec := configsync.HeartbeatInterval(cfg, 300)
+	metricsSec := configsync.TelemetryInterval(cfg, 60)
+	inventorySec := configsync.InventoryInterval(cfg, 21600)
 
-	heartbeatInterval := 5 * time.Minute
-	metricsInterval := 1 * time.Minute
-	inventoryInterval := 6 * time.Hour
+	heartbeatInterval := time.Duration(hbSec) * time.Second
+	metricsInterval := time.Duration(metricsSec) * time.Second
+	inventoryInterval := time.Duration(inventorySec) * time.Second
+
+	log.Printf("[qpa] status=started workspace_id=%d agent_id=%s version=%s permissions=%v hb=%s metrics=%s",
+		cfg.WorkspaceID, cfg.AgentID, version.Agent, cfg.Permissions, heartbeatInterval, metricsInterval)
 
 	tickerHeartbeat := time.NewTicker(heartbeatInterval)
 	tickerMetrics := time.NewTicker(metricsInterval)
@@ -81,7 +100,29 @@ func runAgent(cfgPath string) error {
 func (rt *agentRuntime) doHeartbeat() {
 	privateIP := getPrivateIP()
 	publicIP := getPublicIP()
-	body := heartbeat.BuildPayload(rt.cfg, rt.plugins, privateIP, publicIP, rt.bytesSent, rt.bytesRecv)
+
+	var queueStats map[string]interface{}
+	if rt.queue != nil {
+		queueStats = rt.queue.Stats().ToMap()
+	}
+
+	body := heartbeat.BuildPayload(rt.cfg, rt.plugins, privateIP, publicIP, rt.bytesSent, rt.bytesRecv, queueStats, rt.updateProg)
+
+	if rt.queue != nil {
+		events, _ := rt.queue.Drain(50)
+		if len(events) > 0 {
+			replay := make([]map[string]interface{}, 0, len(events))
+			for _, ev := range events {
+				replay = append(replay, map[string]interface{}{
+					"event_type": ev.EventType,
+					"dedup_key":  ev.DedupKey,
+					"event_at":   ev.EventAt,
+					"payload":    ev.Payload,
+				})
+			}
+			body["offline_replay"] = replay
+		}
+	}
 
 	jsonBody, _ := json.Marshal(body)
 	rt.bytesSent += uint64(len(jsonBody))
@@ -108,6 +149,20 @@ func (rt *agentRuntime) doHeartbeat() {
 
 	heartbeat.UpdateDiagnostics(rt.cfg, "ok", res.Latency, "")
 	rt.applyHeartbeatResponse(res.Body)
+
+	if rt.queue != nil {
+		if replay, ok := body["offline_replay"].([]map[string]interface{}); ok && len(replay) > 0 {
+			keys := make([]string, 0, len(replay))
+			for _, ev := range replay {
+				if k, ok := ev["dedup_key"].(string); ok {
+					keys = append(keys, k)
+				}
+			}
+			_ = rt.queue.Ack(keys)
+		}
+	}
+
+	rt.updateProg = nil
 	log.Printf("[qpa] heartbeat status=ok latency=%s policy=%s",
 		res.Latency.Round(time.Millisecond), rt.cfg.Diagnostics.PolicyStatus)
 	_ = config.Save(rt.cfg, rt.cfgPath)
@@ -140,6 +195,36 @@ func (rt *agentRuntime) applyHeartbeatResponse(body []byte) {
 	} else if syncResult.PolicyChanged {
 		log.Printf("[qpa] policy updated to version %s", rt.cfg.PolicyVersion)
 	}
+
+	if resp.Data.Configuration != nil {
+		changed := configsync.Apply(rt.cfg, &configsync.RemoteSettings{
+			Version:  resp.Data.Configuration.Version,
+			Settings: resp.Data.Configuration.Settings,
+		})
+		if changed {
+			log.Printf("[qpa] configuration synced to version %s", rt.cfg.ConfigVersion)
+		}
+	}
+
+	if resp.Data.Update != nil && resp.Data.Update.MayProceed {
+		prog := rt.updater.Evaluate(&update.Instruction{
+			MayProceed:     resp.Data.Update.MayProceed,
+			Approved:       resp.Data.Update.Approved,
+			TargetVersion:  resp.Data.Update.TargetVersion,
+			DownloadURL:    resp.Data.Update.DownloadURL,
+			ChecksumSHA256: resp.Data.Update.ChecksumSHA256,
+			Signature:      resp.Data.Update.Signature,
+		})
+		if prog != nil {
+			rt.updateProg = map[string]interface{}{
+				"status":   prog.Status,
+				"progress": prog.Progress,
+				"result":   prog.Result,
+				"error":    prog.Error,
+			}
+			log.Printf("[qpa] update status=%s progress=%d", prog.Status, prog.Progress)
+		}
+	}
 }
 
 func (rt *agentRuntime) doMetrics() {
@@ -164,6 +249,7 @@ func (rt *agentRuntime) doMetrics() {
 	}
 	rt.plugins.RecordPluginRun("monitoring", err)
 	if err != nil {
+		rt.enqueueOffline("telemetry", body)
 		log.Printf("[qpa] telemetry send failed: %v (keys: %v)", err, keys)
 		return
 	}
@@ -192,8 +278,22 @@ func (rt *agentRuntime) doInventory() {
 	}
 	rt.plugins.RecordPluginRun("inventory", err)
 	if err != nil {
+		rt.enqueueOffline("inventory", body)
 		log.Printf("[qpa] inventory send failed: %v (keys: %v)", err, keys)
 		return
 	}
 	log.Printf("[qpa] inventory shared=%v status=accepted", keys)
+}
+
+func (rt *agentRuntime) enqueueOffline(eventType string, payload map[string]interface{}) {
+	if rt.queue == nil {
+		return
+	}
+	key := fmt.Sprintf("%s-%s", eventType, time.Now().UTC().Format(time.RFC3339Nano))
+	_ = rt.queue.Enqueue(queue.Event{
+		EventType: eventType,
+		DedupKey:  key,
+		EventAt:   time.Now().UTC().Format(time.RFC3339),
+		Payload:   payload,
+	})
 }

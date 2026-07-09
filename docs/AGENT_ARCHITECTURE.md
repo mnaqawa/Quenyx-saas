@@ -184,3 +184,66 @@ QPA heartbeat payload includes policy versions, managed resources (`local_host`)
 - Exposes `quenyx-agent status` and `quenyx-agent diagnostics`
 - Never reports Docker/K8s/VM resources until discovery plugins exist (no fake data)
 
+## Sprint 29 — Enterprise operational maturity
+
+### Self-update framework (policy-gated)
+
+Updates never proceed without platform approval and maintenance window:
+
+```
+Platform → Policy → Agent → Download → Checksum → Signature → Replace → Restart → Heartbeat → Report
+```
+
+Heartbeat response includes `update` block with `may_proceed`, `download_url`, `checksum_sha256` only when approved.
+
+Tables: `agent_releases`, `agent_update_assignments`, `agent_update_history`, `agent_update_campaigns`.
+
+### Centralized configuration
+
+Platform is configuration authority. Heartbeat returns `configuration.version` and `configuration.settings`.
+
+Agents report `config_version` on sync. Revisions are versioned in `agent_configuration_revisions`.
+
+### Health scoring
+
+Weighted operational score (0–100) persisted on heartbeat:
+
+- Heartbeat freshness, policy sync, plugin health, gateway connectivity, version currency, update status, certificate status, recent failures
+
+Levels: `healthy` (≥80), `warning` (≥50), `critical` (<50). `unknown` only when no enrollment/heartbeat data exists.
+
+### Certificate architecture (mTLS-ready)
+
+`agent_certificates` and `agent_gateway_certificates` support CSR, rotation, revocation. mTLS disabled by default (`AGENT_MTLS_ENABLED=false`). HTTPS agent secret auth continues unchanged.
+
+### Offline queue & replay
+
+Agents queue telemetry/inventory locally when disconnected. Heartbeat replays with deduplication via `agent_offline_events.dedup_key`.
+
+### Diagnostics support bundle
+
+`POST /api/agents/{uuid}/diagnostics` — agent upload  
+`GET /api/platform/agents/{uuid}/diagnostics` — list bundles  
+`GET /api/platform/agents/{uuid}/diagnostics/{bundle}` — download
+
+### New operational APIs
+
+| Method | Path |
+|--------|------|
+| GET | `/api/platform/agents/health` |
+| GET | `/api/platform/agents/updates` |
+| GET | `/api/platform/agents/configuration` |
+| GET | `/api/platform/agents/certificates` |
+| GET | `/api/platform/agents/queue` |
+| GET | `/api/platform/fleet/summary` |
+| POST | `/api/agents/{uuid}/diagnostics` |
+
+Migration: `2026_07_09_180000_platform_agent_operational_maturity`
+
+### Go agent (Sprint 29)
+
+- Disk-backed offline queue with gzip compression and deduplication
+- Policy-gated self-update (checksum verification; signature when provided)
+- Remote configuration sync from heartbeat
+- Enhanced diagnostics bundle (`quenyx-agent diagnostics`)
+

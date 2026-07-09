@@ -115,6 +115,34 @@ export const platformAgentService = {
     return apiClient.get<FleetDashboard>(`/api/platform/agents/fleet?workspace_id=${workspaceId}`)
   },
 
+  async getFleetSummary(workspaceId: number) {
+    return apiClient.get(`/api/platform/fleet/summary?workspace_id=${workspaceId}`)
+  },
+
+  async getHealth(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/health?workspace_id=${workspaceId}`)
+  },
+
+  async getUpdates(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/updates?workspace_id=${workspaceId}`)
+  },
+
+  async getConfiguration(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/configuration?workspace_id=${workspaceId}`)
+  },
+
+  async getCertificates(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/certificates?workspace_id=${workspaceId}`)
+  },
+
+  async getQueue(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/queue?workspace_id=${workspaceId}`)
+  },
+
+  async getGateways(workspaceId: number) {
+    return apiClient.get(`/api/platform/agents/gateways?workspace_id=${workspaceId}`)
+  },
+
   async getInstallers(workspaceId: number): Promise<InstallerCatalog> {
     return apiClient.get<InstallerCatalog>(`/api/platform/agents/installers?workspace_id=${workspaceId}`)
   },

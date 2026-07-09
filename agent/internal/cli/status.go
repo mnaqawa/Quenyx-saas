@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/quenyx/agent/internal/config"
+	"github.com/quenyx/agent/internal/diagnostics"
 	"github.com/quenyx/agent/internal/plugins"
 	"github.com/quenyx/agent/internal/policy"
 )
@@ -60,32 +61,7 @@ func runDiagnostics(cfgPath string) error {
 	}
 	mgr := plugins.NewManager(cfg.Permissions)
 
-	report := map[string]interface{}{
-		"gateway_url":      cfg.PlatformURL,
-		"agent_id":         cfg.AgentID,
-		"workspace_id":     cfg.WorkspaceID,
-		"agent_version":    cfg.AgentVersion,
-		"policy_version":   cfg.PolicyVersion,
-		"platform_version": cfg.PlatformVersion,
-		"lifecycle_status": cfg.LifecycleStatus,
-		"policy_status":    policy.LocalPolicyStatus(cfg),
-		"capabilities":     mgr.Capabilities(),
-		"capability_hash":  policy.CapabilityHash(mgr.Capabilities()),
-		"enabled_plugins":  pluginKeys(mgr.Enabled()),
-		"disabled_plugins": pluginKeys(mgr.Disabled()),
-	}
-	if cfg.Diagnostics != nil {
-		report["last_heartbeat_at"] = cfg.Diagnostics.LastHeartbeatAt
-		report["last_heartbeat_status"] = cfg.Diagnostics.LastHeartbeatStatus
-		report["last_heartbeat_latency_ms"] = cfg.Diagnostics.LastHeartbeatLatencyMs
-		report["last_error"] = cfg.Diagnostics.LastError
-		if cfg.Diagnostics.PolicyStatus != "" {
-			report["policy_status"] = cfg.Diagnostics.PolicyStatus
-		}
-	}
-	if cfg.FailoverGateway != nil {
-		report["failover_gateway"] = cfg.FailoverGateway
-	}
+	report := diagnostics.BuildSupportBundle(cfg, mgr, nil)
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")

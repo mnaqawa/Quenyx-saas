@@ -12,6 +12,7 @@ use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\Project;
 use App\Services\PlatformAgent\FleetDashboardService;
+use App\Services\PlatformAgent\FleetIntelligenceService;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,6 +23,7 @@ class AgentContextBuilder
 {
     public function __construct(
         private readonly FleetDashboardService $fleetDashboard,
+        private readonly FleetIntelligenceService $fleetIntelligence,
     ) {}
 
     /**
@@ -157,6 +159,9 @@ class AgentContextBuilder
                 $lines[] = sprintf('- %s last_seen=%s', $row['hostname'] ?? '?', $row['last_seen'] ?? '?');
             }
         }
+
+        $lines[] = '';
+        $lines[] = $this->fleetIntelligence->toPromptBlock($project);
 
         return implode("\n", $lines);
     }

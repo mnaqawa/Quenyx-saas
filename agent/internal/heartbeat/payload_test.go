@@ -21,7 +21,7 @@ func TestBuildPayloadIncludesFleetFields(t *testing.T) {
 		Permissions:     []string{"system_metrics", "inventory", "filesystem"},
 	}
 	mgr := plugins.NewManager(cfg.Permissions)
-	body := heartbeat.BuildPayload(cfg, mgr, "10.0.0.5", "203.0.113.1", 100, 200)
+	body := heartbeat.BuildPayload(cfg, mgr, "10.0.0.5", "203.0.113.1", 100, 200, nil, nil)
 
 	required := []string{
 		"agent_version", "platform_version", "policy_version", "capability_hash",

@@ -11,10 +11,17 @@ use App\Models\AgentPlugin;
 use App\Models\ObserveTargetHost;
 use App\Models\Project;
 use App\Services\PlatformAgent\AgentCapabilityService;
-use App\Services\PlatformAgent\AgentLifecycleService;
-use App\Services\PlatformAgent\FleetDashboardService;
-use App\Services\PlatformAgent\InstallerCatalogService;
+use App\Services\PlatformAgent\AgentCertificateService;
+use App\Services\PlatformAgent\AgentConfigurationService;
+use App\Services\PlatformAgent\AgentDiagnosticsService;
 use App\Services\PlatformAgent\AgentGatewayService;
+use App\Services\PlatformAgent\AgentHealthScoringService;
+use App\Services\PlatformAgent\AgentLifecycleService;
+use App\Services\PlatformAgent\AgentOfflineQueueService;
+use App\Services\PlatformAgent\AgentUpdateService;
+use App\Services\PlatformAgent\FleetDashboardService;
+use App\Services\PlatformAgent\FleetOperationsService;
+use App\Services\PlatformAgent\InstallerCatalogService;
 use App\Support\AgentGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,9 +37,165 @@ class PlatformAgentController extends Controller
         private AgentCapabilityService $capabilityService,
         private AgentLifecycleService $agentLifecycle,
         private FleetDashboardService $fleetDashboard,
+        private FleetOperationsService $fleetOperations,
         private InstallerCatalogService $installerCatalog,
         private AgentGatewayService $gatewayService,
+        private AgentHealthScoringService $healthScoring,
+        private AgentUpdateService $updateService,
+        private AgentConfigurationService $configurationService,
+        private AgentCertificateService $certificateService,
+        private AgentOfflineQueueService $offlineQueue,
+        private AgentDiagnosticsService $diagnosticsService,
     ) {
+    }
+
+    /**
+     * GET /api/platform/agents/health?workspace_id=
+     */
+    public function health(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->healthScoring->workspaceSummary($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/updates?workspace_id=
+     */
+    public function updates(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->updateService->workspaceSummary($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/configuration?workspace_id=
+     */
+    public function configuration(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->configurationService->workspaceSummary($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/certificates?workspace_id=
+     */
+    public function certificates(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => array_merge(
+                $this->certificateService->workspaceSummary($project),
+                ['gateway_trust_chain' => $this->certificateService->gatewayTrustChain()],
+            ),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/queue?workspace_id=
+     */
+    public function queue(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->offlineQueue->workspaceSummary($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/fleet/summary?workspace_id=
+     */
+    public function fleetSummary(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->fleetOperations->summary($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/{agent}/diagnostics
+     */
+    public function diagnostics(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->diagnosticsService->listForAgent($agent),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/{agent}/diagnostics/{bundle}
+     */
+    public function downloadDiagnostics(Request $request, Agent $agent, string $bundle): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('view', $project);
+
+        $record = \App\Models\AgentDiagnosticsBundle::where('id', $bundle)
+            ->where('agent_id', $agent->id)
+            ->firstOrFail();
+
+        $content = $this->diagnosticsService->download($record);
+        if ($content === null) {
+            return response()->json(['success' => false, 'message' => 'Bundle not found'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => json_decode($content, true) ?? ['raw' => $content],
+        ]);
+    }
+
+    /**
+     * POST /api/platform/agents/{agent}/diagnostics/generate
+     */
+    public function generateDiagnostics(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('update', $project);
+
+        $stored = $this->diagnosticsService->storePlatformBundle($agent);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'bundle_uuid' => $stored->id,
+                'generated_at' => $stored->generated_at?->toIso8601String(),
+            ],
+        ]);
     }
 
     /**
@@ -342,6 +505,11 @@ class PlatformAgentController extends Controller
             'managed_resource_count' => $agent->managedResources()->count(),
             'plugin_count' => $agent->plugins()->count(),
             'last_heartbeat' => $agent->last_seen_at?->toIso8601String(),
+            'health_score' => $agent->health_score,
+            'health_level' => $agent->health_level,
+            'update_channel' => $agent->update_channel ?? 'stable',
+            'update_status' => $agent->update_status,
+            'config_version' => $agent->config_version,
             'capabilities' => $agent->capabilities ?? [],
             'enabled_modules' => $agent->enabled_modules ?? [],
             'permissions' => $agent->permissions ?? [],
@@ -361,6 +529,9 @@ class PlatformAgentController extends Controller
             $base['heartbeat_count'] = $agent->heartbeat_count ?? 0;
             $base['bytes_sent'] = $agent->bytes_sent ?? 0;
             $base['bytes_received'] = $agent->bytes_received ?? 0;
+            $base['health_breakdown'] = $agent->health_breakdown ?? [];
+            $base['queue_stats'] = $agent->queue_stats ?? [];
+            $base['certificate_fingerprint'] = $agent->certificate_fingerprint;
         }
 
         return $base;

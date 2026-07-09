@@ -55,6 +55,15 @@ class Agent extends Model
         'revoked_at',
         'revoked_reason',
         'enrolled_at',
+        'update_channel',
+        'update_status',
+        'update_progress',
+        'config_version',
+        'health_score',
+        'health_level',
+        'health_breakdown',
+        'queue_stats',
+        'certificate_fingerprint',
     ];
 
     protected $casts = [
@@ -73,6 +82,10 @@ class Agent extends Model
         'last_seen_at' => 'datetime',
         'enrolled_at' => 'datetime',
         'revoked_at' => 'datetime',
+        'health_score' => 'integer',
+        'health_breakdown' => 'array',
+        'queue_stats' => 'array',
+        'update_progress' => 'integer',
     ];
 
     protected $hidden = ['agent_secret_hash'];

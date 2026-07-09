@@ -13,9 +13,15 @@ use App\Models\ObserveTargetHost;
 use App\Models\Project;
 use App\Services\DefaultMonitoringProfileService;
 use App\Services\PlatformAgent\AgentCapabilityService;
+use App\Services\PlatformAgent\AgentConfigurationService;
+use App\Services\PlatformAgent\AgentCertificateService;
+use App\Services\PlatformAgent\AgentDiagnosticsService;
 use App\Services\PlatformAgent\AgentGatewayService;
+use App\Services\PlatformAgent\AgentHealthScoringService;
 use App\Services\PlatformAgent\AgentManagedResourceService;
+use App\Services\PlatformAgent\AgentOfflineQueueService;
 use App\Services\PlatformAgent\AgentPolicyService;
+use App\Services\PlatformAgent\AgentUpdateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +38,12 @@ class AgentApiController extends Controller
         private AgentManagedResourceService $resourceService,
         private AgentPolicyService $policyService,
         private AgentGatewayService $gatewayService,
+        private AgentUpdateService $updateService,
+        private AgentHealthScoringService $healthScoring,
+        private AgentConfigurationService $configurationService,
+        private AgentCertificateService $certificateService,
+        private AgentOfflineQueueService $offlineQueue,
+        private AgentDiagnosticsService $diagnosticsService,
     ) {
     }
 
@@ -303,6 +315,18 @@ class AgentApiController extends Controller
         if (is_numeric($bytesReceived)) {
             $updates['bytes_received'] = ($agent->bytes_received ?? 0) + (int) $bytesReceived;
         }
+        if ($request->has('update_status') && is_array($request->input('update_status'))) {
+            $this->updateService->recordProgress($agent, $request->input('update_status'));
+        }
+        if ($request->has('queue_stats') && is_array($request->input('queue_stats'))) {
+            $this->offlineQueue->recordQueueStats($agent, $request->input('queue_stats'));
+        }
+        if ($request->has('config_version') && is_string($request->input('config_version'))) {
+            $this->configurationService->recordSync($agent, $request->input('config_version'));
+        }
+        if ($request->has('offline_replay') && is_array($request->input('offline_replay'))) {
+            $this->offlineQueue->ingestReplay($agent, $request->input('offline_replay'));
+        }
 
         $capabilities = $updates['capabilities'] ?? $agent->capabilities ?? [];
         $updates['policy_status'] = $this->policyService->evaluate(
@@ -326,6 +350,9 @@ class AgentApiController extends Controller
         if ($request->has('plugins') && is_array($request->input('plugins'))) {
             $this->resourceService->syncPlugins($agent, $request->input('plugins'));
         }
+
+        $this->healthScoring->persist($agent->fresh() ?? $agent);
+        $agent->refresh();
 
         $failover = null;
         if ($agent->preferred_gateway_id) {
@@ -362,7 +389,40 @@ class AgentApiController extends Controller
             'data' => [
                 'status' => 'ok',
                 'policy' => $this->policyService->policyPayload($agent),
+                'configuration' => $this->configurationService->heartbeatPayload($agent),
+                'update' => $this->updateService->heartbeatInstruction($agent),
+                'certificate' => $this->certificateService->heartbeatInstruction($agent),
+                'health' => [
+                    'score' => $agent->health_score,
+                    'level' => $agent->health_level,
+                ],
                 'failover_gateway' => $failover,
+            ],
+        ]);
+    }
+
+    /**
+     * Upload diagnostics support bundle from agent.
+     * POST /api/agents/{agent}/diagnostics
+     */
+    public function diagnostics(Request $request, Agent $agent): JsonResponse
+    {
+        if (! $this->verifyAgentSecret($request, $agent)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'bundle' => ['required', 'array'],
+        ]);
+
+        $stored = $this->diagnosticsService->storeFromAgent($agent, $validated['bundle']);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'bundle_uuid' => $stored->id,
+                'size_bytes' => $stored->size_bytes,
+                'generated_at' => $stored->generated_at?->toIso8601String(),
             ],
         ]);
     }

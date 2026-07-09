@@ -55,6 +55,7 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
   const [platformAgents, setPlatformAgents] = useState<PlatformAgentDetail[]>([])
   const [metadata, setMetadata] = useState<PlatformAgentMetadata | null>(null)
   const [fleet, setFleet] = useState<FleetDashboard | null>(null)
+  const [fleetOps, setFleetOps] = useState<Record<string, unknown> | null>(null)
   const [installers, setInstallers] = useState<InstallerCatalog | null>(null)
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, CapabilityMatrixEntry>>({})
@@ -69,17 +70,19 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
     setLoading(true)
     setError(null)
     try {
-      const [list, meta, plat, fleetData, installerData] = await Promise.all([
+      const [list, meta, plat, fleetData, fleetSummary, installerData] = await Promise.all([
         agentService.list(workspaceId),
         platformAgentService.getMetadata(),
         platformAgentService.list(workspaceId),
         platformAgentService.getFleet(workspaceId),
+        platformAgentService.getFleetSummary(workspaceId),
         platformAgentService.getInstallers(workspaceId),
       ])
       setAgents(list)
       setMetadata(meta)
       setPlatformAgents(plat)
       setFleet(fleetData)
+      setFleetOps(fleetSummary as Record<string, unknown>)
       setInstallers(installerData)
       setSelectedPerms(meta.default_permissions ?? [])
     } catch (e) {
@@ -268,6 +271,48 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
               </ul>
             </div>
           </div>
+
+          {fleetOps?.health ? (
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Health distribution</h3>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-sm">
+                {Object.entries((fleetOps.health as { distribution?: Record<string, number> }).distribution ?? {}).map(([level, count]) => (
+                  <div key={level} className="flex justify-between rounded bg-white/5 px-3 py-2 capitalize">
+                    <span>{level}</span>
+                    <span className="text-white/50">{count}</span>
+                  </div>
+                ))}
+              </div>
+              {(fleetOps.health as { average_score?: number }).average_score != null ? (
+                <p className="mt-2 text-xs text-white/50">Average health score: {(fleetOps.health as { average_score: number }).average_score}%</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {fleetOps?.top_failing_plugins && Array.isArray(fleetOps.top_failing_plugins) && (fleetOps.top_failing_plugins as unknown[]).length > 0 ? (
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Top failing plugins</h3>
+              <ul className="text-sm text-white/70 space-y-1">
+                {(fleetOps.top_failing_plugins as Array<{ plugin_key: string; total_errors: number }>).slice(0, 5).map((p) => (
+                  <li key={p.plugin_key} className="flex justify-between">
+                    <span>{p.plugin_key}</span>
+                    <span className="text-rose-300">{p.total_errors} errors</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {fleetOps?.most_disconnected_agents && Array.isArray(fleetOps.most_disconnected_agents) && (fleetOps.most_disconnected_agents as unknown[]).length > 0 ? (
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Most disconnected agents</h3>
+              <ul className="text-xs text-white/60 space-y-1">
+                {(fleetOps.most_disconnected_agents as Array<{ hostname: string; last_seen?: string }>).slice(0, 5).map((a, i) => (
+                  <li key={i}>{a.hostname} — {a.last_seen ?? 'never'}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {fleet.top_errors.length > 0 ? (
             <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">

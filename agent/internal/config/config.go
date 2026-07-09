@@ -46,6 +46,9 @@ type Config struct {
 	PluginVersions   map[string]string `json:"plugin_versions,omitempty"`
 	FailoverGateway  *FailoverGateway  `json:"failover_gateway,omitempty"`
 	LifecycleStatus  string            `json:"lifecycle_status,omitempty"`
+	ConfigVersion    string            `json:"config_version,omitempty"`
+	RemoteSettings   map[string]interface{} `json:"remote_settings,omitempty"`
+	UpdateChannel    string            `json:"update_channel,omitempty"`
 	Diagnostics      *DiagnosticsState `json:"diagnostics,omitempty"`
 }
 

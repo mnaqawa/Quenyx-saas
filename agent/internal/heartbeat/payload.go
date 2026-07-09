@@ -11,8 +11,8 @@ import (
 	"github.com/quenyx/agent/internal/version"
 )
 
-// BuildPayload constructs the Sprint 28 fleet heartbeat body.
-func BuildPayload(cfg *config.Config, mgr *plugins.Manager, privateIP, publicIP string, bytesSent, bytesReceived uint64) map[string]interface{} {
+// BuildPayload constructs the fleet heartbeat body including Sprint 29 operational fields.
+func BuildPayload(cfg *config.Config, mgr *plugins.Manager, privateIP, publicIP string, bytesSent, bytesReceived uint64, queueStats map[string]interface{}, updateProgress map[string]interface{}) map[string]interface{} {
 	caps := mgr.Capabilities()
 	hash := policy.CapabilityHash(caps)
 
@@ -43,6 +43,15 @@ func BuildPayload(cfg *config.Config, mgr *plugins.Manager, privateIP, publicIP 
 	if cfg.Diagnostics != nil && cfg.Diagnostics.LastError != "" {
 		body["last_error"] = cfg.Diagnostics.LastError
 	}
+	if cfg.ConfigVersion != "" {
+		body["config_version"] = cfg.ConfigVersion
+	}
+	if queueStats != nil {
+		body["queue_stats"] = queueStats
+	}
+	if updateProgress != nil {
+		body["update_status"] = updateProgress
+	}
 
 	return body
 }
@@ -51,10 +60,30 @@ func BuildPayload(cfg *config.Config, mgr *plugins.Manager, privateIP, publicIP 
 type Response struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Status          string                 `json:"status"`
-		Policy          *policy.Payload        `json:"policy"`
+		Status          string                  `json:"status"`
+		Policy          *policy.Payload         `json:"policy"`
+		Configuration   *ConfigurationBlock     `json:"configuration"`
+		Update          *UpdateBlock            `json:"update"`
+		Certificate     map[string]interface{}  `json:"certificate"`
+		Health          map[string]interface{}  `json:"health"`
 		FailoverGateway *config.FailoverGateway `json:"failover_gateway"`
 	} `json:"data"`
+}
+
+// ConfigurationBlock is remote configuration from platform.
+type ConfigurationBlock struct {
+	Version  string                 `json:"version"`
+	Settings map[string]interface{} `json:"settings"`
+}
+
+// UpdateBlock is policy-gated update instruction.
+type UpdateBlock struct {
+	MayProceed     bool   `json:"may_proceed"`
+	Approved       bool   `json:"approved"`
+	TargetVersion  string `json:"target_version"`
+	DownloadURL    string `json:"download_url"`
+	ChecksumSHA256 string `json:"checksum_sha256"`
+	Signature      string `json:"signature"`
 }
 
 // ParseResponse decodes heartbeat response; returns nil policy on empty/legacy responses.
