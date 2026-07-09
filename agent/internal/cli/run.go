@@ -1,39 +1,53 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/quenyx/agent/internal/config"
 	"github.com/quenyx/agent/internal/collector"
+	"github.com/quenyx/agent/internal/config"
+	"github.com/quenyx/agent/internal/gateway"
+	"github.com/quenyx/agent/internal/heartbeat"
+	"github.com/quenyx/agent/internal/plugins"
+	"github.com/quenyx/agent/internal/policy"
+	"github.com/quenyx/agent/internal/version"
 )
+
+type agentRuntime struct {
+	cfgPath    string
+	cfg        *config.Config
+	plugins    *plugins.Manager
+	gw         *gateway.Client
+	bytesSent  uint64
+	bytesRecv  uint64
+}
 
 func runAgent(cfgPath string) error {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	if cfg.Hostname == "" {
+		cfg.Hostname, _ = os.Hostname()
+	}
 
-	baseURL := cfg.PlatformURL
-	agentID := cfg.AgentID
-	secret := cfg.AgentSecret
+	rt := &agentRuntime{
+		cfgPath: cfgPath,
+		cfg:     cfg,
+		plugins: plugins.NewManager(cfg.Permissions),
+		gw:      gateway.NewClient(cfg),
+	}
 
-	log.Printf("[agent] status=started workspace_id=%d agent_id=%s primary_protocol=%s permissions=%v",
-		cfg.WorkspaceID, agentID, cfg.PrimaryProtocol, cfg.Permissions)
+	log.Printf("[qpa] status=started workspace_id=%d agent_id=%s version=%s permissions=%v",
+		cfg.WorkspaceID, cfg.AgentID, version.Agent, cfg.Permissions)
 
-	// Heartbeat every 5 minutes
 	heartbeatInterval := 5 * time.Minute
-	// Metrics every 1 minute
 	metricsInterval := 1 * time.Minute
-	// Inventory every 6 hours
 	inventoryInterval := 6 * time.Hour
 
 	tickerHeartbeat := time.NewTicker(heartbeatInterval)
@@ -43,10 +57,9 @@ func runAgent(cfgPath string) error {
 	defer tickerMetrics.Stop()
 	defer tickerInventory.Stop()
 
-	// Run once immediately
-	sendHeartbeat(baseURL, agentID, secret)
-	sendMetrics(baseURL, agentID, secret)
-	sendInventory(baseURL, agentID, secret)
+	rt.doHeartbeat()
+	rt.doMetrics()
+	rt.doInventory()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -56,49 +69,83 @@ func runAgent(cfgPath string) error {
 		case <-sig:
 			return nil
 		case <-tickerHeartbeat.C:
-			sendHeartbeat(baseURL, agentID, secret)
+			rt.doHeartbeat()
 		case <-tickerMetrics.C:
-			sendMetrics(baseURL, agentID, secret)
+			rt.doMetrics()
 		case <-tickerInventory.C:
-			sendInventory(baseURL, agentID, secret)
+			rt.doInventory()
 		}
 	}
 }
 
-func sendHeartbeat(baseURL, agentID, secret string) {
+func (rt *agentRuntime) doHeartbeat() {
 	privateIP := getPrivateIP()
 	publicIP := getPublicIP()
-	body := map[string]interface{}{}
-	if privateIP != "" {
-		body["private_ip"] = privateIP
-	}
-	if publicIP != "" {
-		body["public_ip"] = publicIP
-	}
+	body := heartbeat.BuildPayload(rt.cfg, rt.plugins, privateIP, publicIP, rt.bytesSent, rt.bytesRecv)
+
 	jsonBody, _ := json.Marshal(body)
-	if len(jsonBody) == 2 {
-		jsonBody = []byte("{}")
+	rt.bytesSent += uint64(len(jsonBody))
+
+	res := rt.gw.PostJSON(rt.cfg.AgentID, rt.cfg.AgentSecret, "heartbeat", body)
+	if res.Body != nil {
+		rt.bytesRecv += uint64(len(res.Body))
 	}
-	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/heartbeat")
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Agent-Secret", secret)
-	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("[qpa] heartbeat failed: %v", err)
+
+	if res.Err != nil {
+		heartbeat.UpdateDiagnostics(rt.cfg, "error", res.Latency, res.Err.Error())
+		log.Printf("[qpa] heartbeat failed: %v", res.Err)
+		_ = config.Save(rt.cfg, rt.cfgPath)
 		return
 	}
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("[qpa] heartbeat status=ok")
-	} else {
-		log.Printf("[qpa] heartbeat status=error http=%d", resp.StatusCode)
+
+	if res.StatusCode != 200 {
+		errMsg := fmt.Sprintf("http %d", res.StatusCode)
+		heartbeat.UpdateDiagnostics(rt.cfg, "error", res.Latency, errMsg)
+		log.Printf("[qpa] heartbeat status=error %s", errMsg)
+		_ = config.Save(rt.cfg, rt.cfgPath)
+		return
+	}
+
+	heartbeat.UpdateDiagnostics(rt.cfg, "ok", res.Latency, "")
+	rt.applyHeartbeatResponse(res.Body)
+	log.Printf("[qpa] heartbeat status=ok latency=%s policy=%s",
+		res.Latency.Round(time.Millisecond), rt.cfg.Diagnostics.PolicyStatus)
+	_ = config.Save(rt.cfg, rt.cfgPath)
+}
+
+func (rt *agentRuntime) applyHeartbeatResponse(body []byte) {
+	resp, err := heartbeat.ParseResponse(body)
+	if err != nil {
+		log.Printf("[qpa] heartbeat response parse warning: %v", err)
+		rt.cfg.Diagnostics.PolicyStatus = policy.LocalPolicyStatus(rt.cfg)
+		return
+	}
+	if resp == nil || !resp.Success {
+		rt.cfg.Diagnostics.PolicyStatus = policy.LocalPolicyStatus(rt.cfg)
+		return
+	}
+
+	if resp.Data.FailoverGateway != nil && resp.Data.FailoverGateway.EndpointURL != "" {
+		rt.cfg.FailoverGateway = resp.Data.FailoverGateway
+		rt.gw.FailoverURL = resp.Data.FailoverGateway.EndpointURL
+		log.Printf("[qpa] failover gateway stored (not switching primary): %s", resp.Data.FailoverGateway.EndpointURL)
+	}
+
+	syncResult := policy.Apply(rt.cfg, rt.plugins, resp.Data.Policy)
+	rt.cfg.Diagnostics.PolicyStatus = syncResult.PolicyStatus
+	if syncResult.Error != "" {
+		rt.cfg.Diagnostics.LastError = syncResult.Error
+		rt.cfg.LifecycleStatus = "policy_sync_pending"
+		log.Printf("[qpa] policy sync: %s", syncResult.Error)
+	} else if syncResult.PolicyChanged {
+		log.Printf("[qpa] policy updated to version %s", rt.cfg.PolicyVersion)
 	}
 }
 
-func sendMetrics(baseURL, agentID, secret string) {
+func (rt *agentRuntime) doMetrics() {
+	if rt.plugins.ByKey("monitoring") == nil || !rt.plugins.ByKey("monitoring").Enabled() {
+		return
+	}
 	payload := collector.CollectMetrics()
 	keys := make([]string, 0, len(payload))
 	for k := range payload {
@@ -108,27 +155,25 @@ func sendMetrics(baseURL, agentID, secret string) {
 		"collected_at": time.Now().UTC().Format(time.RFC3339),
 		"payload":      payload,
 	}
-	jsonBody, _ := json.Marshal(body)
-	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/telemetry")
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Agent-Secret", secret)
-	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	var err error
+	res := rt.gw.PostJSON(rt.cfg.AgentID, rt.cfg.AgentSecret, "telemetry", body)
+	if res.Err != nil {
+		err = res.Err
+	} else if res.StatusCode != 200 {
+		err = fmt.Errorf("http %d", res.StatusCode)
+	}
+	rt.plugins.RecordPluginRun("monitoring", err)
 	if err != nil {
-		log.Printf("[qpa] telemetry send failed: %v (shared: %v)", err, keys)
+		log.Printf("[qpa] telemetry send failed: %v (keys: %v)", err, keys)
 		return
 	}
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("[qpa] telemetry shared=%v status=accepted", keys)
-	} else {
-		log.Printf("[qpa] telemetry shared=%v status=error http=%d", keys, resp.StatusCode)
-	}
+	log.Printf("[qpa] telemetry shared=%v status=accepted", keys)
 }
 
-func sendInventory(baseURL, agentID, secret string) {
+func (rt *agentRuntime) doInventory() {
+	if rt.plugins.ByKey("inventory") == nil || !rt.plugins.ByKey("inventory").Enabled() {
+		return
+	}
 	payload := collector.CollectInventory()
 	keys := make([]string, 0, len(payload))
 	for k := range payload {
@@ -138,21 +183,17 @@ func sendInventory(baseURL, agentID, secret string) {
 		"collected_at": time.Now().UTC().Format(time.RFC3339),
 		"payload":      payload,
 	}
-	jsonBody, _ := json.Marshal(body)
-	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/inventory")
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Agent-Secret", secret)
-	client := &http.Client{Timeout: 60 * time.Second}
-	resp, err := client.Do(req)
+	var err error
+	res := rt.gw.PostJSON(rt.cfg.AgentID, rt.cfg.AgentSecret, "inventory", body)
+	if res.Err != nil {
+		err = res.Err
+	} else if res.StatusCode != 200 {
+		err = fmt.Errorf("http %d", res.StatusCode)
+	}
+	rt.plugins.RecordPluginRun("inventory", err)
 	if err != nil {
-		log.Printf("[agent] inventory send failed: %v (shared: %v)", err, keys)
+		log.Printf("[qpa] inventory send failed: %v (keys: %v)", err, keys)
 		return
 	}
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("[agent] inventory shared=%v status=accepted", keys)
-	} else {
-		log.Printf("[agent] inventory shared=%v status=error http=%d", keys, resp.StatusCode)
-	}
+	log.Printf("[qpa] inventory shared=%v status=accepted", keys)
 }

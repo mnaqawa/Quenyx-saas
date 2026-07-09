@@ -1,53 +1,112 @@
-// Package plugins provides the Quenyx Platform Agent plugin manager.
-// Plugins are enabled according to subscription ∩ permissions ∩ platform policy.
 package plugins
 
-import "log"
+import (
+	"sort"
+)
 
-// Plugin is a capability module loaded by the core agent.
-type Plugin interface {
-	Name() string
-	Capabilities() []string
-	Enabled() bool
-	Start() error
-	Stop() error
-}
-
-// Manager loads and manages capability plugins.
+// Manager tracks plugin enablement and metadata for heartbeat reporting.
 type Manager struct {
-	plugins []Plugin
-	allowed map[string]bool
+	plugins     []*Descriptor
+	permissions map[string]bool
 }
 
-func NewManager(allowedCapabilities []string) *Manager {
-	allowed := make(map[string]bool, len(allowedCapabilities))
-	for _, c := range allowedCapabilities {
-		allowed[c] = true
+func NewManager(permissions []string) *Manager {
+	pm := make(map[string]bool, len(permissions))
+	for _, p := range permissions {
+		pm[p] = true
 	}
-	return &Manager{allowed: allowed}
+	m := &Manager{permissions: pm}
+	for _, d := range DefaultRegistry() {
+		cp := *d
+		cp.SetEnabled(cp.IsGranted(pm))
+		m.plugins = append(m.plugins, &cp)
+	}
+	return m
 }
 
-func (m *Manager) Register(p Plugin) {
-	m.plugins = append(m.plugins, p)
-}
-
-func (m *Manager) StartAll() {
+func (m *Manager) ApplyPermissions(permissions []string) {
+	m.permissions = make(map[string]bool, len(permissions))
+	for _, p := range permissions {
+		m.permissions[p] = true
+	}
 	for _, p := range m.plugins {
-		enabled := false
-		for _, cap := range p.Capabilities() {
-			if m.allowed[cap] {
-				enabled = true
-				break
-			}
+		p.SetEnabled(p.IsGranted(m.permissions))
+	}
+}
+
+func (m *Manager) All() []*Descriptor {
+	return m.plugins
+}
+
+func (m *Manager) Enabled() []*Descriptor {
+	var out []*Descriptor
+	for _, p := range m.plugins {
+		if p.Enabled() {
+			out = append(out, p)
 		}
-		if !enabled {
-			log.Printf("[qpa] plugin %s skipped (capability not granted)", p.Name())
+	}
+	return out
+}
+
+func (m *Manager) Disabled() []*Descriptor {
+	var out []*Descriptor
+	for _, p := range m.plugins {
+		if !p.Enabled() {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func (m *Manager) Capabilities() []string {
+	seen := map[string]bool{}
+	var caps []string
+	for _, p := range m.plugins {
+		if !p.Enabled() {
 			continue
 		}
-		if err := p.Start(); err != nil {
-			log.Printf("[qpa] plugin %s start failed: %v", p.Name(), err)
-		} else {
-			log.Printf("[qpa] plugin %s started", p.Name())
+		for _, c := range p.Capabilities {
+			if !seen[c] {
+				seen[c] = true
+				caps = append(caps, c)
+			}
 		}
+	}
+	sort.Strings(caps)
+	return caps
+}
+
+func (m *Manager) PluginVersions() map[string]string {
+	out := make(map[string]string, len(m.plugins))
+	for _, p := range m.plugins {
+		ver := p.Version
+		if ver == "" {
+			ver = "1.0.0"
+		}
+		out[p.PluginKey] = ver
+	}
+	return out
+}
+
+func (m *Manager) HeartbeatPlugins() []Meta {
+	out := make([]Meta, 0, len(m.plugins))
+	for _, p := range m.plugins {
+		out = append(out, p.ToMeta())
+	}
+	return out
+}
+
+func (m *Manager) ByKey(key string) *Descriptor {
+	for _, p := range m.plugins {
+		if p.PluginKey == key {
+			return p
+		}
+	}
+	return nil
+}
+
+func (m *Manager) RecordPluginRun(key string, err error) {
+	if p := m.ByKey(key); p != nil {
+		p.RecordExecution(err)
 	}
 }

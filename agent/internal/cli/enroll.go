@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/quenyx/agent/internal/config"
+	"github.com/quenyx/agent/internal/version"
 )
 
 func runEnroll(platformURL string, workspaceID int, token string) error {
@@ -34,7 +35,7 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		"public_ip":       publicIP,
 		"os":              runtime.GOOS,
 		"arch":            runtime.GOARCH,
-		"agent_version":   "1.0.0",
+		"agent_version":     version.Agent,
 		"primary_protocol": "qag",
 		"enabled_protocols": []string{"qag"},
 		"permissions":     []string{"system_metrics", "inventory", "network", "filesystem"},
@@ -46,7 +47,7 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
+	req.Header.Set("X-Quenyx-Agent-Version", version.Agent)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -78,12 +79,17 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 
 	cfg := config.Config{
 		PlatformURL:      platformURL,
-		WorkspaceID:       workspaceID,
-		AgentID:           result.Data.AgentID,
-		AgentSecret:       result.Data.AgentSecret,
+		WorkspaceID:      workspaceID,
+		AgentID:          result.Data.AgentID,
+		AgentSecret:      result.Data.AgentSecret,
 		PrimaryProtocol:  result.Data.PrimaryProtocol,
 		EnabledProtocols: result.Data.EnabledProtocols,
 		Permissions:      result.Data.Permissions,
+		Hostname:         hostname,
+		AgentVersion:     version.Agent,
+		PolicyVersion:    version.DefaultPolicy,
+		PlatformVersion:  version.DefaultPlatform,
+		LifecycleStatus:  "online",
 	}
 	if cfg.PrimaryProtocol == "" {
 		cfg.PrimaryProtocol = "qag"
@@ -98,11 +104,7 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		return fmt.Errorf("create config dir: %w", err)
 	}
 
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(cfgPath, data, 0600); err != nil {
+	if err := config.Save(&cfg, cfgPath); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
 

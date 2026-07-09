@@ -45,3 +45,16 @@ Workspaces use a **preferred gateway**. If that gateway is unhealthy, heartbeat 
 ## AI diagnostics
 
 Quenyx AI uses live fleet context: heartbeats, lifecycle, policy, plugins, and service checks. It does not invent diagnostics beyond collected data.
+
+## Agent CLI diagnostics
+
+On the enrolled host:
+
+```bash
+quenyx-agent status
+quenyx-agent diagnostics
+```
+
+`status` — gateway URL, versions, lifecycle, last heartbeat, enabled plugins.
+
+`diagnostics` — JSON with policy status, capability hash, enabled/disabled plugins, failover gateway (if stored).

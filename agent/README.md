@@ -1,19 +1,15 @@
-# Quenyx Agent
+# Quenyx Platform Agent (QPA)
 
-Lightweight agent for cross-network monitoring and asset inventory. Runs on Linux, Windows, and macOS.
+Lightweight **Quenyx Platform Agent** for cross-network monitoring and asset inventory. Communicates **outbound-only** via **Quenyx Agent Gateway (QAG)** on HTTPS :9444.
 
 ## Quick start
 
-1. In the Quenyx portal, go to **QynSight → Agents → Install Agent**.
-2. Select protocol (HTTP API recommended) and permissions.
-3. Generate an enrollment token.
-4. On your server, run:
+1. In the portal: **Integrations → Platform Agent → Enrollment wizard**
+2. Generate an enrollment token
+3. On your server:
 
 ```bash
-# Linux
-./quenyx-agent enroll --url="https://app.quenyx.example.com" --workspace=1 --token="ps_xxx..."
-
-# Then run the agent
+./quenyx-agent enroll --url="https://cloud.quenyx.com:9444" --workspace=1 --token="ps_xxx..."
 ./quenyx-agent run
 ```
 
@@ -21,11 +17,35 @@ Lightweight agent for cross-network monitoring and asset inventory. Runs on Linu
 
 | Command | Description |
 |---------|-------------|
-| `enroll` | Register with the platform using a token from the portal |
-| `run` | Run the agent (heartbeat, metrics, inventory) |
-| `install` | Install as a system service (Linux systemd, macOS launchd) |
+| `enroll` | Register with QAG using an enrollment token |
+| `run` | Run heartbeat, telemetry, and inventory loops |
+| `status` | Human-readable connectivity and policy summary |
+| `diagnostics` | JSON diagnostics (gateway, plugins, heartbeat, policy) |
+| `config` | Show config file path and contents |
+| `install` | Install as a system service |
 
-## Build
+## Sprint 28 — Fleet heartbeat
+
+Each heartbeat reports:
+
+- `agent_version`, `platform_version`, `policy_version`, `capability_hash`
+- `plugin_versions`, `plugins[]`, `managed_resources[]` (minimum: `local_host`)
+- `lifecycle_status`, optional bandwidth counters
+- Policy response updates local config; failover gateway stored but primary URL unchanged
+
+Dangerous plugins (`automation_runner`, `compliance`) remain **disabled** unless explicitly granted in enrollment permissions.
+
+## Build & test
+
+```bash
+cd agent
+go test ./...
+go build -o quenyx-agent .
+```
+
+See below for cross-compilation targets.
+
+## Permissions
 
 ```bash
 # Linux amd64

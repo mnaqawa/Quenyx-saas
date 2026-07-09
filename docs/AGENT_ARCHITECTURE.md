@@ -175,3 +175,12 @@ Heartbeat fields: `agent_version`, `platform_version`, `policy_version`, `plugin
 
 Migration: `2026_07_09_140000_platform_agent_enterprise_fleet`
 
+### Go agent (Sprint 28 end-to-end)
+
+QPA heartbeat payload includes policy versions, managed resources (`local_host`), plugin metadata, and bandwidth counters. The agent:
+
+- Applies policy from heartbeat response (`policy_version`, `capability_hash`)
+- Stores `failover_gateway` without switching primary QAG URL
+- Exposes `quenyx-agent status` and `quenyx-agent diagnostics`
+- Never reports Docker/K8s/VM resources until discovery plugins exist (no fake data)
+
