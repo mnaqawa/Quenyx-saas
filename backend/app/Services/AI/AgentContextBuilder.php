@@ -2,11 +2,16 @@
 
 namespace App\Services\AI;
 
+use App\Constants\AgentLifecycleStatus;
+use App\Constants\AgentPolicyStatus;
+use App\Constants\HostLifecycleStatus;
 use App\Models\Agent;
 use App\Models\AgentMetric;
+use App\Models\AgentPlugin;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
 use App\Models\Project;
+use App\Services\PlatformAgent\FleetDashboardService;
 use Illuminate\Support\Carbon;
 
 /**
@@ -15,6 +20,10 @@ use Illuminate\Support\Carbon;
  */
 class AgentContextBuilder
 {
+    public function __construct(
+        private readonly FleetDashboardService $fleetDashboard,
+    ) {}
+
     /**
      * @return string Human-readable context block (bounded in size).
      */
@@ -34,6 +43,7 @@ class AgentContextBuilder
             ->count();
 
         $latestByAgent = $this->latestMetrics($agents->pluck('id')->all());
+        $fleet = $this->fleetDashboard->build($project);
 
         $lines = [];
         $lines[] = '=== WORKSPACE TELEMETRY (live, do not invent beyond this) ===';
@@ -44,6 +54,18 @@ class AgentContextBuilder
             $hostCount,
             $serviceCount,
             $agents->count(),
+        );
+
+        $fs = $fleet['fleet_summary'] ?? [];
+        $lines[] = sprintf(
+            'Fleet: total=%d online=%d offline=%d outdated=%d quarantined=%d maintenance=%d enrollment_pending=%d.',
+            $fs['total'] ?? 0,
+            $fs['online'] ?? 0,
+            $fs['offline'] ?? 0,
+            $fs['outdated'] ?? 0,
+            $fs['quarantined'] ?? 0,
+            $fs['maintenance'] ?? 0,
+            $fs['enrollment_pending'] ?? 0,
         );
 
         if ($host) {
@@ -57,20 +79,36 @@ class AgentContextBuilder
         }
 
         $lines[] = '';
-        $lines[] = '--- Hosts ---';
+        $lines[] = '--- Platform Agents ---';
 
         foreach ($agents as $agent) {
             $metric = $latestByAgent[$agent->id] ?? null;
             $lastSeen = $agent->last_seen_at ? $agent->last_seen_at->diffForHumans() : 'never';
+            $lifecycle = $agent->lifecycle_status ?? $agent->status ?? AgentLifecycleStatus::OFFLINE;
+            $policyStatus = $agent->policy_status ?? AgentPolicyStatus::UP_TO_DATE;
 
             $lines[] = sprintf(
-                '- %s [%s/%s] status=%s, last_seen=%s',
+                '- %s [%s/%s] status=%s lifecycle=%s policy=%s last_seen=%s',
                 $agent->hostname,
                 $agent->os ?: 'unknown-os',
                 $agent->arch ?: 'unknown-arch',
-                $agent->status ?: 'unknown',
+                $agent->status ?: 'offline',
+                $lifecycle,
+                $policyStatus,
                 $lastSeen,
             );
+
+            if ($agent->last_error) {
+                $lines[] = '    last_error: '.$agent->last_error;
+            }
+
+            $pluginSummary = AgentPlugin::where('agent_id', $agent->id)
+                ->get(['plugin_key', 'health_status', 'error_count'])
+                ->map(fn (AgentPlugin $p) => $p->plugin_key.'='.$p->health_status.'(errors:'.$p->error_count.')')
+                ->implode(', ');
+            if ($pluginSummary !== '') {
+                $lines[] = '    plugins: '.$pluginSummary;
+            }
 
             if (! $metric) {
                 $lines[] = '    metrics: none reported yet';
@@ -91,6 +129,35 @@ class AgentContextBuilder
             $lines[] = '    raw: '.$raw;
         }
 
+        if ($host) {
+            $target = ObserveTargetHost::where('workspace_id', $project->id)
+                ->where(function ($q) use ($host) {
+                    $q->where('name', $host)->orWhere('address', $host);
+                })
+                ->first();
+            if ($target) {
+                $lines[] = '';
+                $lines[] = '--- Focus Host Diagnostics ---';
+                $lines[] = sprintf(
+                    'Host %s lifecycle=%s (%s) enabled=%s agent_id=%s',
+                    $target->name,
+                    $target->lifecycle_status ?? HostLifecycleStatus::ACTIVE,
+                    HostLifecycleStatus::displayLabel($target->lifecycle_status, $target->lifecycle_reason),
+                    $target->enabled ? 'yes' : 'no',
+                    $target->agent_id ?? 'none',
+                );
+            }
+        }
+
+        $recentDisconnects = $fleet['recent_disconnects'] ?? [];
+        if ($recentDisconnects !== []) {
+            $lines[] = '';
+            $lines[] = '--- Recent Agent Disconnects ---';
+            foreach (array_slice($recentDisconnects, 0, 5) as $row) {
+                $lines[] = sprintf('- %s last_seen=%s', $row['hostname'] ?? '?', $row['last_seen'] ?? '?');
+            }
+        }
+
         return implode("\n", $lines);
     }
 
@@ -106,8 +173,6 @@ class AgentContextBuilder
             return [];
         }
 
-        // Pull the most recent rows for these agents, then keep the first
-        // (latest) per agent. Bounded by agent count so this stays cheap.
         $rows = AgentMetric::whereIn('agent_id', $agentIds)
             ->orderByDesc('collected_at')
             ->limit(max(count($agentIds) * 3, 30))
@@ -124,8 +189,6 @@ class AgentContextBuilder
     }
 
     /**
-     * Pull commonly-used scalar metrics from a heterogeneous payload, defensively.
-     *
      * @param array<string, mixed> $payload
      */
     private function summarizeMetricPayload(array $payload): string
@@ -143,9 +206,6 @@ class AgentContextBuilder
     }
 
     /**
-     * Find a numeric value for a metric key whether it is stored flat
-     * (e.g. {"cpu": 55}) or nested (e.g. {"cpu": {"value": 55}}).
-     *
      * @param array<string, mixed> $payload
      */
     private function extractNumeric(array $payload, string $key): ?float

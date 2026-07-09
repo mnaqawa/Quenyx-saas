@@ -41,6 +41,17 @@ class Agent extends Model
         'agent_secret_hash',
         'last_seen_at',
         'status',
+        'lifecycle_status',
+        'policy_version',
+        'platform_version',
+        'policy_status',
+        'capability_hash',
+        'plugin_versions',
+        'preferred_gateway_id',
+        'last_error',
+        'heartbeat_count',
+        'bytes_sent',
+        'bytes_received',
         'revoked_at',
         'revoked_reason',
         'enrolled_at',
@@ -55,6 +66,10 @@ class Agent extends Model
         'interfaces' => 'array',
         'nat_detected' => 'boolean',
         'vpn_detected' => 'boolean',
+        'plugin_versions' => 'array',
+        'heartbeat_count' => 'integer',
+        'bytes_sent' => 'integer',
+        'bytes_received' => 'integer',
         'last_seen_at' => 'datetime',
         'enrolled_at' => 'datetime',
         'revoked_at' => 'datetime',
@@ -87,6 +102,26 @@ class Agent extends Model
         return $this->hasMany(ObserveTargetHost::class, 'agent_id');
     }
 
+    public function managedResources(): HasMany
+    {
+        return $this->hasMany(AgentManagedResource::class);
+    }
+
+    public function plugins(): HasMany
+    {
+        return $this->hasMany(AgentPlugin::class);
+    }
+
+    public function platformAssets(): HasMany
+    {
+        return $this->hasMany(PlatformAsset::class);
+    }
+
+    public function preferredGateway(): BelongsTo
+    {
+        return $this->belongsTo(AgentGateway::class, 'preferred_gateway_id');
+    }
+
     public static function generateId(): string
     {
         return (string) Str::uuid();
@@ -97,6 +132,8 @@ class Agent extends Model
         $this->update([
             'last_seen_at' => now(),
             'status' => 'online',
+            'lifecycle_status' => $this->lifecycle_status === 'revoked' ? 'revoked' : 'online',
+            'heartbeat_count' => ($this->heartbeat_count ?? 0) + 1,
         ]);
     }
 

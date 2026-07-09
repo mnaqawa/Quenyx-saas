@@ -8,6 +8,7 @@ use App\Models\Agent;
 use App\Models\AgentInventory;
 use App\Models\ObserveService;
 use App\Models\ObserveTargetHost;
+use App\Models\PlatformAsset;
 use App\Constants\HostLifecycleStatus;
 use App\Models\Project;
 use App\Services\CapacityPlanningService;
@@ -60,7 +61,17 @@ class AssetEvidenceCollector
         $agents = $this->agentsById($project);
         $inventories = $this->latestInventoriesByAgent($agents->keys()->all());
 
-        return $hosts->map(fn (ObserveTargetHost $host): array => $this->describeAsset($project, $host, $agents, $inventories))->all();
+        $hostAssets = $hosts->map(fn (ObserveTargetHost $host): array => $this->describeAsset($project, $host, $agents, $inventories));
+
+        // Inventory-only assets (no monitoring target) — printers, switches, licenses, etc.
+        $inventoryOnly = PlatformAsset::query()
+            ->where('workspace_id', $project->id)
+            ->whereNull('monitoring_target_id')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PlatformAsset $asset): array => $this->describePlatformAsset($project, $asset, $agents));
+
+        return $hostAssets->merge($inventoryOnly)->values()->all();
     }
 
     /**
@@ -292,6 +303,46 @@ class AssetEvidenceCollector
     // -------------------------------------------------------------------------
     // Internals
     // -------------------------------------------------------------------------
+
+    /**
+     * Inventory-only platform asset (not a QynSight monitoring target).
+     *
+     * @param  Collection<int, Agent>  $agents
+     * @return array<string, mixed>
+     */
+    private function describePlatformAsset(Project $project, PlatformAsset $asset, Collection $agents): array
+    {
+        $agent = $asset->agent_id !== null ? $agents->get($asset->agent_id) : null;
+        $lifecycle = (string) ($asset->lifecycle_status ?? HostLifecycleStatus::ACTIVE);
+
+        return [
+            'uuid' => $asset->id,
+            'name' => (string) $asset->name,
+            'address' => null,
+            'public_ip' => null,
+            'source' => 'platform_asset',
+            'enabled' => true,
+            'lifecycle_status' => $lifecycle,
+            'lifecycle_reason' => null,
+            'tags' => [],
+            'os' => $agent?->os,
+            'arch' => $agent?->arch,
+            'has_agent' => $agent !== null,
+            'agent' => $agent !== null ? [
+                'status' => (string) $agent->status,
+                'lifecycle_status' => $agent->lifecycle_status ?? $agent->status,
+            ] : null,
+            'asset_type' => (string) $asset->asset_type,
+            'is_monitoring_target' => false,
+            'monitoring_target_uuid' => null,
+            'discovery_confidence' => $agent !== null ? 'high' : 'medium',
+            'stale' => false,
+            'inactive' => in_array($lifecycle, HostLifecycleStatus::monitoringBlocked(), true),
+            'service_count' => 0,
+            'created_at' => optional($asset->created_at)->toIso8601String(),
+            'updated_at' => optional($asset->updated_at)->toIso8601String(),
+        ];
+    }
 
     /**
      * @param  Collection<int, Agent>  $agents  keyed by agent id

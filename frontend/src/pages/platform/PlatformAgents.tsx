@@ -7,11 +7,13 @@ import {
   type PlatformAgentDetail,
   type PlatformAgentMetadata,
   type CapabilityMatrixEntry,
+  type FleetDashboard,
+  type InstallerCatalog,
 } from '../../services/platformAgentService'
 
 type PlatformPermissionInfo = PlatformAgentMetadata['permissions'][string]
 
-type Tab = 'agents' | 'enroll' | 'capabilities' | 'troubleshoot'
+type Tab = 'fleet' | 'agents' | 'enroll' | 'installers' | 'capabilities' | 'troubleshoot'
 
 function statusClass(s: string) {
   const map: Record<string, string> = {
@@ -23,15 +25,37 @@ function statusClass(s: string) {
   return map[s] ?? 'bg-white/10 text-white/70 border-white/20'
 }
 
+function policyClass(s: string) {
+  const map: Record<string, string> = {
+    up_to_date: 'bg-emerald-500/20 text-emerald-300',
+    policy_outdated: 'bg-amber-500/20 text-amber-300',
+    upgrade_available: 'bg-sky-500/20 text-sky-300',
+    unsupported_version: 'bg-red-500/20 text-red-300',
+    policy_sync_required: 'bg-orange-500/20 text-orange-300',
+  }
+  return map[s] ?? 'bg-white/10 text-white/70'
+}
+
+function FleetStat({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="text-xs text-white/50">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${accent ?? 'text-white'}`}>{value}</p>
+    </div>
+  )
+}
+
 export default function PlatformAgents({ embedded = false }: { embedded?: boolean }) {
   const { selectedWorkspaceId, selectedWorkspaceRole } = useWorkspaceContext()
   const workspaceId = selectedWorkspaceId ? Number(selectedWorkspaceId) : null
   const canEdit = selectedWorkspaceRole === 'owner' || selectedWorkspaceRole === 'admin'
 
-  const [tab, setTab] = useState<Tab>('agents')
+  const [tab, setTab] = useState<Tab>('fleet')
   const [agents, setAgents] = useState<Agent[]>([])
   const [platformAgents, setPlatformAgents] = useState<PlatformAgentDetail[]>([])
   const [metadata, setMetadata] = useState<PlatformAgentMetadata | null>(null)
+  const [fleet, setFleet] = useState<FleetDashboard | null>(null)
+  const [installers, setInstallers] = useState<InstallerCatalog | null>(null)
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, CapabilityMatrixEntry>>({})
   const [enrollment, setEnrollment] = useState<EnrollmentTokenResponse | null>(null)
@@ -45,14 +69,18 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
     setLoading(true)
     setError(null)
     try {
-      const [list, meta, plat] = await Promise.all([
+      const [list, meta, plat, fleetData, installerData] = await Promise.all([
         agentService.list(workspaceId),
         platformAgentService.getMetadata(),
         platformAgentService.list(workspaceId),
+        platformAgentService.getFleet(workspaceId),
+        platformAgentService.getInstallers(workspaceId),
       ])
       setAgents(list)
       setMetadata(meta)
       setPlatformAgents(plat)
+      setFleet(fleetData)
+      setInstallers(installerData)
       setSelectedPerms(meta.default_permissions ?? [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load agents')
@@ -103,7 +131,9 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
   }
 
   const tabs: { id: Tab; label: string }[] = [
+    { id: 'fleet', label: 'Fleet dashboard' },
     { id: 'agents', label: 'Agents' },
+    { id: 'installers', label: 'Installer center' },
     { id: 'enroll', label: 'Enrollment wizard' },
     { id: 'capabilities', label: 'Capability matrix' },
     { id: 'troubleshoot', label: 'Troubleshooting' },
@@ -147,6 +177,113 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/60">Loading…</div>
       ) : null}
 
+      {!loading && tab === 'fleet' && fleet ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+            <FleetStat label="Total agents" value={fleet.fleet_summary.total} />
+            <FleetStat label="Online" value={fleet.fleet_summary.online} accent="text-emerald-300" />
+            <FleetStat label="Offline" value={fleet.fleet_summary.offline} accent="text-amber-300" />
+            <FleetStat label="Outdated" value={fleet.fleet_summary.outdated} accent="text-orange-300" />
+            <FleetStat label="Quarantined" value={fleet.fleet_summary.quarantined} accent="text-rose-300" />
+            <FleetStat label="Updating" value={fleet.fleet_summary.updating} />
+            <FleetStat label="Maintenance" value={fleet.fleet_summary.maintenance} />
+            <FleetStat label="Enrollment pending" value={fleet.fleet_summary.enrollment_pending} />
+            <FleetStat label="Disconnected" value={fleet.fleet_summary.disconnected} />
+            <FleetStat label="Decommissioning" value={fleet.fleet_summary.decommissioning} />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Version summary</h3>
+              <ul className="space-y-1 text-sm text-white/70">
+                {Object.entries(fleet.version_summary).map(([ver, count]) => (
+                  <li key={ver} className="flex justify-between">
+                    <span>{ver}</span>
+                    <span className="text-white/40">{count}</span>
+                  </li>
+                ))}
+                {Object.keys(fleet.version_summary).length === 0 ? <li className="text-white/40">No agents</li> : null}
+              </ul>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Policy summary</h3>
+              <ul className="space-y-1 text-sm">
+                {Object.entries(fleet.policy_summary).map(([status, count]) => (
+                  <li key={status} className="flex justify-between items-center">
+                    <span className={`rounded px-2 py-0.5 text-xs ${policyClass(status)}`}>{status.replace(/_/g, ' ')}</span>
+                    <span className="text-white/40">{count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+            <h3 className="text-sm font-semibold text-white mb-3">Gateway summary</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-white/50 border-b border-white/10">
+                    <th className="py-2 text-start">Name</th>
+                    <th className="py-2 text-start">Region</th>
+                    <th className="py-2 text-start">Health</th>
+                    <th className="py-2 text-start">Agents</th>
+                    <th className="py-2 text-start">Endpoint</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fleet.gateway_summary.map((gw) => (
+                    <tr key={gw.uuid} className="border-b border-white/5">
+                      <td className="py-2">{gw.name}</td>
+                      <td className="py-2 text-white/60">{gw.region ?? '—'}</td>
+                      <td className="py-2 capitalize">{gw.health_status}</td>
+                      <td className="py-2">{gw.connected_agents}</td>
+                      <td className="py-2 font-mono text-xs text-white/50">{gw.endpoint_url}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-2">Heartbeat statistics</h3>
+              <p className="text-sm text-white/70">Total: {fleet.heartbeat_statistics.total_heartbeats}</p>
+              <p className="text-sm text-white/70">Reporting: {fleet.heartbeat_statistics.agents_reporting}</p>
+              <p className="text-sm text-white/70">Avg/agent: {fleet.heartbeat_statistics.avg_per_agent}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-2">Bandwidth</h3>
+              <p className="text-sm text-white/70">Sent: {(fleet.bandwidth_statistics.bytes_sent / 1024).toFixed(1)} KB</p>
+              <p className="text-sm text-white/70">Received: {(fleet.bandwidth_statistics.bytes_received / 1024).toFixed(1)} KB</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white mb-2">Recent enrollments</h3>
+              <ul className="text-xs text-white/60 space-y-1">
+                {fleet.recent_enrollments.slice(0, 5).map((e) => (
+                  <li key={e.agent_uuid}>{e.hostname}</li>
+                ))}
+                {fleet.recent_enrollments.length === 0 ? <li>None in last 7 days</li> : null}
+              </ul>
+            </div>
+          </div>
+
+          {fleet.top_errors.length > 0 ? (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+              <h3 className="text-sm font-semibold text-rose-200 mb-2">Top errors</h3>
+              <ul className="text-xs text-rose-100/80 space-y-1">
+                {fleet.top_errors.map((err) => (
+                  <li key={err.agent_uuid}>
+                    <strong>{err.hostname}</strong>: {err.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {!loading && tab === 'agents' ? (
         <div className="space-y-4">
           {canEdit ? (
@@ -174,7 +311,8 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
                   <tr className="border-b border-white/10 text-left text-xs text-white/50">
                     <th className="px-4 py-2">Hostname</th>
                     <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Modules</th>
+                    <th className="px-4 py-2">Policy</th>
+                    <th className="px-4 py-2">Resources</th>
                     <th className="px-4 py-2">Last heartbeat</th>
                     <th className="px-4 py-2 text-end">Actions</th>
                   </tr>
@@ -186,12 +324,21 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
                       <tr key={a.id} className="border-b border-white/5 hover:bg-white/5">
                         <td className="px-4 py-2 font-medium">{a.hostname}</td>
                         <td className="px-4 py-2">
-                          <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClass(a.status)}`}>
-                            {a.status}
+                          <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClass(plat?.lifecycle_status ?? a.status)}`}>
+                            {plat?.lifecycle_status ?? a.status}
                           </span>
                         </td>
+                        <td className="px-4 py-2">
+                          {plat?.policy_status ? (
+                            <span className={`rounded px-2 py-0.5 text-xs ${policyClass(plat.policy_status)}`}>
+                              {plat.policy_status.replace(/_/g, ' ')}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-white/60">
-                          {(plat?.enabled_modules ?? []).join(', ') || '—'}
+                          {plat?.managed_resource_count ?? 0} res · {plat?.plugin_count ?? 0} plugins
                         </td>
                         <td className="px-4 py-2 text-white/50">{a.last_seen_at ? new Date(a.last_seen_at).toLocaleString() : '—'}</td>
                         <td className="px-4 py-2 text-end">
@@ -222,6 +369,34 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
               </table>
             </div>
           )}
+        </div>
+      ) : null}
+
+      {!loading && tab === 'installers' && installers ? (
+        <div className="space-y-6">
+          <p className="text-sm text-white/70">
+            Enterprise installer catalog — embed gateway URL, workspace ID, and enrollment token in silent deployments.
+          </p>
+          {Object.entries(installers.installers).map(([platform, formats]) => (
+            <div key={platform} className="rounded-xl border border-white/10 bg-[#0f151d] p-4">
+              <h3 className="text-sm font-semibold text-white capitalize mb-3">{platform}</h3>
+              <ul className="space-y-2 text-sm">
+                {(formats as Array<Record<string, string>>).map((item, i) => (
+                  <li key={i} className="rounded bg-black/30 p-3 font-mono text-xs text-white/80">
+                    <span className="text-sky-300">{item.format}</span>
+                    {item.silent ? <pre className="mt-1 whitespace-pre-wrap text-white/60">{item.silent}</pre> : null}
+                    {item.run ? <pre className="mt-1 whitespace-pre-wrap text-white/60">{item.run}</pre> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {installers.enroll_command ? (
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+              <h3 className="text-sm font-semibold text-sky-200 mb-2">Manual enroll (after install)</h3>
+              <pre className="overflow-x-auto text-xs text-white/80">{installers.enroll_command}</pre>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

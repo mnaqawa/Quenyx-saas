@@ -3,6 +3,7 @@
 namespace App\Services\PlatformAgent;
 
 use App\Constants\AgentConstants;
+use App\Constants\AgentLifecycleStatus;
 use App\Models\Agent;
 use App\Models\ObserveTargetHost;
 use App\Models\Project;
@@ -31,6 +32,7 @@ class AgentLifecycleService
 
         $agent->update([
             'status' => 'revoked',
+            'lifecycle_status' => AgentLifecycleStatus::REVOKED,
             'revoked_at' => now(),
             'revoked_reason' => $reason ?? 'Agent revoked by administrator.',
             'agent_secret_hash' => Hash::make(Agent::generateId()),

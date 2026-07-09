@@ -212,8 +212,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Quenyx Platform Agent (QPA) — platform-level APIs
     Route::prefix('platform/agents')->group(function () {
         Route::get('/metadata', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'metadata']);
+        Route::get('/fleet', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'fleet']);
+        Route::get('/installers', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'installers']);
+        Route::get('/gateways', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'gateways']);
         Route::get('/', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'index']);
         Route::post('/enrollment-tokens', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'createEnrollmentToken']);
+        Route::get('/{agent}/resources', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'resources']);
+        Route::get('/{agent}/plugins', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'plugins']);
         Route::get('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'show']);
         Route::put('/{agent}/permissions', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'updatePermissions']);
         Route::post('/{agent}/revoke', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'revoke']);

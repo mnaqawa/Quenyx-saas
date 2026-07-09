@@ -29,6 +29,39 @@ final class HostLifecycleStatus
 
     public const DELETED = 'deleted';
 
+    public const PENDING_ENROLLMENT = 'pending_enrollment';
+
+    public const ENROLLMENT_FAILED = 'enrollment_failed';
+
+    public const POLICY_SYNC_PENDING = 'policy_sync_pending';
+
+    public const AGENT_UPDATING = 'agent_updating';
+
+    public const UPGRADE_REQUIRED = 'upgrade_required';
+
+    public const QUARANTINED = 'quarantined';
+
+    public const MAINTENANCE = 'maintenance';
+
+    public const DISCONNECTED = 'disconnected';
+
+    public const DECOMMISSIONING = 'decommissioning';
+
+    /**
+     * Human-readable label; never return UNKNOWN when lifecycle is set.
+     */
+    public static function displayLabel(?string $status, ?string $reason = null): string
+    {
+        if ($reason !== null && $reason !== '') {
+            return $reason;
+        }
+        if ($status === null || $status === '') {
+            return 'Pending';
+        }
+
+        return str_replace('_', ' ', ucfirst($status));
+    }
+
     /**
      * Hosts in these states must not run service checks.
      *
@@ -42,6 +75,12 @@ final class HostLifecycleStatus
             self::AGENT_REMOVED,
             self::MONITORING_DISABLED,
             self::DELETED,
+            self::QUARANTINED,
+            self::MAINTENANCE,
+            self::DECOMMISSIONING,
+            self::DISCONNECTED,
+            self::ENROLLMENT_FAILED,
+            self::POLICY_SYNC_PENDING,
         ];
     }
 
@@ -93,6 +132,15 @@ final class HostLifecycleStatus
             self::AGENT_REMOVED,
             self::MONITORING_DISABLED,
             self::DELETED,
+            self::PENDING_ENROLLMENT,
+            self::ENROLLMENT_FAILED,
+            self::POLICY_SYNC_PENDING,
+            self::AGENT_UPDATING,
+            self::UPGRADE_REQUIRED,
+            self::QUARANTINED,
+            self::MAINTENANCE,
+            self::DISCONNECTED,
+            self::DECOMMISSIONING,
         ];
     }
 }

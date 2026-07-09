@@ -6,10 +6,15 @@ use App\Constants\AgentConstants;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\AgentEnrollmentToken;
+use App\Models\AgentManagedResource;
+use App\Models\AgentPlugin;
 use App\Models\ObserveTargetHost;
 use App\Models\Project;
 use App\Services\PlatformAgent\AgentCapabilityService;
 use App\Services\PlatformAgent\AgentLifecycleService;
+use App\Services\PlatformAgent\FleetDashboardService;
+use App\Services\PlatformAgent\InstallerCatalogService;
+use App\Services\PlatformAgent\AgentGatewayService;
 use App\Support\AgentGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,8 +28,111 @@ class PlatformAgentController extends Controller
 {
     public function __construct(
         private AgentCapabilityService $capabilityService,
-        private AgentLifecycleService $agentLifecycle
+        private AgentLifecycleService $agentLifecycle,
+        private FleetDashboardService $fleetDashboard,
+        private InstallerCatalogService $installerCatalog,
+        private AgentGatewayService $gatewayService,
     ) {
+    }
+
+    /**
+     * GET /api/platform/agents/fleet?workspace_id=
+     */
+    public function fleet(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->fleetDashboard->build($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/installers?workspace_id=
+     */
+    public function installers(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->installerCatalog->catalog($project),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/gateways?workspace_id=
+     */
+    public function gateways(Request $request): JsonResponse
+    {
+        $workspaceId = (int) $request->query('workspace_id');
+        $project = Project::findOrFail($workspaceId);
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->gatewayService->listForWorkspace($project->id),
+        ]);
+    }
+
+    /**
+     * GET /api/platform/agents/{agent}/resources
+     */
+    public function resources(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('view', $project);
+
+        $resources = AgentManagedResource::where('agent_id', $agent->id)
+            ->orderBy('display_name')
+            ->get()
+            ->map(fn (AgentManagedResource $r) => [
+                'uuid' => $r->id,
+                'resource_type' => $r->resource_type,
+                'display_name' => $r->display_name,
+                'parent_resource_uuid' => $r->parent_resource_id,
+                'lifecycle_status' => $r->lifecycle_status,
+                'health_status' => $r->health_status,
+                'last_seen' => $r->last_seen_at?->toIso8601String(),
+                'metadata' => $r->metadata ?? [],
+            ]);
+
+        return response()->json(['success' => true, 'data' => $resources]);
+    }
+
+    /**
+     * GET /api/platform/agents/{agent}/plugins
+     */
+    public function plugins(Request $request, Agent $agent): JsonResponse
+    {
+        $project = Project::findOrFail($agent->workspace_id);
+        $this->authorize('view', $project);
+
+        $plugins = AgentPlugin::where('agent_id', $agent->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (AgentPlugin $p) => [
+                'uuid' => $p->id,
+                'plugin_key' => $p->plugin_key,
+                'name' => $p->name,
+                'version' => $p->version,
+                'vendor' => $p->vendor,
+                'description' => $p->description,
+                'status' => $p->status,
+                'health_status' => $p->health_status,
+                'last_execution' => $p->last_execution_at?->toIso8601String(),
+                'error_count' => $p->error_count,
+                'required_permissions' => $p->required_permissions ?? [],
+                'dependencies' => $p->dependencies ?? [],
+                'configuration_version' => $p->configuration_version,
+            ]);
+
+        return response()->json(['success' => true, 'data' => $plugins]);
     }
 
     /**
@@ -224,6 +332,15 @@ class PlatformAgentController extends Controller
             'agent_version' => $agent->agent_version,
             'agent_type' => AgentConstants::AGENT_TYPE,
             'status' => $agent->status,
+            'lifecycle_status' => $agent->lifecycle_status ?? $agent->status,
+            'policy_version' => $agent->policy_version,
+            'platform_version' => $agent->platform_version,
+            'policy_status' => $agent->policy_status ?? 'up_to_date',
+            'capability_hash' => $agent->capability_hash,
+            'plugin_versions' => $agent->plugin_versions ?? [],
+            'preferred_gateway_uuid' => $agent->preferred_gateway_id,
+            'managed_resource_count' => $agent->managedResources()->count(),
+            'plugin_count' => $agent->plugins()->count(),
             'last_heartbeat' => $agent->last_seen_at?->toIso8601String(),
             'capabilities' => $agent->capabilities ?? [],
             'enabled_modules' => $agent->enabled_modules ?? [],
@@ -240,6 +357,10 @@ class PlatformAgentController extends Controller
             $base['cloud_provider'] = $agent->cloud_provider;
             $base['nat_detected'] = $agent->nat_detected;
             $base['vpn_detected'] = $agent->vpn_detected;
+            $base['last_error'] = $agent->last_error;
+            $base['heartbeat_count'] = $agent->heartbeat_count ?? 0;
+            $base['bytes_sent'] = $agent->bytes_sent ?? 0;
+            $base['bytes_received'] = $agent->bytes_received ?? 0;
         }
 
         return $base;

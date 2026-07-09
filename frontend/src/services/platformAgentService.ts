@@ -19,12 +19,60 @@ export interface PlatformAgentDetail {
   uuid: string
   hostname: string
   status: string
+  lifecycle_status?: string
+  policy_status?: string
+  policy_version?: string | null
+  platform_version?: string | null
+  capability_hash?: string | null
+  managed_resource_count?: number
+  plugin_count?: number
   capabilities: string[]
   enabled_modules: string[]
   permissions: string[]
   capability_matrix?: Record<string, CapabilityMatrixEntry>
   last_heartbeat?: string | null
   public_ip?: string | null
+}
+
+export interface FleetSummary {
+  total: number
+  online: number
+  offline: number
+  updating: number
+  quarantined: number
+  outdated: number
+  maintenance: number
+  enrollment_pending: number
+  disconnected: number
+  decommissioning: number
+}
+
+export interface FleetDashboard {
+  fleet_summary: FleetSummary
+  version_summary: Record<string, number>
+  policy_summary: Record<string, number>
+  gateway_summary: Array<{
+    uuid: string
+    name: string
+    region: string | null
+    health_status: string
+    connected_agents: number
+    endpoint_url: string
+  }>
+  capability_distribution: Record<string, number>
+  top_errors: Array<{ agent_uuid: string; hostname: string; error: string; at?: string }>
+  recent_enrollments: Array<{ agent_uuid: string; hostname: string; enrolled_at: string }>
+  recent_disconnects: Array<{ agent_uuid: string; hostname: string; last_seen: string }>
+  recent_upgrades: Array<{ agent_uuid: string; hostname: string; current_version: string; latest_version: string }>
+  heartbeat_statistics: { total_heartbeats: number; agents_reporting: number; avg_per_agent: number }
+  bandwidth_statistics: { bytes_sent: number; bytes_received: number }
+  generated_at: string
+}
+
+export interface InstallerCatalog {
+  config: Record<string, unknown>
+  installers: Record<string, Array<Record<string, string>>>
+  enroll_command: string | null
 }
 
 export const platformAgentService = {
@@ -61,5 +109,21 @@ export const platformAgentService = {
 
   async delete(agentId: string) {
     await apiClient.delete(`/api/platform/agents/${agentId}`)
+  },
+
+  async getFleet(workspaceId: number): Promise<FleetDashboard> {
+    return apiClient.get<FleetDashboard>(`/api/platform/agents/fleet?workspace_id=${workspaceId}`)
+  },
+
+  async getInstallers(workspaceId: number): Promise<InstallerCatalog> {
+    return apiClient.get<InstallerCatalog>(`/api/platform/agents/installers?workspace_id=${workspaceId}`)
+  },
+
+  async getPlugins(agentId: string) {
+    return apiClient.get(`/api/platform/agents/${agentId}/plugins`)
+  },
+
+  async getResources(agentId: string) {
+    return apiClient.get(`/api/platform/agents/${agentId}/resources`)
   },
 }

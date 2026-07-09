@@ -139,3 +139,39 @@ Installer ships **core only**. Plugins enabled per capability policy without rei
 
 Platform events: `AgentRevoked`, `HostMonitoringDisabled`
 
+## Sprint 28 — Enterprise fleet maturity
+
+### Multi-resource model
+
+One Platform Agent manages many **managed resources** (`agent_managed_resources`):
+
+```
+Platform Agent → Managed Resources → Resource Types
+```
+
+### Host vs Asset separation
+
+- **QynAsset** consumes `platform_assets`.
+- **QynSight** consumes `observe_targets_hosts`.
+- Linked via UUIDs; not every asset is a monitored host.
+
+### Policy versioning
+
+Heartbeat fields: `agent_version`, `platform_version`, `policy_version`, `plugin_versions`, `capability_hash`.
+
+### Fleet dashboard
+
+`GET /api/platform/agents/fleet?workspace_id=`
+
+### New APIs
+
+| Method | Path |
+|--------|------|
+| GET | `/api/platform/agents/fleet` |
+| GET | `/api/platform/agents/installers` |
+| GET | `/api/platform/agents/gateways` |
+| GET | `/api/platform/agents/{uuid}/resources` |
+| GET | `/api/platform/agents/{uuid}/plugins` |
+
+Migration: `2026_07_09_140000_platform_agent_enterprise_fleet`
+

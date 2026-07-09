@@ -24,4 +24,18 @@ return [
     | Block direct agent API access when QAG is required (production hardening).
     */
     'require_gateway' => env('AGENT_REQUIRE_GATEWAY', false),
+
+    'gateway_region' => env('AGENT_GATEWAY_REGION', 'default'),
+    'gateway_version' => env('AGENT_GATEWAY_VERSION', '1.0.0'),
+    'gateway_capacity' => (int) env('AGENT_GATEWAY_CAPACITY', 5000),
+
+  /*
+    | Policy versioning — agents report these on heartbeat; platform compares.
+    */
+    'policy' => [
+        'version' => env('AGENT_POLICY_VERSION', '1.0.0'),
+        'platform_version' => env('PLATFORM_VERSION', '1.0.0'),
+        'latest_agent_version' => env('AGENT_LATEST_VERSION', '1.0.0'),
+        'supported_agent_versions' => ['1.0.0', '1.1.0'],
+    ],
 ];

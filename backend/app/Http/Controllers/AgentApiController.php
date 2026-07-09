@@ -13,6 +13,9 @@ use App\Models\ObserveTargetHost;
 use App\Models\Project;
 use App\Services\DefaultMonitoringProfileService;
 use App\Services\PlatformAgent\AgentCapabilityService;
+use App\Services\PlatformAgent\AgentGatewayService;
+use App\Services\PlatformAgent\AgentManagedResourceService;
+use App\Services\PlatformAgent\AgentPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +28,10 @@ use Illuminate\Validation\Rule;
 class AgentApiController extends Controller
 {
     public function __construct(
-        private AgentCapabilityService $capabilityService
+        private AgentCapabilityService $capabilityService,
+        private AgentManagedResourceService $resourceService,
+        private AgentPolicyService $policyService,
+        private AgentGatewayService $gatewayService,
     ) {
     }
 
@@ -117,6 +123,8 @@ class AgentApiController extends Controller
             $workspace = Project::findOrFail($validated['workspace_id']);
             $capabilities = $this->capabilityService->resolveGrantedCapabilities($workspace, $permissions);
             $enabledModules = $this->capabilityService->resolveEnabledModules($workspace, $capabilities);
+            $gateway = $this->gatewayService->resolvePreferredGateway($workspace->id);
+            $policyVersion = config('agent.policy.version', '1.0.0');
 
             $agent = Agent::create([
                 'id' => $agentId,
@@ -127,6 +135,16 @@ class AgentApiController extends Controller
                 'os' => $validated['os'] ?? null,
                 'arch' => $validated['arch'] ?? null,
                 'agent_version' => $validated['agent_version'] ?? AgentConstants::AGENT_VERSION,
+                'policy_version' => $policyVersion,
+                'platform_version' => config('agent.policy.platform_version', '1.0.0'),
+                'policy_status' => $this->policyService->evaluate(
+                    new Agent(['agent_version' => $validated['agent_version'] ?? AgentConstants::AGENT_VERSION]),
+                    $validated['agent_version'] ?? null,
+                    $policyVersion,
+                    config('agent.policy.platform_version', '1.0.0'),
+                ),
+                'capability_hash' => $this->policyService->capabilityHash($capabilities),
+                'preferred_gateway_id' => $gateway?->id,
                 'primary_protocol' => $primaryProtocol === 'http_api' ? AgentConstants::PROTOCOL_QAG : $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
                 'permissions' => $permissions,
@@ -138,6 +156,7 @@ class AgentApiController extends Controller
                 'agent_secret_hash' => Hash::make($agentSecret),
                 'last_seen_at' => now(),
                 'status' => AgentConstants::STATUS_ONLINE,
+                'lifecycle_status' => 'online',
                 'enrolled_at' => now(),
             ]);
 
@@ -147,6 +166,7 @@ class AgentApiController extends Controller
             $privateIp = $validated['private_ip'] ?? null;
             $publicIp = $validated['public_ip'] ?? null;
             $hostAddress = $privateIp ?: $validated['hostname'];
+            $targetHost = null;
             for ($i = 0; $i < 3; $i++) {
                 $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
                 try {
@@ -168,6 +188,9 @@ class AgentApiController extends Controller
                     }
                 }
             }
+
+            $this->resourceService->bootstrapOnRegister($agent, $targetHost?->id);
+            $this->gatewayService->refreshConnectedCounts();
 
             Log::info('Agent registered', [
                 'agent_id' => $agentId,
@@ -231,6 +254,15 @@ class AgentApiController extends Controller
         $privateIp = $request->input('private_ip');
         $publicIp = $request->input('public_ip');
         $observedIp = $request->header('X-Quenyx-Observed-Source-Ip') ?? $request->input('observed_source_ip');
+        $agentVersion = $request->input('agent_version');
+        $policyVersion = $request->input('policy_version');
+        $platformVersion = $request->input('platform_version');
+        $pluginVersions = $request->input('plugin_versions');
+        $capabilityHash = $request->input('capability_hash');
+        $lifecycleStatus = $request->input('lifecycle_status');
+        $lastError = $request->input('last_error');
+        $bytesSent = $request->input('bytes_sent');
+        $bytesReceived = $request->input('bytes_received');
         if (is_string($privateIp) && $privateIp !== '') {
             $updates['private_ips'] = [$privateIp];
         }
@@ -244,8 +276,63 @@ class AgentApiController extends Controller
         if ($request->has('capabilities') && is_array($request->input('capabilities'))) {
             $updates['capabilities'] = $request->input('capabilities');
         }
+        if (is_string($agentVersion) && $agentVersion !== '') {
+            $updates['agent_version'] = $agentVersion;
+        }
+        if (is_string($policyVersion) && $policyVersion !== '') {
+            $updates['policy_version'] = $policyVersion;
+        }
+        if (is_string($platformVersion) && $platformVersion !== '') {
+            $updates['platform_version'] = $platformVersion;
+        }
+        if (is_array($pluginVersions)) {
+            $updates['plugin_versions'] = $pluginVersions;
+        }
+        if (is_string($capabilityHash) && $capabilityHash !== '') {
+            $updates['capability_hash'] = $capabilityHash;
+        }
+        if (is_string($lifecycleStatus) && $lifecycleStatus !== '') {
+            $updates['lifecycle_status'] = $lifecycleStatus;
+        }
+        if (is_string($lastError)) {
+            $updates['last_error'] = $lastError !== '' ? $lastError : null;
+        }
+        if (is_numeric($bytesSent)) {
+            $updates['bytes_sent'] = ($agent->bytes_sent ?? 0) + (int) $bytesSent;
+        }
+        if (is_numeric($bytesReceived)) {
+            $updates['bytes_received'] = ($agent->bytes_received ?? 0) + (int) $bytesReceived;
+        }
+
+        $capabilities = $updates['capabilities'] ?? $agent->capabilities ?? [];
+        $updates['policy_status'] = $this->policyService->evaluate(
+            $agent,
+            is_string($agentVersion) ? $agentVersion : null,
+            is_string($policyVersion) ? $policyVersion : null,
+            is_string($platformVersion) ? $platformVersion : null,
+            is_array($pluginVersions) ? $pluginVersions : [],
+        );
+        if (! isset($updates['capability_hash']) && $capabilities !== []) {
+            $updates['capability_hash'] = $this->policyService->capabilityHash($capabilities);
+        }
         if ($updates !== []) {
             $agent->update($updates);
+            $agent->refresh();
+        }
+
+        if ($request->has('managed_resources') && is_array($request->input('managed_resources'))) {
+            $this->resourceService->syncFromHeartbeat($agent, $request->input('managed_resources'));
+        }
+        if ($request->has('plugins') && is_array($request->input('plugins'))) {
+            $this->resourceService->syncPlugins($agent, $request->input('plugins'));
+        }
+
+        $failover = null;
+        if ($agent->preferred_gateway_id) {
+            $gateway = \App\Models\AgentGateway::find($agent->preferred_gateway_id);
+            if ($gateway && $gateway->health_status === 'unhealthy') {
+                $failover = $this->gatewayService->failoverTarget($gateway->id, $agent->workspace_id);
+            }
         }
 
         if ((is_string($privateIp) && $privateIp !== '') || (is_string($publicIp) && $publicIp !== '')) {
@@ -270,7 +357,14 @@ class AgentApiController extends Controller
             'status' => $agent->status,
         ]);
 
-        return response()->json(['success' => true, 'data' => ['status' => 'ok']]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => 'ok',
+                'policy' => $this->policyService->policyPayload($agent),
+                'failover_gateway' => $failover,
+            ],
+        ]);
     }
 
     /**
