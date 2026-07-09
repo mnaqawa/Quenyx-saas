@@ -1,0 +1,27 @@
+{
+  "name": "quenyx-agent-gateway",
+  "version": "1.0.0",
+  "description": "Quenyx Agent Gateway (QAG) — secure HTTPS ingress for Quenyx Platform Agent (QPA)",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["agent", "gateway", "qag", "qpa"],
+  "author": "Quenyx",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

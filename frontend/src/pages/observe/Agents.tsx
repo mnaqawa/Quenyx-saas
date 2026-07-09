@@ -1,5 +1,6 @@
 /**
- * Agents — Install and manage Quenyx agents for cross-network monitoring and asset inventory.
+ * Quenyx Platform Agent (QPA) — install and manage agents for all entitled modules.
+ * Agents communicate outbound-only via Quenyx Agent Gateway (QAG) on HTTPS :9444.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'

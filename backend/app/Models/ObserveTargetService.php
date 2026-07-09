@@ -23,6 +23,7 @@ class ObserveTargetService extends Model
         'name',
         'service_key',
         'check_command',
+        'check_source',
         'check_args',
         'enabled',
         'check_interval',

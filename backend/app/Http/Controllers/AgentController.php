@@ -98,6 +98,7 @@ class AgentController extends Controller
         $enrollmentToken->plain_token = $token;
 
         $gatewayUrl = rtrim(config('app.gateway_url', config('app.url', 'http://127.0.0.1:4000')), '/');
+        $agentGatewayUrl = \App\Support\AgentGateway::url();
 
         return response()->json([
             'success' => true,
@@ -108,8 +109,9 @@ class AgentController extends Controller
                 'primary_protocol' => $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
                 'permissions' => $permissions,
-                'gateway_url' => $gatewayUrl,
-                'install_instructions' => $this->buildInstallInstructions($token, $gatewayUrl, $project->id, $primaryProtocol, $enabledProtocols),
+                'gateway_url' => $agentGatewayUrl,
+                'api_gateway_url' => $gatewayUrl,
+                'install_instructions' => $this->buildInstallInstructions($token, $agentGatewayUrl, $gatewayUrl, $project->id, $primaryProtocol, $enabledProtocols),
                 'protocols' => AgentConstants::PROTOCOLS,
                 'permissions_checklist' => AgentConstants::PERMISSIONS,
             ],
@@ -227,7 +229,8 @@ class AgentController extends Controller
 
     private function buildInstallInstructions(
         string $token,
-        string $gatewayUrl,
+        string $agentGatewayUrl,
+        string $apiGatewayUrl,
         int $workspaceId,
         string $primaryProtocol,
         array $enabledProtocols
@@ -236,12 +239,12 @@ class AgentController extends Controller
             'linux' => [
                 'title' => 'Linux',
                 'steps' => [
-                    '1. Download the agent (or use the direct URL):',
-                    'curl -L -o quenyx-agent "'.$gatewayUrl.'/api/agents/download/linux-amd64"',
+                    '1. Download the Quenyx Platform Agent:',
+                    'curl -L -o quenyx-agent "'.$apiGatewayUrl.'/api/agents/download/linux-amd64"',
                     '',
-                    '2. Make it executable and run:',
+                    '2. Make it executable and enroll (outbound HTTPS to QAG only):',
                     'chmod +x quenyx-agent',
-                    './quenyx-agent enroll --url="'.$gatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
+                    './quenyx-agent enroll --url="'.$agentGatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
                     '',
                     '3. Install as a systemd service (optional):',
                     'sudo ./quenyx-agent install --user=quenyx',
@@ -250,11 +253,11 @@ class AgentController extends Controller
             'windows' => [
                 'title' => 'Windows',
                 'steps' => [
-                    '1. Download the agent:',
-                    'Invoke-WebRequest -Uri "'.$gatewayUrl.'/api/agents/download/windows-amd64" -OutFile quenyx-agent.exe',
+                    '1. Download the Quenyx Platform Agent:',
+                    'Invoke-WebRequest -Uri "'.$apiGatewayUrl.'/api/agents/download/windows-amd64" -OutFile quenyx-agent.exe',
                     '',
                     '2. Run enrollment (PowerShell as Administrator):',
-                    '.\\quenyx-agent.exe enroll --url="'.$gatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
+                    '.\\quenyx-agent.exe enroll --url="'.$agentGatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
                     '',
                     '3. Install as Windows Service (optional):',
                     '.\\quenyx-agent.exe install',
@@ -263,12 +266,12 @@ class AgentController extends Controller
             'macos' => [
                 'title' => 'macOS',
                 'steps' => [
-                    '1. Download the agent:',
-                    'curl -L -o quenyx-agent "'.$gatewayUrl.'/api/agents/download/darwin-amd64"',
+                    '1. Download the Quenyx Platform Agent:',
+                    'curl -L -o quenyx-agent "'.$apiGatewayUrl.'/api/agents/download/darwin-amd64"',
                     '',
                     '2. Make executable and run:',
                     'chmod +x quenyx-agent',
-                    './quenyx-agent enroll --url="'.$gatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
+                    './quenyx-agent enroll --url="'.$agentGatewayUrl.'" --workspace='.$workspaceId.' --token="'.$token.'"',
                     '',
                     '3. Install as launchd service (optional):',
                     'sudo ./quenyx-agent install',

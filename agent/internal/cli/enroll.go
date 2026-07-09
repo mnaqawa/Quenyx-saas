@@ -14,7 +14,7 @@ import (
 )
 
 func runEnroll(platformURL string, workspaceID int, token string) error {
-	baseURL, err := url.JoinPath(platformURL, "/api/agents/register")
+	baseURL, err := url.JoinPath(platformURL, "/v1/agents/register")
 	if err != nil {
 		return fmt.Errorf("invalid URL: %w", err)
 	}
@@ -35,8 +35,8 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		"os":              runtime.GOOS,
 		"arch":            runtime.GOARCH,
 		"agent_version":   "1.0.0",
-		"primary_protocol": "http_api",
-		"enabled_protocols": []string{"http_api"},
+		"primary_protocol": "qag",
+		"enabled_protocols": []string{"qag"},
 		"permissions":     []string{"system_metrics", "inventory", "network", "filesystem"},
 	}
 
@@ -46,6 +46,7 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -85,7 +86,7 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 		Permissions:      result.Data.Permissions,
 	}
 	if cfg.PrimaryProtocol == "" {
-		cfg.PrimaryProtocol = "http_api"
+		cfg.PrimaryProtocol = "qag"
 	}
 
 	cfgPath, err := config.DefaultPath()

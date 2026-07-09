@@ -21,12 +21,14 @@ Route::get('/health', [HealthController::class, 'index']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
 
 // Agent API (no user auth; uses enrollment token or agent secret)
-Route::middleware('throttle:120,1')->group(function () {
+// In production, set AGENT_REQUIRE_GATEWAY=true so agents only reach Laravel via QAG.
+Route::middleware(['throttle:120,1', \App\Http\Middleware\EnsureAgentGateway::class])->group(function () {
     Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
     Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
     Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);
     Route::post('/agents/{agent}/metrics', [\App\Http\Controllers\AgentApiController::class, 'metrics']);
     Route::post('/agents/{agent}/inventory', [\App\Http\Controllers\AgentApiController::class, 'inventory']);
+    Route::post('/agents/{agent}/evidence', [\App\Http\Controllers\AgentApiController::class, 'evidence']);
 });
 
 Route::prefix('auth')->group(function () {
@@ -206,6 +208,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/agents/enrollment-tokens', [\App\Http\Controllers\AgentController::class, 'listEnrollmentTokens']);
     Route::post('/projects/{project}/agents/enrollment-tokens/{token}/revoke', [\App\Http\Controllers\AgentController::class, 'revokeEnrollmentToken']);
     Route::delete('/projects/{project}/agents/{agent}', [\App\Http\Controllers\AgentController::class, 'destroy']);
+
+    // Quenyx Platform Agent (QPA) — platform-level APIs
+    Route::prefix('platform/agents')->group(function () {
+        Route::get('/metadata', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'metadata']);
+        Route::get('/', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'index']);
+        Route::post('/enrollment-tokens', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'createEnrollmentToken']);
+        Route::get('/{agent}', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'show']);
+        Route::put('/{agent}/permissions', [\App\Http\Controllers\Platform\PlatformAgentController::class, 'updatePermissions']);
+    });
 
     // NOTE (GA remediation): The legacy QynSight AI routes that previously registered
     //   POST /{projects|workspaces}/{project}/ai/chat  (App\Http\Controllers\AiAgentController)

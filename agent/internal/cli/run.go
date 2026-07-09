@@ -79,21 +79,22 @@ func sendHeartbeat(baseURL, agentID, secret string) {
 	if len(jsonBody) == 2 {
 		jsonBody = []byte("{}")
 	}
-	u, _ := url.JoinPath(baseURL, "/api/agents/", agentID, "/heartbeat")
+	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/heartbeat")
 	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Agent-Secret", secret)
+	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[agent] heartbeat failed: %v", err)
+		log.Printf("[qpa] heartbeat failed: %v", err)
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
-		log.Printf("[agent] heartbeat status=ok")
+		log.Printf("[qpa] heartbeat status=ok")
 	} else {
-		log.Printf("[agent] heartbeat status=error http=%d", resp.StatusCode)
+		log.Printf("[qpa] heartbeat status=error http=%d", resp.StatusCode)
 	}
 }
 
@@ -108,21 +109,22 @@ func sendMetrics(baseURL, agentID, secret string) {
 		"payload":      payload,
 	}
 	jsonBody, _ := json.Marshal(body)
-	u, _ := url.JoinPath(baseURL, "/api/agents/", agentID, "/metrics")
+	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/telemetry")
 	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Agent-Secret", secret)
+	req.Header.Set("X-Quenyx-Agent-Version", "1.0.0")
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[agent] metrics send failed: %v (shared: %v)", err, keys)
+		log.Printf("[qpa] telemetry send failed: %v (shared: %v)", err, keys)
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
-		log.Printf("[agent] metrics shared=%v status=accepted", keys)
+		log.Printf("[qpa] telemetry shared=%v status=accepted", keys)
 	} else {
-		log.Printf("[agent] metrics shared=%v status=error http=%d", keys, resp.StatusCode)
+		log.Printf("[qpa] telemetry shared=%v status=error http=%d", keys, resp.StatusCode)
 	}
 }
 
@@ -137,7 +139,7 @@ func sendInventory(baseURL, agentID, secret string) {
 		"payload":      payload,
 	}
 	jsonBody, _ := json.Marshal(body)
-	u, _ := url.JoinPath(baseURL, "/api/agents/", agentID, "/inventory")
+	u, _ := url.JoinPath(baseURL, "/v1/agents/", agentID, "/inventory")
 	req, _ := http.NewRequest("POST", u, bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Agent-Secret", secret)

@@ -10,7 +10,9 @@ use App\Models\AgentEnrollmentToken;
 use App\Models\AgentInventory;
 use App\Models\AgentMetric;
 use App\Models\ObserveTargetHost;
+use App\Models\Project;
 use App\Services\DefaultMonitoringProfileService;
+use App\Services\PlatformAgent\AgentCapabilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -22,6 +24,11 @@ use Illuminate\Validation\Rule;
  */
 class AgentApiController extends Controller
 {
+    public function __construct(
+        private AgentCapabilityService $capabilityService
+    ) {
+    }
+
     /**
      * Register a new agent with an enrollment token (multi-tenant: agent is tied to workspace_id from token).
      * POST /api/agents/register
@@ -106,19 +113,28 @@ class AgentApiController extends Controller
             if (! in_array($primaryProtocol, $enabledProtocols, true)) {
                 $enabledProtocols[] = $primaryProtocol;
             }
-            $permissions = $enrollmentToken->permissions ?? $validated['permissions'] ?? array_keys(AgentConstants::PERMISSIONS);
+            $permissions = $enrollmentToken->permissions ?? $validated['permissions'] ?? AgentConstants::DEFAULT_PERMISSIONS;
+            $workspace = Project::findOrFail($validated['workspace_id']);
+            $capabilities = $this->capabilityService->resolveGrantedCapabilities($workspace, $permissions);
+            $enabledModules = $this->capabilityService->resolveEnabledModules($workspace, $capabilities);
 
             $agent = Agent::create([
                 'id' => $agentId,
                 'workspace_id' => $validated['workspace_id'],
+                'workspace_uuid' => $workspace->uuid ?? null,
                 'enrollment_token_id' => $enrollmentToken->id,
                 'hostname' => $validated['hostname'],
                 'os' => $validated['os'] ?? null,
                 'arch' => $validated['arch'] ?? null,
-                'agent_version' => $validated['agent_version'] ?? null,
-                'primary_protocol' => $primaryProtocol,
+                'agent_version' => $validated['agent_version'] ?? AgentConstants::AGENT_VERSION,
+                'primary_protocol' => $primaryProtocol === 'http_api' ? AgentConstants::PROTOCOL_QAG : $primaryProtocol,
                 'enabled_protocols' => $enabledProtocols,
                 'permissions' => $permissions,
+                'capabilities' => $capabilities,
+                'enabled_modules' => $enabledModules,
+                'private_ips' => isset($validated['private_ip']) ? [$validated['private_ip']] : null,
+                'public_ip' => $validated['public_ip'] ?? null,
+                'observed_source_ip' => $request->header('X-Quenyx-Observed-Source-Ip'),
                 'agent_secret_hash' => Hash::make($agentSecret),
                 'last_seen_at' => now(),
                 'status' => AgentConstants::STATUS_ONLINE,
@@ -168,9 +184,16 @@ class AgentApiController extends Controller
                 'data' => [
                     'agent_id' => $agentId,
                     'agent_secret' => $agentSecret,
-                    'primary_protocol' => $primaryProtocol,
+                    'primary_protocol' => $agent->primary_protocol,
                     'enabled_protocols' => $enabledProtocols,
                     'permissions' => $permissions,
+                    'capabilities' => $capabilities,
+                    'enabled_modules' => $enabledModules,
+                    'capability_policy' => [
+                        'capabilities' => $capabilities,
+                        'enabled_modules' => $enabledModules,
+                        'dangerous_disabled' => ['automation.runner', 'automation.execution', 'compliance.evidence'],
+                    ],
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -200,8 +223,27 @@ class AgentApiController extends Controller
 
         $agent->markSeen();
 
+        $updates = [];
         $privateIp = $request->input('private_ip');
         $publicIp = $request->input('public_ip');
+        $observedIp = $request->header('X-Quenyx-Observed-Source-Ip') ?? $request->input('observed_source_ip');
+        if (is_string($privateIp) && $privateIp !== '') {
+            $updates['private_ips'] = [$privateIp];
+        }
+        if (is_string($publicIp) && $publicIp !== '') {
+            $updates['public_ip'] = $publicIp;
+        }
+        if (is_string($observedIp) && $observedIp !== '') {
+            $updates['observed_source_ip'] = $observedIp;
+            $updates['nat_detected'] = is_string($publicIp) && $publicIp !== '' && $publicIp !== $observedIp;
+        }
+        if ($request->has('capabilities') && is_array($request->input('capabilities'))) {
+            $updates['capabilities'] = $request->input('capabilities');
+        }
+        if ($updates !== []) {
+            $agent->update($updates);
+        }
+
         if ((is_string($privateIp) && $privateIp !== '') || (is_string($publicIp) && $publicIp !== '')) {
             ObserveTargetHost::where('agent_id', $agent->id)->get()->each(function (ObserveTargetHost $host) use ($privateIp, $publicIp) {
                 $updates = [];
@@ -281,6 +323,37 @@ class AgentApiController extends Controller
         ]);
 
         AgentIngestInventoryJob::dispatch($agent->id, $validated['collected_at'], $validated['payload']);
+
+        return response()->json(['success' => true, 'data' => ['accepted' => true]]);
+    }
+
+    /**
+     * Submit compliance evidence from agent (disabled by default — requires permission).
+     * POST /api/agents/{agent}/evidence
+     */
+    public function evidence(Request $request, Agent $agent): JsonResponse
+    {
+        if (! $this->verifyAgentSecret($request, $agent)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $permissions = $agent->permissions ?? [];
+        if (! in_array(AgentConstants::PERMISSION_COMPLIANCE, $permissions, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Compliance evidence collection is not enabled for this agent',
+            ], 403);
+        }
+
+        $request->validate([
+            'collected_at' => ['required', 'date'],
+            'payload' => ['required', 'array'],
+        ]);
+
+        Log::info('Agent evidence received (accepted, storage pending)', [
+            'agent_id' => $agent->id,
+            'workspace_id' => $agent->workspace_id,
+        ]);
 
         return response()->json(['success' => true, 'data' => ['accepted' => true]]);
     }

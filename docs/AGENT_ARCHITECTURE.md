@@ -1,227 +1,128 @@
-# Quenyx Agent Architecture
+# Quenyx Platform Agent (QPA) & Agent Gateway (QAG) Architecture
 
-## Overview
+## Sprint 27 — GA Remediation Summary
 
-Most infrastructure is located in **other networks** (DMZ, private subnets, cloud VPCs, remote offices). Central monitoring from the platform server cannot reach these hosts because:
+Enterprise customers install **one Quenyx Platform Agent** per host. The agent supports **every entitled module** (QynSight, QynAsset, QynRun, QynShield, …) via modular capability plugins.
 
-- Firewalls block inbound connections
-- NAT and routing prevent direct access
-- Hosts may have no public IP
-
-**Solution:** Deploy a **lightweight agent** on each monitored host (Windows, Linux, macOS). The agent runs locally, collects data, and **pushes** it to the Quenyx platform. Only outbound HTTPS from the agent to the platform is required—no inbound ports on the host.
-
----
-
-## Goals
-
-1. **Monitoring** – Heartbeat, check results (CPU, memory, disk, services), and alerts from agents.
-2. **Asset inventory** – Hardware, OS, installed software, network interfaces, and other CMDB-style data.
-3. **Cross-network** – Works regardless of host location; agent initiates all connections.
-
----
-
-## Architecture
+**Agents never communicate with Laravel directly.** All traffic flows through the **Quenyx Agent Gateway (QAG)** on outbound HTTPS.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        Quenyx Platform                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │   Gateway   │  │   Backend   │  │   Queue     │  │ Agent Ingest    │ │
-│  │   (API)     │  │   (Laravel) │  │   Worker    │  │ API + Jobs      │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘ │
-│         │                │                │                    │         │
-│         └────────────────┴────────────────┴────────────────────┘         │
-│                                    │                                      │
-│                          HTTPS (agent → platform)                         │
-└────────────────────────────────────┼─────────────────────────────────────┘
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         │                           │                           │
-         ▼                           ▼                           ▼
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│  Agent (Linux)  │       │  Agent (Windows) │       │  Agent (macOS)  │
-│  - Heartbeat    │       │  - Heartbeat     │       │  - Heartbeat    │
-│  - Metrics      │       │  - Metrics       │       │  - Metrics      │
-│  - Inventory    │       │  - Inventory     │       │  - Inventory    │
-└─────────────────┘       └─────────────────┘       └─────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                     Quenyx Platform (cloud)                          │
+│  ┌──────────────┐    ┌──────────────┐    ┌────────────────────────┐ │
+│  │ QAG :9444    │───▶│ Laravel API  │───▶│ Queue / Event Bus      │ │
+│  │ (HTTPS in)   │    │ (internal)   │    │ → QynSight / QynAsset  │ │
+│  └──────▲───────┘    └──────────────┘    └────────────────────────┘ │
+└─────────┼────────────────────────────────────────────────────────────┘
+          │ outbound HTTPS only (TLS 1.2+)
+          │
+┌─────────┴──────────┐
+│ Quenyx Platform Agent │
+│ Core + Plugin Manager │
+│ - monitoring plugin │
+│ - inventory plugin  │
+│ - automation (off)  │
+│ - compliance (off)  │
+└──────────────────────┘
 ```
 
----
+## Default endpoint
 
-## Agent Design Principles
+```
+https://cloud.quenyx.com:9444
+```
 
-| Principle | Description |
-|-----------|-------------|
-| **Push model** | Agent initiates all connections to the platform. No inbound ports on the host. |
-| **Stable identifiers** | Agent UUID (persistent) and workspace_id for correlation. Hostname/IP are display-only. |
-| **Idempotent ingest** | Inventory and metrics use composite keys (agent_id + timestamp/version) for dedup. |
-| **Minimal footprint** | Small binary/service; configurable intervals; no root/admin where avoidable. |
+Configurable via:
 
----
+```
+AGENT_GATEWAY_PROTOCOL=https
+AGENT_GATEWAY_HOST=cloud.quenyx.com
+AGENT_GATEWAY_PORT=9444
+```
 
-## Agent Capabilities (Phase 1 – Minimal)
+## Root cause of GA blockers (SSH / UNKNOWN)
 
-### 1. Registration
+| Symptom | Root cause | Fix |
+|---------|------------|-----|
+| `Could not create directory '/var/www/.ssh'` | Default monitoring profile attached **SSH pull plugins** (`check_disk`, `check_load`, …) to agent-enrolled hosts; Laravel backend ran `ssh` from the web server | Agent hosts now get `check_source=platform_agent` telemetry checks only |
+| `UNKNOWN` service state | Agent metrics stored in `agent_metrics` but **not wired** to `observe_services` | `AgentTelemetryObserveBridge` syncs telemetry → observe states |
+| Agent treated as QynSight-only | Registration auto-created observe host with pull checks; UI under QynSight | Platform Agent APIs, capability model, multi-module plugins |
+| Direct Laravel access | Agent posted to `/api/agents/*` via API gateway :4000 | Dedicated QAG on :9444; `AGENT_REQUIRE_GATEWAY=true` |
 
-- Agent is installed with: `platform_url`, `workspace_id`, `agent_token` (or enrollment key).
-- On first run, agent calls `POST /api/agents/register` with:
-  - `workspace_id`, `hostname`, `os`, `arch`, `agent_version`
-- Platform returns `agent_id` (UUID) and `agent_secret` (for subsequent requests).
-- Agent stores `agent_id` and `agent_secret` locally (encrypted if possible).
+## Communication rules
 
-### 2. Heartbeat
+- HTTPS only, TLS 1.2+
+- Outbound only from customer network
+- No inbound firewall, VPN, SSH, or port forwarding
+- Agent always initiates
 
-- Every N minutes (e.g. 5), agent sends `POST /api/agents/{agent_id}/heartbeat`:
-  - `timestamp`, `uptime`, `version`
-- Platform updates `last_seen_at` and `status` (online/offline/stale).
+## Capability model
 
-### 3. Metrics (Monitoring)
+```
+effective_capability = subscription ∩ entitlements ∩ RBAC ∩ agent_permission
+```
 
-- Agent collects local metrics (CPU, memory, disk, load) using OS APIs.
-- Sends `POST /api/agents/{agent_id}/metrics` with structured payload.
-- Platform stores in `agent_metrics` (or similar) and can drive dashboards/alerts.
+Default permissions (if entitled): QynSight telemetry + QynAsset inventory.
 
-### 4. Inventory (Asset Discovery)
+**Never enabled by default:** SSH, automation execution, compliance evidence.
 
-- On startup and periodically (e.g. daily), agent collects:
-  - **Hardware:** CPU model, cores, RAM, disks, serial numbers (where available)
-  - **OS:** Name, version, kernel, architecture
-  - **Network:** Interfaces, IPs, MACs
-  - **Software:** Installed packages (optional; can be heavy)
-- Sends `POST /api/agents/{agent_id}/inventory` with full or delta payload.
-- Platform reconciles by `agent_id`; creates/updates asset record.
+## QAG responsibilities
 
----
+- Agent authentication & enrollment validation
+- Heartbeat / telemetry / inventory / evidence ingestion
+- Compression & rate limiting
+- Agent version validation
+- Observed source IP for NAT/VPN detection
+- Forward validated payloads to Laravel
 
-## Data Model (Platform Side)
+## QPA plugin architecture
 
-### New Tables (Proposal)
+```
+Core Agent → Plugin Manager → Capability Plugins
+```
 
-| Table | Purpose |
-|-------|---------|
-| `agents` | `id` (UUID), `workspace_id`, `hostname`, `os`, `arch`, `agent_version`, `last_seen_at`, `status`, `enrolled_at` |
-| `agent_metrics` | `agent_id`, `timestamp`, `cpu`, `memory`, `disk`, `load`, etc. (JSON or columns) |
-| `agent_inventories` | `agent_id`, `collected_at`, `payload` (JSON), for reconciliation and history |
+Initial plugins: Monitoring, Asset Inventory, Automation (disabled), Compliance (disabled).
 
-### Stable Identifiers
+Installer ships **core only**. Plugins enabled per capability policy without reinstall.
 
-- **Agent:** `agents.id` (UUID) – use for all joins and API auth.
-- **Inventory:** `(agent_id, collected_at)` – idempotent ingest.
-- **Metrics:** `(agent_id, timestamp)` – append-only time series.
+## API surface
 
----
+### Agent-facing (via QAG → Laravel)
 
-## Agent Implementation Options
+| Method | QAG path | Laravel path |
+|--------|----------|--------------|
+| POST | `/v1/agents/register` | `/api/agents/register` |
+| POST | `/v1/agents/{uuid}/heartbeat` | `/api/agents/{uuid}/heartbeat` |
+| POST | `/v1/agents/{uuid}/telemetry` | `/api/agents/{uuid}/metrics` |
+| POST | `/v1/agents/{uuid}/inventory` | `/api/agents/{uuid}/inventory` |
+| POST | `/v1/agents/{uuid}/evidence` | `/api/agents/{uuid}/evidence` |
 
-### Option A: Go Binary (Recommended)
+### Platform management (authenticated)
 
-- Single binary for Linux, Windows, macOS.
-- Cross-compile from one codebase.
-- Small footprint, no runtime dependency.
-- Distribution: `.deb`/`.rpm`, `.msi`, `.pkg`.
+| Method | Path |
+|--------|------|
+| GET | `/api/platform/agents` |
+| POST | `/api/platform/agents/enrollment-tokens` |
+| GET | `/api/platform/agents/{uuid}` |
+| PUT | `/api/platform/agents/{uuid}/permissions` |
+| GET | `/api/platform/agents/metadata` |
 
-### Option B: Node.js / Electron
+## Module integration
 
-- Easier for JS/TS teams.
-- Larger footprint; requires Node runtime.
-- Good for quick prototyping.
+| Module | Data source | Default |
+|--------|-------------|---------|
+| QynSight | Agent telemetry → observe services | Enabled |
+| QynAsset | Agent inventory push | Enabled |
+| QynRun | Automation runner plugin | Disabled |
+| QynShield | Evidence endpoint | Disabled |
 
-### Option C: Python
+## Deploy checklist
 
-- Good for Linux; Windows/macOS packaging is heavier.
-- Requires Python runtime on host.
+1. Deploy `agent-gateway` service on port 9444
+2. Configure nginx TLS termination for `:9444`
+3. Set Laravel `AGENT_GATEWAY_*` and `AGENT_REQUIRE_GATEWAY=true`
+4. Run migration `2026_07_09_100000_platform_agent_qpa_qag`
+5. Rebuild Go agent binary
+6. Re-enroll or wait for next telemetry push on existing agents
 
-### Option D: Integrate Existing Agents
-
-- **Wazuh agent** – already deployed in many environments; can forward inventory and custom metrics via Wazuh API.
-- **FusionInventory** – GLPI-style; could adapt its protocol.
-- **Telegraf** – metrics only; would need inventory separately.
-
-**Recommendation:** Start with **Option A (Go)** for a clean, minimal agent. Option D can be a later integration if users already have Wazuh/Telegraf.
-
----
-
-## Security
-
-| Concern | Mitigation |
-|---------|------------|
-| Agent auth | `agent_id` + `agent_secret` in header or signed JWT; rotate secret on compromise. |
-| Transport | HTTPS only; certificate pinning optional. |
-| Data at rest | Encrypt `agent_secret` in agent config (OS keychain/credential store where available). |
-| Scope | Agent only sends data for its `workspace_id`; platform validates workspace membership. |
-
----
-
-## Integration with Existing Observe Model
-
-Today, `observe_targets_hosts` assumes hosts are **reachable from the backend**. Two modes:
-
-1. **Legacy (pull):** Backend runs checks (HTTP, TCP, ping, plugins) against `host.address`. Works only for same-network hosts.
-2. **Agent (push):** Agent runs checks locally and pushes results. Works for any network.
-
-**Unified model:**
-
-- Add `source` to host: `manual` (current) or `agent`.
-- For `source=agent`, link `observe_targets_hosts` to `agents.id` (e.g. `agent_id` FK).
-- When processing agent metrics/heartbeat, update the linked host's service status.
-- UI can show both manual and agent-sourced hosts; filter by source.
-
----
-
-## Portal: Install from UI
-
-Users can install the agent directly from the Quenyx portal:
-
-1. **Integrations** page → **Agents** section (platform-wide; used by ShieldObserve, ShieldInventory, VA scan, etc.)
-2. **Install Agent** → Opens modal with:
-   - **Protocol selection**: HTTP API (push), Quenyx Agent Protocol (PSAP, port 9444), SNMP – with descriptions and port info
-   - **Permissions checklist**: System metrics, inventory, network, processes, filesystem
-   - **Token expiry**: 1h, 24h, 72h, 7d, 30d
-3. **Generate token** → Returns enrollment token + install instructions for Linux, Windows, macOS
-4. Copy commands and run on the target host
-
-## Permissions Checklist
-
-| Permission | Description | Required |
-|------------|-------------|----------|
-| `system_metrics` | CPU, memory, disk, load | Yes |
-| `inventory` | Hardware and software inventory | Yes |
-| `filesystem` | Disk usage and stats | Yes |
-| `network` | Network interfaces and connections | No |
-| `processes` | Process list for service monitoring | No |
-
-## Implementation Status
-
-### Phase 1: Platform API + Schema ✅
-
-- Migration: `agents`, `agent_metrics`, `agent_inventories`, `agent_enrollment_tokens`
-- API: `POST /api/agents/register`, `POST /api/agents/{id}/heartbeat`, `POST /api/agents/{id}/metrics`, `POST /api/agents/{id}/inventory`
-- Auth: Enrollment token for register; `agent_id` + `agent_secret` for other endpoints
-- Jobs: `AgentIngestMetricsJob`, `AgentIngestInventoryJob` for async ingest
-
-### Phase 2: Minimal Agent (Go) ✅
-
-- Config: `~/.config/quenyx/agent.json` (Linux/macOS) or `%APPDATA%\quenyx\agent.json` (Windows)
-- `enroll`, `run`, `install` commands
-- Metrics: Linux (`/proc`), macOS (`sysctl`, `vm_stat`), Windows (placeholder)
-- Inventory: Hostname, OS, arch, CPU cores
-
-### Phase 3: Portal UI ✅
-
-- Agents page with list, Install Agent modal
-- Protocol selection and permissions checklist
-- Install instructions with copy buttons
-
-### Phase 4: Observe Integration (planned)
-
-- Add `agent_id` to `observe_targets_hosts` (schema ready)
-- When agent sends metrics, update linked host's check results
-- UI: "Add host from agent" – select enrolled agent to create observe target
-
----
-
-## References
-
-- **GLPI/FusionInventory:** Agent-based discovery and inventory; reconciliation by serial/UUID.
-- **Kaspersky EDR/KSC:** Agent reports to central; host ID and policy ID as stable refs.
-- **Wazuh:** Agent → manager pipeline; rule IDs and agent IDs for correlation.
+See also: `agent-gateway/README.md`, `agent/README.md`

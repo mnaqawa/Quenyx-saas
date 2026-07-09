@@ -50,6 +50,18 @@ class RunObserveChecks extends Command
             $workspaceId = $host->workspace_id;
             $prefix = 'ws' . $workspaceId . '-';
             $hostName = $prefix . $host->name;
+
+            // Platform Agent hosts: use push telemetry, never SSH/pull plugins
+            if ($host->agent_id && $host->source === 'agent') {
+                $existingForWorkspace = $existingByWorkspace[$workspaceId] ?? [];
+                $bridge = app(\App\Services\PlatformAgent\AgentTelemetryObserveBridge::class);
+                $synced = $bridge->syncHost($host, $existingForWorkspace, $now);
+                $existingByWorkspace[$workspaceId] = $existingForWorkspace;
+                $run += $synced;
+
+                continue;
+            }
+
             $address = trim((string) $host->address);
             if ($address === '') {
                 continue;

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Agent;
 use App\Models\AgentMetric;
+use App\Services\PlatformAgent\AgentTelemetryObserveBridge;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,5 +40,7 @@ class AgentIngestMetricsJob implements ShouldQueue
         ]);
 
         $agent->markSeen();
+
+        app(AgentTelemetryObserveBridge::class)->syncAfterIngest($agent);
     }
 }

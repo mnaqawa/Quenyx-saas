@@ -1,22 +1,27 @@
 <?php
 
 return [
-    /*
-    | Agent source directory (Go module). Used for on-demand build when binary is missing.
-    | Default: directory "agent" next to the backend (base_path('../agent')).
-    | Set AGENT_SOURCE_PATH in .env to override (absolute path).
-    */
     'source_path' => env('AGENT_SOURCE_PATH', base_path('../agent')),
-
-    /*
-    | Path to the Go binary used for on-demand build. PHP-FPM often has a minimal PATH, so set this
-    | to the full path (e.g. /usr/bin/go) if "go" is not found when the web server runs.
-    */
     'go_binary' => env('AGENT_GO_BINARY', 'go'),
+    'build_on_demand' => env('AGENT_BUILD_ON_DEMAND', true),
 
     /*
-    | Whether to build the agent on-demand when a download is requested and the binary is missing.
-    | Requires Go to be installed on the server. Set to false to disable and only serve pre-built binaries.
+    | Quenyx Agent Gateway (QAG) — agents connect here, never to Laravel directly.
+    | Default: https://cloud.quenyx.com:9444
     */
-    'build_on_demand' => env('AGENT_BUILD_ON_DEMAND', true),
+    'gateway' => [
+        'protocol' => env('AGENT_GATEWAY_PROTOCOL', 'https'),
+        'host' => env('AGENT_GATEWAY_HOST', 'cloud.quenyx.com'),
+        'port' => (int) env('AGENT_GATEWAY_PORT', 9444),
+    ],
+
+    /*
+    | Stale agent threshold (minutes without heartbeat).
+    */
+    'stale_after_minutes' => (int) env('AGENT_STALE_AFTER_MINUTES', 15),
+
+    /*
+    | Block direct agent API access when QAG is required (production hardening).
+    */
+    'require_gateway' => env('AGENT_REQUIRE_GATEWAY', false),
 ];
