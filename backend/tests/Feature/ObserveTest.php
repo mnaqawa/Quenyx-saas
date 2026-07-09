@@ -308,15 +308,17 @@ class ObserveTest extends TestCase
         $meta = ObserveMeta::where('workspace_id', $this->workspace->id)
             ->where('engine_key', 'native')
             ->firstOrFail();
-        $recentPollAt = now()->subSeconds(30);
+        $recentPollAt = now()->subSeconds(30)->startOfSecond();
         $meta->forceFill([
             'last_poll_at' => $recentPollAt,
             'error' => null,
         ])->save();
         $meta->refresh();
 
-        $this->assertTrue(
-            $recentPollAt->equalTo($meta->last_poll_at),
+        $this->assertNotNull($meta->last_poll_at);
+        $this->assertSame(
+            $recentPollAt->timestamp,
+            $meta->last_poll_at->timestamp,
             'last_poll_at should persist before services request'
         );
 
@@ -335,7 +337,7 @@ class ObserveTest extends TestCase
             ->where('engine_key', 'native')
             ->firstOrFail();
         $meta->forceFill([
-            'last_poll_at' => now()->subSeconds(400),
+            'last_poll_at' => now()->subSeconds(400)->startOfSecond(),
             'error' => null,
         ])->save();
 
