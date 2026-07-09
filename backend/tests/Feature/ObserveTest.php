@@ -303,11 +303,18 @@ class ObserveTest extends TestCase
 
     public function test_services_not_stale_when_last_poll_is_recent(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-06-18T22:32:00Z'));
+        config(['observe.stale_threshold_seconds' => 300]);
 
-        ObserveMeta::where('workspace_id', $this->workspace->id)->update([
-            'last_poll_at' => Carbon::parse('2026-06-18T22:31:54Z'),
-        ]);
+        $now = Carbon::parse('2026-06-18T22:32:00Z');
+        Carbon::setTestNow($now);
+
+        $meta = ObserveMeta::where('workspace_id', $this->workspace->id)
+            ->where('engine_key', 'native')
+            ->firstOrFail();
+        $meta->forceFill([
+            'last_poll_at' => $now->copy()->subSeconds(30),
+            'error' => null,
+        ])->save();
 
         $response = $this->actingAs($this->user)
             ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");
@@ -320,11 +327,18 @@ class ObserveTest extends TestCase
 
     public function test_services_stale_when_last_poll_exceeds_threshold(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-06-18T22:32:00Z'));
+        config(['observe.stale_threshold_seconds' => 300]);
 
-        ObserveMeta::where('workspace_id', $this->workspace->id)->update([
-            'last_poll_at' => Carbon::parse('2026-06-18T22:00:00Z'),
-        ]);
+        $now = Carbon::parse('2026-06-18T22:32:00Z');
+        Carbon::setTestNow($now);
+
+        $meta = ObserveMeta::where('workspace_id', $this->workspace->id)
+            ->where('engine_key', 'native')
+            ->firstOrFail();
+        $meta->forceFill([
+            'last_poll_at' => $now->copy()->subSeconds(400),
+            'error' => null,
+        ])->save();
 
         $response = $this->actingAs($this->user)
             ->getJson("/api/workspaces/{$this->workspace->id}/observe/services");

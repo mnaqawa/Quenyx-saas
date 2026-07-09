@@ -273,9 +273,13 @@ class ObserveController extends Controller
         $staleThresholdSeconds = max(60, (int) config('observe.stale_threshold_seconds', 300));
         $sourceTimestamp = $lastPollAt;
         $pollAt = $nativeMeta?->last_poll_at;
+        $hasObservedServices = $deduped->isNotEmpty();
         $stale = $monitoringConfigured
             && ! $engineUnreachable
-            && ($pollAt === null || $pollAt->lt(now()->subSeconds($staleThresholdSeconds)));
+            && (
+                ($pollAt === null && ! $hasObservedServices)
+                || ($pollAt !== null && $pollAt->lt(now()->subSeconds($staleThresholdSeconds)))
+            );
 
         return response()
             ->json([
