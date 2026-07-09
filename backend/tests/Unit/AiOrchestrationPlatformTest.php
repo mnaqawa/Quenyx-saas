@@ -20,6 +20,16 @@ use Tests\TestCase;
  */
 class AiOrchestrationPlatformTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config([
+            'ai.default' => null,
+            'ai.feature_flags.enabled' => null,
+            'ai.providers.openai.api_key' => null,
+        ]);
+    }
+
     public function test_default_provider_is_mock_in_testing_when_no_openai_key(): void
     {
         $this->assertNull(config('ai.feature_flags.enabled'));

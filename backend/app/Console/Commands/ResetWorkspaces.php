@@ -16,7 +16,7 @@ class ResetWorkspaces extends Command
      *
      * @var string
      */
-    protected $signature = 'quenyx:reset-workspaces {email : User email address} {--count=4 : Number of sample workspaces to create}';
+    protected $signature = 'quenyx:reset-workspaces {email : User email address} {--count=4 : Number of sample workspaces to create} {--force : Skip confirmation prompt}';
 
     /**
      * The console command description.
@@ -41,7 +41,7 @@ class ResetWorkspaces extends Command
     public function handle(): int
     {
         // Safety check: refuse to run in production
-        if (config('app.env') === 'production') {
+        if (app()->environment('production')) {
             $this->error('This command cannot be run in production environment.');
             $this->warn('Set APP_ENV to something other than "production" to use this command.');
             return Command::FAILURE;
@@ -68,9 +68,10 @@ class ResetWorkspaces extends Command
         $this->warn('   This includes related memberships and invites.');
         $this->newLine();
 
-        // Skip confirmation in non-interactive mode (e.g., when called from tests)
-        // Artisan::call() sets input to non-interactive, but we also check environment
-        $skipConfirmation = !$this->input->isInteractive() || app()->environment('testing');
+        // Skip confirmation in non-interactive mode, tests, or when --force is passed.
+        $skipConfirmation = (bool) $this->option('force')
+            || ! $this->input->isInteractive()
+            || app()->environment(['testing', 'local']);
         
         if (!$skipConfirmation && !$this->confirm("Do you want to proceed for user: {$user->name} ({$email})?", false)) {
             $this->info('Operation cancelled.');

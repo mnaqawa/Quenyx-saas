@@ -95,7 +95,6 @@ class AgentTelemetryObserveBridge
                 $collectedAt
             );
             $existingForWorkspace[$engineServiceKey] = $saved;
-            $this->recordHistory($workspaceId, $hostName, $service->name, $result, $collectedAt);
             $updated++;
         }
 
@@ -300,14 +299,34 @@ class AgentTelemetryObserveBridge
             return;
         }
 
-        ObserveMetricHistory::create([
-            'workspace_id' => $workspaceId,
-            'host_name' => $hostName,
-            'service_name' => $serviceName,
-            'state' => $result['state'],
-            'output' => $result['output'],
-            'perfdata' => $result['perfdata'],
-            'checked_at' => $checkedAt,
-        ]);
+        $perfdata = trim((string) ($result['perfdata'] ?? ''));
+        if ($perfdata === '') {
+            return;
+        }
+
+        try {
+            foreach (preg_split('/\s+/', $perfdata) ?: [] as $part) {
+                if (! str_contains($part, '=')) {
+                    continue;
+                }
+
+                [$metric, $value] = explode('=', $part, 2);
+                $metric = trim($metric);
+                if ($metric === '') {
+                    continue;
+                }
+
+                ObserveMetricHistory::create([
+                    'workspace_id' => $workspaceId,
+                    'host_name' => $hostName,
+                    'service_name' => $serviceName,
+                    'metric' => $metric,
+                    'value' => (float) $value,
+                    'recorded_at' => $checkedAt,
+                ]);
+            }
+        } catch (\Throwable) {
+            // Metric history is optional; telemetry state must still update.
+        }
     }
 }

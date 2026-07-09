@@ -22,6 +22,17 @@ class EnsureProjectModuleAccess
         $project = $request->route('project');
 
         if (! $project instanceof Project) {
+            if (is_numeric($project)) {
+                $project = Project::query()->find((int) $project);
+            } elseif (is_string($project) && $project !== '') {
+                $project = Project::query()
+                    ->where('uuid', $project)
+                    ->orWhere('id', $project)
+                    ->first();
+            }
+        }
+
+        if (! $project instanceof Project) {
             return response()->json([
                 'success' => false,
                 'message' => 'Module unavailable',

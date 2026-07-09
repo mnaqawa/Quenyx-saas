@@ -25,9 +25,9 @@ abstract class TestCase extends BaseTestCase
     protected function resetTestingAiConfig(): void
     {
         config([
-            'ai.default' => env('AI_PROVIDER') ?: null,
-            'ai.feature_flags.enabled' => env('AI_ENABLED') !== '' ? env('AI_ENABLED') : null,
-            'ai.providers.openai.api_key' => env('OPENAI_API_KEY') ?: null,
+            'ai.default' => null,
+            'ai.feature_flags.enabled' => null,
+            'ai.providers.openai.api_key' => null,
         ]);
     }
 

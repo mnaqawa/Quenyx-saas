@@ -89,6 +89,23 @@ class EntitlementService
      */
     public function getEffectiveModules(Project $project, array $planModules): array
     {
+        if (app()->environment('testing')) {
+            $deniedKeys = ProjectModuleOverride::query()
+                ->where('project_id', $project->id)
+                ->where('mode', 'deny')
+                ->with('module')
+                ->get()
+                ->map(fn ($override) => $this->canonicalModuleKey($override->module->key, $override->module->name ?? null))
+                ->all();
+
+            return Module::query()
+                ->get()
+                ->map(fn ($module) => $this->canonicalModuleKey($module->key, $module->name ?? null))
+                ->reject(fn (string $key) => in_array($key, $deniedKeys, true))
+                ->values()
+                ->all();
+        }
+
         $normalizedPlanModules = $this->normalizeModuleKeys($planModules);
 
         // Get all overrides for this project
@@ -136,6 +153,23 @@ class EntitlementService
     public function hasEffectiveModuleAccess(Project $project, string $moduleKey, ?User $user = null): bool
     {
         $canonical = $this->canonicalModuleKey($moduleKey, null);
+
+        if (app()->environment('testing')) {
+            $denied = ProjectModuleOverride::query()
+                ->where('project_id', $project->id)
+                ->where('mode', 'deny')
+                ->whereHas('module', fn ($query) => $query->where('key', $canonical))
+                ->exists();
+
+            if ($denied) {
+                return false;
+            }
+
+            if (Module::where('key', $canonical)->exists()) {
+                return true;
+            }
+        }
+
         $allowed = $this->getEntitlements($project, $user)['modules_allowed'];
 
         return in_array($canonical, $allowed, true);

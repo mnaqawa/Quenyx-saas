@@ -12,6 +12,7 @@ use App\Models\AgentPlugin;
 use App\Models\PlatformAsset;
 use App\Models\Project;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -23,8 +24,12 @@ class AgentManagedResourceService
         private readonly AgentGatewayService $gatewayService,
     ) {}
 
-    public function bootstrapOnRegister(Agent $agent, ?int $monitoringTargetId = null): AgentManagedResource
+    public function bootstrapOnRegister(Agent $agent, ?int $monitoringTargetId = null): ?AgentManagedResource
     {
+        if (! Schema::hasTable('agent_managed_resources')) {
+            return null;
+        }
+
         $gateway = $this->gatewayService->resolvePreferredGateway($agent->workspace_id);
         if ($gateway && ! $agent->preferred_gateway_id) {
             $agent->update(['preferred_gateway_id' => $gateway->id]);
@@ -49,24 +54,28 @@ class AgentManagedResourceService
             ]
         );
 
-        PlatformAsset::firstOrCreate(
-            [
-                'agent_id' => $agent->id,
-                'managed_resource_id' => $resource->id,
-            ],
-            [
-                'id' => (string) Str::uuid(),
-                'workspace_id' => $agent->workspace_id,
-                'monitoring_target_id' => $monitoringTargetId,
-                'name' => $agent->hostname,
-                'asset_type' => 'server',
-                'lifecycle_status' => 'active',
-                'health_status' => 'online',
-                'metadata' => ['source' => 'agent_enrollment'],
-            ]
-        );
+        if (Schema::hasTable('platform_assets')) {
+            PlatformAsset::firstOrCreate(
+                [
+                    'agent_id' => $agent->id,
+                    'managed_resource_id' => $resource->id,
+                ],
+                [
+                    'id' => (string) Str::uuid(),
+                    'workspace_id' => $agent->workspace_id,
+                    'monitoring_target_id' => $monitoringTargetId,
+                    'name' => $agent->hostname,
+                    'asset_type' => 'server',
+                    'lifecycle_status' => 'active',
+                    'health_status' => 'online',
+                    'metadata' => ['source' => 'agent_enrollment'],
+                ]
+            );
+        }
 
-        $this->seedDefaultPlugins($agent);
+        if (Schema::hasTable('agent_plugins')) {
+            $this->seedDefaultPlugins($agent);
+        }
 
         return $resource;
     }

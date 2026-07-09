@@ -8,7 +8,6 @@ use App\Models\ProjectMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class ResetWorkspacesCommandTest extends TestCase
@@ -27,7 +26,7 @@ class ResetWorkspacesCommandTest extends TestCase
         ]);
 
         // Mock production environment
-        Config::set('app.env', 'production');
+        $this->app->detectEnvironment(static fn (): string => 'production');
 
         $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
@@ -45,7 +44,7 @@ class ResetWorkspacesCommandTest extends TestCase
     public function test_command_creates_sample_workspaces(): void
     {
         // Ensure we're not in production
-        Config::set('app.env', 'local');
+        $this->app->detectEnvironment(static fn (): string => 'local');
 
         $user = User::create([
             'email' => 'test@example.com',
@@ -70,6 +69,7 @@ class ResetWorkspacesCommandTest extends TestCase
         $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 2,
+            '--force' => true,
         ]);
 
         $this->assertEquals(0, $result); // Command::SUCCESS
@@ -111,7 +111,7 @@ class ResetWorkspacesCommandTest extends TestCase
      */
     public function test_command_deletes_related_data(): void
     {
-        Config::set('app.env', 'local');
+        $this->app->detectEnvironment(static fn (): string => 'local');
 
         $user = User::create([
             'email' => 'test@example.com',
@@ -152,6 +152,7 @@ class ResetWorkspacesCommandTest extends TestCase
         Artisan::call('quenyx:reset-workspaces', [
             'email' => 'test@example.com',
             '--count' => 1,
+            '--force' => true,
         ]);
 
         // Verify related data was deleted
@@ -169,7 +170,7 @@ class ResetWorkspacesCommandTest extends TestCase
      */
     public function test_command_handles_user_not_found(): void
     {
-        Config::set('app.env', 'local');
+        $this->app->detectEnvironment(static fn (): string => 'local');
 
         $result = Artisan::call('quenyx:reset-workspaces', [
             'email' => 'nonexistent@example.com',
@@ -185,7 +186,7 @@ class ResetWorkspacesCommandTest extends TestCase
      */
     public function test_command_validates_count(): void
     {
-        Config::set('app.env', 'local');
+        $this->app->detectEnvironment(static fn (): string => 'local');
 
         $user = User::create([
             'email' => 'test@example.com',

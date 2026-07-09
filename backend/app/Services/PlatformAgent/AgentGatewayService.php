@@ -24,7 +24,8 @@ class AgentGatewayService
         }
 
         return (clone $query)->where('is_primary', true)->first()
-            ?? (clone $query)->orderBy('connected_agents')->first();
+            ?? (clone $query)->orderBy('connected_agents')->first()
+            ?? $this->ensureDefaultExists();
     }
 
     /**

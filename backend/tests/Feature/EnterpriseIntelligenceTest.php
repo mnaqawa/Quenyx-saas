@@ -63,6 +63,12 @@ class EnterpriseIntelligenceTest extends TestCase
                 'starts_at' => now(),
             ]
         );
+
+        config([
+            'ai.default' => null,
+            'ai.feature_flags.enabled' => false,
+            'ai.providers.openai.api_key' => null,
+        ]);
     }
 
     public function test_event_bus_has_full_vocabulary_and_subscriber(): void

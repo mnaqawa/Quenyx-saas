@@ -129,7 +129,22 @@ class OpenAIServiceTest extends TestCase
     public function test_temperature_is_sent_for_compatible_models(): void
     {
         config(['openai.model' => 'gpt-4.1-mini']);
-        $client = new ClientFake([CreateResponse::fake(['model' => 'gpt-4.1-mini'])]);
+        $client = new ClientFake([
+            CreateResponse::fake([
+                'model' => 'gpt-4.1-mini',
+                'output' => [[
+                    'type' => 'message',
+                    'id' => 'msg_test',
+                    'status' => 'completed',
+                    'role' => 'assistant',
+                    'content' => [[
+                        'type' => 'output_text',
+                        'text' => 'Performance summary.',
+                        'annotations' => [],
+                    ]],
+                ]],
+            ]),
+        ]);
         $this->app->instance(ClientContract::class, $client);
 
         $service = app(OpenAIService::class);

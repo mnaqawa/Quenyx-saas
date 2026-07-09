@@ -20,7 +20,6 @@ class AiExecutionResolverTest extends TestCase
         $this->simulateProduction();
         config(['ai.providers.openai.api_key' => 'sk-test-key']);
         config(['ai.default' => 'openai']);
-        $this->clearAiEnv();
 
         $resolver = app(AiExecutionResolver::class);
 
@@ -61,7 +60,7 @@ class AiExecutionResolverTest extends TestCase
     {
         config(['ai.providers.openai.api_key' => null]);
         config(['ai.default' => null]);
-        $this->clearAiEnv();
+        config(['ai.feature_flags.enabled' => null]);
 
         $resolver = app(AiExecutionResolver::class);
 
@@ -73,7 +72,7 @@ class AiExecutionResolverTest extends TestCase
     {
         config(['ai.providers.openai.api_key' => 'sk-test']);
         config(['ai.default' => 'openai']);
-        $this->clearAiEnv();
+        config(['ai.feature_flags.enabled' => null]);
 
         $fields = app(AiExecutionResolver::class)->workspaceSummaryFields();
 
