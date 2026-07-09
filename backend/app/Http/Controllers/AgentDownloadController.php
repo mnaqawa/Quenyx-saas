@@ -21,6 +21,42 @@ class AgentDownloadController extends Controller
     ];
 
     /**
+     * Check whether a platform binary is available for download.
+     * GET /api/agents/availability/{platform}
+     */
+    public function availability(string $platform): JsonResponse
+    {
+        $platform = strtolower($platform);
+        if (! in_array($platform, self::ALLOWED_PLATFORMS, true)) {
+            return response()->json([
+                'success' => false,
+                'available' => false,
+                'message' => 'Unsupported platform. Use one of: '.implode(', ', self::ALLOWED_PLATFORMS),
+            ], 404);
+        }
+
+        $path = storage_path('app/agents/'.$platform);
+        if (File::isFile($path)) {
+            return response()->json([
+                'success' => true,
+                'available' => true,
+                'platform' => $platform,
+                'size_bytes' => File::size($path),
+                'download_url' => url('/api/agents/download/'.$platform),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'available' => false,
+            'platform' => $platform,
+            'message' => 'Agent binary is not on the server yet. An administrator must run: php artisan agent:build '.$platform,
+            'build_on_demand' => (bool) config('agent.build_on_demand', true),
+            'download_url' => url('/api/agents/download/'.$platform),
+        ]);
+    }
+
+    /**
      * Serve the agent binary for the given platform.
      * GET /api/agents/download/{platform}
      *
@@ -52,6 +88,7 @@ class AgentDownloadController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => $message,
+                    'hint' => 'On the Quenyx server run: php artisan agent:build '.$platform,
                 ], 404)->header('Content-Type', 'application/json');
             }
         }

@@ -88,4 +88,17 @@ export const agentService = {
   async delete(workspaceId: string | number, agentId: string): Promise<void> {
     await apiClient.delete(`/api/workspaces/${workspaceId}/agents/${agentId}`)
   },
+
+  async getDownloadAvailability(platform = 'linux-amd64'): Promise<{
+    available: boolean
+    message?: string
+    size_bytes?: number
+  }> {
+    const res = await apiClient.get<{
+      available: boolean
+      message?: string
+      size_bytes?: number
+    }>(`/api/agents/availability/${platform}`)
+    return res ?? { available: false, message: 'Unable to check agent availability' }
+  },
 }

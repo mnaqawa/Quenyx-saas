@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'source_path' => env('AGENT_SOURCE_PATH', base_path('../agent')),
+    'source_path' => env('AGENT_SOURCE_PATH'),
     'go_binary' => env('AGENT_GO_BINARY', 'go'),
     'build_on_demand' => env('AGENT_BUILD_ON_DEMAND', true),
 

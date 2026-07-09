@@ -23,6 +23,7 @@ Route::get('/health/ready', [HealthController::class, 'ready']);
 // Agent API (no user auth; uses enrollment token or agent secret)
 // In production, set AGENT_REQUIRE_GATEWAY=true so agents only reach Laravel via QAG.
 Route::middleware(['throttle:120,1', \App\Http\Middleware\EnsureAgentGateway::class])->group(function () {
+    Route::get('/agents/availability/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'availability']);
     Route::get('/agents/download/{platform}', [\App\Http\Controllers\AgentDownloadController::class, 'download']);
     Route::post('/agents/register', [\App\Http\Controllers\AgentApiController::class, 'register']);
     Route::post('/agents/{agent}/heartbeat', [\App\Http\Controllers\AgentApiController::class, 'heartbeat']);

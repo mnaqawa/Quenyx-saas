@@ -39,10 +39,10 @@ class AgentBuildService
             return null;
         }
 
-        $sourcePath = rtrim(config('agent.source_path', base_path('../agent')), '/');
-        if (! is_dir($sourcePath) || ! File::isFile($sourcePath . '/go.mod')) {
-            $this->lastError = 'Agent source not found at ' . $sourcePath . '. Set AGENT_SOURCE_PATH in .env to the directory containing go.mod.';
-            Log::warning('Agent source not found', ['path' => $sourcePath]);
+        $sourcePath = $this->resolveSourcePath();
+        if ($sourcePath === null) {
+            $this->lastError = 'Agent source not found. Clone the agent/ directory on the server or set AGENT_SOURCE_PATH in .env to the directory containing go.mod.';
+            Log::warning('Agent source not found');
             return null;
         }
 
@@ -135,5 +135,26 @@ class AgentBuildService
     public static function isPlatformSupported(string $platform): bool
     {
         return isset(self::PLATFORM_MAP[strtolower($platform)]);
+    }
+
+    /**
+     * Resolve agent source directory (contains go.mod).
+     */
+    public function resolveSourcePath(): ?string
+    {
+        $configured = config('agent.source_path');
+        $candidates = array_values(array_unique(array_filter([
+            is_string($configured) && $configured !== '' ? rtrim($configured, '/') : null,
+            rtrim(base_path('../agent'), '/'),
+            rtrim(dirname(base_path()).'/agent', '/'),
+        ])));
+
+        foreach ($candidates as $path) {
+            if (is_dir($path) && File::isFile($path.'/go.mod')) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }

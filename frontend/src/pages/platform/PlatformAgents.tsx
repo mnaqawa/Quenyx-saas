@@ -3,6 +3,10 @@ import { useWorkspaceContext } from '../../workspaces/WorkspaceContext'
 import { PageHeader } from '../../components/observe/PageHeader'
 import { agentService, type Agent, type EnrollmentTokenResponse } from '../../services/agentService'
 import {
+  EnrollmentInstallPanel,
+  type VerifyStatus,
+} from '../../components/platform/EnrollmentInstallPanel'
+import {
   platformAgentService,
   type PlatformAgentDetail,
   type PlatformAgentMetadata,
@@ -60,6 +64,11 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, CapabilityMatrixEntry>>({})
   const [enrollment, setEnrollment] = useState<EnrollmentTokenResponse | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle')
+  const [agentCountBefore, setAgentCountBefore] = useState(0)
+  const [downloadAvailable, setDownloadAvailable] = useState<boolean | null>(null)
+  const [downloadMessage, setDownloadMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [wizardStep, setWizardStep] = useState(1)
@@ -120,18 +129,58 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
 
   const runEnrollment = async () => {
     if (!workspaceId) return
+    setEnrolling(true)
+    setError(null)
+    setAgentCountBefore(agents.length)
     try {
-      const res = await agentService.createEnrollmentToken(workspaceId, {
-        permissions: selectedPerms,
-        expires_hours: 24,
-        name: 'Platform Agent enrollment',
-      })
+      const [res, availability] = await Promise.all([
+        agentService.createEnrollmentToken(workspaceId, {
+          permissions: selectedPerms,
+          expires_hours: 24,
+          name: 'Platform Agent enrollment',
+        }),
+        agentService.getDownloadAvailability('linux-amd64'),
+      ])
       setEnrollment(res)
+      setDownloadAvailable(availability.available)
+      setDownloadMessage(availability.message ?? null)
       setWizardStep(4)
+      setVerifyStatus('waiting')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Enrollment failed')
+    } finally {
+      setEnrolling(false)
     }
   }
+
+  const finishEnrollment = () => {
+    setEnrollment(null)
+    setWizardStep(1)
+    setVerifyStatus('idle')
+    setDownloadAvailable(null)
+    setDownloadMessage(null)
+    void load()
+  }
+
+  useEffect(() => {
+    if (wizardStep !== 4 || verifyStatus !== 'waiting' || !workspaceId) return
+
+    const started = Date.now()
+    const interval = window.setInterval(() => {
+      void agentService.list(workspaceId).then((list) => {
+        setAgents(list)
+        if (list.length > agentCountBefore) {
+          setVerifyStatus('success')
+          window.clearInterval(interval)
+        } else if (Date.now() - started > 120000) {
+          setVerifyStatus('timeout')
+          window.clearInterval(interval)
+        }
+      })
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [wizardStep, verifyStatus, workspaceId, agentCountBefore])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'fleet', label: 'Fleet dashboard' },
@@ -446,24 +495,48 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
       ) : null}
 
       {!loading && tab === 'enroll' ? (
-        <div className="rounded-xl border border-white/10 bg-[#0f151d] p-6 space-y-4">
-          <ol className="flex flex-wrap gap-4 text-xs text-white/50">
-            {['Workspace', 'Permissions', 'Review', 'Install'].map((label, i) => (
-              <li key={label} className={wizardStep >= i + 1 ? 'text-sky-300' : ''}>
+        <div className="rounded-xl border border-white/10 bg-[#0f151d] p-6 space-y-6">
+          <div>
+            <h3 className="text-base font-semibold text-white">Enrollment wizard</h3>
+            <p className="mt-1 text-sm text-white/60">
+              Generate a one-time token and install the Platform Agent on your target host.
+            </p>
+          </div>
+          <ol className="flex flex-wrap gap-3 text-xs">
+            {['Workspace', 'Permissions', 'Review', 'Install & verify'].map((label, i) => (
+              <li
+                key={label}
+                className={[
+                  'rounded-full border px-3 py-1',
+                  wizardStep >= i + 1
+                    ? 'border-sky-500/40 bg-sky-500/15 text-sky-200'
+                    : 'border-white/10 text-white/40',
+                ].join(' ')}
+              >
                 {i + 1}. {label}
               </li>
             ))}
           </ol>
           {wizardStep === 1 ? (
-            <div>
-              <p className="text-sm text-white/70">Workspace ID: <strong>{workspaceId}</strong></p>
-              <button type="button" className="mt-4 rounded bg-white/10 px-3 py-1.5 text-sm" onClick={() => setWizardStep(2)}>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <p className="text-sm text-white/80">
+                Workspace: <strong className="text-white">{workspaceId}</strong>
+              </p>
+              <p className="mt-2 text-xs text-white/50">
+                Agents enrolled here report to this workspace only.
+              </p>
+              <button
+                type="button"
+                className="mt-4 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+                onClick={() => setWizardStep(2)}
+              >
                 Next: Choose permissions
               </button>
             </div>
           ) : null}
           {wizardStep === 2 && metadata ? (
-            <div className="space-y-2">
+            <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+              <p className="text-xs text-white/50">Select capabilities the agent may use. Required permissions cannot be disabled.</p>
               {(Object.entries(metadata.permissions) as [string, PlatformPermissionInfo][]).map(([key, p]) => (
                 <label key={key} className="flex items-center gap-2 text-sm text-white/80">
                   <input
@@ -480,27 +553,49 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
                   {p.dangerous ? <span className="text-amber-400 text-xs">(approval required)</span> : null}
                 </label>
               ))}
-              <button type="button" className="mt-4 rounded bg-white/10 px-3 py-1.5 text-sm" onClick={() => setWizardStep(3)}>
-                Next: Review
-              </button>
+              <div className="flex gap-2 pt-2">
+                <button type="button" className="rounded-lg border border-white/15 px-3 py-1.5 text-sm text-white/70" onClick={() => setWizardStep(1)}>
+                  Back
+                </button>
+                <button type="button" className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white" onClick={() => setWizardStep(3)}>
+                  Next: Review
+                </button>
+              </div>
             </div>
           ) : null}
           {wizardStep === 3 ? (
-            <div>
-              <p className="text-sm text-white/70">Default safe permissions — no SSH, automation, or compliance unless explicitly enabled.</p>
-              <button type="button" className="mt-4 rounded bg-sky-500/30 px-3 py-1.5 text-sm text-sky-100" onClick={() => void runEnrollment()}>
-                Generate enrollment token
-              </button>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <p className="text-sm text-white/80">Review before generating the enrollment token.</p>
+              <ul className="mt-3 space-y-1 text-xs text-white/60">
+                <li>Workspace ID: {workspaceId}</li>
+                <li>Permissions: {selectedPerms.length ? selectedPerms.join(', ') : 'defaults'}</li>
+                <li>Token validity: 24 hours</li>
+              </ul>
+              <div className="mt-4 flex gap-2">
+                <button type="button" className="rounded-lg border border-white/15 px-3 py-1.5 text-sm text-white/70" onClick={() => setWizardStep(2)}>
+                  Back
+                </button>
+                <button
+                  type="button"
+                  disabled={enrolling}
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-50"
+                  onClick={() => void runEnrollment()}
+                >
+                  {enrolling ? 'Generating…' : 'Generate enrollment token'}
+                </button>
+              </div>
             </div>
           ) : null}
-          {wizardStep === 4 && enrollment ? (
-            <div className="space-y-3 text-sm">
-              <p className="text-emerald-300">Token generated. Install the agent on your host:</p>
-              <pre className="overflow-x-auto rounded bg-black/40 p-3 text-xs text-white/80">
-                {enrollment.install_instructions?.linux?.steps?.join('\n')}
-              </pre>
-              <p className="text-white/50">Gateway URL: {enrollment.gateway_url ?? metadata?.gateway_url}</p>
-            </div>
+          {wizardStep === 4 && enrollment && workspaceId ? (
+            <EnrollmentInstallPanel
+              enrollment={enrollment}
+              workspaceId={workspaceId}
+              gatewayUrl={enrollment.gateway_url ?? metadata?.gateway_url}
+              downloadAvailable={downloadAvailable}
+              downloadMessage={downloadMessage}
+              verifyStatus={verifyStatus}
+              onDone={finishEnrollment}
+            />
           ) : null}
         </div>
       ) : null}
