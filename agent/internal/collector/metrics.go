@@ -5,18 +5,10 @@ import (
 )
 
 // CollectMetrics returns system metrics (CPU, memory, disk, load).
-// Cross-platform: uses runtime and OS-specific collectors where available.
+// Only sections that were successfully collected are included (no empty placeholders).
 func CollectMetrics() map[string]interface{} {
-	m := map[string]interface{}{
-		"cpu": map[string]interface{}{
-			"cores": runtime.NumCPU(),
-		},
-		"memory": map[string]interface{}{},
-		"disk":   map[string]interface{}{},
-		"load":   map[string]interface{}{},
-	}
+	m := map[string]interface{}{}
 
-	// Platform-specific collection
 	switch runtime.GOOS {
 	case "linux":
 		collectLinuxMetrics(m)
@@ -25,7 +17,11 @@ func CollectMetrics() map[string]interface{} {
 	case "darwin":
 		collectDarwinMetrics(m)
 	default:
-		// Minimal fallback
+		m["cpu"] = map[string]interface{}{"cores": runtime.NumCPU()}
+	}
+
+	// Always report core count even if OS-specific CPU sampling failed.
+	if _, ok := m["cpu"]; !ok {
 		m["cpu"] = map[string]interface{}{"cores": runtime.NumCPU()}
 	}
 

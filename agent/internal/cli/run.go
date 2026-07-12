@@ -233,8 +233,12 @@ func (rt *agentRuntime) doMetrics() {
 	}
 	payload := collector.CollectMetrics()
 	keys := make([]string, 0, len(payload))
-	for k := range payload {
+	empty := make([]string, 0)
+	for k, v := range payload {
 		keys = append(keys, k)
+		if isEmptyMetricSection(v) {
+			empty = append(empty, k)
+		}
 	}
 	body := map[string]interface{}{
 		"collected_at": time.Now().UTC().Format(time.RFC3339),
@@ -253,7 +257,19 @@ func (rt *agentRuntime) doMetrics() {
 		log.Printf("[qpa] telemetry send failed: %v (keys: %v)", err, keys)
 		return
 	}
-	log.Printf("[qpa] telemetry shared=%v status=accepted", keys)
+	if len(empty) > 0 {
+		log.Printf("[qpa] telemetry shared=%v empty=%v status=accepted", keys, empty)
+	} else {
+		log.Printf("[qpa] telemetry shared=%v status=accepted", keys)
+	}
+}
+
+func isEmptyMetricSection(v interface{}) bool {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return v == nil
+	}
+	return len(m) == 0
 }
 
 func (rt *agentRuntime) doInventory() {

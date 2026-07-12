@@ -975,7 +975,7 @@ export default function Targets() {
                           ? lifecycleStatusLabel(host.lifecycle_status)
                           : host.lifecycle_reason
                             ? lifecycleStatusLabel(host.lifecycle_status)
-                            : (runtime?.status ?? t('targets.status.unknown'))}
+                            : (runtime?.status ?? host.lifecycle_status ?? t('targets.status.unknown'))}
                       </td>
                       <td className="px-3 py-2.5">{runtime?.serviceCheckCount ?? host.services.length}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-white/70">

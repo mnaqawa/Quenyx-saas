@@ -235,6 +235,70 @@ class PlatformAgentTest extends TestCase
 
         $this->assertNotNull($disk);
         $this->assertSame('unknown', $disk->state);
+        $this->assertStringContainsString('disk telemetry', strtolower((string) $disk->output));
+    }
+
+    public function test_telemetry_bridge_evaluates_disk_free_percent(): void
+    {
+        $this->seedPlans();
+        [, $project] = $this->makeUserAndProject();
+
+        $agent = Agent::create([
+            'id' => Agent::generateId(),
+            'workspace_id' => $project->id,
+            'hostname' => 'disk-host',
+            'permissions' => AgentConstants::DEFAULT_PERMISSIONS,
+            'capabilities' => ['monitoring.telemetry'],
+            'agent_secret_hash' => Hash::make('secret'),
+            'status' => AgentConstants::STATUS_ONLINE,
+            'enrolled_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        $host = ObserveTargetHost::create([
+            'workspace_id' => $project->id,
+            'name' => 'disk-host',
+            'address' => '10.0.0.10',
+            'agent_id' => $agent->id,
+            'source' => 'agent',
+            'enabled' => true,
+        ]);
+
+        ObserveTargetService::create([
+            'workspace_id' => $project->id,
+            'host_id' => $host->id,
+            'name' => 'disk',
+            'service_key' => 'disk',
+            'check_command' => 'platform_agent_telemetry',
+            'check_source' => AgentConstants::CHECK_SOURCE_PLATFORM_AGENT,
+            'check_args' => ['warn_pct' => 20, 'crit_pct' => 10],
+            'enabled' => true,
+        ]);
+
+        AgentMetric::create([
+            'agent_id' => $agent->id,
+            'collected_at' => now(),
+            'payload' => [
+                'disk' => [
+                    '/' => [
+                        'total' => 1000,
+                        'used' => 400,
+                        'free' => 600,
+                        'used_pct' => 40.0,
+                        'free_pct' => 60.0,
+                    ],
+                ],
+            ],
+        ]);
+
+        $bridge = app(AgentTelemetryObserveBridge::class);
+        $existing = [];
+        $bridge->syncHost($host, $existing, now());
+
+        $disk = $existing['ws'.$project->id.'-disk-host::disk'] ?? null;
+        $this->assertNotNull($disk);
+        $this->assertSame('ok', $disk->state);
+        $this->assertStringContainsString('60.0% free', $disk->output);
     }
 
     public function test_evidence_endpoint_disabled_without_permission(): void

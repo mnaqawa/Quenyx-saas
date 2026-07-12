@@ -61,6 +61,33 @@ func collectDarwinMetrics(m map[string]interface{}) {
 	}
 
 	m["cpu"] = map[string]interface{}{"cores": runtime.NumCPU()}
+
+	// Root filesystem via df (portable on macOS).
+	if out, err := exec.Command("df", "-k", "/").Output(); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		if len(lines) >= 2 {
+			fields := strings.Fields(lines[1])
+			if len(fields) >= 4 {
+				totalKB := parseUint64Darwin(fields[1])
+				usedKB := parseUint64Darwin(fields[2])
+				availKB := parseUint64Darwin(fields[3])
+				if totalKB > 0 {
+					total := totalKB * 1024
+					used := usedKB * 1024
+					free := availKB * 1024
+					m["disk"] = map[string]interface{}{
+						"/": map[string]interface{}{
+							"total":    total,
+							"used":     used,
+							"free":     free,
+							"used_pct": float64(used) / float64(total) * 100,
+							"free_pct": float64(free) / float64(total) * 100,
+						},
+					}
+				}
+			}
+		}
+	}
 }
 
 func parseFloatDarwin(s string) float64 {

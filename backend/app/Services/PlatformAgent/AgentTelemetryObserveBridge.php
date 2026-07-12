@@ -159,9 +159,8 @@ class AgentTelemetryObserveBridge
                 $worst = 'critical';
             } elseif ($state === 'warning' && $worst !== 'critical') {
                 $worst = 'warning';
-            } elseif (in_array($state, ['unknown', 'pending'], true) && $worst === 'ok') {
-                $worst = 'pending';
             }
+            // unknown/pending metrics must not flip a live host to UNKNOWN in Hosts UI.
         }
 
         if (! $hostAliveFresh) {
@@ -269,13 +268,17 @@ class AgentTelemetryObserveBridge
             if (! is_array($disk) || $disk === []) {
                 return [
                     'state' => 'unknown',
-                    'output' => 'No disk telemetry from Platform Agent yet',
+                    'output' => 'No disk telemetry from Platform Agent yet — upgrade/rebuild quenyx-agent (≥1.0.1) and restart the service',
                     'perfdata' => null,
                 ];
             }
 
             // Prefer root mount when present; otherwise first entry.
             $entry = $disk['/'] ?? $disk['root'] ?? null;
+            if (! is_array($entry) && isset($disk['total'])) {
+                // Flat shape: { total, used, free, used_pct, free_pct }
+                $entry = $disk;
+            }
             if (! is_array($entry)) {
                 $first = reset($disk);
                 $entry = is_array($first) ? $first : null;
@@ -298,7 +301,11 @@ class AgentTelemetryObserveBridge
                 : ($usedPct !== null ? max(0, 100 - $usedPct) : null);
 
             if ($freePct === null && $usedPct === null) {
-                return ['state' => 'ok', 'output' => 'DISK OK (source: Platform Agent)', 'perfdata' => null];
+                return [
+                    'state' => 'unknown',
+                    'output' => 'Disk telemetry missing used/free percentages',
+                    'perfdata' => null,
+                ];
             }
 
             // check_args warn/crit are free-space percentages (same as classic check_disk).
@@ -311,6 +318,26 @@ class AgentTelemetryObserveBridge
                 'state' => $state,
                 'output' => sprintf('DISK %s: %.1f%% free (source: Platform Agent)', strtoupper($state), $free),
                 'perfdata' => sprintf('disk_free_pct=%.1f', $free),
+            ];
+        }
+
+        if ($key === 'uptime') {
+            $uptime = $payload['uptime'] ?? null;
+            if (! is_array($uptime) && ! is_numeric($uptime)) {
+                return ['state' => 'unknown', 'output' => 'No uptime telemetry from Platform Agent', 'perfdata' => null];
+            }
+            $seconds = is_numeric($uptime) ? (float) $uptime : (float) ($uptime['seconds'] ?? $uptime['uptime_seconds'] ?? 0);
+            if ($seconds <= 0) {
+                return ['state' => 'unknown', 'output' => 'Uptime telemetry present but empty', 'perfdata' => null];
+            }
+            $days = (int) floor($seconds / 86400);
+            $hours = (int) floor(($seconds % 86400) / 3600);
+            $mins = (int) floor(($seconds % 3600) / 60);
+
+            return [
+                'state' => 'ok',
+                'output' => sprintf('UPTIME OK: %d days, %d hours, %d minutes (source: Platform Agent)', $days, $hours, $mins),
+                'perfdata' => sprintf('uptime_seconds=%.0f', $seconds),
             ];
         }
 

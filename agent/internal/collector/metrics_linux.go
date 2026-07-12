@@ -4,6 +4,7 @@ package collector
 
 import (
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -78,16 +79,27 @@ func collectLinuxMetrics(m map[string]interface{}) {
 		}
 	}
 
-	// Root filesystem usage via statfs (was previously left empty → UI "awaiting disk telemetry").
+	if disk := collectLinuxDisk(); disk != nil {
+		m["disk"] = disk
+	}
+}
+
+func collectLinuxDisk() map[string]interface{} {
 	var st syscall.Statfs_t
 	if err := syscall.Statfs("/", &st); err == nil && st.Blocks > 0 {
 		bsize := uint64(st.Bsize)
+		if bsize == 0 {
+			bsize = 4096
+		}
 		total := st.Blocks * bsize
 		free := st.Bavail * bsize
 		used := total - (st.Bfree * bsize)
+		if total == 0 {
+			return nil
+		}
 		usedPct := float64(used) / float64(total) * 100
 		freePct := float64(free) / float64(total) * 100
-		m["disk"] = map[string]interface{}{
+		return map[string]interface{}{
 			"/": map[string]interface{}{
 				"total":    total,
 				"used":     used,
@@ -96,6 +108,41 @@ func collectLinuxMetrics(m map[string]interface{}) {
 				"free_pct": freePct,
 			},
 		}
+	}
+
+	// Fallback when statfs is unavailable (rare containers / restricted mounts).
+	out, err := exec.Command("df", "-Pk", "/").Output()
+	if err != nil {
+		return nil
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) < 2 {
+		return nil
+	}
+	fields := strings.Fields(lines[1])
+	// Filesystem 1024-blocks Used Available Capacity Mounted on
+	if len(fields) < 6 {
+		return nil
+	}
+	totalKB := parseUint64(fields[1])
+	usedKB := parseUint64(fields[2])
+	availKB := parseUint64(fields[3])
+	if totalKB == 0 {
+		return nil
+	}
+	total := totalKB * 1024
+	used := usedKB * 1024
+	free := availKB * 1024
+	usedPct := float64(used) / float64(total) * 100
+	freePct := float64(free) / float64(total) * 100
+	return map[string]interface{}{
+		"/": map[string]interface{}{
+			"total":    total,
+			"used":     used,
+			"free":     free,
+			"used_pct": usedPct,
+			"free_pct": freePct,
+		},
 	}
 }
 

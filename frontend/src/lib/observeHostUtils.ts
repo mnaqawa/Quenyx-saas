@@ -49,6 +49,46 @@ export function worstServiceStatus(statuses: string[]): string {
   )
 }
 
+/**
+ * Host-level rollup for the Hosts table.
+ * Host-Alive drives reachability; incomplete metrics (unknown) must not mark a live host UNKNOWN.
+ */
+export function hostRollupStatus(rows: ObserveServiceRow[]): string {
+  if (rows.length === 0) return 'unknown'
+
+  const isHostAlive = (row: ObserveServiceRow) => {
+    const name = (row.service ?? '').toLowerCase()
+    return name === 'host-alive' || name === 'host alive' || name.includes('host-alive')
+  }
+
+  const hostAlive = rows.find(isHostAlive)
+  const hostAliveStatus = (hostAlive?.status ?? '').toLowerCase()
+
+  if (hostAliveStatus === 'critical' || hostAliveStatus === 'unreachable') {
+    return 'critical'
+  }
+
+  const hasCritical = rows.some((r) => {
+    const s = (r.status ?? '').toLowerCase()
+    return s === 'critical' || s === 'unreachable'
+  })
+  if (hasCritical) return 'critical'
+
+  const hasWarning = rows.some((r) => (r.status ?? '').toLowerCase() === 'warning')
+  if (hasWarning) return 'warning'
+
+  if (hostAliveStatus === 'ok') return 'ok'
+
+  const hardStatuses = rows
+    .map((r) => (r.status ?? '').toLowerCase())
+    .filter((s) => s !== 'unknown' && s !== 'pending')
+  if (hardStatuses.length > 0) {
+    return worstServiceStatus(hardStatuses)
+  }
+
+  return worstServiceStatus(rows.map((r) => r.status ?? 'pending'))
+}
+
 export interface HostRuntimeSummary {
   status: string
   lastCheck: string
@@ -72,10 +112,8 @@ export function summarizeHostServices(
   let critical = 0
   let unknown = 0
   let pending = 0
-  const statuses: string[] = []
 
   for (const row of matched) {
-    statuses.push(row.status)
     if (row.status === 'ok') healthy += 1
     else if (row.status === 'warning') warning += 1
     else if (row.status === 'critical') critical += 1
@@ -87,7 +125,7 @@ export function summarizeHostServices(
   }
 
   return {
-    status: worstServiceStatus(statuses),
+    status: hostRollupStatus(matched),
     lastCheck,
     serviceCheckCount: matched.length,
     healthy,
