@@ -10,8 +10,11 @@ Lightweight **Quenyx Platform Agent** for cross-network monitoring and asset inv
 
 ```bash
 ./quenyx-agent enroll --url="https://cloud.quenyx.com:9444" --workspace=1 --token="ps_xxx..."
-./quenyx-agent run
+sudo ./quenyx-agent install   # creates user quenyx if needed, enables systemd, starts service
+sudo systemctl status quenyx-agent
 ```
+
+`status=217/USER` means the systemd unit references a user that does not exist. Re-run `sudo ./quenyx-agent install` (creates `quenyx`) or create the user manually.
 
 ## Commands
 
@@ -115,5 +118,6 @@ The agent collects:
 
 ## Config location
 
-- **Linux/macOS**: `~/.config/quenyx/agent.json`
-- **Windows**: `%APPDATA%\quenyx\agent.json`
+- **Linux (service):** `/etc/quenyx/agent.json`
+- **Linux/macOS (user):** `~/.config/quenyx/agent.json`
+- **Windows:** `%APPDATA%\quenyx\agent.json` (service: `%PROGRAMDATA%\Quenyx\agent.json`)

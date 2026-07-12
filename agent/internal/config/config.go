@@ -52,7 +52,21 @@ type Config struct {
 	Diagnostics      *DiagnosticsState `json:"diagnostics,omitempty"`
 }
 
-func DefaultPath() (string, error) {
+func SystemPath() string {
+	switch runtime.GOOS {
+	case "windows":
+		base := os.Getenv("PROGRAMDATA")
+		if base == "" {
+			base = `C:\ProgramData`
+		}
+		return filepath.Join(base, "Quenyx", "agent.json")
+	default:
+		return "/etc/quenyx/agent.json"
+	}
+}
+
+// UserPath is the per-user config location (~/.config/quenyx/agent.json).
+func UserPath() (string, error) {
 	var dir string
 	switch runtime.GOOS {
 	case "windows":
@@ -70,12 +84,27 @@ func DefaultPath() (string, error) {
 	return filepath.Join(dir, "quenyx", "agent.json"), nil
 }
 
+// DefaultPath prefers an existing system config, then root→system path, else user path.
+func DefaultPath() (string, error) {
+	if _, err := os.Stat(SystemPath()); err == nil {
+		return SystemPath(), nil
+	}
+	if runtime.GOOS != "windows" && os.Getuid() == 0 {
+		return SystemPath(), nil
+	}
+	return UserPath()
+}
+
 func Load(path string) (*Config, error) {
 	if path == "" {
-		var err error
-		path, err = DefaultPath()
-		if err != nil {
-			return nil, err
+		if _, err := os.Stat(SystemPath()); err == nil {
+			path = SystemPath()
+		} else {
+			var err error
+			path, err = UserPath()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	data, err := os.ReadFile(path)

@@ -113,7 +113,8 @@ func runEnroll(platformURL string, workspaceID int, token string) error {
 	case "windows":
 		fmt.Println("To start the agent, run: .\\quenyx-agent.exe run")
 	default:
-		fmt.Println("To start the agent, run: ./quenyx-agent run  (or add it to PATH and run: quenyx-agent run)")
+		fmt.Println("To run now: ./quenyx-agent run")
+		fmt.Println("To install as a persistent service: sudo ./quenyx-agent install")
 	}
 	return nil
 }
