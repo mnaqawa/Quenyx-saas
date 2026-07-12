@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 func collectLinuxMetrics(m map[string]interface{}) {
@@ -63,17 +64,37 @@ func collectLinuxMetrics(m map[string]interface{}) {
 					total := user + nice + sys + idle
 					if total > 0 {
 						m["cpu"] = map[string]interface{}{
-							"cores":   runtime.NumCPU(),
-							"user":    user,
-							"system":  sys,
-							"idle":    idle,
-							"total":   total,
+							"cores":    runtime.NumCPU(),
+							"user":     user,
+							"system":   sys,
+							"idle":     idle,
+							"total":    total,
 							"used_pct": float64(total-idle) / float64(total) * 100,
 						}
 					}
 				}
 				break
 			}
+		}
+	}
+
+	// Root filesystem usage via statfs (was previously left empty → UI "awaiting disk telemetry").
+	var st syscall.Statfs_t
+	if err := syscall.Statfs("/", &st); err == nil && st.Blocks > 0 {
+		bsize := uint64(st.Bsize)
+		total := st.Blocks * bsize
+		free := st.Bavail * bsize
+		used := total - (st.Bfree * bsize)
+		usedPct := float64(used) / float64(total) * 100
+		freePct := float64(free) / float64(total) * 100
+		m["disk"] = map[string]interface{}{
+			"/": map[string]interface{}{
+				"total":    total,
+				"used":     used,
+				"free":     free,
+				"used_pct": usedPct,
+				"free_pct": freePct,
+			},
 		}
 	}
 }

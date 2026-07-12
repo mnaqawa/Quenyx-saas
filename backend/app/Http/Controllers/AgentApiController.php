@@ -396,6 +396,17 @@ class AgentApiController extends Controller
             });
         }
 
+        // Refresh Host-Alive / observe states immediately on heartbeat (not only on metrics ingest).
+        try {
+            app(\App\Services\PlatformAgent\AgentTelemetryObserveBridge::class)
+                ->syncAfterIngest($agent->fresh() ?? $agent);
+        } catch (\Throwable $e) {
+            Log::warning('Agent heartbeat observe sync failed', [
+                'agent_id' => $agent->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
         Log::info('Agent heartbeat', [
             'agent_id' => $agent->id,
             'workspace_id' => $agent->workspace_id,

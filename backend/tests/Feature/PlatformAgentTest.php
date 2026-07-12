@@ -156,6 +156,85 @@ class PlatformAgentTest extends TestCase
         $this->assertArrayHasKey('ws'.$project->id.'-telemetry-host::cpu', $existing);
         $this->assertSame('ok', $existing['ws'.$project->id.'-telemetry-host::cpu']->state);
         $this->assertStringContainsString('Platform Agent', $existing['ws'.$project->id.'-telemetry-host::cpu']->output);
+        $this->assertArrayHasKey('ws'.$project->id.'-telemetry-host::Host-Alive', $existing);
+        $this->assertSame('ok', $existing['ws'.$project->id.'-telemetry-host::Host-Alive']->state);
+    }
+
+    public function test_telemetry_bridge_marks_stale_metrics_and_critical_host_alive(): void
+    {
+        $this->seedPlans();
+        [, $project] = $this->makeUserAndProject();
+
+        $agent = Agent::create([
+            'id' => Agent::generateId(),
+            'workspace_id' => $project->id,
+            'hostname' => 'stale-host',
+            'permissions' => AgentConstants::DEFAULT_PERMISSIONS,
+            'capabilities' => ['monitoring.telemetry'],
+            'agent_secret_hash' => Hash::make('secret'),
+            'status' => AgentConstants::STATUS_ONLINE,
+            'enrolled_at' => now()->subHours(3),
+            'last_seen_at' => now()->subHours(2),
+        ]);
+
+        $host = ObserveTargetHost::create([
+            'workspace_id' => $project->id,
+            'name' => 'stale-host',
+            'address' => '10.0.0.9',
+            'agent_id' => $agent->id,
+            'source' => 'agent',
+            'enabled' => true,
+        ]);
+
+        ObserveTargetService::create([
+            'workspace_id' => $project->id,
+            'host_id' => $host->id,
+            'name' => 'cpu',
+            'service_key' => 'cpu',
+            'check_command' => 'platform_agent_telemetry',
+            'check_source' => AgentConstants::CHECK_SOURCE_PLATFORM_AGENT,
+            'check_args' => ['warn_pct' => 80, 'crit_pct' => 90],
+            'enabled' => true,
+        ]);
+
+        ObserveTargetService::create([
+            'workspace_id' => $project->id,
+            'host_id' => $host->id,
+            'name' => 'disk',
+            'service_key' => 'disk',
+            'check_command' => 'platform_agent_telemetry',
+            'check_source' => AgentConstants::CHECK_SOURCE_PLATFORM_AGENT,
+            'check_args' => ['warn_pct' => 20, 'crit_pct' => 10],
+            'enabled' => true,
+        ]);
+
+        AgentMetric::create([
+            'agent_id' => $agent->id,
+            'collected_at' => now()->subHours(2),
+            'payload' => [
+                'cpu' => ['used_pct' => 10.0, 'cores' => 2],
+                'disk' => [],
+            ],
+        ]);
+
+        $bridge = app(AgentTelemetryObserveBridge::class);
+        $existing = [];
+        $bridge->syncHost($host, $existing, now());
+
+        $hostAlive = $existing['ws'.$project->id.'-stale-host::Host-Alive'] ?? null;
+        $cpu = $existing['ws'.$project->id.'-stale-host::cpu'] ?? null;
+        $disk = $existing['ws'.$project->id.'-stale-host::disk'] ?? null;
+
+        $this->assertNotNull($hostAlive);
+        $this->assertSame('critical', $hostAlive->state);
+        $this->assertStringContainsString('no recent Platform Agent heartbeat', $hostAlive->output);
+
+        $this->assertNotNull($cpu);
+        $this->assertSame('warning', $cpu->state);
+        $this->assertStringContainsString('Stale Platform Agent telemetry', $cpu->output);
+
+        $this->assertNotNull($disk);
+        $this->assertSame('unknown', $disk->state);
     }
 
     public function test_evidence_endpoint_disabled_without_permission(): void

@@ -55,20 +55,39 @@ class AgentTelemetryObserveBridge
         $prefix = 'ws' . $workspaceId . '-';
         $hostName = $prefix . $host->name;
 
-        // Host alive from heartbeat (not ping/SSH)
-        $updated += $this->syncHostAlive($agent, $workspaceId, $hostName, $existingForWorkspace, $now);
+        $staleSeconds = $this->staleAfterSeconds();
+        $contactAt = $this->agentFreshnessAt($agent, $metric);
+        $hostAliveFresh = $contactAt !== null && $contactAt->diffInSeconds($now) <= $staleSeconds;
+
+        // Host alive from heartbeat and/or recent telemetry (not SSH/ping).
+        $updated += $this->syncHostAlive(
+            $agent,
+            $workspaceId,
+            $hostName,
+            $existingForWorkspace,
+            $now,
+            $hostAliveFresh,
+            $contactAt
+        );
 
         if ($metric === null) {
+            app(\App\Services\PlatformAgent\HostLifecycleService::class)
+                ->updateHealthFromTelemetry($host, $hostAliveFresh ? 'ok' : 'critical');
+
             return $updated;
         }
 
         $payload = is_array($metric->payload) ? $metric->payload : [];
         $collectedAt = $metric->collected_at ?? $now;
+        $metricAgeSec = $collectedAt->diffInSeconds($now);
+        $metricsFresh = $metricAgeSec <= $staleSeconds;
 
         $services = ObserveTargetService::query()
             ->where('host_id', $host->id)
             ->where('enabled', true)
             ->get();
+
+        $worst = $hostAliveFresh ? 'ok' : 'critical';
 
         foreach ($services as $service) {
             $serviceKey = (string) ($service->service_key ?? $service->name);
@@ -95,6 +114,20 @@ class AgentTelemetryObserveBridge
                 continue;
             }
 
+            // Do not keep green OK when the metric sample itself is stale.
+            if (! $metricsFresh && in_array(($result['state'] ?? ''), ['ok', 'warning'], true)) {
+                $ageMin = (int) ceil($metricAgeSec / 60);
+                $result = [
+                    'state' => 'warning',
+                    'output' => sprintf(
+                        'Stale Platform Agent telemetry (%d min old) — last sample %s. Check that quenyx-agent is running and can reach the gateway.',
+                        $ageMin,
+                        $collectedAt->toIso8601String()
+                    ),
+                    'perfdata' => $result['perfdata'] ?? null,
+                ];
+            }
+
             // Annotate with reachable address so UI does not look like private-IP SSH checks.
             $reach = $host->reachableAddress();
             if ($reach !== '' && is_string($result['output'] ?? null) && ! str_contains((string) $result['output'], $reach)) {
@@ -105,6 +138,9 @@ class AgentTelemetryObserveBridge
             $existing = $existingForWorkspace[$engineServiceKey] ?? null;
             $intervalSec = max(60, (int) ($service->check_interval ?? 300));
 
+            // Fresh samples keep collected_at; stale samples bump last_check so UI age is honest.
+            $checkedAt = $metricsFresh ? $collectedAt : $now;
+
             $saved = $this->persistResult(
                 $workspaceId,
                 $hostName,
@@ -113,21 +149,25 @@ class AgentTelemetryObserveBridge
                 $existing,
                 $result,
                 $intervalSec,
-                $collectedAt
+                $checkedAt
             );
             $existingForWorkspace[$engineServiceKey] = $saved;
             $updated++;
-        }
 
-        $worst = 'ok';
-        foreach ($services as $service) {
-            if (($service->check_source ?? '') === \App\Constants\AgentConstants::CHECK_SOURCE_PLATFORM_AGENT) {
-                $r = $this->evaluateTelemetry((string) ($service->service_key ?? $service->name), $payload, $service->check_args ?? []);
-                if ($r && in_array($r['state'], ['critical', 'warning', 'unknown'], true)) {
-                    $worst = $r['state'] === 'unknown' ? 'pending' : $r['state'];
-                }
+            $state = strtolower((string) ($result['state'] ?? 'ok'));
+            if ($state === 'critical') {
+                $worst = 'critical';
+            } elseif ($state === 'warning' && $worst !== 'critical') {
+                $worst = 'warning';
+            } elseif (in_array($state, ['unknown', 'pending'], true) && $worst === 'ok') {
+                $worst = 'pending';
             }
         }
+
+        if (! $hostAliveFresh) {
+            $worst = 'critical';
+        }
+
         app(\App\Services\PlatformAgent\HostLifecycleService::class)->updateHealthFromTelemetry($host, $worst);
 
         return $updated;
@@ -227,10 +267,51 @@ class AgentTelemetryObserveBridge
         if ($key === 'disk') {
             $disk = $payload['disk'] ?? null;
             if (! is_array($disk) || $disk === []) {
-                return ['state' => 'ok', 'output' => 'DISK OK: awaiting disk telemetry (source: Platform Agent)', 'perfdata' => null];
+                return [
+                    'state' => 'unknown',
+                    'output' => 'No disk telemetry from Platform Agent yet',
+                    'perfdata' => null,
+                ];
             }
 
-            return ['state' => 'ok', 'output' => 'DISK OK (source: Platform Agent)', 'perfdata' => null];
+            // Prefer root mount when present; otherwise first entry.
+            $entry = $disk['/'] ?? $disk['root'] ?? null;
+            if (! is_array($entry)) {
+                $first = reset($disk);
+                $entry = is_array($first) ? $first : null;
+            }
+            if (! is_array($entry)) {
+                return [
+                    'state' => 'unknown',
+                    'output' => 'Disk telemetry present but unrecognized format',
+                    'perfdata' => null,
+                ];
+            }
+
+            $usedPct = isset($entry['used_pct'])
+                ? (float) $entry['used_pct']
+                : (isset($entry['total'], $entry['used']) && (float) $entry['total'] > 0
+                    ? ((float) $entry['used'] / (float) $entry['total']) * 100
+                    : null);
+            $freePct = isset($entry['free_pct'])
+                ? (float) $entry['free_pct']
+                : ($usedPct !== null ? max(0, 100 - $usedPct) : null);
+
+            if ($freePct === null && $usedPct === null) {
+                return ['state' => 'ok', 'output' => 'DISK OK (source: Platform Agent)', 'perfdata' => null];
+            }
+
+            // check_args warn/crit are free-space percentages (same as classic check_disk).
+            $warnFree = (float) ($checkArgs['warn_pct'] ?? 20);
+            $critFree = (float) ($checkArgs['crit_pct'] ?? 10);
+            $free = $freePct ?? max(0, 100 - (float) $usedPct);
+            $state = $free <= $critFree ? 'critical' : ($free <= $warnFree ? 'warning' : 'ok');
+
+            return [
+                'state' => $state,
+                'output' => sprintf('DISK %s: %.1f%% free (source: Platform Agent)', strtoupper($state), $free),
+                'perfdata' => sprintf('disk_free_pct=%.1f', $free),
+            ];
         }
 
         return null;
@@ -244,15 +325,31 @@ class AgentTelemetryObserveBridge
         int $workspaceId,
         string $hostName,
         array &$existingForWorkspace,
-        Carbon $now
+        Carbon $now,
+        bool $isFresh,
+        ?Carbon $freshnessAt
     ): int {
-        $staleMinutes = (int) config('agent.stale_after_minutes', 15);
-        $lastSeen = $agent->last_seen_at;
-        $isOnline = $lastSeen && $lastSeen->diffInMinutes($now) <= $staleMinutes;
-
-        $result = $isOnline
-            ? ['state' => 'ok', 'output' => 'Host alive (Platform Agent heartbeat)', 'perfdata' => null]
-            : ['state' => 'critical', 'output' => 'Host unreachable — no recent Platform Agent heartbeat', 'perfdata' => null];
+        if ($isFresh) {
+            $ageSec = $freshnessAt ? $freshnessAt->diffInSeconds($now) : 0;
+            $result = [
+                'state' => 'ok',
+                'output' => sprintf(
+                    'Host alive (Platform Agent) — last contact %ds ago',
+                    $ageSec
+                ),
+                'perfdata' => null,
+            ];
+        } else {
+            $lastSeen = $agent->last_seen_at;
+            $detail = $lastSeen
+                ? sprintf('last heartbeat %s', $lastSeen->toIso8601String())
+                : 'no heartbeat recorded';
+            $result = [
+                'state' => 'critical',
+                'output' => 'Host unreachable — no recent Platform Agent heartbeat ('.$detail.'). Ensure quenyx-agent is running and can reach '.(\App\Support\AgentGateway::url()).'.',
+                'perfdata' => null,
+            ];
+        }
 
         $engineServiceKey = "{$hostName}::Host-Alive";
         $existing = $existingForWorkspace[$engineServiceKey] ?? null;
@@ -260,6 +357,31 @@ class AgentTelemetryObserveBridge
         $existingForWorkspace[$engineServiceKey] = $saved;
 
         return 1;
+    }
+
+    private function staleAfterSeconds(): int
+    {
+        $minutes = max(1, (int) config('agent.stale_after_minutes', 15));
+        // Allow at least 3× default heartbeat interval so a single missed beat is not CRITICAL.
+        $heartbeat = max(60, (int) config('agent.configuration.defaults.heartbeat_interval_seconds', 300));
+
+        return max($minutes * 60, $heartbeat * 3);
+    }
+
+    private function agentFreshnessAt(Agent $agent, ?AgentMetric $metric): ?Carbon
+    {
+        $candidates = [];
+        if ($agent->last_seen_at) {
+            $candidates[] = $agent->last_seen_at;
+        }
+        if ($metric?->collected_at) {
+            $candidates[] = $metric->collected_at;
+        }
+        if ($candidates === []) {
+            return null;
+        }
+
+        return collect($candidates)->sortByDesc(fn (Carbon $c) => $c->timestamp)->first();
     }
 
     /**
