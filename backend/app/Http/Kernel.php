@@ -62,5 +62,6 @@ class Kernel extends HttpKernel
         'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'project.module' => \App\Http\Middleware\EnsureProjectModuleAccess::class,
         'project.qynshield' => \App\Http\Middleware\EnsureQynShieldEntitlement::class,
+        'auth.session.idle' => \App\Http\Middleware\EnforceAuthSessionIdle::class,
     ];
 }

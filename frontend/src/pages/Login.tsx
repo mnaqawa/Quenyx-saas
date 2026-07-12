@@ -23,6 +23,16 @@ function Login() {
       } else {
         navigate('/app/workspaces', { replace: true })
       }
+      return
+    }
+
+    const reason = searchParams.get('reason')
+    if (reason === 'idle') {
+      setError('Your session expired due to inactivity. Please sign in again.')
+    } else if (reason === 'replaced') {
+      setError('You were signed out because this account signed in from another location.')
+    } else if (reason === 'auth') {
+      setError('Your session ended — you may have signed in elsewhere, or it expired. Please sign in again.')
     }
   }, [navigate, searchParams])
 

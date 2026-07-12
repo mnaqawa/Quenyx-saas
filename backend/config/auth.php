@@ -52,6 +52,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Interactive login session policy (Sanctum PATs)
+    |--------------------------------------------------------------------------
+    | Quenyx portal auth uses Bearer personal access tokens, not cookie sessions.
+    | These settings govern those tokens for human users.
+    |
+    | single_session: when true, a successful login/register revokes all existing
+    | tokens for that user so only the newest session remains valid.
+    |
+    | idle_timeout_minutes: revoke a token when last_used_at (or created_at if
+    | never used) is older than N minutes. Set 0 to disable idle expiry.
+    | Absolute max lifetime remains SANCTUM_TOKEN_EXPIRATION_MINUTES.
+    */
+    'session' => [
+        'single_session' => filter_var(env('AUTH_SINGLE_SESSION', true), FILTER_VALIDATE_BOOLEAN),
+        'idle_timeout_minutes' => (int) env('AUTH_IDLE_TIMEOUT_MINUTES', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Database seeding
     |--------------------------------------------------------------------------
     | Read through the config layer (not env() directly) so the value survives

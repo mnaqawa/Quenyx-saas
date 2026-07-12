@@ -36,6 +36,7 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiError
 type ErrorJson = {
   message?: string
   error?: string
+  code?: string
   errors?: Record<string, unknown>
 }
 
@@ -172,11 +173,31 @@ class ApiClient {
 
         if (response.status === 401) {
           clearAuthToken()
-          const authError = new Error('Unauthorized') as RequestError
+          const sessionCode =
+            isRecord(errorData) && typeof errorData.code === 'string' ? errorData.code : null
+          const sessionMessage =
+            typeof errorMessage === 'string' && errorMessage.length > 0
+              ? errorMessage
+              : 'Unauthorized'
+
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            const params = new URLSearchParams()
+            params.set('next', window.location.pathname + window.location.search)
+            if (sessionCode === 'session_idle_expired') {
+              params.set('reason', 'idle')
+            } else if (sessionCode === 'session_replaced') {
+              params.set('reason', 'replaced')
+            } else {
+              params.set('reason', 'auth')
+            }
+            window.location.assign(`/login?${params.toString()}`)
+          }
+
+          const authError = new Error(sessionMessage) as RequestError
           authError.status = 401
           authError.isAuthError = true
           authError.url = url
-          authError.userMessage = 'Unauthorized'
+          authError.userMessage = sessionMessage
           if (import.meta.env.DEV) {
             console.error('API Error (401):', { url, status: response.status, message: errorMessage })
           }

@@ -31,6 +31,8 @@ abstract class TestCase extends BaseTestCase
             'ai.feature_flags.workspace_enabled' => true,
             'openai.vector_store_id' => 'vs_test123',
             'observe.stale_threshold_seconds' => 300,
+            'auth.session.single_session' => true,
+            'auth.session.idle_timeout_minutes' => 30,
         ]);
     }
 

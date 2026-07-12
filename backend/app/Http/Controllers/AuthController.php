@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\ProjectMembership;
+use App\Services\Auth\AuthSessionService;
 use App\Services\EntitlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,11 @@ class AuthController extends Controller
      * user-enumeration resistance). Never matches any real credential.
      */
     private const DUMMY_PASSWORD_HASH = '$2y$10$tYHLES4jGjiFta.FWxqxA.2f03LdexqejX5lXz95gEwUynrcxYNO6';
+
+    public function __construct(
+        private AuthSessionService $authSessions
+    ) {
+    }
 
     /**
      * Register a new user and create their default workspace
@@ -72,8 +78,8 @@ class AuthController extends Controller
 
                 DB::commit();
 
-                // Create token for immediate authentication
-                $token = $user->createToken('api')->plainTextToken;
+                // Create token for immediate authentication (revokes prior sessions when configured)
+                $token = $this->authSessions->issuePortalToken($user);
 
                 return response()->json([
                     'success' => true,
@@ -165,7 +171,8 @@ class AuthController extends Controller
         }
 
         try {
-            $token = $user->createToken('api')->plainTextToken;
+            // Single-session policy: revoke any existing tokens so only this login remains valid.
+            $token = $this->authSessions->issuePortalToken($user);
         } catch (\Throwable $e) {
             SafeLog::error('Login token creation failed', [
                 'user_id' => $user->id,
@@ -352,6 +359,8 @@ class AuthController extends Controller
         // GA HARDENING: invalidate all OTHER active tokens after a password change
         // so a leaked/old session cannot survive a credential rotation. The current
         // request's token is preserved so the active session is not disrupted.
+        // (Single-session login already keeps only one token; this covers the case
+        // when AUTH_SINGLE_SESSION is temporarily disabled.)
         $currentTokenId = $request->user()?->currentAccessToken()?->getKey();
         $user->tokens()
             ->when($currentTokenId !== null, fn ($q) => $q->where('id', '!=', $currentTokenId))
