@@ -963,7 +963,12 @@ export default function Targets() {
                       className={`border-b border-white/5 hover:bg-white/5 ${!host.id ? 'bg-sky-500/5' : ''}`}
                     >
                       <td className="px-3 py-2.5 font-medium">{host.name || '—'}</td>
-                      <td className="px-3 py-2.5 text-white/70">{host.address || '—'}</td>
+                      <td className="px-3 py-2.5 text-white/70">
+                        {host.public_ip || host.address || '—'}
+                        {host.public_ip && host.address && host.public_ip !== host.address ? (
+                          <span className="mt-0.5 block text-[10px] text-white/40">priv {host.address}</span>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2.5 text-white/70">{os ?? t('hosts.osUnknown')}</td>
                       <td className={`px-3 py-2.5 uppercase text-xs ${lifecycleStatusClass(host.lifecycle_status ?? runtime?.status)}`}>
                         {['agent_removed', 'monitoring_disabled', 'suspended', 'archived'].includes(host.lifecycle_status ?? '')

@@ -30,8 +30,10 @@ class AgentDownloadController extends Controller
         if (! in_array($platform, self::ALLOWED_PLATFORMS, true)) {
             return response()->json([
                 'success' => false,
-                'available' => false,
-                'message' => 'Unsupported platform. Use one of: '.implode(', ', self::ALLOWED_PLATFORMS),
+                'data' => [
+                    'available' => false,
+                    'message' => 'Unsupported platform. Use one of: '.implode(', ', self::ALLOWED_PLATFORMS),
+                ],
             ], 404);
         }
 
@@ -39,20 +41,24 @@ class AgentDownloadController extends Controller
         if (File::isFile($path)) {
             return response()->json([
                 'success' => true,
-                'available' => true,
-                'platform' => $platform,
-                'size_bytes' => File::size($path),
-                'download_url' => url('/api/agents/download/'.$platform),
+                'data' => [
+                    'available' => true,
+                    'platform' => $platform,
+                    'size_bytes' => File::size($path),
+                    'download_url' => url('/api/agents/download/'.$platform),
+                ],
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'available' => false,
-            'platform' => $platform,
-            'message' => 'Agent binary is not on the server yet. An administrator must run: php artisan agent:build '.$platform,
-            'build_on_demand' => (bool) config('agent.build_on_demand', true),
-            'download_url' => url('/api/agents/download/'.$platform),
+            'data' => [
+                'available' => false,
+                'platform' => $platform,
+                'message' => 'Agent binary is not on the server yet. An administrator must run: php artisan agent:build '.$platform,
+                'build_on_demand' => (bool) config('agent.build_on_demand', true),
+                'download_url' => url('/api/agents/download/'.$platform),
+            ],
         ]);
     }
 

@@ -134,17 +134,27 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
     setError(null)
     setAgentCountBefore(agents.length)
     try {
-      const [res, availability] = await Promise.all([
-        agentService.createEnrollmentToken(workspaceId, {
-          permissions: selectedPerms,
-          expires_hours: 24,
-          name: 'Platform Agent enrollment',
-        }),
-        agentService.getDownloadAvailability('linux-amd64'),
-      ])
+      const res = await agentService.createEnrollmentToken(workspaceId, {
+        permissions: selectedPerms,
+        expires_hours: 24,
+        name: 'Platform Agent enrollment',
+        primary_protocol: 'qag',
+        enabled_protocols: ['qag'],
+      })
+      let available: boolean | null = null
+      let availabilityMessage: string | null = null
+      try {
+        const availability = await agentService.getDownloadAvailability('linux-amd64')
+        available = availability.available
+        availabilityMessage = availability.message ?? null
+      } catch {
+        // Token generation must succeed even if availability check fails.
+        available = null
+        availabilityMessage = null
+      }
       setEnrollment(res)
-      setDownloadAvailable(availability.available)
-      setDownloadMessage(availability.message ?? null)
+      setDownloadAvailable(available)
+      setDownloadMessage(availabilityMessage)
       setWizardStep(4)
       setVerifyStatus('waiting')
     } catch (e) {

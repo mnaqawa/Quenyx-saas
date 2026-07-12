@@ -452,6 +452,27 @@ class ObserveTargetsController extends Controller
                         ],
                         $hostPayload
                     );
+
+                    // Re-link Platform Agent if this host lost agent_id (common after UI edits).
+                    if (! $host->agent_id) {
+                        $linkedAgent = \App\Models\Agent::query()
+                            ->where('workspace_id', $project->id)
+                            ->where(function ($q) use ($host) {
+                                $q->where('hostname', $host->name)
+                                    ->orWhere('hostname', 'like', $host->name.'%');
+                            })
+                            ->where(function ($q) {
+                                $q->whereNull('status')->orWhere('status', '!=', 'revoked');
+                            })
+                            ->orderByDesc('last_seen_at')
+                            ->first();
+                        if ($linkedAgent) {
+                            $host->forceFill([
+                                'agent_id' => $linkedAgent->id,
+                                'source' => 'agent',
+                            ])->save();
+                        }
+                    }
                     
                     $newHostIds[] = $host->id;
 
@@ -516,11 +537,11 @@ class ObserveTargetsController extends Controller
                             $updateData['service_key'] = $serviceKeyToStore;
                         }
                         if (Schema::hasColumn($serviceTable, 'check_source')) {
-                            if ($host->isAgentEnrolled()) {
+                            $isAgentHost = $host->isAgentEnrolled() || ($host->source ?? '') === 'agent';
+                            if ($isAgentHost) {
                                 $updateData['check_source'] = \App\Constants\AgentConstants::CHECK_SOURCE_PLATFORM_AGENT;
                                 $updateData['check_command'] = 'platform_agent_telemetry';
                             } elseif ($existing && $existing->check_source) {
-                                // Preserve existing source unless explicitly changing a manual host
                                 $updateData['check_source'] = $existing->check_source;
                             }
                         }

@@ -7,6 +7,8 @@ use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
+use App\Models\Agent;
+use App\Constants\AgentConstants;
 use App\Services\NativeObserveCheckRunner;
 use App\Services\ObserveCheckArgsResolver;
 use App\Services\ObserveServiceKeyResolver;
@@ -55,8 +57,11 @@ class RunObserveChecks extends Command
             $prefix = 'ws' . $workspaceId . '-';
             $hostName = $prefix . $host->name;
 
+            // Re-attach Platform Agent hosts that lost agent_id (e.g. after UI save / rename).
+            $this->ensureHostLinkedToAgent($host);
+
             // Platform Agent hosts: use push telemetry, never SSH/pull plugins
-            if ($host->isAgentEnrolled()) {
+            if ($this->shouldUseAgentTelemetry($host)) {
                 $existingForWorkspace = $existingByWorkspace[$workspaceId] ?? [];
                 $bridge = app(\App\Services\PlatformAgent\AgentTelemetryObserveBridge::class);
                 $synced = $bridge->syncHost($host, $existingForWorkspace, $now);
@@ -423,5 +428,55 @@ class RunObserveChecks extends Command
         } catch (\Throwable $e) {
             Log::debug('RunObserveChecks::pruneHistory failed', ['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Re-link Observe hosts to Platform Agents when agent_id was lost.
+     */
+    private function ensureHostLinkedToAgent(ObserveTargetHost $host): void
+    {
+        if ($host->agent_id) {
+            return;
+        }
+
+        $agent = Agent::query()
+            ->where('workspace_id', $host->workspace_id)
+            ->where(function ($q) use ($host) {
+                $q->where('hostname', $host->name)
+                    ->orWhere('hostname', 'like', $host->name.'%');
+            })
+            ->where(function ($q) {
+                $q->whereNull('status')
+                    ->orWhere('status', '!=', 'revoked');
+            })
+            ->orderByDesc('last_seen_at')
+            ->first();
+
+        if (! $agent) {
+            return;
+        }
+
+        $host->forceFill([
+            'agent_id' => $agent->id,
+            'source' => 'agent',
+        ])->save();
+        $host->setRelation('services', $host->services()->where('enabled', true)->get());
+    }
+
+    private function shouldUseAgentTelemetry(ObserveTargetHost $host): bool
+    {
+        if ($host->isAgentEnrolled() || ($host->source ?? '') === 'agent') {
+            return true;
+        }
+
+        foreach ($host->services as $service) {
+            $source = (string) ($service->check_source ?? '');
+            $command = (string) ($service->check_command ?? '');
+            if ($source === AgentConstants::CHECK_SOURCE_PLATFORM_AGENT || $command === 'platform_agent_telemetry') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
