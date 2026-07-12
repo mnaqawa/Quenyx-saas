@@ -42,6 +42,9 @@ class AgentTelemetryObserveBridge
             return 0;
         }
 
+        // Ensure standard metric services are platform_agent (heals SSH/pull leftovers).
+        app(\App\Services\DefaultMonitoringProfileService::class)->attachToHost($host, (int) $host->workspace_id);
+
         $metric = AgentMetric::query()
             ->where('agent_id', $agent->id)
             ->orderByDesc('collected_at')
@@ -68,16 +71,34 @@ class AgentTelemetryObserveBridge
             ->get();
 
         foreach ($services as $service) {
+            $serviceKey = (string) ($service->service_key ?? $service->name);
             $checkSource = $service->check_source ?? AgentConstants::CHECK_SOURCE_PULL;
+            $isAgentMetric = in_array(strtolower($serviceKey), ['cpu', 'memory', 'disk', 'load', 'uptime'], true)
+                || in_array(strtolower((string) $service->name), ['cpu', 'memory', 'disk', 'load', 'uptime'], true);
+
+            // Agent hosts must never use SSH/pull for standard metrics — heal + evaluate from telemetry.
             if ($checkSource !== AgentConstants::CHECK_SOURCE_PLATFORM_AGENT) {
-                continue;
+                if (! $isAgentMetric) {
+                    continue;
+                }
+                if (Schema::hasColumn('observe_targets_services', 'check_source')) {
+                    $service->forceFill([
+                        'check_source' => AgentConstants::CHECK_SOURCE_PLATFORM_AGENT,
+                        'check_command' => 'platform_agent_telemetry',
+                    ])->save();
+                }
             }
 
-            $serviceKey = (string) ($service->service_key ?? $service->name);
             $result = $this->evaluateTelemetry($serviceKey, $payload, $service->check_args ?? []);
 
             if ($result === null) {
                 continue;
+            }
+
+            // Annotate with reachable address so UI does not look like private-IP SSH checks.
+            $reach = $host->reachableAddress();
+            if ($reach !== '' && is_string($result['output'] ?? null) && ! str_contains((string) $result['output'], $reach)) {
+                $result['output'] = rtrim((string) $result['output']).' ('.$reach.')';
             }
 
             $engineServiceKey = "{$hostName}::{$service->name}";

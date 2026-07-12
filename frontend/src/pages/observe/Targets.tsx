@@ -197,6 +197,7 @@ export default function Targets() {
   const [hosts, setHosts] = useState<TargetHost[]>([])
   const [definitions, setDefinitions] = useState<ServiceDefinition[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -260,6 +261,8 @@ export default function Targets() {
 
       if (!background) {
         setLoading(true)
+      } else {
+        setRefreshing(true)
       }
       setError(null)
       const [targetsResponse, defsResponse, servicesResponse] = await Promise.all([
@@ -284,6 +287,7 @@ export default function Targets() {
       if (!background) {
         setLoading(false)
       }
+      setRefreshing(false)
       fetchInFlightRef.current = false
       lastFetchAtRef.current = Date.now()
     }
@@ -854,7 +858,7 @@ export default function Targets() {
                 setDataRefreshKey((k) => k + 1)
                 refreshNow()
               }}
-              refreshing={loading}
+              refreshing={loading || refreshing}
               settingsLabel={canEdit ? t('targets.monitoringSettings') : undefined}
               onSettings={canEdit ? () => setSettingsOpen(true) : undefined}
             />

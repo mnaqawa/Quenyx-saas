@@ -76,6 +76,7 @@ export default function CapacityPlanning() {
   const [activeTab, setActiveTab] = useState<CapacityTab>('overview')
   const [data, setData] = useState<CapacityPlanningResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -93,6 +94,8 @@ export default function CapacityPlanning() {
     }
     if (!background) {
       setLoading(true)
+    } else {
+      setRefreshing(true)
     }
     setError(null)
     return observeService
@@ -104,6 +107,7 @@ export default function CapacityPlanning() {
       })
       .finally(() => {
         if (!background) setLoading(false)
+        setRefreshing(false)
       })
   }, [range, wsId])
 
@@ -326,7 +330,7 @@ export default function CapacityPlanning() {
               void load(false).then(() => markUpdated())
               refreshNow()
             }}
-            refreshing={loading}
+            refreshing={loading || refreshing}
           />
         </>
       }

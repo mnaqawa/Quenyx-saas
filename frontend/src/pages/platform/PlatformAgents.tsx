@@ -66,6 +66,7 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
   const [enrollment, setEnrollment] = useState<EnrollmentTokenResponse | null>(null)
   const [enrolling, setEnrolling] = useState(false)
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle')
+  const [connectedAgentHostname, setConnectedAgentHostname] = useState<string | null>(null)
   const [agentCountBefore, setAgentCountBefore] = useState(0)
   const [downloadAvailable, setDownloadAvailable] = useState<boolean | null>(null)
   const [downloadMessage, setDownloadMessage] = useState<string | null>(null)
@@ -154,32 +155,48 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
   }
 
   const finishEnrollment = () => {
+    const goToAgents = verifyStatus === 'success'
     setEnrollment(null)
     setWizardStep(1)
     setVerifyStatus('idle')
+    setConnectedAgentHostname(null)
     setDownloadAvailable(null)
     setDownloadMessage(null)
-    void load()
+    void load().then(() => {
+      if (goToAgents) setTab('agents')
+    })
   }
 
   useEffect(() => {
     if (wizardStep !== 4 || verifyStatus !== 'waiting' || !workspaceId) return
 
+    let cancelled = false
     const started = Date.now()
-    const interval = window.setInterval(() => {
+
+    const poll = () => {
       void agentService.list(workspaceId).then((list) => {
+        if (cancelled) return
         setAgents(list)
         if (list.length > agentCountBefore) {
+          const newest = [...list].sort((a, b) => {
+            const ae = a.enrolled_at ? Date.parse(a.enrolled_at) : 0
+            const be = b.enrolled_at ? Date.parse(b.enrolled_at) : 0
+            return be - ae
+          })[0]
+          setConnectedAgentHostname(newest?.hostname ?? newest?.name ?? 'agent')
           setVerifyStatus('success')
-          window.clearInterval(interval)
         } else if (Date.now() - started > 120000) {
           setVerifyStatus('timeout')
-          window.clearInterval(interval)
         }
       })
-    }, 5000)
+    }
 
-    return () => window.clearInterval(interval)
+    poll()
+    const interval = window.setInterval(poll, 4000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
   }, [wizardStep, verifyStatus, workspaceId, agentCountBefore])
 
   const tabs: { id: Tab; label: string }[] = [
@@ -594,6 +611,7 @@ export default function PlatformAgents({ embedded = false }: { embedded?: boolea
               downloadAvailable={downloadAvailable}
               downloadMessage={downloadMessage}
               verifyStatus={verifyStatus}
+              connectedAgentHostname={connectedAgentHostname}
               onDone={finishEnrollment}
             />
           ) : null}

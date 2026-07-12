@@ -57,6 +57,20 @@ class DefaultMonitoringProfileService
                 ->exists();
 
             if ($exists) {
+                // Heal older rows that were created as pull/SSH before agent enrollment.
+                $heal = ['check_command' => 'platform_agent_telemetry'];
+                if (Schema::hasColumn('observe_targets_services', 'check_source')) {
+                    $heal['check_source'] = AgentConstants::CHECK_SOURCE_PLATFORM_AGENT;
+                }
+                ObserveTargetService::query()
+                    ->where('host_id', $host->id)
+                    ->where(function ($q) use ($check) {
+                        $q->where('name', $check['service_name']);
+                        if (Schema::hasColumn('observe_targets_services', 'service_key')) {
+                            $q->orWhere('service_key', $check['service_key']);
+                        }
+                    })
+                    ->update($heal);
                 $skipped++;
 
                 continue;

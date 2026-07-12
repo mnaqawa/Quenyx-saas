@@ -26,6 +26,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -177,12 +178,13 @@ class AgentApiController extends Controller
             $hostName = $validated['hostname'];
             $privateIp = $validated['private_ip'] ?? null;
             $publicIp = $validated['public_ip'] ?? null;
-            $hostAddress = $privateIp ?: $validated['hostname'];
+            // Inventory address prefers private IP; reachability uses public_ip when set (see reachableAddress()).
+            $hostAddress = $privateIp ?: ($publicIp ?: $validated['hostname']);
             $targetHost = null;
             for ($i = 0; $i < 3; $i++) {
                 $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
                 try {
-                    $targetHost = ObserveTargetHost::create([
+                    $createHost = [
                         'workspace_id' => $agent->workspace_id,
                         'name' => $name,
                         'address' => $hostAddress,
@@ -190,7 +192,11 @@ class AgentApiController extends Controller
                         'agent_id' => $agent->id,
                         'source' => 'agent',
                         'enabled' => true,
-                    ]);
+                    ];
+                    if (Schema::hasColumn('observe_targets_hosts', 'ip_locked')) {
+                        $createHost['ip_locked'] = false;
+                    }
+                    $targetHost = ObserveTargetHost::create($createHost);
                     app(DefaultMonitoringProfileService::class)->attachToHost($targetHost, (int) $agent->workspace_id);
                     break;
                 } catch (\Illuminate\Database\QueryException $e) {
@@ -372,6 +378,11 @@ class AgentApiController extends Controller
 
         if ((is_string($privateIp) && $privateIp !== '') || (is_string($publicIp) && $publicIp !== '')) {
             ObserveTargetHost::where('agent_id', $agent->id)->get()->each(function (ObserveTargetHost $host) use ($privateIp, $publicIp) {
+                // Do not overwrite IPs the operator set manually in Host Configuration.
+                if (Schema::hasColumn('observe_targets_hosts', 'ip_locked') && $host->ip_locked) {
+                    return;
+                }
+
                 $updates = [];
                 if (is_string($privateIp) && $privateIp !== '') {
                     $updates['address'] = $privateIp;

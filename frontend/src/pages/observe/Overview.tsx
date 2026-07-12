@@ -23,7 +23,7 @@ export default function Overview() {
   const [alertsError, setAlertsError] = useState(false)
   const [capacityError, setCapacityError] = useState(false)
 
-  const { data, loading, error } = useObserveServices({
+  const { data, loading, refreshing, error } = useObserveServices({
     workspaceId: selectedWorkspaceId,
     limit: 500,
     refreshKey,
@@ -146,7 +146,7 @@ export default function Overview() {
               refreshAll()
               refreshNow()
             }}
-            refreshing={loading || alertsLoading}
+            refreshing={loading || refreshing || alertsLoading}
           />
         }
       />

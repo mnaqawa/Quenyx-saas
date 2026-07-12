@@ -434,18 +434,23 @@ class ObserveTargetsController extends Controller
                 $newHostIds = [];
 
                 foreach ($hostsData as $hostIndex => $hostData) {
+                    $hostPayload = [
+                        'address' => $hostData['address'],
+                        'public_ip' => $hostData['public_ip'] ?? null,
+                        'check_command' => $hostData['check_command'] ?? 'check-host-alive',
+                        'tags' => $hostData['tags'] ?? [],
+                        'enabled' => $hostData['enabled'] ?? true,
+                    ];
+                    if (Schema::hasColumn('observe_targets_hosts', 'ip_locked')) {
+                        $hostPayload['ip_locked'] = true;
+                    }
+
                     $host = ObserveTargetHost::updateOrCreate(
                         [
                             'workspace_id' => $project->id,
                             'name' => $hostData['name'],
                         ],
-                        [
-                            'address' => $hostData['address'],
-                            'public_ip' => $hostData['public_ip'] ?? null,
-                            'check_command' => $hostData['check_command'] ?? 'check-host-alive',
-                            'tags' => $hostData['tags'] ?? [],
-                            'enabled' => $hostData['enabled'] ?? true,
-                        ]
+                        $hostPayload
                     );
                     
                     $newHostIds[] = $host->id;
@@ -509,6 +514,15 @@ class ObserveTargetsController extends Controller
                         }
                         if (Schema::hasColumn($serviceTable, 'service_key')) {
                             $updateData['service_key'] = $serviceKeyToStore;
+                        }
+                        if (Schema::hasColumn($serviceTable, 'check_source')) {
+                            if ($host->isAgentEnrolled()) {
+                                $updateData['check_source'] = \App\Constants\AgentConstants::CHECK_SOURCE_PLATFORM_AGENT;
+                                $updateData['check_command'] = 'platform_agent_telemetry';
+                            } elseif ($existing && $existing->check_source) {
+                                // Preserve existing source unless explicitly changing a manual host
+                                $updateData['check_source'] = $existing->check_source;
+                            }
                         }
 
                         $service = ObserveTargetService::updateOrCreate(

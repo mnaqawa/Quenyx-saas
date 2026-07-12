@@ -28,6 +28,7 @@ class ObserveTargetHost extends Model
         'name',
         'address',
         'public_ip',
+        'ip_locked',
         'agent_id',
         'source',
         'check_command',
@@ -41,6 +42,7 @@ class ObserveTargetHost extends Model
     protected $casts = [
         'tags' => 'array',
         'enabled' => 'boolean',
+        'ip_locked' => 'boolean',
         'lifecycle_changed_at' => 'datetime',
     ];
 
@@ -115,5 +117,27 @@ class ObserveTargetHost extends Model
         return $query
             ->whereNull('deleted_at')
             ->where('lifecycle_status', '!=', HostLifecycleStatus::DELETED);
+    }
+
+    /**
+     * Host is linked to a Platform Agent (push telemetry — never SSH/pull).
+     */
+    public function isAgentEnrolled(): bool
+    {
+        return $this->agent_id !== null && $this->agent_id !== '';
+    }
+
+    /**
+     * Address Quenyx should use to reach this host from the platform network.
+     * Prefer public_ip when set (agent on another subnet/VPC); fall back to address.
+     */
+    public function reachableAddress(): string
+    {
+        $public = trim((string) ($this->public_ip ?? ''));
+        if ($public !== '') {
+            return $public;
+        }
+
+        return trim((string) ($this->address ?? ''));
     }
 }

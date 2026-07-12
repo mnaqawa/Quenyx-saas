@@ -164,7 +164,7 @@ export default function RealTimeMonitoring() {
     setTargetsLoaded(false)
   }, [selectedWorkspaceId])
 
-  const { data: servicesData, loading: kpisLoading, error: kpisError } = useObserveServices({
+  const { data: servicesData, loading: kpisLoading, refreshing: kpisRefreshing, error: kpisError } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
     refreshKey,
@@ -497,7 +497,7 @@ export default function RealTimeMonitoring() {
                 refreshAll()
                 refreshNow()
               }}
-              refreshing={kpisLoading}
+              refreshing={kpisLoading || kpisRefreshing}
               onSettings={
                 selectedWorkspaceId
                   ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)

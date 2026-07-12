@@ -85,7 +85,7 @@ export default function PerformanceAnalytics() {
   const aiAvailable = useAiAgentAvailable(selectedWorkspaceId)
   const prefix = selectedWorkspaceId ? `ws${selectedWorkspaceId}-` : ''
 
-  const { data, loading, error } = useObserveServices({
+  const { data, loading, refreshing, error } = useObserveServices({
     workspaceId: selectedWorkspaceId ?? null,
     limit: 500,
     realDataOnly: true,
@@ -315,7 +315,7 @@ export default function PerformanceAnalytics() {
               refreshAll()
               refreshNow()
             }}
-            refreshing={loading || historyLoading}
+            refreshing={loading || refreshing || historyLoading}
             onSettings={
               selectedWorkspaceId
                 ? () => navigate(`/app/workspaces/${selectedWorkspaceId}/observe/targets`)

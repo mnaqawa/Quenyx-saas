@@ -574,7 +574,7 @@ export function useDataSourceSummary() {
 // Observe KPIs for Real-time Monitoring (host/service totals, problems, unreachable, stale, last poll)
 // Map: real target hosts with status from services (for Infrastructure Map). Use realDataOnly in Observe module.
 export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs = 0, realDataOnly = false, refreshKey = 0) {
-  const { data: servicesData, loading: servicesLoading, error: servicesError } = useObserveServices({
+  const { data: servicesData, loading: servicesLoading, refreshing: servicesRefreshing, error: servicesError } = useObserveServices({
     workspaceId,
     limit: 500,
     refetchIntervalMs,
@@ -583,6 +583,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
   })
   const [targets, setTargets] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoading, setTargetsLoading] = useState(true)
+  const [targetsRefreshing, setTargetsRefreshing] = useState(false)
   const [targetsError, setTargetsError] = useState(false)
   const prevWorkspaceRef = useRef<string | null | undefined>(undefined)
   const hasTargetsRef = useRef(false)
@@ -607,6 +608,8 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
 
     if (!isBackground) {
       setTargetsLoading(true)
+    } else {
+      setTargetsRefreshing(true)
     }
     setTargetsError(false)
     let cancelled = false
@@ -623,7 +626,10 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
         if (!cancelled) setTargetsError(true)
       })
       .finally(() => {
-        if (!cancelled) setTargetsLoading(false)
+        if (!cancelled) {
+          setTargetsLoading(false)
+          setTargetsRefreshing(false)
+        }
       })
     const intervalMs = refetchIntervalMs > 0 ? refetchIntervalMs : 0
     const id = intervalMs ? window.setInterval(() => {
@@ -675,6 +681,7 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
     hosts,
     servicesData,
     loading: (targetsLoading && targets.length === 0) || (servicesLoading && servicesData == null),
+    refreshing: targetsRefreshing || servicesRefreshing,
     error: !!servicesError || targetsError,
   }
 }
@@ -854,6 +861,7 @@ interface UseObserveServicesParams {
 export function useObserveServices({ workspaceId, q, statuses, limit, problemsOnly, refreshKey = 0, refetchIntervalMs = 0, realDataOnly = false }: UseObserveServicesParams) {
   const [data, setData] = useState<ObserveServicesResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Track the last workspace so we only blank the view when it actually changes,
   // not on every live poll/refresh (which caused the UI to "flap").
@@ -864,6 +872,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
     if (!workspaceId) {
       setData(null)
       setLoading(false)
+      setRefreshing(false)
       setError(null)
       prevWorkspaceRef.current = workspaceId
       hasDataRef.current = false
@@ -879,6 +888,8 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
       setLoading(true)
     } else if (!hasDataRef.current) {
       setLoading(true)
+    } else {
+      setRefreshing(true)
     }
     setError(null)
 
@@ -962,6 +973,7 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
         )
       } finally {
         setLoading(false)
+        setRefreshing(false)
         hasDataRef.current = true
       }
     }
@@ -975,5 +987,5 @@ export function useObserveServices({ workspaceId, q, statuses, limit, problemsOn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, q, statuses?.join(','), limit, problemsOnly, refreshKey, refetchIntervalMs, realDataOnly])
 
-  return { data, loading, error }
+  return { data, loading, refreshing, error }
 }

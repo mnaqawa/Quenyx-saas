@@ -11,6 +11,7 @@ interface EnrollmentInstallPanelProps {
   downloadAvailable: boolean | null
   downloadMessage?: string | null
   verifyStatus: VerifyStatus
+  connectedAgentHostname?: string | null
   onDone: () => void
 }
 
@@ -21,6 +22,7 @@ export function EnrollmentInstallPanel({
   downloadAvailable,
   downloadMessage,
   verifyStatus,
+  connectedAgentHostname,
   onDone,
 }: EnrollmentInstallPanelProps) {
   const [selectedOs, setSelectedOs] = useState<'linux' | 'windows' | 'macos'>('linux')
@@ -152,7 +154,15 @@ export function EnrollmentInstallPanel({
             </span>
           ) : null}
           {verifyStatus === 'success' ? (
-            <span className="text-sm font-medium text-emerald-300">Agent connected successfully.</span>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-emerald-300">Agent connected successfully.</span>
+              {connectedAgentHostname ? (
+                <p className="text-xs text-emerald-200/80">
+                  Hostname: <span className="font-mono text-white">{connectedAgentHostname}</span>
+                </p>
+              ) : null}
+              <p className="text-xs text-white/50">Click Done to open the Agents list.</p>
+            </div>
           ) : null}
           {verifyStatus === 'timeout' ? (
             <span className="text-sm text-amber-200">
@@ -163,13 +173,20 @@ export function EnrollmentInstallPanel({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-white/10 pt-4">
+      <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/70 hover:bg-white/5"
+        >
+          {verifyStatus === 'success' ? 'Close' : 'Cancel'}
+        </button>
         <button
           type="button"
           onClick={onDone}
           className="rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
         >
-          Done
+          {verifyStatus === 'success' ? 'Done — view agents' : 'Done'}
         </button>
       </div>
     </div>

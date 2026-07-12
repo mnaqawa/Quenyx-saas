@@ -435,7 +435,7 @@ export default function InfrastructureMap() {
   } = useObserveAutoRefresh(refreshAll, !!selectedWorkspaceId)
 
   // Observe module: real data only from QynSight microservice APIs (no fixtures / no hardcoded dynamic data)
-  const { hosts, loading, error: topologyError, servicesData } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
+  const { hosts, loading, refreshing, error: topologyError, servicesData } = useObserveMapHosts(selectedWorkspaceId, 0, true, refreshKey)
   const { data: apiConnectionsData } = useObserveConnections(selectedWorkspaceId, {
     includeIntegrations: true,
     refreshKey,
@@ -987,7 +987,7 @@ export default function InfrastructureMap() {
                 refreshPortScans()
                 refreshNow()
               }}
-              refreshing={loading}
+              refreshing={loading || refreshing}
             />
           </div>
         }

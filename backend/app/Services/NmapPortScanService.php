@@ -35,7 +35,7 @@ class NmapPortScanService
             'status' => 'running',
         ]);
 
-        $address = trim((string) $host->address);
+        $address = $host->reachableAddress();
         if ($address === '') {
             $scan->update([
                 'status' => 'failed',

@@ -56,7 +56,7 @@ class RunObserveChecks extends Command
             $hostName = $prefix . $host->name;
 
             // Platform Agent hosts: use push telemetry, never SSH/pull plugins
-            if ($host->agent_id && $host->source === 'agent') {
+            if ($host->isAgentEnrolled()) {
                 $existingForWorkspace = $existingByWorkspace[$workspaceId] ?? [];
                 $bridge = app(\App\Services\PlatformAgent\AgentTelemetryObserveBridge::class);
                 $synced = $bridge->syncHost($host, $existingForWorkspace, $now);
@@ -66,7 +66,7 @@ class RunObserveChecks extends Command
                 continue;
             }
 
-            $address = trim((string) $host->address);
+            $address = $host->reachableAddress();
             if ($address === '') {
                 continue;
             }

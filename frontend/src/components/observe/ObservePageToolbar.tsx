@@ -48,9 +48,16 @@ export function ObservePageToolbar({
         type="button"
         onClick={onRefresh}
         disabled={disabled || refreshing}
-        className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {refreshing ? t('observe.refreshing') : t('observe.refresh')}
+        {refreshing ? (
+          <>
+            <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" aria-hidden />
+            {t('observe.refreshing')}
+          </>
+        ) : (
+          t('observe.refresh')
+        )}
       </button>
       {onSettings ? (
         <button

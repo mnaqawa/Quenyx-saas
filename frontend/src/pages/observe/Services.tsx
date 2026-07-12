@@ -109,7 +109,7 @@ export default function Services() {
 
   const [refreshKey, setRefreshKey] = useState(0)
   
-  const { data, loading, error } = useObserveServices({
+  const { data, loading, refreshing, error } = useObserveServices({
     workspaceId: selectedWorkspaceId,
     q: searchQuery,
     statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
@@ -131,8 +131,8 @@ export default function Services() {
   } = useObserveAutoRefresh(triggerRefresh, !!selectedWorkspaceId)
 
   useEffect(() => {
-    if (!loading && data) markUpdated()
-  }, [loading, data, refreshKey, markUpdated])
+    if (!loading && !refreshing && data) markUpdated()
+  }, [loading, refreshing, data, refreshKey, markUpdated])
 
   const handleRecheck = async () => {
     if (!selectedWorkspaceId || !canRunOperations) return
@@ -140,14 +140,15 @@ export default function Services() {
     setRecheckError(null)
     try {
       await observeService.runChecks(Number(selectedWorkspaceId))
-      // Checks run asynchronously — refresh again shortly so statuses update after the job completes.
+      // Checks run asynchronously — keep the indicator visible while the job runs.
       triggerRefresh()
-      window.setTimeout(() => triggerRefresh(), 5000)
+      window.setTimeout(() => triggerRefresh(), 4000)
+      window.setTimeout(() => triggerRefresh(), 8000)
       markUpdated()
     } catch (e) {
       setRecheckError(e instanceof Error ? e.message : t('services.recheckError'))
     } finally {
-      setRechecking(false)
+      window.setTimeout(() => setRechecking(false), 8000)
     }
   }
 
@@ -292,7 +293,7 @@ export default function Services() {
                 triggerRefresh()
                 refreshNow()
               }}
-              refreshing={loading}
+              refreshing={loading || refreshing || rechecking}
               disabled={false}
               onSettings={
                 selectedWorkspaceId
@@ -307,6 +308,13 @@ export default function Services() {
       {recheckError ? (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {recheckError}
+        </div>
+      ) : null}
+
+      {rechecking ? (
+        <div className="flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-sky-300" />
+          {t('services.rechecking')} Statuses will refresh automatically when checks finish.
         </div>
       ) : null}
 
@@ -537,9 +545,16 @@ export default function Services() {
                                 }}
                                 disabled={!canRunOperations || rechecking}
                                 title={t('services.action.runAllChecksHint')}
-                                className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
                               >
-                                {t('services.action.recheck')}
+                                {rechecking ? (
+                                  <>
+                                    <span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" />
+                                    {t('services.rechecking')}
+                                  </>
+                                ) : (
+                                  t('services.action.recheck')
+                                )}
                               </button>
                             </div>
                           </td>
