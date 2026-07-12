@@ -2,18 +2,17 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Agent;
 use App\Models\ObserveTargetHost;
-use App\Services\DefaultMonitoringProfileService;
+use App\Services\PlatformAgent\AgentHostLinker;
 use Illuminate\Console\Command;
 
 class RepairAgentObserveHostsCommand extends Command
 {
     protected $signature = 'observe:repair-agent-hosts {--workspace_id= : Limit to one workspace}';
 
-    protected $description = 'Re-link Observe hosts to Platform Agents and convert SSH metric checks to telemetry';
+    protected $description = 'Re-link Observe hosts to Platform Agents (by IP/hostname) and convert SSH/pull metrics to telemetry';
 
-    public function handle(DefaultMonitoringProfileService $profiles): int
+    public function handle(AgentHostLinker $linker): int
     {
         $workspaceId = $this->option('workspace_id');
         $query = ObserveTargetHost::query()->visibleInList();
@@ -22,56 +21,37 @@ class RepairAgentObserveHostsCommand extends Command
         }
 
         $fixed = 0;
+        $skipped = 0;
         foreach ($query->get() as $host) {
-            $agent = null;
-            if ($host->agent_id) {
-                $agent = Agent::find($host->agent_id);
-            }
-            if (! $agent) {
-                $agent = Agent::query()
-                    ->where('workspace_id', $host->workspace_id)
-                    ->where(function ($q) use ($host) {
-                        $q->where('hostname', $host->name)
-                            ->orWhere('hostname', 'like', $host->name.'%');
-                    })
-                    ->where(function ($q) {
-                        $q->whereNull('status')->orWhere('status', '!=', 'revoked');
-                    })
-                    ->orderByDesc('last_seen_at')
-                    ->first();
-            }
+            $result = $linker->linkAndHeal($host);
+            if (! $result['linked']) {
+                $this->warn(sprintf(
+                    '— %s (id=%d) address=%s public=%s — no matching agent in workspace %d',
+                    $host->name,
+                    $host->id,
+                    $host->address ?? '-',
+                    $host->public_ip ?? '-',
+                    $host->workspace_id
+                ));
+                $skipped++;
 
-            if (! $agent) {
                 continue;
             }
 
-            $updates = [
-                'agent_id' => $agent->id,
-                'source' => 'agent',
-            ];
-            if (! empty($agent->public_ip) && empty($host->public_ip)) {
-                $updates['public_ip'] = $agent->public_ip;
-            }
-            if (is_array($agent->private_ips) && $agent->private_ips !== [] && empty($host->address)) {
-                $updates['address'] = (string) $agent->private_ips[0];
-            }
-
-            $host->forceFill($updates)->save();
-            $result = $profiles->attachToHost($host->fresh(), (int) $host->workspace_id);
-            $this->line(sprintf(
-                '✓ %s (id=%d) → agent %s (attached=%d healed=%d)',
+            $this->info(sprintf(
+                '✓ %s (id=%d) → agent %s (healed_services=%d)',
                 $host->name,
                 $host->id,
-                $agent->id,
-                $result['attached'] ?? 0,
-                $result['skipped'] ?? 0
+                $result['agent_id'],
+                $result['healed_services']
             ));
             $fixed++;
         }
 
-        $this->info("Repaired {$fixed} agent-linked host(s).");
+        $this->newLine();
+        $this->info("Repaired {$fixed} host(s); {$skipped} unmatched.");
         $this->line('Next: php artisan observe:run-checks'.($workspaceId ? " --workspace_id={$workspaceId}" : ''));
 
-        return Command::SUCCESS;
+        return $fixed > 0 || $skipped === 0 ? Command::SUCCESS : Command::FAILURE;
     }
 }

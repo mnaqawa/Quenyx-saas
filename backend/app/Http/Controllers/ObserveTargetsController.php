@@ -453,25 +453,10 @@ class ObserveTargetsController extends Controller
                         $hostPayload
                     );
 
-                    // Re-link Platform Agent if this host lost agent_id (common after UI edits).
-                    if (! $host->agent_id) {
-                        $linkedAgent = \App\Models\Agent::query()
-                            ->where('workspace_id', $project->id)
-                            ->where(function ($q) use ($host) {
-                                $q->where('hostname', $host->name)
-                                    ->orWhere('hostname', 'like', $host->name.'%');
-                            })
-                            ->where(function ($q) {
-                                $q->whereNull('status')->orWhere('status', '!=', 'revoked');
-                            })
-                            ->orderByDesc('last_seen_at')
-                            ->first();
-                        if ($linkedAgent) {
-                            $host->forceFill([
-                                'agent_id' => $linkedAgent->id,
-                                'source' => 'agent',
-                            ])->save();
-                        }
+                    // Re-link Platform Agent by IP/hostname if this host lost agent_id.
+                    $link = app(\App\Services\PlatformAgent\AgentHostLinker::class)->linkAndHeal($host);
+                    if ($link['linked']) {
+                        $host->refresh();
                     }
                     
                     $newHostIds[] = $host->id;

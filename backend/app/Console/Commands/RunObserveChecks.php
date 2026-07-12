@@ -7,7 +7,6 @@ use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
-use App\Models\Agent;
 use App\Constants\AgentConstants;
 use App\Services\NativeObserveCheckRunner;
 use App\Services\ObserveCheckArgsResolver;
@@ -57,7 +56,7 @@ class RunObserveChecks extends Command
             $prefix = 'ws' . $workspaceId . '-';
             $hostName = $prefix . $host->name;
 
-            // Re-attach Platform Agent hosts that lost agent_id (e.g. after UI save / rename).
+            // Always attempt IP/hostname agent link + heal pull→telemetry before deciding path.
             $this->ensureHostLinkedToAgent($host);
 
             // Platform Agent hosts: use push telemetry, never SSH/pull plugins
@@ -70,6 +69,20 @@ class RunObserveChecks extends Command
 
                 continue;
             }
+
+            // Hard stop: never SSH standard metric checks (cpu/memory/disk/load) — they require an agent.
+            // Leaving them as pull produces Permission denied noise on remote hosts.
+            $host->setRelation(
+                'services',
+                $host->services->filter(function ($service) {
+                    $key = strtolower((string) ($service->service_key ?? $service->name ?? ''));
+                    $isMetric = in_array($key, ['cpu', 'memory', 'disk', 'load', 'uptime'], true);
+                    $isPull = (($service->check_source ?? 'pull') === 'pull')
+                        || (($service->check_command ?? '') === '' && $isMetric);
+
+                    return ! ($isMetric && $isPull);
+                })->values()
+            );
 
             $address = $host->reachableAddress();
             if ($address === '') {
@@ -435,32 +448,12 @@ class RunObserveChecks extends Command
      */
     private function ensureHostLinkedToAgent(ObserveTargetHost $host): void
     {
-        if ($host->agent_id) {
-            return;
+        $linker = app(\App\Services\PlatformAgent\AgentHostLinker::class);
+        $result = $linker->linkAndHeal($host);
+        if ($result['linked']) {
+            $host->refresh();
+            $host->load(['services' => fn ($q) => $q->where('enabled', true)]);
         }
-
-        $agent = Agent::query()
-            ->where('workspace_id', $host->workspace_id)
-            ->where(function ($q) use ($host) {
-                $q->where('hostname', $host->name)
-                    ->orWhere('hostname', 'like', $host->name.'%');
-            })
-            ->where(function ($q) {
-                $q->whereNull('status')
-                    ->orWhere('status', '!=', 'revoked');
-            })
-            ->orderByDesc('last_seen_at')
-            ->first();
-
-        if (! $agent) {
-            return;
-        }
-
-        $host->forceFill([
-            'agent_id' => $agent->id,
-            'source' => 'agent',
-        ])->save();
-        $host->setRelation('services', $host->services()->where('enabled', true)->get());
     }
 
     private function shouldUseAgentTelemetry(ObserveTargetHost $host): bool
