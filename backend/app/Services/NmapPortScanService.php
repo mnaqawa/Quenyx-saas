@@ -7,15 +7,17 @@ use App\Models\HostPortScanResult;
 use App\Models\ObserveTargetHost;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Runs nmap port scans on target hosts and persists results.
  * Requires nmap to be installed on the server (e.g. apt install nmap).
  *
- * @param array{ports?: string, ports_range?: string, protocol?: string} $options
+ * @param array{ports?: string, ports_range?: string, protocol?: string, target_mode?: string} $options
  *   - ports: 'top100' | 'all' | 'range' (default: top100)
  *   - ports_range: e.g. '1-1024' or '80,443,8080' when ports=range
  *   - protocol: 'tcp' | 'udp' (default: tcp). UDP may require root on Linux.
+ *   - target_mode: 'public' (black-box) | 'private' (white-box) | 'auto' (default reachable)
  */
 class NmapPortScanService
 {
@@ -26,32 +28,51 @@ class NmapPortScanService
     private const TIMEOUT_ALL_PORTS = 600;
 
     /**
-     * @param  array{ports?: string, ports_range?: string, protocol?: string}  $options
+     * @param  array{ports?: string, ports_range?: string, protocol?: string, target_mode?: string}  $options
      */
     public function runScan(ObserveTargetHost $host, array $options = []): HostPortScan
     {
-        $scan = HostPortScan::create([
+        $targetMode = strtolower((string) ($options['target_mode'] ?? 'auto'));
+        if (! in_array($targetMode, ['public', 'private', 'auto'], true)) {
+            $targetMode = 'auto';
+        }
+
+        $resolved = $host->resolveScanAddress($targetMode);
+
+        $create = [
             'host_id' => $host->id,
             'status' => 'running',
-        ]);
+        ];
+        if (Schema::hasColumn('host_port_scans', 'target_mode')) {
+            $create['target_mode'] = $resolved['mode'];
+        }
+        if (Schema::hasColumn('host_port_scans', 'scanned_address')) {
+            $create['scanned_address'] = $resolved['ok'] ? $resolved['address'] : null;
+        }
 
-        $address = $host->reachableAddress();
-        if ($address === '') {
+        $scan = HostPortScan::create($create);
+
+        if (! $resolved['ok']) {
             $scan->update([
                 'status' => 'failed',
-                'error_message' => 'Host address is empty',
+                'error_message' => $resolved['error'] ?? 'Unable to resolve scan address',
             ]);
+
             return $scan;
         }
 
-        // Sanitize address for shell (basic safety)
-        $address = preg_replace('/[^a-zA-Z0-9.\-_:\/]/', '', $address);
-        if ($address === '') {
+        $address = preg_replace('/[^a-zA-Z0-9.\-_:\/]/', '', $resolved['address']);
+        if ($address === '' || $address === null) {
             $scan->update([
                 'status' => 'failed',
                 'error_message' => 'Invalid host address after sanitization',
             ]);
+
             return $scan;
+        }
+
+        if (Schema::hasColumn('host_port_scans', 'scanned_address')) {
+            $scan->update(['scanned_address' => $address]);
         }
 
         $portsMode = $options['ports'] ?? 'top100';
@@ -70,16 +91,18 @@ class NmapPortScanService
         try {
             $process = Process::timeout($timeout)->run($command);
 
-            if (!$process->successful()) {
+            if (! $process->successful()) {
                 $scan->update([
                     'status' => 'failed',
-                    'error_message' => 'nmap failed: ' . trim($process->errorOutput() ?: $process->output() ?: 'Unknown error'),
+                    'error_message' => 'nmap failed: '.trim($process->errorOutput() ?: $process->output() ?: 'Unknown error'),
                 ]);
                 Log::warning('NmapPortScanService: scan failed', [
                     'host_id' => $host->id,
-                    'address' => $host->address,
+                    'address' => $address,
+                    'target_mode' => $resolved['mode'],
                     'exit_code' => $process->exitCode(),
                 ]);
+
                 return $scan;
             }
 
@@ -108,7 +131,8 @@ class NmapPortScanService
 
             Log::info('NmapPortScanService: scan completed', [
                 'host_id' => $host->id,
-                'address' => $host->address,
+                'address' => $address,
+                'target_mode' => $resolved['mode'],
                 'open_ports' => $openCount,
                 'total_ports' => count($results),
             ]);
@@ -119,6 +143,8 @@ class NmapPortScanService
             ]);
             Log::error('NmapPortScanService: scan exception', [
                 'host_id' => $host->id,
+                'address' => $address,
+                'target_mode' => $resolved['mode'],
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -139,7 +165,7 @@ class NmapPortScanService
 
         try {
             $doc = new \DOMDocument();
-            if (!$doc->loadXML($xml)) {
+            if (! $doc->loadXML($xml)) {
                 return [];
             }
 
@@ -156,7 +182,7 @@ class NmapPortScanService
                 $serviceNodes = $xpath->query('.//*[local-name()="service"]', $portNode);
                 $serviceNode = $serviceNodes->item(0);
                 $service = $serviceNode ? $serviceNode->getAttribute('name') : null;
-                $version = $serviceNode ? trim($serviceNode->getAttribute('product') . ' ' . $serviceNode->getAttribute('version')) : null;
+                $version = $serviceNode ? trim($serviceNode->getAttribute('product').' '.$serviceNode->getAttribute('version')) : null;
                 $version = $version !== '' ? $version : null;
 
                 $results[] = [
@@ -185,13 +211,13 @@ class NmapPortScanService
             return '-p-';
         }
         if ($portsMode === 'range' && $portsRange !== '') {
-            // Validate: allow 1-65535, comma-separated ports, or mix like "80,443,8000-9000"
             $sanitized = preg_replace('/[^0-9,\-\s]/', '', $portsRange);
             $sanitized = preg_replace('/\s+/', '', $sanitized);
             if ($sanitized !== '') {
-                return '-p ' . $sanitized;
+                return '-p '.$sanitized;
             }
         }
+
         return '--top-ports 100';
     }
 }

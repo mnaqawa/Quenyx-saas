@@ -410,11 +410,18 @@ export default function InfrastructureMap() {
     [selectedWorkspaceId],
   )
   const [scanModalOpen, setScanModalOpen] = useState(false)
-  const [scanOptions, setScanOptions] = useState<{ ports: 'top100' | 'all' | 'range'; portsRange: string; protocol: 'tcp' | 'udp'; hostIds: number[] }>({
+  const [scanOptions, setScanOptions] = useState<{
+    ports: 'top100' | 'all' | 'range'
+    portsRange: string
+    protocol: 'tcp' | 'udp'
+    hostIds: number[]
+    targetMode: 'public' | 'private'
+  }>({
     ports: 'top100',
     portsRange: '1-1024',
     protocol: 'tcp',
     hostIds: [],
+    targetMode: 'public',
   })
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -1324,6 +1331,37 @@ export default function InfrastructureMap() {
                   <h4 className="mb-4 text-base font-semibold">{t('map.portScan.modalTitle')}</h4>
                   <div className="space-y-4">
                     <div>
+                      <label className="mb-1 block text-xs font-medium text-white/80">{t('map.portScan.targetMode')}</label>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10">
+                          <input
+                            type="radio"
+                            name="targetMode"
+                            checked={scanOptions.targetMode === 'public'}
+                            onChange={() => setScanOptions((prev) => ({ ...prev, targetMode: 'public' }))}
+                            className="mt-1 rounded border-white/20"
+                          />
+                          <span className="text-sm">
+                            <span className="font-medium text-sky-200">{t('map.portScan.blackBox')}</span>
+                            <span className="mt-0.5 block text-[11px] text-white/55">{t('map.portScan.blackBoxHint')}</span>
+                          </span>
+                        </label>
+                        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10">
+                          <input
+                            type="radio"
+                            name="targetMode"
+                            checked={scanOptions.targetMode === 'private'}
+                            onChange={() => setScanOptions((prev) => ({ ...prev, targetMode: 'private' }))}
+                            className="mt-1 rounded border-white/20"
+                          />
+                          <span className="text-sm">
+                            <span className="font-medium text-emerald-200">{t('map.portScan.whiteBox')}</span>
+                            <span className="mt-0.5 block text-[11px] text-white/55">{t('map.portScan.whiteBoxHint')}</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    <div>
                       <label className="mb-1 block text-xs font-medium text-white/80">{t('map.portScan.portRange')}</label>
                       <div className="flex flex-wrap gap-2">
                         {(['top100', 'all', 'range'] as const).map((p) => (
@@ -1415,6 +1453,7 @@ export default function InfrastructureMap() {
                             ports: scanOptions.ports,
                             portsRange: scanOptions.ports === 'range' ? scanOptions.portsRange : undefined,
                             protocol: scanOptions.protocol,
+                            targetMode: scanOptions.targetMode,
                           })
                           if (res.errors.length > 0) {
                             setScanError(res.errors.join('; '))
@@ -1457,7 +1496,13 @@ export default function InfrastructureMap() {
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <div>
                         <p className="font-semibold text-sm">{ps.host_name}</p>
-                        <p className="text-xs text-white/60">{ps.address}</p>
+                        <p className="text-xs text-white/60">
+                          {ps.scan?.scanned_address
+                            ? `${ps.scan.target_mode === 'public' ? t('map.portScan.scannedPublic') : ps.scan.target_mode === 'private' ? t('map.portScan.scannedPrivate') : t('map.portScan.scannedAddress')}: ${ps.scan.scanned_address}`
+                            : ps.public_ip && ps.public_ip !== ps.address
+                              ? `${ps.public_ip} · priv ${ps.address}`
+                              : ps.address}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         {canRunOperations ? (
