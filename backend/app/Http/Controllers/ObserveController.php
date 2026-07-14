@@ -1020,9 +1020,10 @@ class ObserveController extends Controller
             ->get();
         $hostToState = [];
         $hostToServiceCount = ['total' => [], 'critical' => [], 'warning' => []];
+        $servicesByHost = [];
         foreach ($serviceRows as $s) {
             $hostName = str_starts_with($s->host_name, $prefix) ? substr($s->host_name, strlen($prefix)) : $s->host_name;
-            $hostToState[$hostName] = $this->worstState($hostToState[$hostName] ?? 'pending', $s->state);
+            $servicesByHost[$hostName][] = $s;
             $hostToServiceCount['total'][$hostName] = ($hostToServiceCount['total'][$hostName] ?? 0) + 1;
             if (in_array($s->state, ['critical', 'unreachable'], true)) {
                 $hostToServiceCount['critical'][$hostName] = ($hostToServiceCount['critical'][$hostName] ?? 0) + 1;
@@ -1030,12 +1031,15 @@ class ObserveController extends Controller
                 $hostToServiceCount['warning'][$hostName] = ($hostToServiceCount['warning'][$hostName] ?? 0) + 1;
             }
         }
+        foreach ($servicesByHost as $hostName => $rows) {
+            $hostToState[$hostName] = $this->rollupHostState($rows);
+        }
         $nodes = [];
         $seenNet = [];
         foreach ($hosts as $h) {
             $name = $h->name;
             $address = $h->address ?? '';
-            $status = $hostToState[$name] ?? 'pending';
+            $status = $this->resolveHostState($hostToState, $name);
             $nodes[] = [
                 'id' => 'host-' . $name,
                 'name' => $name,
@@ -1066,7 +1070,7 @@ class ObserveController extends Controller
                 'source' => $h->name,
                 'destination' => 'Monitoring',
                 'type' => 'monitored',
-                'status' => $this->stateToLabel($hostToState[$h->name] ?? 'pending'),
+                'status' => $this->stateToLabel($this->resolveHostState($hostToState, $h->name)),
             ];
         }
         $serviceStats = [];
@@ -1099,9 +1103,9 @@ class ObserveController extends Controller
     /**
      * Merge topology from project integrations (settings.topology_enabled + topology_data).
      *
-     * @param array{nodes: array, connections: array} $observeData
+     * @param array{nodes: array, connections: array, service_stats?: array} $observeData
      * @param array $integrationSources filled with integration names that contributed
-     * @return array{nodes: array, connections: array}
+     * @return array{nodes: array, connections: array, service_stats: array}
      */
     private function mergeIntegrationTopology(Project $project, array $observeData, array &$integrationSources): array
     {
