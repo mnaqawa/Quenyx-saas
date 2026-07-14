@@ -40,17 +40,6 @@ import { hostRollupStatus, shortHostName } from '../lib/observeHostUtils'
 // Data source toggle: use fixtures if VITE_OBSERVE_USE_FIXTURES=true, otherwise use real API
 const USE_FIXTURES = import.meta.env.VITE_OBSERVE_USE_FIXTURES === 'true' || false
 
-const statusOrder = (s: string) => {
-  const i = ['critical', 'unreachable', 'warning', 'unknown', 'pending', 'ok'].indexOf(s.toLowerCase())
-  return i === -1 ? 99 : i
-}
-
-function pickWorstStatusString(statuses: string[]): string {
-  if (statuses.length === 0) return 'pending'
-  // Do not seed with 'pending' — that incorrectly wins over 'ok' once 2+ services exist.
-  return statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b))
-}
-
 function extractTargetsList(list: unknown): Array<{ name: string; address: string }> {
   if (Array.isArray(list)) {
     return list as Array<{ name: string; address: string }>

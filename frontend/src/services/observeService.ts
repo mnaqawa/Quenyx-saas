@@ -126,6 +126,38 @@ export const observeService = {
     }
   },
 
+  async getPortScanSchedule(workspaceId: number): Promise<import('../types/observe').PortScanSchedule> {
+    return gatewayClient.get<import('../types/observe').PortScanSchedule>(
+      `workspaces/${workspaceId}/observe/infrastructure/port-scans/schedule`,
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
+  async updatePortScanSchedule(
+    workspaceId: number,
+    schedule: {
+      enabled: boolean
+      intervalMinutes: number
+      targetMode?: 'public' | 'private' | 'auto'
+      ports?: 'top100' | 'all' | 'range'
+      portsRange?: string
+      protocol?: 'tcp' | 'udp'
+    }
+  ): Promise<import('../types/observe').PortScanSchedule> {
+    return gatewayClient.put<import('../types/observe').PortScanSchedule>(
+      `workspaces/${workspaceId}/observe/infrastructure/port-scans/schedule`,
+      {
+        enabled: schedule.enabled,
+        interval_minutes: schedule.intervalMinutes,
+        target_mode: schedule.targetMode ?? 'public',
+        ports: schedule.ports ?? 'top100',
+        ports_range: schedule.portsRange ?? null,
+        protocol: schedule.protocol ?? 'tcp',
+      },
+      { workspaceId, moduleKey: 'qynsight' }
+    )
+  },
+
   // Performance Analytics
   async getPerformanceMetrics(workspaceId: number, timeRange?: string): Promise<PerformanceMetric[]> {
     const endpoint = timeRange

@@ -695,47 +695,14 @@ class ObserveTargetsController extends Controller
             return response()->json(['success' => false, 'message' => 'Host not found'], 404);
         }
 
-        $latestScan = $host->portScans()->with('results')->orderByDesc('id')->first();
-        if (!$latestScan) {
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'host_id' => $host->id,
-                    'host_name' => $host->name,
-                    'address' => $host->address,
-                    'public_ip' => $host->public_ip ?? null,
-                    'scan' => null,
-                    'ports' => [],
-                ],
-            ]);
-        }
-
-        $ports = $latestScan->results->map(fn ($r) => [
-            'port' => $r->port,
-            'protocol' => $r->protocol,
-            'state' => $r->state,
-            'service' => $r->service,
-            'version' => $r->version,
-        ])->values()->all();
+        $host->setRelation(
+            'portScans',
+            $host->portScans()->with('results')->orderByDesc('id')->limit(10)->get()
+        );
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'host_id' => $host->id,
-                'host_name' => $host->name,
-                'address' => $host->address,
-                'public_ip' => $host->public_ip ?? null,
-                'scan' => [
-                    'id' => $latestScan->id,
-                    'status' => $latestScan->status,
-                    'scanned_at' => $latestScan->scanned_at?->toIso8601String(),
-                    'open_ports_count' => $latestScan->open_ports_count,
-                    'error_message' => $latestScan->error_message,
-                    'target_mode' => $latestScan->target_mode ?? null,
-                    'scanned_address' => $latestScan->scanned_address ?? null,
-                ],
-                'ports' => $ports,
-            ],
+            'data' => \App\Models\HostPortScan::presentForHost($host),
         ]);
     }
 

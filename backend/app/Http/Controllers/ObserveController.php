@@ -9,6 +9,7 @@ use App\Models\ObserveMeta;
 use App\Models\ObserveMetricHistory;
 use App\Models\ObserveServiceDefinition;
 use App\Models\ObserveTargetHost;
+use App\Models\ObservePortScanSchedule;
 use App\Models\IntegrationConfiguration;
 use App\Models\Agent;
 use App\Models\AgentMetric;
@@ -108,6 +109,24 @@ class ObserveController extends Controller
     {
         $this->authorize('view', $project);
 
+        try {
+            return $this->servicesPayload($request, $project);
+        } catch (\Throwable $e) {
+            Log::error('observe services failed', [
+                'workspace_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load service checks',
+                'errors' => config('app.debug') ? ['detail' => $e->getMessage()] : null,
+            ], 500);
+        }
+    }
+
+    private function servicesPayload(Request $request, Project $project): JsonResponse
+    {
         // Get query parameters
         $q = $request->query('q');
         $statusParam = $request->query('status');
@@ -206,14 +225,34 @@ class ObserveController extends Controller
             'unreachable' => $allServices->where('state', 'unreachable')->count(),
         ];
 
-        // Calculate host totals
+        // Host badge: count hosts with live checks; if none yet, count configured targets as pending.
         $hosts = $allServices->groupBy('host_name');
-        $hostTotals = [
-            'up' => $hosts->count(), // Simplified: assume all hosts are up if they have services
-            'down' => 0,
-            'unreachable' => 0,
-            'pending' => 0,
-        ];
+        $serviceHostCount = $hosts->count();
+        $configuredHostCount = ObserveTargetHost::where('workspace_id', $project->id)
+            ->where('enabled', true)
+            ->count();
+        if ($serviceHostCount > 0) {
+            $hostTotals = [
+                'up' => $serviceHostCount,
+                'down' => 0,
+                'unreachable' => 0,
+                'pending' => 0,
+            ];
+        } elseif ($configuredHostCount > 0) {
+            $hostTotals = [
+                'up' => 0,
+                'down' => 0,
+                'unreachable' => 0,
+                'pending' => $configuredHostCount,
+            ];
+        } else {
+            $hostTotals = [
+                'up' => 0,
+                'down' => 0,
+                'unreachable' => 0,
+                'pending' => 0,
+            ];
+        }
 
         // Get meta for last_poll_at (native engine)
         $nativeMeta = ObserveMeta::where('workspace_id', $project->id)->where('engine_key', 'native')->first();
@@ -242,10 +281,15 @@ class ObserveController extends Controller
             $statusInfo = $output !== '' ? $output : $pluginOutput;
             // Duration = time spent in the current state (live), not a frozen snapshot from last check run.
             $durationSec = 0;
-            if ($service->last_state_change_at) {
-                $durationSec = max(0, (int) $service->last_state_change_at->diffInSeconds(now()));
-            } elseif (is_numeric($service->duration_sec)) {
-                $durationSec = max(0, (int) $service->duration_sec);
+            try {
+                $stateChangedAt = $service->last_state_change_at;
+                if ($stateChangedAt instanceof \DateTimeInterface) {
+                    $durationSec = max(0, (int) now()->diffInSeconds($stateChangedAt));
+                } elseif (is_numeric($service->duration_sec)) {
+                    $durationSec = max(0, (int) $service->duration_sec);
+                }
+            } catch (\Throwable) {
+                $durationSec = is_numeric($service->duration_sec) ? max(0, (int) $service->duration_sec) : 0;
             }
 
             return [
@@ -501,19 +545,32 @@ class ObserveController extends Controller
     {
         $this->authorize('view', $project);
 
-        $range = (string) $request->query('range', '30d');
-        $options = array_filter([
-            'scenario_template' => $request->query('scenario_template'),
-            'growth_pct' => $request->query('growth_pct'),
-            'horizon_days' => $request->query('horizon_days'),
-            'target_resource' => $request->query('target_resource'),
-            'hosts' => $request->query('hosts'),
-        ], fn ($v) => $v !== null && $v !== '');
-        $data = app(CapacityPlanningService::class)->build($project->id, $range, $options);
+        try {
+            $range = (string) $request->query('range', '30d');
+            $options = array_filter([
+                'scenario_template' => $request->query('scenario_template'),
+                'growth_pct' => $request->query('growth_pct'),
+                'horizon_days' => $request->query('horizon_days'),
+                'target_resource' => $request->query('target_resource'),
+                'hosts' => $request->query('hosts'),
+            ], fn ($v) => $v !== null && $v !== '');
+            $data = app(CapacityPlanningService::class)->build($project->id, $range, $options);
 
-        return response()
-            ->json(['success' => true, 'data' => $data])
-            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+            return response()
+                ->json(['success' => true, 'data' => $data])
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        } catch (\Throwable $e) {
+            Log::error('capacityPlanning failed', [
+                'workspace_id' => $project->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load capacity data',
+                'errors' => config('app.debug') ? ['detail' => $e->getMessage()] : null,
+            ], 500);
+        }
     }
 
     /**
@@ -845,6 +902,7 @@ class ObserveController extends Controller
 
     /**
      * Port scan results for all hosts in the workspace (for Infrastructure Map).
+     * Keeps last completed ports visible when a newer scan is pending/running/failed.
      */
     public function portScans(Request $request, Project $project): JsonResponse
     {
@@ -852,40 +910,124 @@ class ObserveController extends Controller
 
         $hosts = ObserveTargetHost::where('workspace_id', $project->id)
             ->where('enabled', true)
-            ->with(['portScans' => fn ($q) => $q->orderByDesc('id')->limit(1)->with('results')])
+            ->with(['portScans' => fn ($q) => $q->orderByDesc('id')->limit(10)->with('results')])
             ->get();
 
-        $data = $hosts->map(function ($host) {
-            $latestScan = $host->portScans->first();
-            $ports = $latestScan
-                ? $latestScan->results->map(fn ($r) => [
-                    'port' => $r->port,
-                    'protocol' => $r->protocol,
-                    'state' => $r->state,
-                    'service' => $r->service,
-                    'version' => $r->version,
-                ])->values()->all()
-                : [];
-
-            return [
-                'host_id' => $host->id,
-                'host_name' => $host->name,
-                'address' => $host->address,
-                'public_ip' => $host->public_ip ?? null,
-                'scan' => $latestScan ? [
-                    'id' => $latestScan->id,
-                    'status' => $latestScan->status,
-                    'scanned_at' => $latestScan->scanned_at?->toIso8601String(),
-                    'open_ports_count' => $latestScan->open_ports_count,
-                    'error_message' => $latestScan->error_message,
-                    'target_mode' => $latestScan->target_mode ?? null,
-                    'scanned_address' => $latestScan->scanned_address ?? null,
-                ] : null,
-                'ports' => $ports,
-            ];
-        })->values()->all();
+        $data = $hosts->map(fn ($host) => HostPortScan::presentForHost($host))->values()->all();
 
         return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    /**
+     * Get auto port-scan schedule for this workspace.
+     * GET /workspaces/{project}/observe/infrastructure/port-scans/schedule
+     */
+    public function portScanSchedule(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        if (! Schema::hasTable('observe_port_scan_schedules')) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'enabled' => false,
+                    'interval_minutes' => 1440,
+                    'target_mode' => 'public',
+                    'ports' => 'top100',
+                    'ports_range' => null,
+                    'protocol' => 'tcp',
+                    'last_run_at' => null,
+                    'next_run_at' => null,
+                    'min_interval_minutes' => ObservePortScanSchedule::minIntervalMinutes(),
+                ],
+            ]);
+        }
+
+        $schedule = ObservePortScanSchedule::firstOrCreate(
+            ['workspace_id' => $project->id],
+            [
+                'enabled' => false,
+                'interval_minutes' => 1440,
+                'target_mode' => 'public',
+                'ports' => 'top100',
+                'protocol' => 'tcp',
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'enabled' => (bool) $schedule->enabled,
+                'interval_minutes' => (int) $schedule->interval_minutes,
+                'target_mode' => $schedule->target_mode,
+                'ports' => $schedule->ports,
+                'ports_range' => $schedule->ports_range,
+                'protocol' => $schedule->protocol,
+                'last_run_at' => $schedule->last_run_at?->toIso8601String(),
+                'next_run_at' => $schedule->next_run_at?->toIso8601String(),
+                'min_interval_minutes' => ObservePortScanSchedule::minIntervalMinutes(),
+            ],
+        ]);
+    }
+
+    /**
+     * Update auto port-scan schedule for this workspace.
+     * PUT /workspaces/{project}/observe/infrastructure/port-scans/schedule
+     */
+    public function updatePortScanSchedule(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('runObserveOperations', $project);
+
+        if (! Schema::hasTable('observe_port_scan_schedules')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Port scan schedule table is not migrated yet.',
+            ], 503);
+        }
+
+        $min = ObservePortScanSchedule::minIntervalMinutes();
+        $validated = $request->validate([
+            'enabled' => 'required|boolean',
+            'interval_minutes' => "required|integer|min:{$min}|max:10080",
+            'target_mode' => 'nullable|string|in:public,private,auto',
+            'ports' => 'nullable|string|in:top100,all,range',
+            'ports_range' => 'nullable|string|max:500',
+            'protocol' => 'nullable|string|in:tcp,udp',
+        ]);
+
+        $schedule = ObservePortScanSchedule::firstOrNew(['workspace_id' => $project->id]);
+        $schedule->enabled = (bool) $validated['enabled'];
+        $schedule->interval_minutes = (int) $validated['interval_minutes'];
+        $schedule->target_mode = $validated['target_mode'] ?? 'public';
+        $schedule->ports = $validated['ports'] ?? 'top100';
+        $schedule->ports_range = $validated['ports_range'] ?? null;
+        $schedule->protocol = $validated['protocol'] ?? 'tcp';
+        if ($schedule->enabled) {
+            $schedule->next_run_at = $schedule->next_run_at && $schedule->next_run_at->isFuture()
+                ? $schedule->next_run_at
+                : $schedule->computeNextRunAt(now());
+        } else {
+            $schedule->next_run_at = null;
+        }
+        $schedule->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $schedule->enabled
+                ? 'Auto port scan enabled.'
+                : 'Auto port scan disabled.',
+            'data' => [
+                'enabled' => (bool) $schedule->enabled,
+                'interval_minutes' => (int) $schedule->interval_minutes,
+                'target_mode' => $schedule->target_mode,
+                'ports' => $schedule->ports,
+                'ports_range' => $schedule->ports_range,
+                'protocol' => $schedule->protocol,
+                'last_run_at' => $schedule->last_run_at?->toIso8601String(),
+                'next_run_at' => $schedule->next_run_at?->toIso8601String(),
+                'min_interval_minutes' => ObservePortScanSchedule::minIntervalMinutes(),
+            ],
+        ]);
     }
 
     /**

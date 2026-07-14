@@ -143,6 +143,8 @@ Route::middleware(['auth.session.idle', 'auth:sanctum'])->group(function () {
     Route::get('/workspaces/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/workspaces/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     Route::get('/workspaces/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
+    Route::get('/workspaces/{project}/observe/infrastructure/port-scans/schedule', [\App\Http\Controllers\ObserveController::class, 'portScanSchedule']);
+    Route::put('/workspaces/{project}/observe/infrastructure/port-scans/schedule', [\App\Http\Controllers\ObserveController::class, 'updatePortScanSchedule']);
     Route::post('/workspaces/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
 
     // Observe targets endpoints (workspace canonical)
@@ -189,6 +191,8 @@ Route::middleware(['auth.session.idle', 'auth:sanctum'])->group(function () {
     Route::get('/projects/{project}/observe/infrastructure/topology', [\App\Http\Controllers\ObserveController::class, 'networkTopology']);
     Route::get('/projects/{project}/observe/infrastructure/connections', [\App\Http\Controllers\ObserveController::class, 'infrastructureConnections']);
     Route::get('/projects/{project}/observe/infrastructure/port-scans', [\App\Http\Controllers\ObserveController::class, 'portScans']);
+    Route::get('/projects/{project}/observe/infrastructure/port-scans/schedule', [\App\Http\Controllers\ObserveController::class, 'portScanSchedule']);
+    Route::put('/projects/{project}/observe/infrastructure/port-scans/schedule', [\App\Http\Controllers\ObserveController::class, 'updatePortScanSchedule']);
         Route::post('/projects/{project}/observe/infrastructure/port-scans/run', [\App\Http\Controllers\ObserveController::class, 'runPortScans']);
         Route::get('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'index']);
         Route::put('/projects/{project}/observe/targets', [\App\Http\Controllers\ObserveTargetsController::class, 'update']);

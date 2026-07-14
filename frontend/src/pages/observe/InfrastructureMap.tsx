@@ -18,7 +18,7 @@ import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import { useObserveAccess } from '../../hooks/useObserveAccess'
 import { AIAgentDrawer } from '../../components/ai/AIAgentDrawer'
 import type { AIAgentSeed } from '../../types/aiAgent'
-import type { PortScanResult } from '../../types/observe'
+import type { PortScanResult, PortScanSchedule } from '../../types/observe'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { ObserveLoadError } from '../../components/observe/ObserveLoadError'
 import {
@@ -426,6 +426,14 @@ export default function InfrastructureMap() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanStartedMessage, setScanStartedMessage] = useState<string | null>(null)
+  const [portScanSchedule, setPortScanSchedule] = useState<PortScanSchedule | null>(null)
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [scheduleDraft, setScheduleDraft] = useState<{
+    enabled: boolean
+    intervalMinutes: number
+    targetMode: 'public' | 'private'
+  }>({ enabled: false, intervalMinutes: 1440, targetMode: 'public' })
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const topologyRef = useRef<HTMLDivElement>(null)
 
@@ -448,6 +456,31 @@ export default function InfrastructureMap() {
     refreshKey,
   })
   const { data: portScansData, refresh: refreshPortScans } = useObservePortScans(selectedWorkspaceId, { refreshKey })
+
+  useEffect(() => {
+    if (!selectedWorkspaceId) {
+      setPortScanSchedule(null)
+      return
+    }
+    let cancelled = false
+    observeService
+      .getPortScanSchedule(Number(selectedWorkspaceId))
+      .then((sched) => {
+        if (cancelled) return
+        setPortScanSchedule(sched)
+        setScheduleDraft({
+          enabled: !!sched.enabled,
+          intervalMinutes: sched.interval_minutes || 1440,
+          targetMode: sched.target_mode === 'private' ? 'private' : 'public',
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setPortScanSchedule(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedWorkspaceId, refreshKey])
 
   useEffect(() => {
     if (!loading && hosts.length >= 0) markUpdated()
@@ -585,7 +618,11 @@ export default function InfrastructureMap() {
       source: h.name,
       type: 'monitored',
       destination: 'Monitoring',
-      status: h.status === 'ok' ? 'Online' : h.status === 'warning' ? 'Warning' : 'Critical',
+      status:
+        h.status === 'ok' ? 'Online' :
+        h.status === 'warning' || h.status === 'unknown' ? 'Warning' :
+        h.status === 'critical' || h.status === 'unreachable' ? 'Critical' :
+        'Pending',
       speed: '—',
     }))
   }, [layerFilter, hosts, networks])
@@ -618,25 +655,43 @@ export default function InfrastructureMap() {
     })
   }, [connectionsFiltered, hostServiceStats])
 
-  // Prefer API connections (Observe + Integrations) when available; enrich with service stats
+  // Prefer API connections (Observe + Integrations) when available; enrich with service stats + live host status
   const connectionsForTab = useMemo(() => {
     if (apiConnectionsData != null) {
       const stats = apiConnectionsData.service_stats ?? {}
-      return apiConnectionsData.connections.map((c) => ({
-        id: (c as { id?: string }).id ?? `conn-${c.source}-${c.destination}`,
-        source: c.source,
-        type: c.type,
-        destination: c.destination,
-        status: c.status,
-        serviceCount: stats[c.source]?.total ?? 0,
-        criticalCount: stats[c.source]?.critical ?? 0,
-        warningCount: stats[c.source]?.warning ?? 0,
-        fromIntegration: (c as { source_origin?: string; integration?: string }).source_origin === 'integration',
-        integrationName: (c as { integration?: string }).integration,
-      }))
+      const hostStatusByName = new Map(hosts.map((h) => [h.name, h.status]))
+      return apiConnectionsData.connections.map((c) => {
+        const apiStats = stats[c.source]
+        const localStats = hostServiceStats.get(c.source)
+        const total = apiStats?.total ?? localStats?.total ?? 0
+        const critical = apiStats?.critical ?? localStats?.critical ?? 0
+        const warning = apiStats?.warning ?? localStats?.warning ?? 0
+        const hostStatus = hostStatusByName.get(c.source)
+        let status = c.status
+        // Prefer live host rollup when API still says Pending but services are reporting
+        if ((status === 'Pending' || !status) && hostStatus && hostStatus !== 'pending') {
+          status =
+            hostStatus === 'ok' ? 'Online' :
+            hostStatus === 'warning' || hostStatus === 'unknown' ? 'Warning' :
+            hostStatus === 'critical' || hostStatus === 'unreachable' ? 'Critical' :
+            status
+        }
+        return {
+          id: (c as { id?: string }).id ?? `conn-${c.source}-${c.destination}`,
+          source: c.source,
+          type: c.type,
+          destination: c.destination,
+          status,
+          serviceCount: total,
+          criticalCount: critical,
+          warningCount: warning,
+          fromIntegration: (c as { source_origin?: string; integration?: string }).source_origin === 'integration',
+          integrationName: (c as { integration?: string }).integration,
+        }
+      })
     }
     return connectionsWithServices.map((c) => ({ ...c, fromIntegration: false, integrationName: undefined }))
-  }, [apiConnectionsData, connectionsWithServices])
+  }, [apiConnectionsData, connectionsWithServices, hostServiceStats, hosts])
 
   const hostStatusCounts = useMemo(() => {
     const ok = hosts.filter((h) => h.status === 'ok').length
@@ -1212,8 +1267,9 @@ export default function InfrastructureMap() {
                       <span
                         className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${
                           h.status === 'ok' ? 'bg-emerald-500/20 text-emerald-200' :
-                          h.status === 'warning' ? 'bg-amber-500/20 text-amber-200' :
-                          'bg-rose-500/20 text-rose-200'
+                          h.status === 'warning' || h.status === 'unknown' ? 'bg-amber-500/20 text-amber-200' :
+                          h.status === 'critical' || h.status === 'unreachable' ? 'bg-rose-500/20 text-rose-200' :
+                          'bg-white/10 text-white/70'
                         }`}
                         title={statusTooltip(h.status, t)}
                       >
@@ -1324,6 +1380,99 @@ export default function InfrastructureMap() {
               </button>
               ) : null}
             </div>
+
+            {canRunOperations ? (
+              <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-semibold">{t('map.portScan.autoTitle')}</h4>
+                    <p className="text-[11px] text-white/50">{t('map.portScan.autoDesc')}</p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-xs text-white/80">
+                    <input
+                      type="checkbox"
+                      checked={scheduleDraft.enabled}
+                      onChange={(e) => setScheduleDraft((prev) => ({ ...prev, enabled: e.target.checked }))}
+                      className="rounded border-white/20"
+                    />
+                    {t('map.portScan.autoEnable')}
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/60">{t('map.portScan.autoInterval')}</label>
+                    <select
+                      value={scheduleDraft.intervalMinutes}
+                      onChange={(e) => setScheduleDraft((prev) => ({ ...prev, intervalMinutes: Number(e.target.value) }))}
+                      disabled={!scheduleDraft.enabled}
+                      className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white disabled:opacity-50"
+                    >
+                      <option value={60} className="bg-slate-900">1 hour</option>
+                      <option value={360} className="bg-slate-900">6 hours</option>
+                      <option value={720} className="bg-slate-900">12 hours</option>
+                      <option value={1440} className="bg-slate-900">24 hours</option>
+                      <option value={4320} className="bg-slate-900">3 days</option>
+                      <option value={10080} className="bg-slate-900">7 days</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/60">{t('map.portScan.targetMode')}</label>
+                    <select
+                      value={scheduleDraft.targetMode}
+                      onChange={(e) => setScheduleDraft((prev) => ({
+                        ...prev,
+                        targetMode: e.target.value === 'private' ? 'private' : 'public',
+                      }))}
+                      disabled={!scheduleDraft.enabled}
+                      className="rounded border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white disabled:opacity-50"
+                    >
+                      <option value="public" className="bg-slate-900">{t('map.portScan.blackBox')}</option>
+                      <option value="private" className="bg-slate-900">{t('map.portScan.whiteBox')}</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={scheduleSaving}
+                    onClick={async () => {
+                      if (!selectedWorkspaceId) return
+                      setScheduleSaving(true)
+                      setScheduleError(null)
+                      try {
+                        const saved = await observeService.updatePortScanSchedule(Number(selectedWorkspaceId), {
+                          enabled: scheduleDraft.enabled,
+                          intervalMinutes: scheduleDraft.intervalMinutes,
+                          targetMode: scheduleDraft.targetMode,
+                          ports: 'top100',
+                          protocol: 'tcp',
+                        })
+                        setPortScanSchedule(saved)
+                        setScheduleDraft({
+                          enabled: !!saved.enabled,
+                          intervalMinutes: saved.interval_minutes || scheduleDraft.intervalMinutes,
+                          targetMode: saved.target_mode === 'private' ? 'private' : 'public',
+                        })
+                      } catch (e) {
+                        setScheduleError(e instanceof Error ? e.message : 'Failed to save schedule')
+                      } finally {
+                        setScheduleSaving(false)
+                      }
+                    }}
+                    className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                  >
+                    {scheduleSaving ? t('map.portScan.autoSaving') : t('map.portScan.autoSave')}
+                  </button>
+                </div>
+                {portScanSchedule?.next_run_at && scheduleDraft.enabled ? (
+                  <p className="mt-2 text-[10px] text-white/45">
+                    {t('map.portScan.autoNext')}: {new Date(portScanSchedule.next_run_at).toLocaleString()}
+                    {portScanSchedule.last_run_at
+                      ? ` · ${t('map.portScan.autoLast')}: ${new Date(portScanSchedule.last_run_at).toLocaleString()}`
+                      : ''}
+                  </p>
+                ) : null}
+                {scheduleError ? <p className="mt-2 text-xs text-rose-400">{scheduleError}</p> : null}
+              </div>
+            ) : null}
 
             {scanModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !scanning && setScanModalOpen(false)}>
@@ -1520,7 +1669,12 @@ export default function InfrastructureMap() {
                         ) : null}
                         {ps.scan?.status === 'completed' && (
                           <span className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-medium text-emerald-200">
-                            {t('map.openPortsShort').replace('{count}', String(ps.scan.open_ports_count ?? 0))}
+                            {t('map.openPortsShort').replace('{count}', String(ps.scan.open_ports_count ?? ps.ports.filter((p) => p.state === 'open').length))}
+                          </span>
+                        )}
+                        {ps.scan?.previous_completed && ps.scan.status !== 'completed' && ps.ports.length > 0 && (
+                          <span className="rounded bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-200/80" title={t('map.portScan.previousResultsHint')}>
+                            {t('map.openPortsShort').replace('{count}', String(ps.ports.filter((p) => p.state === 'open').length))}
                           </span>
                         )}
                         {ps.scan?.status === 'running' && (
@@ -1530,7 +1684,7 @@ export default function InfrastructureMap() {
                           <span className="rounded bg-rose-500/20 px-2 py-1 text-[10px] font-medium text-rose-200" title={ps.scan.error_message ?? ''}>{t('map.portScan.failed')}</span>
                         )}
                         {ps.scan?.status === 'pending' && (
-                          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">{t('map.status.pending')}</span>
+                          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-medium text-white/70">{t('map.portScan.queued')}</span>
                         )}
                         {!ps.scan && (
                           <span className="rounded bg-sky-500/20 px-2 py-1 text-[10px] font-medium text-sky-200" title={t('map.portScan.queuedOnSave').replace('{hosts}', hostsLabel)}>{t('map.portScan.queued')}</span>
@@ -1544,6 +1698,9 @@ export default function InfrastructureMap() {
                     </div>
                     {ps.ports.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
+                        {ps.scan?.previous_completed && ps.scan.status !== 'completed' ? (
+                          <p className="mb-1 w-full text-[10px] text-white/45 italic">{t('map.portScan.previousResultsHint')}</p>
+                        ) : null}
                         {ps.ports.filter((p) => p.state === 'open').map((p) => (
                           <span
                             key={`${p.port}-${p.protocol}`}
@@ -1557,7 +1714,7 @@ export default function InfrastructureMap() {
                       </div>
                     ) : ps.scan?.status === 'completed' ? (
                       <p className="text-xs text-white/50">No open ports found in scan range.</p>
-                    ) : ps.scan?.status === 'running' || !ps.scan ? (
+                    ) : ps.scan?.status === 'running' || ps.scan?.status === 'pending' || !ps.scan ? (
                       <p className="text-xs text-white/50 italic">
                         {ps.scan?.status === 'running' ? t('map.portScan.scanning') : t('map.portScan.scanQueuedHint')}
                       </p>
@@ -1570,13 +1727,15 @@ export default function InfrastructureMap() {
         )}
 
         {activeTab === 'health' && (
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
               <h3 className="mb-3 text-sm font-semibold">{t('map.health.title')}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/70">Hosts</span>
-                  <span className="text-xs font-medium text-emerald-400">{hostStatusCounts.ok}/{hostStatusCounts.total} Healthy</span>
+                  <span className={`text-xs font-medium ${hostStatusCounts.ok === hostStatusCounts.total && hostStatusCounts.total > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {hostStatusCounts.ok}/{hostStatusCounts.total} Healthy
+                  </span>
                 </div>
                 <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
                   <span className="text-xs text-white/70">Connections</span>
@@ -1604,29 +1763,6 @@ export default function InfrastructureMap() {
                   ))}
                 </ul>
               )}
-            </div>
-            <div>
-              <h3 className="mb-3 text-sm font-semibold">{t('map.quickActions')}</h3>
-              <div className="flex flex-col gap-2">
-                <Link
-                  to={selectedWorkspaceId ? `/app/workspaces/${selectedWorkspaceId}/observe/targets` : '#'}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                  {hostsLabel}
-                </Link>
-                <button type="button" onClick={handleExportMap} className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Export Topology (HLD/LLD)
-                </button>
-              </div>
             </div>
           </div>
         )}

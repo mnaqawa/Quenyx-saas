@@ -147,6 +147,8 @@ export interface PortScanResult {
     /** public = black-box, private = white-box */
     target_mode?: 'public' | 'private' | 'auto' | null
     scanned_address?: string | null
+    /** True when showing last completed ports while a newer scan is in progress */
+    previous_completed?: boolean
   } | null
   ports: Array<{
     port: number
@@ -158,6 +160,18 @@ export interface PortScanResult {
 }
 
 export type PortScanTargetMode = 'public' | 'private'
+
+export interface PortScanSchedule {
+  enabled: boolean
+  interval_minutes: number
+  target_mode: 'public' | 'private' | 'auto'
+  ports: 'top100' | 'all' | 'range'
+  ports_range?: string | null
+  protocol: 'tcp' | 'udp'
+  last_run_at?: string | null
+  next_run_at?: string | null
+  min_interval_minutes: number
+}
 
 export interface CapacityMetric {
   title: string

@@ -49,9 +49,15 @@ export function WorkspaceSelector() {
 
   const hostCount = useMemo(() => {
     const ht = observeData?.hostTotals
-    if (!ht) return 0
-    return ht.up + ht.down + ht.unreachable + ht.pending
-  }, [observeData?.hostTotals])
+    if (ht) {
+      const fromTotals = ht.up + ht.down + ht.unreachable + ht.pending
+      if (fromTotals > 0) return fromTotals
+    }
+    // Fallback: unique hosts from service rows (targets-configured hosts with checks)
+    const items = observeData?.items
+    if (!items?.length) return 0
+    return new Set(items.map((i) => i.host).filter(Boolean)).size
+  }, [observeData?.hostTotals, observeData?.items])
 
   const problemCount = useMemo(() => {
     const st = observeData?.serviceTotals

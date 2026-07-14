@@ -31,6 +31,12 @@ class Kernel extends ConsoleKernel
             })
             ->appendOutputTo(storage_path('logs/scheduler.log'));
 
+        $schedule->command('observe:run-port-scans')
+            ->everyFiveMinutes()
+            ->when(fn () => array_key_exists('observe:run-port-scans', \Illuminate\Support\Facades\Artisan::all()))
+            ->withoutOverlapping(300)
+            ->appendOutputTo(storage_path('logs/scheduler.log'));
+
         // GA HARDENING: prune expired/revoked personal access tokens daily (when Sanctum provides the command).
         $schedule->command('sanctum:prune-expired --hours=24')
             ->daily()

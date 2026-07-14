@@ -150,6 +150,7 @@ export default function RealTimeMonitoring() {
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [hostList, setHostList] = useState<Array<{ name: string; address: string }>>([])
   const [targetsLoaded, setTargetsLoaded] = useState(false)
+  const [targetsError, setTargetsError] = useState<string | null>(null)
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
   const [aiSeed, setAiSeed] = useState<AIAgentSeed | null>(null)
 
@@ -161,6 +162,7 @@ export default function RealTimeMonitoring() {
     setHostList([])
     setSelectedHost('')
     setMetricsError(null)
+    setTargetsError(null)
     setTargetsLoaded(false)
   }, [selectedWorkspaceId])
 
@@ -244,6 +246,7 @@ export default function RealTimeMonitoring() {
       return
     }
     setTargetsLoaded(false)
+    setTargetsError(null)
     observeService
       .getTargets(wsId)
       .then((list) => {
@@ -255,8 +258,9 @@ export default function RealTimeMonitoring() {
         })
         setTargetsLoaded(true)
       })
-      .catch(() => {
+      .catch((e) => {
         setHostList([])
+        setTargetsError(e instanceof Error ? e.message : 'Failed to load hosts')
         setTargetsLoaded(true)
       })
   }, [wsId, refreshKey])
@@ -378,6 +382,26 @@ export default function RealTimeMonitoring() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-sm text-white/60">{t('rtm.loading')}</div>
+      </div>
+    )
+  }
+
+  // Targets API failed — do not pretend there are no hosts
+  if (selectedWorkspaceId && targetsLoaded && targetsError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t('rtm.title')} subtitle={t('rtm.subtitle')} />
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-6 text-center">
+          <p className="text-sm font-medium text-rose-200">{t('observe.error.services')}</p>
+          <p className="mt-1 text-xs text-rose-200/70">{targetsError}</p>
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="mt-4 rounded-lg bg-rose-500/30 px-4 py-2 text-sm font-medium text-rose-100 hover:bg-rose-500/40"
+          >
+            {t('observe.loadError.retry')}
+          </button>
+        </div>
       </div>
     )
   }
