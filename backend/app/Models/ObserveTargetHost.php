@@ -142,6 +142,60 @@ class ObserveTargetHost extends Model
     }
 
     /**
+     * Resolve nmap target for black-box (public) or white-box (private) scans.
+     *
+     * @param  'public'|'private'|'auto'  $mode
+     * @return array{ok: bool, address: string, mode: string, error: string|null}
+     */
+    public function resolveScanAddress(string $mode = 'auto'): array
+    {
+        $mode = strtolower(trim($mode));
+        if (! in_array($mode, ['public', 'private', 'auto'], true)) {
+            $mode = 'auto';
+        }
+
+        $public = trim((string) ($this->public_ip ?? ''));
+        $private = trim((string) ($this->address ?? ''));
+
+        if ($mode === 'public') {
+            if ($public === '') {
+                return [
+                    'ok' => false,
+                    'address' => '',
+                    'mode' => 'public',
+                    'error' => 'No public IP configured for this host. Add a public IP in Hosts, or use a white-box (private IP) scan.',
+                ];
+            }
+
+            return ['ok' => true, 'address' => $public, 'mode' => 'public', 'error' => null];
+        }
+
+        if ($mode === 'private') {
+            if ($private === '') {
+                return [
+                    'ok' => false,
+                    'address' => '',
+                    'mode' => 'private',
+                    'error' => 'No private IP/address configured for this host.',
+                ];
+            }
+
+            return ['ok' => true, 'address' => $private, 'mode' => 'private', 'error' => null];
+        }
+
+        $address = $this->reachableAddress();
+        if ($address === '') {
+            return [
+                'ok' => false,
+                'address' => '',
+                'mode' => 'auto',
+                'error' => 'Host address is empty',
+            ];
+        }
+
+        $resolvedMode = ($public !== '' && $address === $public) ? 'public' : 'private';
+
+        return ['ok' => true, 'address' => $address, 'mode' => $resolvedMode, 'error' => null];
      * True when this host is the platform itself (local plugins are safe / expected).
      */
     public function isLocalLoopback(): bool
