@@ -9,6 +9,7 @@ use App\Models\ObserveMetricHistory;
 use App\Models\ObserveService;
 use App\Models\ObserveTargetHost;
 use App\Models\ObserveTargetService;
+use App\Services\DefaultMonitoringProfileService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
@@ -29,17 +30,21 @@ class AgentTelemetryObserveBridge
         array &$existingForWorkspace,
         Carbon $now
     ): int {
-        if (! $host->agent_id) {
-            return 0;
-        }
-
         if (! $host->isMonitoringAllowed()) {
             return 0;
         }
 
+        // Host expects Platform Agent telemetry but agent row was wiped / not enrolled yet.
+        if (! $host->agent_id) {
+            return $this->syncAwaitingAgentEnrollment($host, $existingForWorkspace, $now);
+        }
+
         $agent = Agent::find($host->agent_id);
         if (! $agent) {
-            return 0;
+            // Stale agent_id on host — clear and wait for re-enrollment.
+            $host->forceFill(['agent_id' => null])->save();
+
+            return $this->syncAwaitingAgentEnrollment($host, $existingForWorkspace, $now);
         }
 
         // Ensure standard metric services are platform_agent (heals SSH/pull leftovers).
@@ -342,6 +347,72 @@ class AgentTelemetryObserveBridge
         }
 
         return null;
+    }
+
+    /**
+     * When inventory has agent-style checks but no enrolled agent: surface pending/unknown
+     * (never ICMP CRITICAL) so Service Checks lists cpu/memory/disk/load + Host-Alive.
+     *
+     * @param  array<string, ObserveService>  $existingForWorkspace
+     */
+    private function syncAwaitingAgentEnrollment(
+        ObserveTargetHost $host,
+        array &$existingForWorkspace,
+        Carbon $now
+    ): int {
+        app(\App\Services\DefaultMonitoringProfileService::class)->attachAgentTelemetryChecks($host, (int) $host->workspace_id);
+        app(AgentHostLinker::class)->forceTelemetryOnMetricServices($host);
+
+        $workspaceId = (int) $host->workspace_id;
+        $prefix = 'ws'.$workspaceId.'-';
+        $hostName = $prefix.$host->name;
+        $message = 'Awaiting Platform Agent enrollment — install/re-enroll quenyx-agent for this host (ICMP reachability is not used).';
+        $updated = 0;
+
+        $aliveKey = "{$hostName}::Host-Alive";
+        $existingAlive = $existingForWorkspace[$aliveKey] ?? null;
+        $aliveRow = $this->persistResult(
+            $workspaceId,
+            $hostName,
+            'Host-Alive',
+            $aliveKey,
+            $existingAlive,
+            ['state' => 'unknown', 'output' => $message, 'perfdata' => null],
+            300,
+            $now
+        );
+        $existingForWorkspace[$aliveKey] = $aliveRow;
+        $updated++;
+
+        $services = ObserveTargetService::query()
+            ->where('host_id', $host->id)
+            ->where('enabled', true)
+            ->get();
+
+        foreach ($services as $service) {
+            $serviceKey = strtolower((string) ($service->service_key ?? $service->name));
+            if (! in_array($serviceKey, ['cpu', 'memory', 'disk', 'load', 'uptime'], true)
+                && ! in_array(strtolower((string) $service->name), ['cpu', 'memory', 'disk', 'load', 'uptime'], true)) {
+                continue;
+            }
+            $engineServiceKey = "{$hostName}::{$service->name}";
+            $existing = $existingForWorkspace[$engineServiceKey] ?? null;
+            $intervalSec = max(60, (int) ($service->check_interval ?? 300));
+            $row = $this->persistResult(
+                $workspaceId,
+                $hostName,
+                (string) $service->name,
+                $engineServiceKey,
+                $existing,
+                ['state' => 'unknown', 'output' => $message, 'perfdata' => null],
+                $intervalSec,
+                $now
+            );
+            $existingForWorkspace[$engineServiceKey] = $row;
+            $updated++;
+        }
+
+        return $updated;
     }
 
     /**

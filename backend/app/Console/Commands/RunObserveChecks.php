@@ -59,6 +59,17 @@ class RunObserveChecks extends Command
             // Always attempt IP/hostname agent link + heal pull→telemetry before deciding path.
             $this->ensureHostLinkedToAgent($host);
 
+            // Remote inventory with metric checks (or explicit public IP) should use Platform Agent path —
+            // never ICMP CRITICAL + discarded NRPE/pull cpu/memory/disk/load for cloud VMs.
+            if (! $this->shouldUseAgentTelemetry($host) && $this->shouldPreferAgentTelemetryPath($host)) {
+                app(\App\Services\DefaultMonitoringProfileService::class)
+                    ->attachAgentTelemetryChecks($host, (int) $workspaceId);
+                app(\App\Services\PlatformAgent\AgentHostLinker::class)
+                    ->forceTelemetryOnMetricServices($host);
+                $host->refresh();
+                $host->load(['services' => fn ($q) => $q->where('enabled', true)]);
+            }
+
             // Platform Agent hosts: use push telemetry, never SSH/pull plugins
             if ($this->shouldUseAgentTelemetry($host)) {
                 $existingForWorkspace = $existingByWorkspace[$workspaceId] ?? [];
@@ -498,6 +509,30 @@ class RunObserveChecks extends Command
             $source = (string) ($service->check_source ?? '');
             $command = (string) ($service->check_command ?? '');
             if ($source === AgentConstants::CHECK_SOURCE_PLATFORM_AGENT || $command === 'platform_agent_telemetry') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Prefer agent telemetry for non-local hosts that already have metric inventory
+     * (or a public IP), instead of ICMP-only Host-Alive.
+     */
+    private function shouldPreferAgentTelemetryPath(ObserveTargetHost $host): bool
+    {
+        if ($host->isLocalLoopback()) {
+            return false;
+        }
+
+        if (trim((string) ($host->public_ip ?? '')) !== '') {
+            return true;
+        }
+
+        foreach ($host->services as $service) {
+            $key = strtolower((string) ($service->service_key ?? $service->name ?? ''));
+            if (in_array($key, ['cpu', 'memory', 'disk', 'load', 'uptime'], true)) {
                 return true;
             }
         }

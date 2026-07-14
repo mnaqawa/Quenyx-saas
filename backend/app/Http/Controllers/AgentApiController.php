@@ -180,29 +180,63 @@ class AgentApiController extends Controller
             $publicIp = $validated['public_ip'] ?? null;
             // Inventory address prefers private IP; reachability uses public_ip when set (see reachableAddress()).
             $hostAddress = $privateIp ?: ($publicIp ?: $validated['hostname']);
-            $targetHost = null;
-            for ($i = 0; $i < 3; $i++) {
-                $name = $i === 0 ? $hostName : $hostName . '-' . substr($agentId, 0, 8);
-                try {
-                    $createHost = [
-                        'workspace_id' => $agent->workspace_id,
-                        'name' => $name,
-                        'address' => $hostAddress,
-                        'public_ip' => $publicIp,
-                        'agent_id' => $agent->id,
-                        'source' => 'agent',
-                        'enabled' => true,
-                    ];
-                    if (Schema::hasColumn('observe_targets_hosts', 'ip_locked')) {
-                        $createHost['ip_locked'] = false;
+
+            // Re-enrollment after workspace repair: link to existing inventory by IP/hostname.
+            $targetHost = ObserveTargetHost::query()
+                ->where('workspace_id', $agent->workspace_id)
+                ->where(function ($q) use ($privateIp, $publicIp, $hostName, $hostAddress) {
+                    if ($publicIp) {
+                        $q->orWhere('public_ip', $publicIp)->orWhere('address', $publicIp);
                     }
-                    $targetHost = ObserveTargetHost::create($createHost);
-                    app(DefaultMonitoringProfileService::class)->attachToHost($targetHost, (int) $agent->workspace_id);
-                    break;
-                } catch (\Illuminate\Database\QueryException $e) {
-                    $msg = $e->getMessage();
-                    if (strpos($msg, 'Duplicate') === false && strpos($msg, '23000') === false && strpos($msg, 'unique') === false) {
-                        throw $e;
+                    if ($privateIp) {
+                        $q->orWhere('address', $privateIp)->orWhere('public_ip', $privateIp);
+                    }
+                    if ($hostAddress) {
+                        $q->orWhere('address', $hostAddress);
+                    }
+                    if ($hostName) {
+                        $q->orWhere('name', $hostName)
+                            ->orWhere('name', 'Web-Server')
+                            ->orWhere('name', 'like', $hostName.'%');
+                    }
+                })
+                ->orderByDesc('id')
+                ->first();
+
+            if ($targetHost) {
+                $targetHost->forceFill([
+                    'agent_id' => $agent->id,
+                    'source' => 'agent',
+                    'enabled' => true,
+                    'public_ip' => $targetHost->public_ip ?: $publicIp,
+                    'address' => $targetHost->address ?: $hostAddress,
+                ])->save();
+                app(DefaultMonitoringProfileService::class)->attachToHost($targetHost->fresh(), (int) $agent->workspace_id);
+                app(\App\Services\PlatformAgent\AgentHostLinker::class)->forceTelemetryOnMetricServices($targetHost->fresh());
+            } else {
+                for ($i = 0; $i < 3; $i++) {
+                    $name = $i === 0 ? $hostName : $hostName.'-'.substr($agentId, 0, 8);
+                    try {
+                        $createHost = [
+                            'workspace_id' => $agent->workspace_id,
+                            'name' => $name,
+                            'address' => $hostAddress,
+                            'public_ip' => $publicIp,
+                            'agent_id' => $agent->id,
+                            'source' => 'agent',
+                            'enabled' => true,
+                        ];
+                        if (Schema::hasColumn('observe_targets_hosts', 'ip_locked')) {
+                            $createHost['ip_locked'] = false;
+                        }
+                        $targetHost = ObserveTargetHost::create($createHost);
+                        app(DefaultMonitoringProfileService::class)->attachToHost($targetHost, (int) $agent->workspace_id);
+                        break;
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        $msg = $e->getMessage();
+                        if (strpos($msg, 'Duplicate') === false && strpos($msg, '23000') === false && strpos($msg, 'unique') === false) {
+                            throw $e;
+                        }
                     }
                 }
             }
