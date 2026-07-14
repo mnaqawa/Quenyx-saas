@@ -14,7 +14,22 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
-        Project::query()->delete();
+        // Never wipe all workspaces — that recreates "Production Env" under a new id
+        // and cascades deletes of observe hosts / agents.
+        if (app()->environment('production') || Project::query()->exists()) {
+            $owner = User::query()->first();
+            if (! $owner) {
+                return;
+            }
+            foreach (['Production Env', 'Staging Env'] as $name) {
+                Project::firstOrCreate(
+                    ['name' => $name, 'owner_id' => $owner->id],
+                    ['status' => 'active']
+                );
+            }
+
+            return;
+        }
 
         $owner = User::query()->first();
         if (! $owner) {

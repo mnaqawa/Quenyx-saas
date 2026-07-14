@@ -101,10 +101,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       const stored = localStorage.getItem(STORAGE_KEY)
       const storedId = stored || null
+      // Prefer explicit localStorage when still valid; otherwise lowest-id "Production Env", then first workspace.
+      const productionPreferred = [...projects]
+        .filter((workspace) => workspace.name === 'Production Env')
+        .sort((a, b) => Number(a.id) - Number(b.id))[0]
       const validId =
         storedId && projects.some((workspace) => String(workspace.id) === storedId)
           ? storedId
-          : projects[0] ? String(projects[0].id) : null
+          : productionPreferred
+            ? String(productionPreferred.id)
+            : projects[0]
+              ? String(projects[0].id)
+              : null
       setSelectedWorkspaceIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, validId)
