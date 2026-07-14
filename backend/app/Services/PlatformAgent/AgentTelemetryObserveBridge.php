@@ -442,8 +442,13 @@ class AgentTelemetryObserveBridge
         ];
 
         if ($existing) {
-            if ($existing->state !== $state) {
+            if (strtolower((string) $existing->state) !== $state) {
                 $data['last_state_change_at'] = $checkedAt;
+                $data['duration_sec'] = 0;
+            } else {
+                $changedAt = $existing->last_state_change_at ?? $checkedAt;
+                $data['last_state_change_at'] = $changedAt;
+                $data['duration_sec'] = max(0, (int) $changedAt->diffInSeconds($checkedAt));
             }
             $existing->update($data);
 
@@ -451,6 +456,7 @@ class AgentTelemetryObserveBridge
         }
 
         $data['last_state_change_at'] = $checkedAt;
+        $data['duration_sec'] = 0;
 
         return ObserveService::create($data);
     }
