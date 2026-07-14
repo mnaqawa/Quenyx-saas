@@ -35,15 +35,20 @@ import type {
   ObserveServicesResponse,
   ObserveServiceRow,
 } from '../types/observe'
+import { hostRollupStatus, shortHostName } from '../lib/observeHostUtils'
 
 // Data source toggle: use fixtures if VITE_OBSERVE_USE_FIXTURES=true, otherwise use real API
 const USE_FIXTURES = import.meta.env.VITE_OBSERVE_USE_FIXTURES === 'true' || false
 
-const statusOrder = (s: string) =>
-  ['critical', 'warning', 'unknown', 'unreachable', 'pending', 'ok'].indexOf(s.toLowerCase())
+const statusOrder = (s: string) => {
+  const i = ['critical', 'unreachable', 'warning', 'unknown', 'pending', 'ok'].indexOf(s.toLowerCase())
+  return i === -1 ? 99 : i
+}
 
 function pickWorstStatusString(statuses: string[]): string {
-  return statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b), 'pending')
+  if (statuses.length === 0) return 'pending'
+  // Do not seed with 'pending' — that incorrectly wins over 'ok' once 2+ services exist.
+  return statuses.reduce((a, b) => (statusOrder(a) <= statusOrder(b) ? a : b))
 }
 
 function extractTargetsList(list: unknown): Array<{ name: string; address: string }> {
@@ -648,16 +653,19 @@ export function useObserveMapHosts(workspaceId: string | null, refetchIntervalMs
   }, [workspaceId, refetchIntervalMs, refreshKey])
 
   const hostToStatus = useMemo(() => {
-    const map = new Map<string, string>()
-    if (!servicesData?.items) return map
-    const prefix = workspaceId ? `ws${workspaceId}-` : ''
+    const byHost = new Map<string, ObserveServiceRow[]>()
+    if (!servicesData?.items) return new Map<string, string>()
     for (const item of servicesData.items) {
       const row = item as ObserveServiceRow
-      const hostName = row.host?.startsWith(prefix) ? row.host.slice(prefix.length) : row.host
+      const hostName = shortHostName(row.host ?? '', workspaceId)
       if (!hostName) continue
-      const current = map.get(hostName)
-      const s: string = row.status ?? 'pending'
-      map.set(hostName, current ? pickWorstStatusString([current, s]) : s)
+      const list = byHost.get(hostName) ?? []
+      list.push(row)
+      byHost.set(hostName, list)
+    }
+    const map = new Map<string, string>()
+    for (const [hostName, rows] of byHost) {
+      map.set(hostName, hostRollupStatus(rows))
     }
     return map
   }, [servicesData?.items, workspaceId])

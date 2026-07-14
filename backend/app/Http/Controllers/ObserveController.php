@@ -1108,7 +1108,7 @@ class ObserveController extends Controller
                 $connections[] = array_merge($c, ['source_origin' => 'integration', 'integration' => $integrationName]);
             }
         }
-        return ['nodes' => $nodes, 'connections' => $connections];
+        return ['nodes' => $nodes, 'connections' => $connections, 'service_stats' => $observeData['service_stats'] ?? []];
     }
 
     /**
