@@ -17,21 +17,39 @@ if ($host === '') {
 }
 
 $isLocal = observe_is_local_host($host);
+$loadRaw = '';
+$parsed = false;
+$load1 = $load5 = $load15 = 0.0;
 
 if ($isLocal) {
-    $load = is_readable('/proc/loadavg') ? file_get_contents('/proc/loadavg') : '';
+    if (function_exists('sys_getloadavg')) {
+        $avg = @sys_getloadavg();
+        if (is_array($avg) && count($avg) >= 3) {
+            $load1 = (float) $avg[0];
+            $load5 = (float) $avg[1];
+            $load15 = (float) $avg[2];
+            $parsed = true;
+        }
+    }
+    if (! $parsed && is_readable('/proc/loadavg')) {
+        $loadRaw = (string) file_get_contents('/proc/loadavg');
+    }
 } else {
-    $cmd = "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no " . escapeshellarg($host) . " 'cat /proc/loadavg 2>/dev/null'";
-    $load = (string) @shell_exec($cmd);
+    $cmd = "ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o BatchMode=yes "
+        .escapeshellarg($host)
+        ." 'cat /proc/loadavg 2>/dev/null'";
+    $loadRaw = (string) @shell_exec($cmd);
 }
 
-$load1 = $load5 = $load15 = 0.0;
-if (preg_match('/^([\d.]+)\s+([\d.]+)\s+([\d.]+)/', trim($load), $m)) {
+if (! $parsed && preg_match('/^([\d.]+)\s+([\d.]+)\s+([\d.]+)/', trim($loadRaw), $m)) {
     $load1 = (float) $m[1];
     $load5 = (float) $m[2];
     $load15 = (float) $m[3];
+    $parsed = true;
 }
-if ($load1 === 0.0 && $load5 === 0.0 && $load15 === 0.0) {
+
+// Genuine idle hosts report 0.00 load — that is OK, not UNKNOWN.
+if (! $parsed) {
     echo "UNKNOWN - Could not read load average for {$host}\n";
     exit(3);
 }
