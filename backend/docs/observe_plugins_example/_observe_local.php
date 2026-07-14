@@ -11,11 +11,24 @@ if (! function_exists('observe_is_local_host')) {
             return false;
         }
 
-        $locals = ['localhost', '127.0.0.1', '::1'];
+        $locals = ['localhost', '127.0.0.1', '::1', '0.0.0.0'];
         if (function_exists('gethostname')) {
             $hn = strtolower(trim((string) gethostname()));
             if ($hn !== '') {
                 $locals[] = $hn;
+                // CloudQuenyx / short hostname variants
+                if (str_contains($hn, '.')) {
+                    $locals[] = explode('.', $hn, 2)[0];
+                }
+            }
+        }
+        if (function_exists('php_uname')) {
+            $n = strtolower(trim((string) php_uname('n')));
+            if ($n !== '') {
+                $locals[] = $n;
+                if (str_contains($n, '.')) {
+                    $locals[] = explode('.', $n, 2)[0];
+                }
             }
         }
         if (function_exists('gethostbyname')) {
@@ -25,6 +38,6 @@ if (! function_exists('observe_is_local_host')) {
             }
         }
 
-        return in_array($host, $locals, true);
+        return in_array($host, array_values(array_unique($locals)), true);
     }
 }

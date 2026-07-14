@@ -7,6 +7,7 @@ import { QuenyxAiButton } from '../../components/observe/intelligence/QuenyxAiBu
 import { ObservePageToolbar } from '../../components/observe/ObservePageToolbar'
 import { ServiceDetailsDrawer } from '../../components/observe/ServiceDetailsDrawer'
 import { useObserveAutoRefresh } from '../../hooks/useObserveAutoRefresh'
+import { formatObserveDuration, resolveObserveDurationSec } from '../../lib/observeDuration'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useAiAgentAvailable } from '../../hooks/useAiAgentAvailable'
 import { useObserveAccess } from '../../hooks/useObserveAccess'
@@ -37,21 +38,6 @@ function checkSortOrder(serviceName: string): number {
 function treeBranch(index: number, total: number): string {
   if (total <= 1) return '└ '
   return index === total - 1 ? '└ ' : '├ '
-}
-
-function formatDuration(seconds: number): string {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = seconds % 60
-
-  const parts: string[] = []
-  if (days > 0) parts.push(`${days}d`)
-  if (hours > 0) parts.push(`${hours}h`)
-  if (minutes > 0) parts.push(`${minutes}m`)
-  if (secs > 0 && parts.length < 3) parts.push(`${secs}s`)
-
-  return parts.join(' ') || '0s'
 }
 
 function formatDateTime(dateString: string | null | undefined, locale: string): string {
@@ -521,7 +507,11 @@ export default function Services() {
                           <td className="px-3 py-2.5 text-[13px] text-white/70 font-mono tabular-nums">
                             {formatDateTime(item.lastCheckAt, language)}
                           </td>
-                          <td className="px-3 py-2.5 text-[13px] text-white/70">{formatDuration(item.durationSec)}</td>
+                          <td className="px-3 py-2.5 text-[13px] text-white/70">
+                            {formatObserveDuration(
+                              resolveObserveDurationSec(item.durationSec, item.lastStateChangeAt),
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 text-center text-[13px] text-white/70 font-mono">{item.attempt}</td>
                           <td className="px-3 py-2.5 text-[13px] text-white/70">
                             <div className="line-clamp-2" title={output}>

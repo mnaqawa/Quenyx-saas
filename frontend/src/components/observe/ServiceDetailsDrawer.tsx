@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { formatObserveDuration, resolveObserveDurationSec } from '../../lib/observeDuration'
 import { observeService } from '../../services/observeService'
 import type { AlertHistoryEvent, MonitoringProfileCheck, ObserveServiceRow } from '../../types/observe'
 
@@ -143,7 +144,11 @@ export function ServiceDetailsDrawer({
             </div>
             <div>
               <span className="text-xs text-white/50">{t('services.drawer.duration')}</span>
-              <p>{service.durationSec != null ? `${service.durationSec}s` : '—'}</p>
+              <p>
+                {formatObserveDuration(
+                  resolveObserveDurationSec(service.durationSec, service.lastStateChangeAt),
+                )}
+              </p>
             </div>
           </div>
 
