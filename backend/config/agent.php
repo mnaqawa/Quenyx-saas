@@ -35,8 +35,11 @@ return [
     'policy' => [
         'version' => env('AGENT_POLICY_VERSION', '1.0.0'),
         'platform_version' => env('PLATFORM_VERSION', '1.0.0'),
-        'latest_agent_version' => env('AGENT_LATEST_VERSION', '1.0.0'),
-        'supported_agent_versions' => ['1.0.0', '1.1.0'],
+        'latest_agent_version' => env('AGENT_LATEST_VERSION', '1.0.1'),
+        // Floor for support — agents below this are unsupported_version.
+        'min_supported_agent_version' => env('AGENT_MIN_SUPPORTED_VERSION', '1.0.0'),
+        // Informational allowlist returned in policy payload / installer docs.
+        'supported_agent_versions' => ['1.0.0', '1.0.1', '1.1.0'],
     ],
 
     'configuration' => [

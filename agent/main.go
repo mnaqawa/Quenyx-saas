@@ -8,7 +8,7 @@ import (
 	"github.com/quenyx/agent/internal/cli"
 )
 
-var version = "1.0.0"
+var version = "1.0.1"
 
 func main() {
 	ver := flag.Bool("version", false, "Print version")

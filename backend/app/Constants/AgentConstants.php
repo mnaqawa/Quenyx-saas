@@ -152,5 +152,5 @@ class AgentConstants
 
     public const AGENT_TYPE = 'quenyx_platform_agent';
 
-    public const AGENT_VERSION = '1.0.0';
+    public const AGENT_VERSION = '1.0.1';
 }
