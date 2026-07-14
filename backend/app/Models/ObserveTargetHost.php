@@ -196,6 +196,9 @@ class ObserveTargetHost extends Model
         $resolvedMode = ($public !== '' && $address === $public) ? 'public' : 'private';
 
         return ['ok' => true, 'address' => $address, 'mode' => $resolvedMode, 'error' => null];
+    }
+
+    /**
      * True when this host is the platform itself (local plugins are safe / expected).
      */
     public function isLocalLoopback(): bool
