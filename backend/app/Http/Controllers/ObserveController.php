@@ -240,6 +240,14 @@ class ObserveController extends Controller
             $output = $service->output ?? '';
             $pluginOutput = $service->plugin_output ?? '';
             $statusInfo = $output !== '' ? $output : $pluginOutput;
+            // Duration = time spent in the current state (live), not a frozen snapshot from last check run.
+            $durationSec = 0;
+            if ($service->last_state_change_at) {
+                $durationSec = max(0, (int) $service->last_state_change_at->diffInSeconds(now()));
+            } elseif (is_numeric($service->duration_sec)) {
+                $durationSec = max(0, (int) $service->duration_sec);
+            }
+
             return [
                 'host' => $service->host_name,
                 'service' => $service->service_name,
@@ -247,7 +255,7 @@ class ObserveController extends Controller
                 'state_code' => $stateCode($service->state),
                 'lastCheckAt' => $service->last_check_at?->toIso8601String() ?? '',
                 'nextCheckAt' => $service->next_check_at?->toIso8601String() ?? '',
-                'durationSec' => $service->duration_sec ?? 0,
+                'durationSec' => $durationSec,
                 'attempt' => $service->attempt ?? '1/3',
                 'currentAttempt' => $service->current_attempt,
                 'maxAttempts' => $service->max_attempts,

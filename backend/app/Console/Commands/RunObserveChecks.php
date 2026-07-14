@@ -70,19 +70,16 @@ class RunObserveChecks extends Command
                 continue;
             }
 
-            // Hard stop: never SSH standard metric checks (cpu/memory/disk/load) — they require an agent.
-            // Leaving them as pull produces Permission denied noise on remote hosts.
-            $host->setRelation(
-                'services',
-                $host->services->filter(function ($service) {
-                    $key = strtolower((string) ($service->service_key ?? $service->name ?? ''));
-                    $isMetric = in_array($key, ['cpu', 'memory', 'disk', 'load', 'uptime'], true);
-                    $isPull = (($service->check_source ?? 'pull') === 'pull')
-                        || (($service->check_command ?? '') === '' && $isMetric);
-
-                    return ! ($isMetric && $isPull);
-                })->values()
-            );
+            // Remote hosts: never SSH/pull standard metric checks (cpu/memory/disk/load/uptime) — they need an agent.
+            // Local Platform (127.0.0.1) must keep running local plugin checks on schedule.
+            if (! $host->isLocalLoopback()) {
+                $host->setRelation(
+                    'services',
+                    $host->services->filter(function ($service) {
+                        return ! $this->isRemotePullMetricService($service);
+                    })->values()
+                );
+            }
 
             $address = $host->reachableAddress();
             if ($address === '') {
@@ -255,7 +252,40 @@ class RunObserveChecks extends Command
             return true;
         }
 
+        // Heal stuck schedules: if last_check is older than 2× interval, force due even if next_check_at drifted.
+        if ($existing->last_check_at !== null) {
+            $staleAfter = max($intervalSec * 2, (int) config('observe.min_check_interval_seconds', 60) * 2);
+            if ($existing->last_check_at->diffInSeconds($now) >= $staleAfter) {
+                return true;
+            }
+        }
+
         return $existing->next_check_at->getTimestamp() <= $now->getTimestamp();
+    }
+
+    /**
+     * Standard host metrics that must not be SSH-pulled on remote (non-loopback) hosts.
+     */
+    private function isRemotePullMetricService($service): bool
+    {
+        $rawKey = strtolower(trim((string) ($service->service_key ?? '')));
+        $rawName = strtolower(trim((string) ($service->name ?? '')));
+        $normalizedName = preg_replace('/^(check[\s_\-]*)/i', '', $rawName) ?? $rawName;
+        $normalizedName = str_replace([' ', '_'], '', $normalizedName);
+
+        $metricTokens = ['cpu', 'memory', 'mem', 'disk', 'space', 'load', 'uptime'];
+        $isMetric = in_array($rawKey, ['cpu', 'memory', 'disk', 'load', 'uptime', 'space'], true)
+            || in_array($normalizedName, $metricTokens, true)
+            || in_array($rawName, ['cpu', 'memory', 'disk', 'load', 'uptime'], true);
+
+        if (! $isMetric) {
+            return false;
+        }
+
+        $source = strtolower((string) ($service->check_source ?? 'pull'));
+        $command = trim((string) ($service->check_command ?? ''));
+
+        return $source === 'pull' || $command === '';
     }
 
     /**
@@ -347,9 +377,11 @@ class RunObserveChecks extends Command
             $payload['duration_sec'] = 0;
         } elseif ($existing !== null && $existing->last_state_change_at) {
             $payload['last_state_change_at'] = $existing->last_state_change_at;
-            $payload['duration_sec'] = (int) $existing->last_state_change_at->diffInSeconds($now);
+            $payload['duration_sec'] = max(0, (int) $existing->last_state_change_at->diffInSeconds($now));
         } else {
-            $payload['duration_sec'] = 0;
+            // First successful persist (or missing history): treat current check as state start.
+            $payload['last_state_change_at'] = $existing?->last_check_at ?? $now;
+            $payload['duration_sec'] = max(0, (int) ($payload['last_state_change_at'])->diffInSeconds($now));
         }
 
         return ObserveService::updateOrCreate(
