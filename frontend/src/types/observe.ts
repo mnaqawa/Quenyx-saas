@@ -137,12 +137,16 @@ export interface PortScanResult {
   host_id: number
   host_name: string
   address: string
+  public_ip?: string | null
   scan: {
     id: number
     status: 'pending' | 'running' | 'completed' | 'failed'
     scanned_at: string | null
     open_ports_count: number | null
     error_message: string | null
+    /** public = black-box, private = white-box */
+    target_mode?: 'public' | 'private' | 'auto' | null
+    scanned_address?: string | null
   } | null
   ports: Array<{
     port: number
@@ -152,6 +156,8 @@ export interface PortScanResult {
     version: string | null
   }>
 }
+
+export type PortScanTargetMode = 'public' | 'private'
 
 export interface CapacityMetric {
   title: string

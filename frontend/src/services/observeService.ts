@@ -98,11 +98,14 @@ export const observeService = {
       ports?: 'top100' | 'all' | 'range'
       portsRange?: string
       protocol?: 'tcp' | 'udp'
+      /** public = black-box from Quenyx, private = white-box internal IP */
+      targetMode?: 'public' | 'private' | 'auto'
     }
   ): Promise<{ scanned: number; total: number; errors: string[] }> {
     const body: Record<string, unknown> = {
       ports: options.ports ?? 'top100',
       protocol: options.protocol ?? 'tcp',
+      target_mode: options.targetMode ?? 'auto',
     }
     if (options.hostIds && options.hostIds.length > 0) {
       body.host_ids = options.hostIds

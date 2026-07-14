@@ -863,12 +863,15 @@ class ObserveController extends Controller
                 'host_id' => $host->id,
                 'host_name' => $host->name,
                 'address' => $host->address,
+                'public_ip' => $host->public_ip ?? null,
                 'scan' => $latestScan ? [
                     'id' => $latestScan->id,
                     'status' => $latestScan->status,
                     'scanned_at' => $latestScan->scanned_at?->toIso8601String(),
                     'open_ports_count' => $latestScan->open_ports_count,
                     'error_message' => $latestScan->error_message,
+                    'target_mode' => $latestScan->target_mode ?? null,
+                    'scanned_address' => $latestScan->scanned_address ?? null,
                 ] : null,
                 'ports' => $ports,
             ];
@@ -880,7 +883,14 @@ class ObserveController extends Controller
     /**
      * Trigger nmap port scan(s) with custom options.
      * POST /workspaces/{project}/observe/infrastructure/port-scans/run
-     * Body: { host_ids?: number[], ports?: 'top100'|'all'|'range', ports_range?: string, protocol?: 'tcp'|'udp' }
+     * Body: {
+     *   host_ids?: number[],
+     *   ports?: 'top100'|'all'|'range',
+     *   ports_range?: string,
+     *   protocol?: 'tcp'|'udp',
+     *   target_mode?: 'public'|'private'|'auto'
+     * }
+     * target_mode: public = black-box (public IP), private = white-box (private IP).
      */
     public function runPortScans(Request $request, Project $project): JsonResponse
     {
@@ -892,6 +902,7 @@ class ObserveController extends Controller
             'ports' => 'nullable|string|in:top100,all,range',
             'ports_range' => 'nullable|string|max:500',
             'protocol' => 'nullable|string|in:tcp,udp',
+            'target_mode' => 'nullable|string|in:public,private,auto',
         ]);
 
         $hostIds = $validated['host_ids'] ?? null;
@@ -899,6 +910,7 @@ class ObserveController extends Controller
             'ports' => $validated['ports'] ?? 'top100',
             'ports_range' => $validated['ports_range'] ?? '',
             'protocol' => $validated['protocol'] ?? 'tcp',
+            'target_mode' => $validated['target_mode'] ?? 'auto',
         ];
 
         $query = ObserveTargetHost::where('workspace_id', $project->id)->where('enabled', true);
@@ -914,19 +926,37 @@ class ObserveController extends Controller
             ], 400);
         }
 
-        // Dispatch jobs to queue (database/redis). Worker must be running: php artisan queue:work
-        // With sync driver, jobs run in-process; with database driver, jobs run in worker (recommended for long scans)
+        $errors = [];
         foreach ($hosts as $host) {
+            $resolved = $host->resolveScanAddress($options['target_mode']);
+            if (! $resolved['ok']) {
+                $errors[] = $host->name.': '.($resolved['error'] ?? 'No scan address');
+                continue;
+            }
             NmapPortScanJob::dispatch($host->id, $options);
+        }
+
+        $queued = $hosts->count() - count($errors);
+        if ($queued === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hosts could be queued for scanning.',
+                'data' => [
+                    'scanned' => 0,
+                    'total' => $hosts->count(),
+                    'errors' => $errors,
+                ],
+            ], 400);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Scan started. Results will appear when complete—refresh the page or wait for auto-refresh.',
             'data' => [
-                'scanned' => $hosts->count(),
+                'scanned' => $queued,
                 'total' => $hosts->count(),
-                'errors' => [],
+                'errors' => $errors,
+                'target_mode' => $options['target_mode'],
             ],
         ]);
     }

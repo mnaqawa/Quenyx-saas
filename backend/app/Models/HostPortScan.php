@@ -15,6 +15,8 @@ class HostPortScan extends Model
 
     protected $fillable = [
         'host_id',
+        'target_mode',
+        'scanned_address',
         'status',
         'error_message',
         'scanned_at',

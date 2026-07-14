@@ -20,7 +20,7 @@ class NmapPortScanJob implements ShouldQueue
     public int $timeout = 600;
 
     /**
-     * @param  array{ports?: string, ports_range?: string, protocol?: string}  $options
+     * @param  array{ports?: string, ports_range?: string, protocol?: string, target_mode?: string}  $options
      */
     public function __construct(
         public int $hostId,
