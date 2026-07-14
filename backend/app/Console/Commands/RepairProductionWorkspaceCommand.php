@@ -179,12 +179,34 @@ class RepairProductionWorkspaceCommand extends Command
             if ((int) $dupe->id === $canonicalId) {
                 continue;
             }
-            if ($dupe->name === 'Production Env') {
-                $newName = 'Production Env (legacy '.$dupe->id.')';
-                $this->line("Rename project {$dupe->id} → \"{$newName}\"");
+            if ($dupe->name === 'Production Env' || preg_match('/^Production Env \(legacy\b/', (string) $dupe->name)) {
+                $emptyShell = ObserveTargetHost::withTrashed()->where('workspace_id', $dupe->id)->count() === 0
+                    && Agent::withTrashed()->where('workspace_id', $dupe->id)->count() === 0;
+
+                if ($emptyShell) {
+                    $this->line("Delete empty legacy Production Env shell project {$dupe->id}");
+                    if (! $dryRun) {
+                        ProjectMembership::where('project_id', $dupe->id)->delete();
+                        Project::where('id', $dupe->id)->delete();
+                    }
+
+                    continue;
+                }
+
+                if ($dupe->name === 'Production Env') {
+                    $newName = 'Production Env (legacy '.$dupe->id.')';
+                    $this->line("Rename project {$dupe->id} → \"{$newName}\"");
+                    if (! $dryRun) {
+                        $dupe->name = $newName;
+                        $dupe->save();
+                    }
+                }
+                // Drop membership so UI/localStorage cannot keep selecting the empty shell.
                 if (! $dryRun) {
-                    $dupe->name = $newName;
-                    $dupe->save();
+                    $removed = ProjectMembership::where('project_id', $dupe->id)->where('user_id', $user->id)->delete();
+                    if ($removed) {
+                        $this->line("  Removed membership for {$email} on legacy project {$dupe->id}");
+                    }
                 }
             }
 

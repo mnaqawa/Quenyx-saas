@@ -101,23 +101,31 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       const stored = localStorage.getItem(STORAGE_KEY)
       const storedId = stored || null
-      // Prefer explicit localStorage when still valid; otherwise lowest-id "Production Env", then first workspace.
+      // Prefer real "Production Env" (lowest id). Ignore localStorage that still points at a
+      // renamed legacy duplicate (e.g. "Production Env (legacy 1397)") after workspace repair.
       const productionPreferred = [...projects]
         .filter((workspace) => workspace.name === 'Production Env')
         .sort((a, b) => Number(a.id) - Number(b.id))[0]
-      const validId =
-        storedId && projects.some((workspace) => String(workspace.id) === storedId)
-          ? storedId
-          : productionPreferred
-            ? String(productionPreferred.id)
-            : projects[0]
-              ? String(projects[0].id)
-              : null
+      const storedProject = storedId
+        ? projects.find((workspace) => String(workspace.id) === storedId)
+        : undefined
+      const storedIsLegacyProduction =
+        !!storedProject && /^Production Env \(legacy\b/i.test(storedProject.name || '')
+      const storedIsValid =
+        !!storedId &&
+        !!storedProject &&
+        !storedIsLegacyProduction
+      const validId = storedIsValid
+        ? storedId
+        : productionPreferred
+          ? String(productionPreferred.id)
+          : projects[0]
+            ? String(projects[0].id)
+            : null
       setSelectedWorkspaceIdState(validId)
       if (validId) {
         localStorage.setItem(STORAGE_KEY, validId)
       } else {
-        // Clear localStorage if no valid selection
         localStorage.removeItem(STORAGE_KEY)
       }
     } catch (err: unknown) {

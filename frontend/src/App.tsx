@@ -18,6 +18,7 @@ import Register from './pages/Register'
 import InviteAcceptance from './pages/InviteAcceptance'
 import ProtectedRoute from './components/ProtectedRoute'
 import WorkspaceGuard from './components/WorkspaceGuard'
+import { WorkspaceRouteSync } from './components/WorkspaceRouteSync'
 import ObserveLayout from './layouts/ObserveLayout'
 import ObserveRemovedRouteRedirect from './components/observe/ObserveRemovedRouteRedirect'
 import { ObservePageSkeleton } from './components/observe/ObservePageSkeleton'
@@ -92,6 +93,8 @@ function App() {
   const observeRoutes = routesByModule.qynsight || []
 
   return (
+    <>
+      <WorkspaceRouteSync />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -328,6 +331,7 @@ function App() {
         </Route>
       </Route>
     </Routes>
+    </>
   )
 }
 
