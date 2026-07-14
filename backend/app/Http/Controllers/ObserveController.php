@@ -1084,6 +1084,90 @@ class ObserveController extends Controller
         return ['nodes' => $nodes, 'connections' => $connections, 'service_stats' => $serviceStats];
     }
 
+    /**
+     * Host rollup matching frontend hostRollupStatus: Host-Alive drives reachability;
+     * incomplete metrics (unknown) must not mark a live host as pending/unknown.
+     *
+     * @param  array<int, ObserveService>  $rows
+     */
+    private function rollupHostState(array $rows): string
+    {
+        if ($rows === []) {
+            return 'pending';
+        }
+
+        $isHostAlive = static function ($row): bool {
+            $name = strtolower((string) ($row->service_name ?? ''));
+
+            return $name === 'host-alive' || $name === 'host alive' || str_contains($name, 'host-alive');
+        };
+
+        $hostAlive = null;
+        foreach ($rows as $row) {
+            if ($isHostAlive($row)) {
+                $hostAlive = $row;
+                break;
+            }
+        }
+        $hostAliveStatus = strtolower((string) ($hostAlive->state ?? ''));
+
+        if (in_array($hostAliveStatus, ['critical', 'unreachable'], true)) {
+            return 'critical';
+        }
+
+        foreach ($rows as $row) {
+            if (in_array(strtolower((string) $row->state), ['critical', 'unreachable'], true)) {
+                return 'critical';
+            }
+        }
+
+        foreach ($rows as $row) {
+            if (strtolower((string) $row->state) === 'warning') {
+                return 'warning';
+            }
+        }
+
+        if ($hostAliveStatus === 'ok') {
+            return 'ok';
+        }
+
+        $agg = 'ok';
+        $hasHard = false;
+        foreach ($rows as $row) {
+            $state = strtolower((string) $row->state);
+            if (in_array($state, ['unknown', 'pending'], true)) {
+                continue;
+            }
+            $hasHard = true;
+            $agg = $this->worstState($agg, $state);
+        }
+        if ($hasHard) {
+            return $agg;
+        }
+
+        $agg = 'pending';
+        foreach ($rows as $row) {
+            $agg = $this->worstState($agg, strtolower((string) $row->state));
+        }
+
+        return $agg;
+    }
+
+    /** @param array<string, string> $hostToState */
+    private function resolveHostState(array $hostToState, string $name): string
+    {
+        if (isset($hostToState[$name])) {
+            return $hostToState[$name];
+        }
+        foreach ($hostToState as $k => $st) {
+            if (strcasecmp((string) $k, $name) === 0) {
+                return $st;
+            }
+        }
+
+        return 'pending';
+    }
+
     private function worstState(string $a, string $b): string
     {
         $order = ['critical' => 1, 'unreachable' => 2, 'warning' => 3, 'unknown' => 4, 'pending' => 5, 'ok' => 6];
@@ -1094,7 +1178,7 @@ class ObserveController extends Controller
     {
         return match ($state) {
             'ok' => 'Online',
-            'warning' => 'Warning',
+            'warning', 'unknown' => 'Warning',
             'critical', 'unreachable' => 'Critical',
             default => 'Pending',
         };
