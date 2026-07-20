@@ -21,6 +21,8 @@ quenyx-saas/
 ├── backend/          # Laravel API-only backend
 ├── frontend/         # React + TypeScript + Vite frontend
 ├── gateway/          # Node.js API gateway with entitlement enforcement
+├── agent-gateway/    # Quenyx Agent Gateway (QAG) for platform agents
+├── agent/            # Go Quenyx Platform Agent (QPA) source + build
 ├── docs/             # Documentation
 ├── DEPLOYMENT.md      # Full deployment guide (single-node & multi-node)
 └── README.md         # This file
@@ -197,7 +199,7 @@ Gateway will be available at `http://localhost:4000`
 - **Logging**: Request/response logging with token hashing
 
 **Enforced Routes:**
-- `/api/projects/:projectId/integrations*` → requires `shieldintegrations` module
+- `/api/projects/:projectId/integrations*` → requires `qynintegrations` entitlement (legacy alias: `shieldintegrations`)
 
 **Allowed Routes (pass-through):**
 - `/api/projects/:projectId/modules`
@@ -207,7 +209,7 @@ Gateway will be available at `http://localhost:4000`
 
 ## Deployment and production
 
-Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, and QynSight/Nagios gateway options are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, QAG (agent gateway), and native QynSight scheduler requirements are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 **Production checklist (see DEPLOYMENT.md):**
 - Use `composer install --no-dev` and `npm ci` / `npm run build` for backend and frontend.
@@ -218,7 +220,7 @@ Full deployment instructions (single-node and multi-node), Nginx configs, system
 - Run real tests (login, workspace switch, add host, view Observe) before go-live.
 
 **Summary:**
-- **Single-node**: Backend (Laravel), Gateway (Node), Frontend (static build), Nginx, MySQL. Use `npm ci` and `composer install --no-dev` for reproducible installs.
+- **Single-node (recommended for first production):** One host — PHP-FPM Laravel, Node gateway, optional QAG, static frontend, Nginx, MySQL, cron scheduler, queue worker. See **[DEPLOYMENT.md](DEPLOYMENT.md)** §1–11.
 - **Multi-node**: Load balancer → Gateway pool and Backend pool; shared MySQL; optional CDN for frontend.
 - **Gateway**: After code changes, rebuild (`npm run build`) and restart the gateway service so `dist/` is updated.
 
@@ -254,7 +256,7 @@ php artisan db:seed --class=ModuleSeeder
 - **Policies**: Authorization rules
 - **Strict TypeScript**: No logic in React components
 - **Consistent JSON**: All endpoints return `{ success: true/false, data/message }`
-- **Module Catalog**: Only Shield modules (enforced at query level)
+- **Module Catalog**: Quenyx module keys (`qyn*`); legacy `shield*` keys are mapped in the backend
 
 ## API Response Format
 
@@ -280,19 +282,12 @@ All endpoints return consistent JSON:
 
 ### Module Catalog
 
-The system maintains a catalog of Shield modules:
-- QynCore (core module, always included)
+The system maintains a catalog of Quenyx modules (examples):
+- QynCore (platform core; entitlement key, not a sidebar module)
 - QynSight
-- ShieldInventory
-- ShieldRespond
-- ShieldSecure
-- ShieldNotify
-- ShieldVoice
-- ShieldKnowledge
-- ShieldAutomate
-- ShieldBalance
-- ShieldDesk
-- ShieldIntegrations
+- QynAsset, QynRun, QynKnow, QynNotify, QynReact, QynSupport, QynBalance, QynVA
+- QynShield (feature-flagged / hidden until production-ready in GA builds)
+- Integrations page is gated by entitlement key **`qynintegrations`** (external systems only; not a business module)
 
 ### Entitlements
 
@@ -304,7 +299,7 @@ Modules are granted based on:
 ### Gateway Enforcement
 
 The gateway enforces module access for:
-- `/api/projects/:projectId/integrations*` → requires `shieldintegrations`
+- `/api/projects/:projectId/integrations*` → requires `qynintegrations` (legacy alias: `shieldintegrations`)
 
 All other routes pass through without enforcement.
 

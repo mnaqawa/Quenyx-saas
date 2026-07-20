@@ -1,5 +1,9 @@
 # Gateway Internal Routes + Approach 2 Implementation - Verification Guide
 
+> **⚠️ LEGACY — pre‑v1.0.0 Nagios/docker-compose path.** This guide references removed gateway Nagios
+> engines and `docker-compose.nagios.yml`, which are **not** in the current codebase. For production
+> verification use **`DEPLOYMENT.md`** (real testing before go-live), **`docs/quenyx-v1/43_DEPLOYMENT_CHECKLIST_v1.0.md`**, and **`docs/OBSERVE_RUNBOOK.md`** (native QynSight).
+
 ## Files Created/Modified
 
 ### Gateway (3 files)

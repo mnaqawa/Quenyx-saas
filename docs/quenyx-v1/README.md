@@ -10,7 +10,7 @@
 > | Classification | Internal |
 > | Owner | Platform Engineering |
 > | Status | Released |
-> | Last Updated | 2026-06-30 |
+> | Last Updated | 2026-07-21 |
 > | Document Type | Documentation index |
 >
 > **Revision History**
@@ -25,6 +25,7 @@
 | 2.4 | 2026-06-30 | Sprint 24 — **Enterprise Knowledge & Collaboration Platform**: QynKnow/QynSupport/QynNotify unified into shared platform capabilities — **Knowledge Source Registry** (registry-driven, Internal KB live + planned providers), **Enterprise Search** (keyword + semantic over real rows), **Knowledge Graph v2**, **Global Timeline**, **Collaboration Platform** (comments/mentions/participants, polymorphic), **Ticket Intelligence**, **Notification Intelligence** — all AI via `ModuleAiNarrator` (no direct provider calls, no duplicated AI/automation/orchestration). New guides 28–32; docs 05, 07, 08, 11, 12, 18, 21 updated; PDFs regenerated (deterministic CDP builder). |
 | 3.0 | 2026-06-30 | **Documentation Pack v3.0 — v1.0.0 GA.** Sprint 25 — **Enterprise Intelligence Platform**: **Platform Event Bus** (publish/subscribe, audited, async-ready), **Enterprise Context Engine** (one normalized AI context), **QynVA** Enterprise AI Operator, **QynBalance** Cost Intelligence, **Executive Intelligence**, **Enterprise Analytics**, **Platform Health**; full module navigation enabled (sidebar flag removed). New guides 33–40 and release artifacts 41–44; docs 05, 07, 08, 11, 12, 18, 21 updated; all affected PDFs regenerated (deterministic CDP builder). |
 | 3.1 | 2026-06-30 | **GA production-readiness remediation** (Phase 5 certification). Security hardening: configurable CORS allowlist, HTTP security headers (CSP/HSTS/X-Frame-Options/etc.), Sanctum token expiration + daily pruning, login/register rate limiting + timing-attack resistance, post-password-change token revocation. AI hardening: single governed pipeline, prompt-injection defenses, audit logging on the KB path. Platform Event Bus publishers wired across incident/alert/workflow/ticket/knowledge. Performance: KnowledgeGraph N+1 fix, executive read-model dedupe. DevOps: liveness + readiness health endpoints (`/api/health/ready`), verified backup/restore scripts, PHP-FPM deployment guidance, `quenyx:config-check` configuration validation. Frontend: global ErrorBoundary, toast notifications, module icons, navigation/help polish, QynShield kept hidden until production-ready. All RC1 labels removed; status set to GA. No breaking API changes. |
+| 3.2 | 2026-07-21 | **Fresh single-node production deploy sync:** root `DEPLOYMENT.md`, doc 10, checklist 43, `QUENYX_DEPLOYMENT_AND_CHANGES.md`, README — QAG, PHP-FPM, native scheduler intervals, Nagios/docker removed from deploy path; legacy verification docs flagged. Regenerate PDFs/HTML on build host (`scripts/docs/`). |
 
 This pack is the **canonical, definitive documentation set** for Quenyx vOPS HUB at **v1.0.0 (GA)**.
 Every statement here is grounded in the **current production codebase and actually delivered

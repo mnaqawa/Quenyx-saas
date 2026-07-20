@@ -274,3 +274,24 @@ Applied as the final AI Platform polish before Sprint 21 (no new AI behavior; AP
 - [x] Internally consistent roadmap (Phases 1–4 / Sprints 20–25).
 - [x] Document metadata headers on all major documents.
 - [x] External-facing PDFs generated and visually verified.
+
+---
+
+## 11. Addendum — fresh single-node production deploy (2026-07-21)
+
+Aligned operational docs with **v1.0.0 GA** for a greenfield **single-node** production install:
+
+| Document | Changes |
+|---|---|
+| `DEPLOYMENT.md` | Stack table; QAG + systemd; removed Nagios env block; scheduler intervals; `/ready` native engine; production checklist (QAG, `quenyx:config-check`) |
+| `README.md` | `qynintegrations`; agent-gateway in tree; native QynSight deploy pointer |
+| `docs/QUENYX_DEPLOYMENT_AND_CHANGES.md` | Gateway without Nagios/OBSERVE_ENGINE_URL; QAG env; long-running services |
+| `docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md` | PHP-FPM prod; scheduler table; QAG §9b; health/ready |
+| `docs/quenyx-v1/43_DEPLOYMENT_CHECKLIST_v1.0.md` | Single-node pre-flight, config, smoke tests |
+| `docs/quenyx-v1/18_OPERATIONS_RUNBOOK.md` | Scheduler command intervals |
+| `backend/docs/OBSERVE_NATIVE_CHECKS.md` | Rewritten for native-only v1.0.0 |
+| `VERIFICATION_*.md`, `db.config` | Legacy banners |
+
+**Build host:** Regenerate bundled docs for the SPA (`build/docs-html/`, `docs/pdf/`) via `scripts/docs/` after pulling these Markdown updates.
+
+**Not rewritten (historical):** `APPROACH_2_*.md`, `IMPLEMENTATION_*.md`, `OBSERVE_IMPLEMENTATION.md`, `FIXES_SUMMARY.md` — retain for archaeology only.

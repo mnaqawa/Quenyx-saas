@@ -52,10 +52,10 @@ This document lists what was implemented (consistent **Quenyx** branding, securi
 ### Gateway (Node + Express)
 
 - `package.json` — `quenyx-gateway`.
-- `src/entitlementGuard.ts` — workspace + project integration paths, `extractProjectId`.
-- `src/engines/nagiosConfig.ts` — Quenyx Nagios object paths; temp file `quenyx-nagios-cfg-tmp.cfg`.
-- `src/server.ts`, `src/proxy.ts` — unchanged behavior; confirm env in §3.
-- `README.md` — service name examples `quenyx-gateway`.
+- `src/entitlementGuard.ts` — workspace + project integration paths, `extractProjectId`; enforces `qynintegrations`.
+- `src/server.ts`, `src/proxy.ts` — proxy all `/api/*` to `BACKEND_BASE_URL` only (no split observe engine).
+- `README.md` — native QynSight, `GET /ready`, legacy Nagios routes return `410 Gone`.
+- **Removed (v1.0.0):** Nagios config engine, `OBSERVE_ENGINE_URL`, and `docker-compose.nagios.yml` are not part of the current deploy path.
 
 ### Agent (Go)
 
@@ -67,8 +67,8 @@ This document lists what was implemented (consistent **Quenyx** branding, securi
 
 - `LICENSE` — Quenyx proprietary notice.
 - `db.config` — example DDL/comments use Quenyx Admin and `admin@quenyx.test`.
-- `README.md`, `DEPLOYMENT.md`, and other `*.md` in repo and `docs/` — paths and hostnames (e.g. `quenyx-saas`, `quenyx.net`, `quenyx` Nagios object dir).
-- `docker-compose.nagios.yml` — volume `./nagios/config` → `/opt/nagios/etc/objects/quenyx`.
+- `README.md`, `DEPLOYMENT.md`, and other `*.md` in repo and `docs/` — paths and hostnames (e.g. `quenyx-saas`, `quenyx.net`).
+- **Historical only:** root files such as `VERIFICATION_GUIDE.md`, `APPROACH_2_*.md`, and `OBSERVE_IMPLEMENTATION.md` describe the **removed** Nagios/docker-compose path — use **`DEPLOYMENT.md`** and **`docs/OBSERVE_RUNBOOK.md`** for production.
 - `.cursor/skills/engine-tooling-integration/SKILL.md` — Quenyx wording.
 
 ---
@@ -99,9 +99,13 @@ Copy from `gateway/.env.example`:
 
 - `GATEWAY_PORT` — e.g. `4000`.
 - `BACKEND_BASE_URL` — Laravel, e.g. `http://127.0.0.1:8000`.
-- `OBSERVE_ENGINE_URL` (optional) — QynSight observe engine if split.
-- `GATEWAY_INTERNAL_SECRET` — required for `/internal/engines/*`.
-- Nagios: `NAGIOS_CONFIG_DIR`, `NAGIOS_CONTAINER_NAME`, `NAGIOS_BASE_URL`, credentials as needed (see `gateway` README and `docs/OBSERVE_RUNBOOK.md`).
+- `GATEWAY_INTERNAL_SECRET` — **required**; must match backend `GATEWAY_INTERNAL_SECRET`.
+- `ENTITLEMENTS_CACHE_TTL_MS` — optional (default 30000).
+- **Do not set** `OBSERVE_ENGINE_URL` — all `/api/*` (including QynSight) goes to `BACKEND_BASE_URL` only.
+
+### Agent gateway `agent-gateway/.env` (when agents are enabled)
+
+Copy from `agent-gateway/.env.example`. Set `BACKEND_BASE_URL=http://127.0.0.1:8000`. Align backend `AGENT_GATEWAY_*` and `AGENT_REQUIRE_GATEWAY` with your public `:9444` TLS endpoint (see `agent-gateway/README.md`).
 
 ### Frontend `frontend/.env` (build-time)
 
@@ -375,9 +379,9 @@ Deploy the contents of `frontend/dist` to your static host (Nginx, S3+CDN, etc.)
 
 ### 5.6 Long-running services
 
-- **Queue workers:** `php artisan queue:work` (supervisor/systemd).
-- **Scheduler:** `* * * * * cd /path/to/backend && php artisan schedule:run` (per `DEPLOYMENT.md` patterns, updated to your paths and service names).
-- **Nagios** (if used): ensure host bind mount for `./nagios/config` → `/opt/nagios/etc/objects/quenyx` and `nagios.cfg` includes `cfg_dir=.../quenyx/workspaces` as in runbooks.
+- **Queue workers:** `php artisan queue:work` (supervisor/systemd `quenyx-queue.service`).
+- **Scheduler:** `* * * * * cd /path/to/backend && php artisan schedule:run` — runs native QynSight commands (`observe:run-checks` every 2 min, `observe:evaluate-alerts` every 1 min, `observe:run-port-scans` every 5 min). See root `DEPLOYMENT.md` §7.
+- **Agent gateway:** when `AGENT_REQUIRE_GATEWAY=true`, run `agent-gateway` behind Nginx TLS on port 9444.
 
 ### 5.7 Post-deploy checks
 
@@ -411,8 +415,9 @@ If your units still use old names, rename them to match documentation (e.g. `que
 
 | Component | Port / role |
 |-----------|----------------|
-| Laravel | Often `8000` (dev) or PHP-FPM behind Nginx |
-| Gateway | `GATEWAY_PORT` (e.g. `4000`); routes `/api/*` to backend, observe to engine if configured |
-| SPA | Static files, calls API via `VITE_API_BASE_URL` |
+| Laravel | PHP-FPM behind Nginx on `127.0.0.1:8000` (not `artisan serve` in production) |
+| Gateway | `GATEWAY_PORT` (e.g. `4000`); routes `/api/*` to backend only |
+| Agent gateway (QAG) | TLS `:9444` → forwards agent API to Laravel (when agents enabled) |
+| SPA | Static files from `frontend/dist`; API via same-origin `/api` or `VITE_API_BASE_URL` |
 
 This file is the single handover checklist for the Quenyx rebrand, integration security rules, and deployment. Update `DEPLOYMENT.md` in lockstep with your real hostnames and TLS certificates.

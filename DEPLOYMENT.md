@@ -2,7 +2,24 @@
 
 **PROPRIETARY SOFTWARE - Copyright (c) 2026 Quenyx CO. All rights reserved.**
 
-This document describes how to deploy the Quenyx vOPS HUB monorepo (backend, frontend, gateway) for development and production.
+This document describes how to deploy the Quenyx vOPS HUB monorepo (backend, frontend, gateway, optional agent gateway) for development and production.
+
+**Canonical guide for a fresh production install:** use **Single-Node Deployment** (§1–11) on one Ubuntu host. Stack at a glance:
+
+| Service | Role | Typical binding |
+|---------|------|-----------------|
+| Nginx | TLS, SPA (`frontend/dist`), `/api/` → gateway | `:443` (public) |
+| Node gateway | Entitlements + proxy to Laravel | `127.0.0.1:4000` |
+| PHP-FPM + Nginx | Laravel API (`backend/public`) | `127.0.0.1:8000` |
+| MySQL | Application data | `127.0.0.1:3306` |
+| Cron | `php artisan schedule:run` (QynSight native checks) | www-data crontab |
+| systemd `quenyx-queue` | Port scans, RAG jobs | worker process |
+| systemd `quenyx-gateway` | API gateway | see above |
+| **Optional** QAG + Nginx TLS | Platform agents (`AGENT_REQUIRE_GATEWAY=true`) | `:9444` (public) |
+
+QynSight monitoring is **native** (Laravel `observe:run-checks` / `observe:evaluate-alerts`). There is **no** Nagios container or `docker-compose` stack in this repo. See [docs/OBSERVE_RUNBOOK.md](docs/OBSERVE_RUNBOOK.md).
+
+Packaged docs: [docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md](docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md) and [docs/quenyx-v1/43_DEPLOYMENT_CHECKLIST_v1.0.md](docs/quenyx-v1/43_DEPLOYMENT_CHECKLIST_v1.0.md).
 
 ## Prerequisites
 
@@ -174,15 +191,50 @@ Ensure **backend/storage/app/agents** exists and is writable by the web server u
 
 Built or pre-placed files in `backend/storage/app/agents/`: `linux-amd64`, `linux-arm64`, `windows-amd64`, `windows-arm64`, `darwin-amd64`, `darwin-arm64`. See `agent/README.md` for manual build commands. If the server cannot build or find a binary, the endpoint returns JSON with a `message` explaining the reason (e.g. "Go binary not found").
 
-**Optional – QynSight / Nagios:**
+**Quenyx Agent Gateway (QAG) — required when `AGENT_REQUIRE_GATEWAY=true` (production default in `.env.example`):**
+
+Agents enroll and send telemetry to QAG, not to Laravel directly. On the same host (or a dedicated ingress):
 
 ```bash
-NAGIOS_BIN=nagios
-NAGIOS_CONFIG_DIR=./nagios/config
-NAGIOS_CONTAINER_NAME=nagios-core
+cd agent-gateway
+npm ci
+npm run build
 ```
 
-See [gateway/README.md](gateway/README.md) for Nagios binary resolution and `GET /ready` checks.
+Set `backend/.env` to your public agent endpoint (example):
+
+```env
+AGENT_GATEWAY_PROTOCOL=https
+AGENT_GATEWAY_HOST=cloud.quenyx.com
+AGENT_GATEWAY_PORT=9444
+AGENT_REQUIRE_GATEWAY=true
+GATEWAY_BASE_URL=https://cloud.quenyx.com
+```
+
+Copy `agent-gateway/.env.example` → `agent-gateway/.env` with `BACKEND_BASE_URL=http://127.0.0.1:8000`. Terminate TLS on Nginx (`listen 9444 ssl`) and proxy to the Node process (default `QAG_PORT=9444`). Full examples: [agent-gateway/README.md](agent-gateway/README.md), [docs/AGENT_ARCHITECTURE.md](docs/AGENT_ARCHITECTURE.md).
+
+Example systemd unit `/etc/systemd/system/quenyx-agent-gateway.service`:
+
+```ini
+[Unit]
+Description=Quenyx Agent Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/quenyx/quenyx-saas/agent-gateway
+Environment="BACKEND_BASE_URL=http://127.0.0.1:8000"
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable with `systemctl enable --now quenyx-agent-gateway`.
+
+**Gateway readiness (native QynSight):** `curl http://127.0.0.1:4000/ready` — observe engine is `"native"`; legacy `/internal/engines/nagios*` returns `410 Gone`. See [gateway/README.md](gateway/README.md).
 
 ### 5. Nginx (single node)
 
@@ -293,7 +345,7 @@ WantedBy=multi-user.target
 
 ### 7. Laravel scheduler (cron) – required for QynSight
 
-The scheduler runs `observe:run-checks` every minute for host/service monitoring. **Without this, Real-time Monitoring and Infrastructure Map will show stale or "never" data.**
+The scheduler runs **`observe:run-checks` every two minutes**, **`observe:evaluate-alerts` every minute**, and **`observe:run-port-scans` every five minutes** (see `backend/app/Console/Kernel.php`). **Without cron + `schedule:run`, Real-time Monitoring and Infrastructure Map will show stale or "never" data.**
 
 Add to the **www-data** user crontab (or the user that runs the backend):
 
@@ -469,7 +521,7 @@ php artisan route:cache
 
 ### Health and monitoring
 
-- Gateway: `GET /health` → `{"status":"ok","service":"gateway"}` (and optionally `GET /ready` for Nagios).
+- Gateway: `GET /health` → `{"status":"ok","service":"gateway"}`; `GET /ready` for native observe engine status.
 - Backend: `GET /api/health`.
 - Monitor ports 4000 (gateway) and 8000 (backend); set alerts on 502/503 and DB connectivity.
 
@@ -498,7 +550,7 @@ Before going live:
 | **Security headers** | `SECURITY_HEADERS_ENABLED=true`; HSTS enabled (served over HTTPS). CSP/Referrer/Permissions policies applied by `SecurityHeaders` middleware |
 | **Login protection** | `AUTH_LOGIN_MAX_ATTEMPTS` / `AUTH_REGISTER_MAX_ATTEMPTS` tuned; login is rate-limited per email + IP |
 | **Sessions** | `SESSION_SECURE_COOKIE=true` (HTTPS only) |
-| **Frontend build** | `VITE_API_BASE_URL` set to your API base (e.g. `https://your-domain/api`) so requests go to gateway |
+| **Frontend build** | Leave `VITE_API_BASE_URL` **empty** for same-origin `/api` behind Nginx, **or** set to your public origin — then **`npm run build`** |
 | **Seeded credentials** | Set `SEED_ADMIN_PASSWORD` before seeding; rotate after first login if required |
 | **Gateway internal secret** | Set strong `GATEWAY_INTERNAL_SECRET` in both backend and gateway env; deployment should fail if missing |
 | **Workspaces** | Seeder creates only **Production Env** and **Staging Env**; adjust in `ProjectSeeder` if needed |
@@ -506,6 +558,8 @@ Before going live:
 | **Gateway** | `BACKEND_BASE_URL` must point to backend (e.g. `http://127.0.0.1:8000` or internal LB URL) |
 | **No dev deps** | Backend: `composer install --no-dev`. Frontend/gateway: use built assets; no dev servers in production |
 | **Laravel scheduler** | Add crontab for `php artisan schedule:run` (see §7). Without it, QynSight checks never run and "Last poll: never" appears |
+| **Agent gateway** | If `AGENT_REQUIRE_GATEWAY=true`, deploy QAG + TLS on `:9444` and set `AGENT_GATEWAY_*` in backend `.env` (see §4) |
+| **Pre-flight** | `php artisan quenyx:config-check --strict` before traffic |
 
 ---
 

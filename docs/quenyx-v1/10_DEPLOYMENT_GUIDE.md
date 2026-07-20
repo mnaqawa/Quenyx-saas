@@ -10,7 +10,7 @@
 > | Classification | Internal |
 > | Owner | DevOps / SRE |
 > | Status | Released |
-> | Last Updated | 2026-06-29 |
+> | Last Updated | 2026-07-21 |
 > | Document Type | Deployment guide |
 >
 > **Revision History**
@@ -19,6 +19,7 @@
 > |---|---|---|
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring scheduler (`observe:run-checks` / `observe:evaluate-alerts`). |
+| 2.1 | 2026-07-21 | Fresh single-node production: PHP-FPM only (no `artisan serve`), QAG, scheduler intervals, Nagios removed from deploy path. |
 
 **Audience:** DevOps, implementation partners.
 **Canonical source:** This consolidates the repo‑root [`DEPLOYMENT.md`](../../DEPLOYMENT.md) and adds
@@ -39,8 +40,10 @@ prevail. **Host‑specific values below are examples — substitute your own.**
 
 ## 2. Ubuntu deployment (single node)
 
-Single host runs: Laravel backend (PHP‑FPM or `artisan serve`), Node gateway, Nginx (serves
-`frontend/dist`, proxies `/api/`), MySQL, queue worker, and the Laravel scheduler.
+Single host runs: Laravel backend (**PHP‑FPM + Nginx on 127.0.0.1:8000** — not `php artisan serve` in
+production), Node gateway, Nginx (serves `frontend/dist`, proxies `/api/`), MySQL, queue worker,
+Laravel scheduler, and optionally **Quenyx Agent Gateway (QAG)** on `:9444` when platform agents are
+enabled (`AGENT_REQUIRE_GATEWAY=true`).
 
 ```bash
 git clone <repo-url> && cd quenyx-saas
@@ -109,13 +112,26 @@ Port scans and **RAG indexing jobs** require a worker:
 
 ## 9. Scheduler
 
-QynSight checks require cron running the Laravel scheduler:
+QynSight checks require cron running **`php artisan schedule:run` every minute** (the cron entry is
+every minute; Laravel then runs scheduled commands at their own intervals):
+
+| Command | Interval |
+|---------|----------|
+| `observe:run-checks` | Every 2 minutes |
+| `observe:evaluate-alerts` | Every minute |
+| `observe:run-port-scans` | Every 5 minutes |
+| `sanctum:prune-expired` | Daily |
 
 ```
 * * * * * cd /path/backend && php artisan schedule:run >> storage/logs/scheduler.log 2>&1
 ```
 
-Without it, monitoring shows "Last poll: never".
+Without scheduler + cron, monitoring shows "Last poll: never".
+
+## 9b. Agent gateway (production agents)
+
+When `AGENT_REQUIRE_GATEWAY=true` in backend `.env`, deploy `agent-gateway/` with TLS on port **9444**
+and set `AGENT_GATEWAY_*` to match. See repo root `DEPLOYMENT.md` §4 and `agent-gateway/README.md`.
 
 ## 10. Cache
 
@@ -178,8 +194,8 @@ Expected corpus: **5 domains, 108 controls, 108 requirements**, active **Revisio
 
 ## 17. Health checks
 
-- Backend: `GET /api/health`.
-- Gateway: `GET /health` → `{"status":"ok","service":"gateway"}` (and `/ready`).
+- Backend: `GET /api/health` (liveness); `GET /api/health/ready` (readiness).
+- Gateway: `GET /health` → `{"status":"ok","service":"gateway"}`; `GET /ready` (native observe engine).
 - Monitor ports 8000 (backend) and 4000 (gateway); alert on 502/503 and DB connectivity.
 
 ## 18. Production checklist
@@ -189,6 +205,7 @@ Expected corpus: **5 domains, 108 controls, 108 requirements**, active **Revisio
 - [ ] CORS restricted to frontend origin; `SANCTUM_STATEFUL_DOMAINS` set.
 - [ ] `GATEWAY_INTERNAL_SECRET` set on both sides.
 - [ ] `SEED_ADMIN_PASSWORD` set; seeded credentials rotated.
+- [ ] `php artisan quenyx:config-check --strict` passes.
 - [ ] Queue worker + scheduler running.
 - [ ] AI/RAG flags reviewed (off unless intended; tenant‑evidence indexing off).
 - [ ] Migrations applied; corpus counts verified.

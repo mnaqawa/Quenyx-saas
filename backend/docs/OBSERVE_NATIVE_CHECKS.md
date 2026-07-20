@@ -1,148 +1,54 @@
-# In-Platform Monitoring (No Nagios Daemon)
+# In-Platform Monitoring (Native QynSight — No Nagios Daemon)
 
-ShieldObserve is the **observe engine** microservice. All access must go **via the gateway**. Auto-checks run via `observe:run-checks` on the scheduler. See **docs/SHIELDOBSERVE_ENGINE_ARCHITECTURE.md** for architecture and gateway-only access.
+> **v1.0.0 GA.** QynSight runs **native** checks inside Laravel. The gateway proxies `/api/*` to the
+> backend only; there is no Nagios container or `docker-compose` stack in this repo. Operational
+> procedures: **`docs/OBSERVE_RUNBOOK.md`**, **`DEPLOYMENT.md`** §7.
 
 ## Validation: Will it work?
 
-**Yes.** You do **not** need to reimplement or analyze the full Nagios Core codebase. The platform already has:
+**Yes.** The platform provides:
 
-- **Data model:** Hosts and services (ObserveTargetHost, ObserveTargetService) with check_args, check_interval, retry_interval.
-- **Command resolution:** ObserveServiceCommandResolver knows how to interpret check_args for HTTP, TCP, and Ping.
-- **Result storage:** ObserveService stores state, last_check_at, next_check_at, output (same table the UI reads).
+- **Data model:** Hosts and services (`ObserveTargetHost`, `ObserveTargetService`) with `check_args`, intervals, and retry policy.
+- **Command resolution:** `ObserveServiceCommandResolver` for HTTP, TCP, Ping, and plugins.
+- **Result storage:** `ObserveService` with `engine_key = 'native'` (same tables the UI reads).
 
-What was missing was **who runs the checks**. Today Nagios runs them and we poll its API; if the poll or Nagios scheduler is misconfigured, the UI goes stale.
+The **scheduler** runs checks via `observe:run-checks` (every **two minutes** in `app/Console/Kernel.php`).
 
-## Approach: Native check runner inside the platform
+## Approach: Native check runner
 
-1. **Scheduler** – Laravel schedule runs `observe:run-checks` every minute (or more often).
-2. **Runner** – For each enabled target service whose "next check" time is due (or never run), the app runs the check **inside the app**:
-   - **HTTP:** PHP HTTP client to `host:port/path`, compare status to expected (e.g. 200).
-   - **TCP:** PHP socket connect to `host:port`.
-   - **Ping:** Execute system `ping` (or a simple socket) and parse RTA/loss.
-3. **Result** – Map exit/response to state (ok / warning / critical), set last_check_at, next_check_at, output; upsert into ObserveService with `engine_key = 'native'`.
-4. **UI** – Unchanged; it already reads ObserveService. No gateway, no Nagios daemon, no poll from Nagios.
-
-## What is *not* reimplemented (and not required for this)
-
-- Full Nagios Core (flapping, downtime windows, event handlers, distributed checks, etc.).
-- Nagios plugins as binaries (we use native PHP/HTTP/sockets instead).
-- Nagios web UI or CGIs.
+1. **Scheduler** — Cron runs `php artisan schedule:run` every minute; Laravel invokes `observe:run-checks` on its schedule.
+2. **Runner** — For each due target service, the app runs the check in PHP (HTTP client, TCP socket, ping, or plugin script).
+3. **Result** — Map to ok / warning / critical; update `last_check_at`, `next_check_at`, `output`; upsert `ObserveService`.
+4. **UI** — Reads `ObserveService`; no external daemon required.
 
 ## Engine mode
 
-- **Native only:** Use `observe:run-checks` on a schedule; do not start Nagios or the gateway for observe. Services page shows data from `engine_key = 'native'`.
-- **Nagios (optional):** Keep Publish + gateway + poll for teams that still want Nagios. You can run both and show both in the UI, or switch to native only.
+- **Native only (production default):** Use `observe:run-checks` + `observe:evaluate-alerts` on the scheduler. Do **not** set `OBSERVE_ENGINE_URL` on the gateway.
+- **Legacy Nagios:** Removed as a platform dependency. Gateway returns `410 Gone` for `/internal/engines/nagios*`.
 
-## Stop Nagios for native-only testing
+## Verify on a fresh deploy
 
-You do **not** need Nagios when using the native engine. To test without Nagios:
+1. Confirm crontab for `schedule:run` (see `DEPLOYMENT.md` §7).
+2. Wait 2–3 minutes; check `backend/storage/logs/scheduler.log` for `observe:run-checks` output.
+3. Manual run:
 
-1. **Stop the Nagios container:**
    ```bash
-   docker-compose -f docker-compose.nagios.yml down
-   ```
-2. **Optional:** Stop or disable the observe poll so it does not try to reach the gateway:
-   - Comment out or remove the `observe:poll` schedule in `app/Console/Kernel.php`, or
-   - Leave it; it will set `engine_unreachable` for nagios but native data will still show (deduped, native preferred).
-3. Ensure the Laravel scheduler is running so `observe:run-checks` runs every minute:
-   ```bash
-   * * * * * cd /path/to/backend && php artisan schedule:run >> /path/to/backend/storage/logs/scheduler.log 2>&1
-   ```
-   (Use `>> /dev/null 2>&1` only if you do not need scheduler output. Prefer logging for debugging.)
-4. Run checks once manually if needed:
-   ```bash
-   cd backend && php artisan observe:run-checks --workspace_id=84
+   cd backend && php artisan observe:run-checks --workspace_id=<id>
    ```
 
-The Services UI will show native results; "last poll" will reflect the last `observe:run-checks` run.
+The Services UI reflects the last native check run.
 
----
+## Plugins
 
-## Observe plugins (Nagios-style custom scripts)
+Custom plugin scripts (PHP/Perl/shell) receive environment variables from the engine and use Nagios-style exit codes (0/1/2/3). Set **`OBSERVE_PHP_CLI`** in `.env` to the CLI PHP binary (not php-fpm) when plugins need PHP.
 
-The native engine can run **custom plugin scripts** (PHP, Perl, shell) so you can monitor anything the built-in checks don’t cover.
+See **`backend/docs/OBSERVE_READY_PLUGINS.md`** for ready-made check types.
 
-### How it works
+## Related commands
 
-- **Plugin directory:** Scripts live under the configured plugins dir (default: `storage/app/observe_plugins`). Set `OBSERVE_PLUGINS_DIR` in `.env` to override (path relative to `storage_path()` or absolute).
-- **Service type:** Add a service with **service_key** `plugin` and **check_args** containing at least `plugin` (script name or path relative to plugins dir). Other keys in `check_args` are passed to the script as JSON in `OBSERVE_CHECK_ARGS`.
-- **Execution:** The engine runs the script with environment variables set (see below), waits for exit (timeout from `observe.plugin_timeout_seconds`), then maps **exit code** to status and uses **stdout** as the check output.
-
-### Environment variables passed to plugins
-
-| Variable | Description |
-|----------|-------------|
-| `OBSERVE_HOST_ADDRESS` | Host IP or hostname from the monitored target |
-| `OBSERVE_HOST_NAME` | Scoped host name (e.g. `ws84-MyHost`) |
-| `OBSERVE_SERVICE_NAME` | Service name (e.g. `Disk /`) |
-| `OBSERVE_WORKSPACE_ID` | Workspace ID |
-| `OBSERVE_CHECK_ARGS` | JSON object of check_args (e.g. `{"plugin":"check_disk","mount":"/"}`) |
-
-### Exit codes (Nagios convention)
-
-| Code | Status |
-|------|--------|
-| 0 | OK |
-| 1 | Warning |
-| 2 | Critical |
-| 3 | Unknown |
-
-### Output
-
-- **Stdout:** First line is the short status message shown in the UI. Optional: append ` | perfdata` (space-pipe-space) for performance data.
-- **Stderr:** Logged by the engine but not stored as the main output.
-
-### Supported script types
-
-- **PHP:** `script.php` — run with `php script.php`
-- **Perl:** `script.pl` — run with `perl script.pl`
-- **Shell:** `script.sh` (or no extension) — run with `bash script.sh` (or `sh`)
-
-Only scripts inside the plugins directory are allowed; path traversal is blocked.
-
-### Example plugin (PHP)
-
-```php
-#!/usr/bin/env php
-<?php
-// storage/app/observe_plugins/check_disk.php
-$args = json_decode(getenv('OBSERVE_CHECK_ARGS') ?: '{}', true);
-$mount = $args['mount'] ?? '/';
-$host = getenv('OBSERVE_HOST_ADDRESS');
-// ... check disk on $host (e.g. SSH or local if host is localhost) ...
-$free = 50; // percent free
-if ($free >= 20) { echo "DISK OK - {$free}% free\n"; exit(0); }
-if ($free >= 10) { echo "DISK WARNING - {$free}% free\n"; exit(1); }
-echo "DISK CRITICAL - {$free}% free\n"; exit(2);
-```
-
-### Example plugin (shell)
-
-Host must come from the UI (Monitored Targets). Do not hardcode an IP.
-
-```bash
-#!/bin/bash
-# storage/app/observe_plugins/check_myapp.sh
-HOST="${OBSERVE_HOST_ADDRESS:?No host address (set host in Monitored Targets)}"
-PORT=$(echo "${OBSERVE_CHECK_ARGS:-{}}" | php -r 'echo json_decode(file_get_contents("php://stdin"))->port ?? 8080;')
-if curl -sf "http://$HOST:$PORT/health" > /dev/null; then
-  echo "OK - health endpoint responded"
-  exit 0
-else
-  echo "CRITICAL - health endpoint failed"
-  exit 2
-fi
-```
-
-### Adding a plugin service in the UI
-
-1. In **Monitored Targets**, add a service and set its type to **Plugin** (or the service definition with `service_key` = `plugin`).
-2. In check_args (or overrides), set at least:
-   - `plugin`: script name, e.g. `check_disk` or `check_disk.php` (must exist in the plugins dir).
-3. Add any other arguments (e.g. `mount`, `port`); they will be in `OBSERVE_CHECK_ARGS` for the script.
-
----
-
-## Summary
-
-Running the full "core" of checks **inside the platform** is done by a scheduled command that runs HTTP/TCP/Ping checks in PHP and writes to ObserveService. **Plugins** allow custom PHP/Perl/shell scripts to run with variables from the engine and return status. No Nagios daemon required; use `observe:run-checks` and optionally stop Nagios with `docker-compose -f docker-compose.nagios.yml down`.
+| Command | Purpose |
+|---------|---------|
+| `observe:run-checks` | Run due native checks |
+| `observe:evaluate-alerts` | Alert evaluation (every minute) |
+| `observe:run-port-scans` | Scheduled port scans (every five minutes; also uses queue for large scans) |
+| `observe:install-plugins` | Install/sync plugin definitions |

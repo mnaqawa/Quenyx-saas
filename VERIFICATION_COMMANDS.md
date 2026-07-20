@@ -1,5 +1,8 @@
 # ShieldObserve Approach 2 - End-to-End Verification Commands
 
+> **⚠️ LEGACY — pre‑v1.0.0.** Nagios/docker-compose steps below are **obsolete**. Use native monitoring:
+> cron + `observe:run-checks`, gateway `GET /ready`, and **`DEPLOYMENT.md`** §10–11 for health checks.
+
 ## Prerequisites
 
 1. **Start Nagios:**

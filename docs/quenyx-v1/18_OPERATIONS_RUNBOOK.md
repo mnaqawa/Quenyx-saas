@@ -69,8 +69,11 @@ and a Linux host (adjust paths).
 
 ## 7. Scheduler
 
-- Cron must run `php artisan schedule:run` every minute (`crontab -u www-data -l`).
-- If monitoring shows "never": confirm cron, PHP path, and `storage/logs` writability.
+- Cron must run `php artisan schedule:run` **every minute** (`crontab -u www-data -l`).
+- Scheduled commands (see `backend/app/Console/Kernel.php`): `observe:run-checks` **every 2 minutes**,
+  `observe:evaluate-alerts` every minute, `observe:run-port-scans` every 5 minutes,
+  `sanctum:prune-expired` daily.
+- If monitoring shows "never": confirm cron, PHP path, and `storage/logs` writability; inspect `scheduler.log`.
 
 ## 8. SSL
 
