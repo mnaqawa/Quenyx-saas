@@ -21,6 +21,7 @@
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring scheduler (`observe:run-checks` / `observe:evaluate-alerts`). |
 | 2.1 | 2026-07-21 | Fresh single-node production: PHP-FPM only (no `artisan serve`), QAG, scheduler intervals, Nagios removed from deploy path. |
 | 2.2 | 2026-07-21 | OS prerequisite installs (Ubuntu/Debian/RHEL family) documented in root `DEPLOYMENT.md`. |
+| 2.3 | 2026-07-21 | Ubuntu Resolute+: PPA 404 fix; Sury + native `php8.5` methods; `PHPVER` variable. |
 
 **Audience:** DevOps, implementation partners.
 **Canonical source:** This consolidates the repo‑root [`DEPLOYMENT.md`](../../DEPLOYMENT.md) and adds

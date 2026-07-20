@@ -35,14 +35,14 @@ Packaged docs: [docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md](docs/quenyx-v1/10_DEPLOYM
 | Git        | Clone and deploy updates |
 | Optional   | **Go 1.21+** — on-demand agent binary builds; **certbot** — Let’s Encrypt TLS |
 
-Examples below use **`php8.2`** package names and **`/run/php/php8.2-fpm.sock`**. If you install PHP 8.3, substitute `php8.3` / `php8.3-fpm` everywhere (including `systemctl` and Nginx `fastcgi_pass`).
+Examples in §6 systemd/Nginx use **`php8.2-fpm`** and **`/run/php/php8.2-fpm.sock`**. Set **`PHPVER`** to match what you installed (`8.2`, `8.3`, `8.5`, …) and substitute package/service/socket names everywhere (`php${PHPVER}-fpm`, `/run/php/php${PHPVER}-fpm.sock`).
 
 **Install and configure base packages on the server before** [Single-Node Deployment](#single-node-deployment-development--staging). Supported families:
 
 | OS | Tested / documented |
 |----|---------------------|
-| **Ubuntu** 22.04 / 24.04 LTS | Primary reference below |
-| **Debian** 12 (Bookworm) | Same packages as Ubuntu (`apt`) |
+| **Ubuntu** | **22.04 LTS (jammy)**, **24.04 LTS (noble)**, **25.04+ / resolute** — see PHP matrix below (PPA **not** on resolute) |
+| **Debian** 12 (Bookworm) | `packages.sury.org/php` (not Launchpad PPA) |
 | **RHEL** 8 / 9, **Rocky Linux**, **AlmaLinux**, **CentOS Stream** 8 / 9 | `dnf` + Remi PHP module below |
 
 > **Windows/macOS** are fine for **development** (`artisan serve`, `npm run dev`). **Production GA** in this guide assumes **Linux + Nginx + PHP-FPM** as documented in §6.
@@ -76,7 +76,22 @@ Run these on a **fresh** single-node host (as root or with `sudo`). Replace mirr
 
 ---
 
-### Ubuntu 22.04 / 24.04 LTS (and Debian 12)
+### Ubuntu (22.04 LTS and newer)
+
+**Check your release first** (drives which PHP repository works):
+
+```bash
+source /etc/os-release
+echo "Ubuntu $VERSION_ID ($VERSION_CODENAME)"
+```
+
+| Codename | Ubuntu | PHP — use this method |
+|----------|--------|------------------------|
+| `jammy` | 22.04 LTS | **A** Launchpad PPA `ppa:ondrej/php`, **or B** [packages.sury.org](https://packages.sury.org/php/), **or C** distro packages if ≥ 8.2 |
+| `noble` | 24.04 LTS | **A** PPA, **or B** Sury, **or C** native `php8.3-*` / `php8.4-*` from Ubuntu |
+| `plucky`, `resolute`, … | 25.04+ | **Do not use** `ppa:ondrej/php` (404 / no Release file on new codenames). Use **B** Sury **or C** native `php8.5-*` (or whatever `apt` offers ≥ 8.1) |
+
+Quenyx backend requires **PHP 8.1+** (`composer.json`). **8.2 / 8.3** are common in production; **8.5 from Ubuntu archives is fine** on Resolute if you use method **C**.
 
 **1. Base tools**
 
@@ -85,25 +100,86 @@ sudo apt update
 sudo apt install -y git curl unzip ca-certificates gnupg lsb-release
 ```
 
-**2. PHP 8.2 + PHP-FPM** (Ubuntu 22.04 — use Ondřej Surý PPA; 24.04 can use the same PPA or native `php8.3` if preferred)
+**2. PHP** — pick **one** method below (on **resolute**, use **B** or **C** only).
+
+#### If you already added the PPA and `apt update` fails (404 on `resolute`)
+
+Remove the broken PPA, then pick method **B** or **C** below:
 
 ```bash
-sudo add-apt-repository ppa:ondrej/php -y
+sudo add-apt-repository --remove ppa:ondrej/php -y 2>/dev/null || true
+sudo rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list
 sudo apt update
-sudo apt install -y \
-  php8.2-fpm php8.2-cli \
-  php8.2-mysql php8.2-mbstring php8.2-xml php8.2-curl \
-  php8.2-zip php8.2-bcmath php8.2-intl php8.2-gd php8.2-opcache
-sudo systemctl enable --now php8.2-fpm
-php8.2 -v
 ```
 
-Tune FPM pool for production (optional): edit `/etc/php/8.2/fpm/pool.d/www.conf` (`pm`, `pm.max_children`), then `sudo systemctl reload php8.2-fpm`.
+#### Method A — Launchpad PPA (Jammy & Noble only)
+
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+export PHPVER=8.2
+sudo apt install -y \
+  php${PHPVER}-fpm php${PHPVER}-cli \
+  php${PHPVER}-mysql php${PHPVER}-mbstring php${PHPVER}-xml php${PHPVER}-curl \
+  php${PHPVER}-zip php${PHPVER}-bcmath php${PHPVER}-intl php${PHPVER}-gd php${PHPVER}-opcache
+sudo systemctl enable --now php${PHPVER}-fpm
+php${PHPVER} -v
+```
+
+#### Method B — Sury PHP repository (all Ubuntu versions, including Resolute)
+
+Official path when the PPA message says to use [packages.sury.org/php](https://packages.sury.org/php/) (required on **resolute** and recommended on Debian):
+
+```bash
+sudo apt update
+sudo apt install -y lsb-release ca-certificates curl
+sudo curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb
+sudo tee /etc/apt/sources.list.d/php.list <<EOF
+deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main
+EOF
+sudo apt update
+export PHPVER=8.3
+sudo apt install -y \
+  php${PHPVER}-fpm php${PHPVER}-cli \
+  php${PHPVER}-mysql php${PHPVER}-mbstring php${PHPVER}-xml php${PHPVER}-curl \
+  php${PHPVER}-zip php${PHPVER}-bcmath php${PHPVER}-intl php${PHPVER}-gd php${PHPVER}-opcache
+sudo systemctl enable --now php${PHPVER}-fpm
+php${PHPVER} -v
+```
+
+Change `PHPVER` to `8.2`, `8.3`, or `8.4` as offered by `apt-cache search php | grep fpm`.
+
+#### Method C — Ubuntu archive PHP only (simplest on Resolute)
+
+When `apt` already ships a suitable version (your host suggested **`php8.5-cli`**):
+
+```bash
+sudo apt update
+export PHPVER=8.5
+sudo apt install -y \
+  php${PHPVER}-fpm php${PHPVER}-cli \
+  php${PHPVER}-mysql php${PHPVER}-mbstring php${PHPVER}-xml php${PHPVER}-curl \
+  php${PHPVER}-zip php${PHPVER}-bcmath php${PHPVER}-intl php${PHPVER}-gd php${PHPVER}-opcache
+sudo systemctl enable --now php${PHPVER}-fpm
+php${PHPVER} -v
+```
+
+List available FPM packages if unsure:
+
+```bash
+apt-cache search --names-only '^php[0-9\.]+-fpm$' | sort
+```
+
+Tune FPM (optional): `/etc/php/${PHPVER}/fpm/pool.d/www.conf` → `sudo systemctl reload php${PHPVER}-fpm`.
+
+Set **`OBSERVE_PHP_CLI=/usr/bin/php${PHPVER}`** in `backend/.env` when using plugin checks (CLI must match FPM major version).
 
 **3. Composer**
 
 ```bash
-curl -sS https://getcomposer.org/installer | php8.2
+curl -sS https://getcomposer.org/installer | php${PHPVER}
 sudo mv composer.phar /usr/local/bin/composer
 composer --version
 ```
@@ -153,13 +229,21 @@ sudo ufw enable
 **9. Verify toolchain**
 
 ```bash
-php8.2 -m | grep -E 'pdo_mysql|mbstring|bcmath'
+php${PHPVER} -m | grep -E 'pdo_mysql|mbstring|bcmath'
 composer --version
 node -v && npm -v
 mysql --version
 nginx -v
-systemctl is-active php8.2-fpm nginx mysql
+systemctl is-active php${PHPVER}-fpm nginx mysql
 ```
+
+---
+
+### Debian 12 (Bookworm)
+
+Use **Sury** (method **B** above) with `lsb_release -sc` → `bookworm`. Do **not** use the Ubuntu Launchpad PPA on Debian.
+
+Then continue with the same Composer, NodeSource, MySQL, and Nginx steps as in the Ubuntu section.
 
 ---
 
