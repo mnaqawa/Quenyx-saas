@@ -283,7 +283,7 @@ Aligned operational docs with **v1.0.0 GA** for a greenfield **single-node** pro
 
 | Document | Changes |
 |---|---|
-| `DEPLOYMENT.md` | Stack table; QAG + systemd; removed Nagios env block; scheduler intervals; `/ready` native engine; production checklist (QAG, `quenyx:config-check`) |
+| `DEPLOYMENT.md` | Stack table; QAG + systemd; removed Nagios env block; scheduler intervals; `/ready` native engine; production checklist (QAG, `quenyx:config-check`); **§ Host prerequisites — Ubuntu/Debian/RHEL install** |
 | `README.md` | `qynintegrations`; agent-gateway in tree; native QynSight deploy pointer |
 | `docs/QUENYX_DEPLOYMENT_AND_CHANGES.md` | Gateway without Nagios/OBSERVE_ENGINE_URL; QAG env; long-running services |
 | `docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md` | PHP-FPM prod; scheduler table; QAG §9b; health/ready |

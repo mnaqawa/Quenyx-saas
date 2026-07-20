@@ -20,6 +20,7 @@
 > | 1.0 | 2026 | Initial v1 pack (through Sprint 19). |
 > | 2.0 | 2026-06-29 | Aligned to v1.0.0; native monitoring scheduler (`observe:run-checks` / `observe:evaluate-alerts`). |
 | 2.1 | 2026-07-21 | Fresh single-node production: PHP-FPM only (no `artisan serve`), QAG, scheduler intervals, Nagios removed from deploy path. |
+| 2.2 | 2026-07-21 | OS prerequisite installs (Ubuntu/Debian/RHEL family) documented in root `DEPLOYMENT.md`. |
 
 **Audience:** DevOps, implementation partners.
 **Canonical source:** This consolidates the repo‑root [`DEPLOYMENT.md`](../../DEPLOYMENT.md) and adds
@@ -32,11 +33,14 @@ prevail. **Host‑specific values below are examples — substitute your own.**
 
 | Component | Version |
 |---|---|
-| PHP | **8.3** recommended (8.1+ supported); extensions: `mbstring, pdo_mysql, openssl, curl, fileinfo, bcmath` |
+| PHP | **8.2 or 8.3** recommended (8.1+ supported); extensions: `mbstring, pdo_mysql, openssl, curl, fileinfo, bcmath, xml, zip, intl` |
 | Composer | 2.x |
-| Node.js / npm | 18+ LTS or 20+ / npm 9+ (`npm ci`) |
+| Node.js / npm | 18+ LTS or **20 LTS** / npm 9+ (`npm ci`) |
 | MySQL | 8.0+ |
 | Nginx | reverse proxy + static frontend |
+| Git | deploy / updates |
+
+**OS install (Ubuntu, Debian, RHEL/Rocky/Alma/CentOS Stream):** follow **[Host prerequisites — install by OS](../../DEPLOYMENT.md#host-prerequisites--install-by-os)** in the repo-root `DEPLOYMENT.md` before §2 below.
 
 ## 2. Ubuntu deployment (single node)
 

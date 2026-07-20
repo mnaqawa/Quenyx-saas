@@ -209,7 +209,7 @@ Gateway will be available at `http://localhost:4000`
 
 ## Deployment and production
 
-Full deployment instructions (single-node and multi-node), Nginx configs, systemd units, QAG (agent gateway), and native QynSight scheduler requirements are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+Full deployment instructions (single-node and multi-node), **OS prerequisite installs (Ubuntu/Debian/RHEL)**, Nginx configs, systemd units, QAG (agent gateway), and native QynSight scheduler requirements are in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 **Production checklist (see DEPLOYMENT.md):**
 - Use `composer install --no-dev` and `npm ci` / `npm run build` for backend and frontend.

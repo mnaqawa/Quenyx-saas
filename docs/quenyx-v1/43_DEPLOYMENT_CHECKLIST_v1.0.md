@@ -15,6 +15,7 @@
 
 ## 1. Pre-deployment
 
+- [ ] **Host prerequisites** installed per `DEPLOYMENT.md` (PHP-FPM, Composer, Node 20, MySQL 8, Nginx, git) for your OS (Ubuntu / Debian / RHEL family)
 - [ ] Release tag **`v1.0.0`** (or current GA tag) checked out on the production host.
 - [ ] **Single-node stack** planned: Nginx + PHP-FPM (127.0.0.1:8000) + gateway (4000) + MySQL + cron + `quenyx-queue` (+ QAG on :9444 if agents enabled).
 - [ ] Database snapshot/backup taken (or fresh `scripts/mysql-quenyx-setup.sql` for greenfield).

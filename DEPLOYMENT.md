@@ -25,12 +25,280 @@ Packaged docs: [docs/quenyx-v1/10_DEPLOYMENT_GUIDE.md](docs/quenyx-v1/10_DEPLOYM
 
 | Component   | Version / Notes |
 |------------|------------------|
-| PHP        | 8.1+             |
+| PHP        | **8.2 or 8.3** recommended (8.1+ minimum); PHP-FPM + CLI with extensions below |
+| PHP extensions | `mbstring`, `pdo_mysql`, `openssl`, `curl`, `fileinfo`, `bcmath`, `xml`, `zip`, `intl` (and `gd` if you serve images from Laravel) |
 | Composer   | 2.x              |
-| Node.js    | 18+ LTS or 20+   |
-| npm        | 9+ (use `npm ci` for reproducible installs) |
-| MySQL      | 8.0+             |
-| Nginx      | For production (reverse proxy, static frontend, `/api/` to gateway) |
+| Node.js    | 18 LTS or **20 LTS** (recommended for builds) |
+| npm        | 9+ (ships with Node 20; use `npm ci` in CI/deploy) |
+| MySQL      | **8.0+** (MariaDB 10.6+ may work but is not the tested target) |
+| Nginx      | Reverse proxy, static frontend, `/api/` → gateway, optional TLS on `:9444` (QAG) |
+| Git        | Clone and deploy updates |
+| Optional   | **Go 1.21+** — on-demand agent binary builds; **certbot** — Let’s Encrypt TLS |
+
+Examples below use **`php8.2`** package names and **`/run/php/php8.2-fpm.sock`**. If you install PHP 8.3, substitute `php8.3` / `php8.3-fpm` everywhere (including `systemctl` and Nginx `fastcgi_pass`).
+
+**Install and configure base packages on the server before** [Single-Node Deployment](#single-node-deployment-development--staging). Supported families:
+
+| OS | Tested / documented |
+|----|---------------------|
+| **Ubuntu** 22.04 / 24.04 LTS | Primary reference below |
+| **Debian** 12 (Bookworm) | Same packages as Ubuntu (`apt`) |
+| **RHEL** 8 / 9, **Rocky Linux**, **AlmaLinux**, **CentOS Stream** 8 / 9 | `dnf` + Remi PHP module below |
+
+> **Windows/macOS** are fine for **development** (`artisan serve`, `npm run dev`). **Production GA** in this guide assumes **Linux + Nginx + PHP-FPM** as documented in §6.
+
+---
+
+## Host prerequisites — install by OS
+
+Run these on a **fresh** single-node host (as root or with `sudo`). Replace mirror URLs if your policy requires internal mirrors.
+
+### Common after any OS install
+
+1. Set hostname and timezone (example):
+
+   ```bash
+   sudo timedatectl set-timezone UTC
+   ```
+
+2. Create an app tree (adjust path):
+
+   ```bash
+   sudo mkdir -p /var/www/quenyx
+   sudo chown "$USER":"$USER" /var/www/quenyx
+   ```
+
+3. After MySQL is installed, apply Quenyx databases (edit password in the SQL file first):
+
+   ```bash
+   mysql -u root -p < /var/www/quenyx/quenyx-saas/scripts/mysql-quenyx-setup.sql
+   ```
+
+---
+
+### Ubuntu 22.04 / 24.04 LTS (and Debian 12)
+
+**1. Base tools**
+
+```bash
+sudo apt update
+sudo apt install -y git curl unzip ca-certificates gnupg lsb-release
+```
+
+**2. PHP 8.2 + PHP-FPM** (Ubuntu 22.04 — use Ondřej Surý PPA; 24.04 can use the same PPA or native `php8.3` if preferred)
+
+```bash
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+sudo apt install -y \
+  php8.2-fpm php8.2-cli \
+  php8.2-mysql php8.2-mbstring php8.2-xml php8.2-curl \
+  php8.2-zip php8.2-bcmath php8.2-intl php8.2-gd php8.2-opcache
+sudo systemctl enable --now php8.2-fpm
+php8.2 -v
+```
+
+Tune FPM pool for production (optional): edit `/etc/php/8.2/fpm/pool.d/www.conf` (`pm`, `pm.max_children`), then `sudo systemctl reload php8.2-fpm`.
+
+**3. Composer**
+
+```bash
+curl -sS https://getcomposer.org/installer | php8.2
+sudo mv composer.phar /usr/local/bin/composer
+composer --version
+```
+
+**4. Node.js 20 LTS + npm**
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v && npm -v
+```
+
+**5. MySQL 8.0**
+
+```bash
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
+# Harden defaults (set root password, remove test DB, etc.):
+sudo mysql_secure_installation
+```
+
+Create app user/database via `scripts/mysql-quenyx-setup.sql` (or manual grants matching `backend/.env.example`: database `quenyx_dev`, user `quenyx`).
+
+**6. Nginx**
+
+```bash
+sudo apt install -y nginx
+sudo systemctl enable --now nginx
+```
+
+**7. Optional — Go (agent builds), Certbot (TLS)**
+
+```bash
+sudo apt install -y golang-go certbot python3-certbot-nginx
+go version
+```
+
+**8. Firewall (UFW) — example for public web + QAG**
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'    # 80/443
+sudo ufw allow 9444/tcp      # only if Agent Gateway is public on this host
+sudo ufw enable
+```
+
+**9. Verify toolchain**
+
+```bash
+php8.2 -m | grep -E 'pdo_mysql|mbstring|bcmath'
+composer --version
+node -v && npm -v
+mysql --version
+nginx -v
+systemctl is-active php8.2-fpm nginx mysql
+```
+
+---
+
+### RHEL 8 / 9, Rocky Linux, AlmaLinux, CentOS Stream 8 / 9
+
+Package names differ from Debian; PHP comes from **Remi**. Adjust `remi-release-*.rpm` for your major version (`-8.rpm` vs `-9.rpm`).
+
+**1. Base tools**
+
+```bash
+sudo dnf install -y git curl unzip tar ca-certificates
+```
+
+**2. PHP 8.2 + PHP-FPM (Remi)**
+
+```bash
+sudo dnf install -y epel-release
+# RHEL 9 / Rocky 9 / Alma 9 example:
+sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+# RHEL 8 / Rocky 8: use remi-release-8.rpm instead
+
+sudo dnf module reset php -y
+sudo dnf module enable php:remi-8.2 -y
+sudo dnf install -y \
+  php php-fpm php-cli php-mysqlnd php-mbstring php-xml php-curl \
+  php-zip php-bcmath php-intl php-gd php-opcache
+sudo systemctl enable --now php-fpm
+php -v
+```
+
+Default FPM socket is often **`/run/php-fpm/www.sock`** (not `/run/php/php8.2-fpm.sock`). In Nginx and docs, set:
+
+```nginx
+fastcgi_pass unix:/run/php-fpm/www.sock;
+```
+
+**3. Composer**
+
+```bash
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
+composer --version
+```
+
+**4. Node.js 20 LTS**
+
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+node -v && npm -v
+```
+
+**5. MySQL 8**
+
+```bash
+sudo dnf install -y mysql-server
+sudo systemctl enable --now mysqld
+# First start may log temporary root password in /var/log/mysqld.log — change it, then run:
+sudo mysql_secure_installation
+```
+
+Apply `scripts/mysql-quenyx-setup.sql` after root access is configured.
+
+**6. Nginx**
+
+```bash
+sudo dnf install -y nginx
+sudo systemctl enable --now nginx
+```
+
+**7. SELinux (if enforcing)**
+
+Allow Nginx to connect to PHP-FPM and upstream proxy:
+
+```bash
+sudo setsebool -P httpd_can_network_connect 1
+# If you use non-default paths under /var/www:
+sudo semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/quenyx(/.*)?" 2>/dev/null || true
+sudo restorecon -Rv /var/www/quenyx 2>/dev/null || true
+```
+
+(`policycoreutils-python-utils` provides `semanage` if missing.)
+
+**8. App file ownership on RHEL**
+
+Debian examples use **`www-data`**. On RHEL, either:
+
+- Run queue/gateway units as **`nginx`** and `chown -R nginx:nginx backend/storage backend/bootstrap/cache`, **or**
+- Create a matching user: `sudo groupadd -r www-data; sudo useradd -r -g www-data -s /sbin/nologin www-data` and use the same `User=` as in §6.
+
+**9. Firewall (firewalld)**
+
+```bash
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --permanent --add-port=9444/tcp   # if QAG exposed
+sudo firewall-cmd --reload
+```
+
+**10. Optional — Go, Certbot**
+
+```bash
+sudo dnf install -y golang
+# Certbot: use snap or epel certbot package per your distro policy
+```
+
+---
+
+### TLS (all Linux — Let’s Encrypt example)
+
+After Nginx serves your domain on port 80:
+
+```bash
+sudo certbot --nginx -d cloud.quenyx.com
+# Agent gateway hostname (if separate):
+# sudo certbot certonly --nginx -d agents.cloud.quenyx.com
+```
+
+Renewal is typically automatic via systemd timer or cron installed by certbot.
+
+---
+
+### Cron user for Laravel scheduler
+
+Ubuntu/Debian: run scheduler as **`www-data`** (matches PHP-FPM pool user):
+
+```bash
+sudo crontab -u www-data -e
+```
+
+RHEL (if using `nginx` user for PHP-FPM): use `sudo crontab -u nginx -e` and the same `User=` in `quenyx-queue.service`.
+
+---
+
+### Build host note
+
+You may install **Node + npm only** on a CI/build machine to produce `frontend/dist` and copy artifacts to the app server. The **app server** still needs PHP, Composer, MySQL, Nginx, PHP-FPM, Node (for gateway `npm ci` / `dist/`), and optionally Go on the same host unless you pre-build gateway `dist/` as well.
+
+---
 
 ## Single-Node Deployment (Development / Staging)
 
@@ -300,6 +568,7 @@ server {
        location ~ \.php$ {
            include snippets/fastcgi-php.conf;
            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+           # RHEL/Rocky/Alma (Remi php-fpm): often unix:/run/php-fpm/www.sock
            fastcgi_read_timeout 180s;
        }
 
