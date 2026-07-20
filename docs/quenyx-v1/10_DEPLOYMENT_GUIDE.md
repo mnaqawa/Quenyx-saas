@@ -52,7 +52,8 @@ enabled (`AGENT_REQUIRE_GATEWAY=true`).
 
 ```bash
 git clone <repo-url> && cd quenyx-saas
-mysql -u root -p < scripts/mysql-quenyx-setup.sql   # first-time DB setup
+mysql -u root -p < scripts/mysql-quenyx-setup-production.sql   # production: database `quenyx`
+# mysql -u root -p < scripts/mysql-quenyx-setup-dev.sql        # local only
 ```
 
 ## 3. Laravel backend

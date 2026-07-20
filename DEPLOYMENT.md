@@ -68,10 +68,20 @@ Run these on a **fresh** single-node host (as root or with `sudo`). Replace mirr
    sudo chown "$USER":"$USER" /var/www/quenyx
    ```
 
-3. After MySQL is installed, apply Quenyx databases (edit password in the SQL file first):
+3. After MySQL is installed, **edit the password in the SQL file**, then apply databases:
 
    ```bash
-   mysql -u root -p < /var/www/quenyx/quenyx-saas/scripts/mysql-quenyx-setup.sql
+   cd /var/www/quenyx/quenyx-saas   # your clone path
+   nano scripts/mysql-quenyx-setup.sql
+   # Replace both CHANGE_ME strings with one strong password (match backend/.env DB_PASSWORD later)
+
+   mysql -u root -p < scripts/mysql-quenyx-setup.sql
+   ```
+
+   Verify:
+
+   ```bash
+   mysql -u quenyx -p -e "SHOW DATABASES LIKE 'quenyx%';"   # production: expect `quenyx` only
    ```
 
 ---
@@ -201,7 +211,7 @@ sudo systemctl enable --now mysql
 sudo mysql_secure_installation
 ```
 
-Create app user/database via `scripts/mysql-quenyx-setup.sql` (or manual grants matching `backend/.env.example`: database `quenyx_dev`, user `quenyx`).
+Create app user/database via `scripts/mysql-quenyx-setup.sql` — **replace `CHANGE_ME` in the file** (both `CREATE USER` lines) before running; use the same password in `backend/.env` as `DB_PASSWORD`.
 
 **6. Nginx**
 
@@ -210,11 +220,12 @@ sudo apt install -y nginx
 sudo systemctl enable --now nginx
 ```
 
-**7. Optional — Go (agent builds), Certbot (TLS)**
+**7. Optional — Go (agent builds); Certbot package (run Certbot only after §5 Nginx — see §5b)**
 
 ```bash
 sudo apt install -y golang-go certbot python3-certbot-nginx
 go version
+# Do NOT run certbot until port 80 is open and Nginx serves your domain (DEPLOYMENT.md §5b).
 ```
 
 **8. Firewall (UFW) — example for public web + QAG**
@@ -305,7 +316,7 @@ sudo systemctl enable --now mysqld
 sudo mysql_secure_installation
 ```
 
-Apply `scripts/mysql-quenyx-setup.sql` after root access is configured.
+Apply `scripts/mysql-quenyx-setup.sql` after root access is configured (**replace `CHANGE_ME` in the file first**).
 
 **6. Nginx**
 
@@ -352,17 +363,9 @@ sudo dnf install -y golang
 
 ---
 
-### TLS (all Linux — Let’s Encrypt example)
+### TLS (Let’s Encrypt) — see §5b
 
-After Nginx serves your domain on port 80:
-
-```bash
-sudo certbot --nginx -d cloud.quenyx.com
-# Agent gateway hostname (if separate):
-# sudo certbot certonly --nginx -d agents.cloud.quenyx.com
-```
-
-Renewal is typically automatic via systemd timer or cron installed by certbot.
+Do **not** run Certbot until **§5 Nginx** is deployed and **port 80 is reachable from the public internet** (DNS, host firewall, cloud security group). Full checklist: **[§5b TLS (Let’s Encrypt)](#5b-tls-lets-encrypt--after-nginx-on-port-80)**.
 
 ---
 
@@ -397,13 +400,62 @@ cd quenyx-saas
 
 ### 1b. MySQL (first-time or Quenyx rename)
 
-Fresh install:
+**Database naming**
+
+| Environment | MySQL database | Bootstrap script |
+|-------------|----------------|------------------|
+| **Production** | **`quenyx`** | `scripts/mysql-quenyx-setup.sql` or `mysql-quenyx-setup-production.sql` |
+| **Local dev / staging** | `quenyx_dev` | `scripts/mysql-quenyx-setup-dev.sql` |
+| **PHPUnit / CI only** | `quenyx_test` | same dev script (do **not** create on production) |
+
+**Production fresh install**
+
+**1. Edit the bootstrap password** in `scripts/mysql-quenyx-setup.sql`: replace **both** `'CHANGE_ME'` literals in the `CREATE USER` lines.
+
+**2. Apply** (creates database **`quenyx`** only):
 
 ```bash
 mysql -u root -p < scripts/mysql-quenyx-setup.sql
 ```
 
-Existing databases with pre-rebrand names: see `docs/QUENYX_DEPLOYMENT_AND_CHANGES.md` §4.2 and `scripts/migrate-mysql-to-quenyx-databases.sh`.
+**3. Match Laravel** (`backend/.env`):
+
+```env
+APP_ENV=production
+DB_DATABASE=quenyx
+DB_USERNAME=quenyx
+DB_PASSWORD=<same password as in the SQL file>
+```
+
+**4. Test login:**
+
+```bash
+mysql -u quenyx -p quenyx -e "SELECT 1;"
+```
+
+**Already created `quenyx_dev` / `quenyx_test` on production by mistake**
+
+If those databases are **empty** (no migrations yet):
+
+```bash
+mysql -u root -p -e "DROP DATABASE IF EXISTS quenyx_dev; DROP DATABASE IF EXISTS quenyx_test;"
+mysql -u root -p < scripts/mysql-quenyx-setup.sql
+```
+
+If **`quenyx_dev` already has data** (migrations/seeds ran):
+
+```bash
+mysql -u root -p < scripts/mysql-quenyx-rename-to-production.sql
+mysqldump -u root -p --single-transaction quenyx_dev | mysql -u root -p quenyx
+# Update backend/.env: DB_DATABASE=quenyx
+cd backend && php artisan config:clear && php artisan config:cache
+# After verification:
+mysql -u root -p -e "DROP DATABASE quenyx_dev; DROP DATABASE IF EXISTS quenyx_test;"
+```
+
+**Local development** uses `mysql-quenyx-setup-dev.sql` and `DB_DATABASE=quenyx_dev` — see `backend/TESTING.md`.
+
+Existing servers with pre-rebrand **database names** (not `_dev` suffix): `docs/QUENYX_DEPLOYMENT_AND_CHANGES.md` §4.2 and `scripts/migrate-mysql-to-quenyx-databases.sh`.
 
 ### 2. Backend
 
@@ -411,7 +463,7 @@ Existing databases with pre-rebrand names: see `docs/QUENYX_DEPLOYMENT_AND_CHANG
 cd backend
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
-# Edit .env: DB_DATABASE=quenyx_dev, DB_USERNAME=quenyx, DB_PASSWORD=..., APP_URL, etc.
+# Edit .env: DB_DATABASE=quenyx, DB_USERNAME=quenyx, DB_PASSWORD=..., APP_URL, etc.
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
@@ -590,13 +642,19 @@ Enable with `systemctl enable --now quenyx-agent-gateway`.
 
 ### 5. Nginx (single node)
 
-Example: site root = frontend build; `/api/` proxied to gateway.
+Replace **`prod.quenyx.com`** and paths with your domain and install directory (example: `/var/www/quenyx/Quenyx-saas`).
+
+**5a. HTTP site (required before Certbot)**
+
+Create `/etc/nginx/sites-available/quenyx`:
 
 ```nginx
 server {
     listen 80;
-    server_name dev.quenyx.net;
-    root /var/www/quenyx/quenyx-saas/frontend/dist;
+    listen [::]:80;
+    server_name prod.quenyx.com;
+
+    root /var/www/quenyx/Quenyx-saas/frontend/dist;
     index index.html;
 
     location / {
@@ -622,7 +680,71 @@ server {
 }
 ```
 
-### 6. Systemd services
+Enable and test:
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/quenyx /etc/nginx/sites-enabled/quenyx
+sudo rm -f /etc/nginx/sites-enabled/default   # if it conflicts on port 80
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Confirm locally:
+
+```bash
+curl -sI -H 'Host: prod.quenyx.com' http://127.0.0.1/ | head
+```
+
+### 5b. TLS (Let’s Encrypt) — after Nginx on port 80
+
+Certbot failed with **`Timeout during connect (likely firewall problem)`** when **Let’s Encrypt cannot reach your server on port 80**. Fix prerequisites **in this order**:
+
+| Step | Check |
+|------|--------|
+| **DNS** | `prod.quenyx.com` **A record** points to this server’s **public** IP (`dig +short prod.quenyx.com` matches `curl -s ifconfig.me`) |
+| **Cloud security group** | On **Alibaba Cloud / AWS / Azure**, allow **inbound TCP 80 and 443** to this instance (mirrors alone do not open the firewall) |
+| **Host firewall** | `sudo ufw status` — allow `Nginx Full` or `80/tcp` and `443/tcp` **before** Certbot |
+| **Nginx** | Site enabled (§5a), `server_name` matches the domain, `listen 80` |
+| **Services** | Gateway on `4000`, PHP-FPM backend on `8000` (Certbot only needs HTTP for the challenge, but the site should respond) |
+
+```bash
+# Example UFW (if enabled)
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+sudo ufw status
+```
+
+**Verify from the internet** (another machine or an online HTTP checker):
+
+```bash
+curl -sI http://prod.quenyx.com/
+```
+
+You must get an HTTP response (200/301/404), not a timeout.
+
+**Then** request the certificate (install certbot if needed: `sudo apt install -y certbot python3-certbot-nginx`):
+
+```bash
+sudo certbot --nginx -d prod.quenyx.com \
+  --non-interactive --agree-tos -m admin@your-company.com
+```
+
+Certbot edits the Nginx server block to add `listen 443 ssl` and redirects. Reload is automatic.
+
+**Staging test** (optional, avoids rate limits while debugging):
+
+```bash
+sudo certbot --nginx -d prod.quenyx.com --staging --dry-run
+```
+
+**After TLS:** set `APP_URL=https://prod.quenyx.com`, `GATEWAY_BASE_URL=https://prod.quenyx.com`, CORS/Sanctum domains, rebuild frontend if needed, `php artisan config:cache` (see domain change table in §4).
+
+Renewal: Certbot installs a systemd timer or cron; check with `sudo systemctl list-timers | grep certbot`.
+
+**Agent gateway TLS (optional):** separate vhost or `listen 9444 ssl` with `certbot certonly --nginx -d agents.prod.quenyx.com` if you use a dedicated hostname.
+
+---
 
 **Backend (production: PHP-FPM, NOT `php artisan serve`)**
 
@@ -789,7 +911,7 @@ scripts/backup-db.sh /var/backups/quenyx
 scripts/restore-db.sh /var/backups/quenyx/quenyx-<db>-<timestamp>.sql.gz
 
 # Real restore into a target database (interactive confirmation required).
-scripts/restore-db.sh <backup_file.sql.gz> --target quenyx_dev
+scripts/restore-db.sh <backup_file.sql.gz> --target quenyx
 ```
 
 Schedule nightly backups + a weekly restore-verification via cron:
@@ -896,7 +1018,7 @@ Before going live:
 
 | Item | Action |
 |------|--------|
-| **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx`, `DB_PASSWORD` |
+| **Backend .env** | `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`, correct `APP_URL` (HTTPS), `DB_DATABASE=quenyx`, `DB_USERNAME=quenyx`, `DB_PASSWORD` |
 | **Config validation** | Run `php artisan quenyx:config-check` (use `--strict` in CI). Validates AI_ENABLED, AI_PROVIDER, OPENAI_API_KEY, and blocks silent mock in production |
 | **CORS** | Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s) (no `*`); set `SANCTUM_STATEFUL_DOMAINS`. `CORS_SUPPORTS_CREDENTIALS=true` requires an explicit origin |
 | **Token expiry** | `SANCTUM_TOKEN_EXPIRATION_MINUTES` set (default 7 days). Schedule runs `sanctum:prune-expired` daily |

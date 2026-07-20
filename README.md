@@ -84,7 +84,8 @@ In-app **Getting started** (sidebar) links to a short guide. For production depl
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
    DB_PORT=3306
-   DB_DATABASE=quenyx_dev
+   DB_DATABASE=quenyx
+   # Local dev: quenyx_dev (see scripts/mysql-quenyx-setup-dev.sql)
    DB_USERNAME=your_username
    DB_PASSWORD=your_password
    ```

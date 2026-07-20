@@ -8,7 +8,7 @@ This document lists what was implemented (consistent **Quenyx** branding, securi
 
 | Area | What changed |
 |------|----------------|
-| **Branding** | User-facing and internal strings, package names, agent binary and config paths, docs, `LICENSE`, MySQL database/user names (`quenyx_dev`, `quenyx_test`, `quenyx`), seed data, and Go module path use **Quenyx** / `quenyx` consistently. |
+| **Branding** | User-facing and internal strings, package names, agent binary and config paths, docs, `LICENSE`, MySQL database **`quenyx`** (production), **`quenyx_dev` / `quenyx_test`** (dev/CI only), MySQL user `quenyx`, seed data, and Go module path use **Quenyx** / `quenyx` consistently. |
 | **Integrations API (Laravel)** | `PUT` integration configuration now requires `authorize('update', $project)` (not `view`), so only owners/admins can write settings. All integration list/show/write endpoints require the **`qynintegrations`** module via `EntitlementService` (plan + overrides). |
 | **Gateway (Node)** | Entitlement middleware applies to both `/api/projects/:id/integrations/*` and `/api/workspaces/:id/integrations/*`. Project ID is parsed from either URL shape. |
 | **Frontend localStorage** | Only `quenyx.*` keys (auth token, workspace id, etc.). Users who had pre-migration keys may need to sign in again and re-select a workspace. |
@@ -28,7 +28,7 @@ This document lists what was implemented (consistent **Quenyx** branding, securi
 - `app/Console/Commands/EnsureAdminUser.php`, `ResetWorkspaces.php` — Quenyx naming.
 - `app/Services/AgentBuildService.php` — builds agent from `agent/` (output paths unchanged: `storage/app/agents/{platform}`).
 - `config/database.php` — default `DB_DATABASE` = `quenyx`.
-- `.env.example` — `DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx` (see §3 and §4).
+- `.env.example` — `DB_DATABASE=quenyx` (production); dev uses `quenyx_dev` (see `mysql-quenyx-setup-dev.sql`).
 - `scripts/mysql-quenyx-setup.sql` — fresh MySQL databases and `quenyx` user.
 - `scripts/migrate-mysql-to-quenyx-databases.sh` — copy legacy DB data into `quenyx_dev` / `quenyx_test`.
 - `composer.json` — description “Quenyx vOPS HUB Backend API”.
@@ -84,7 +84,7 @@ Set or verify these for each environment.
 - `DB_CONNECTION=mysql`
 - `DB_HOST` — e.g. `127.0.0.1`
 - `DB_PORT` — e.g. `3306`
-- `DB_DATABASE` — **`quenyx_dev`** on app servers (use `quenyx_test` only for PHPUnit; see `backend/TESTING.md`).
+- `DB_DATABASE` — **`quenyx`** on **production** app servers. Use **`quenyx_dev`** only for local/staging (`mysql-quenyx-setup-dev.sql`). **`quenyx_test`** only for PHPUnit on dev/CI (`backend/TESTING.md`) — do not create on production.
 - `DB_USERNAME` — **`quenyx`** (dedicated app user; not `root` in production).
 - `DB_PASSWORD` — password for the `quenyx` MySQL user.
 - `AGENT_SOURCE_PATH` (optional) — path to the `agent/` directory if not next to `backend/`.
@@ -119,18 +119,21 @@ Quenyx uses these MySQL identifiers:
 
 | Purpose | Database | User |
 |---------|----------|------|
-| Application (dev/staging/prod app DB) | `quenyx_dev` | `quenyx` |
-| PHPUnit / CI test DB | `quenyx_test` | `quenyx` |
+| **Production application** | **`quenyx`** | `quenyx` |
+| **Local / staging application** | `quenyx_dev` | `quenyx` |
+| **PHPUnit / CI test DB** | `quenyx_test` | `quenyx` |
 
 ### 4.1 Fresh install
 
 ```bash
-# Edit password in scripts/mysql-quenyx-setup.sql, then:
-mysql -u root -p < scripts/mysql-quenyx-setup.sql
+# Production:
+mysql -u root -p < scripts/mysql-quenyx-setup-production.sql
+# Local dev (quenyx_dev + quenyx_test):
+# mysql -u root -p < scripts/mysql-quenyx-setup-dev.sql
 
 cd backend
 cp .env.example .env
-# Set DB_DATABASE=quenyx_dev, DB_USERNAME=quenyx, DB_PASSWORD=...
+# Set DB_DATABASE=quenyx (production) or quenyx_dev (local)
 php artisan key:generate
 php artisan migrate --force
 ```
@@ -176,10 +179,12 @@ FLUSH PRIVILEGES;
 **D — Update `backend/.env`**
 
 ```env
-DB_DATABASE=quenyx_dev
+DB_DATABASE=quenyx
 DB_USERNAME=quenyx
 DB_PASSWORD=your_password
 ```
+
+(Legacy migration script `migrate-mysql-to-quenyx-databases.sh` still copies into `quenyx_dev`; on new production installs use `mysql-quenyx-setup-production.sql` and `DB_DATABASE=quenyx` instead.)
 
 **E — Clear config cache and verify**
 
@@ -190,7 +195,7 @@ php artisan migrate --force
 php artisan db:show
 ```
 
-**F — Drop legacy databases** (only after the app works against `quenyx_dev`):
+**F — Drop legacy databases** (only after the app works against the target DB):
 
 ```sql
 DROP DATABASE your_old_dev_database;
@@ -254,7 +259,7 @@ grep -R -i --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
   'quenyx' backend/.env docs/ README.md | head
 ```
 
-Expected: `quenyx` in `backend/.env` (`DB_DATABASE=quenyx_dev`, `DB_USERNAME=quenyx`). No pre-rebrand product slug in source, docs, or env.
+Expected: `backend/.env` uses `DB_DATABASE=quenyx` on production (or `quenyx_dev` on local dev only).
 
 **Git remote URL:** If `.git/config` still points at an old GitHub repository name, update with `git remote set-url origin <new-quenyx-repo-url>` — that is server-local and not stored in this repo.
 
@@ -327,7 +332,7 @@ cd quenyx-saas   # or your checkout folder name
 cd backend
 composer install --no-dev --optimize-autoloader   # use --dev on staging if you run tests
 cp .env.example .env  # if new only; else merge DB_* and other keys into .env
-# Set DB_DATABASE=quenyx_dev, DB_USERNAME=quenyx, DB_PASSWORD=...
+# Set DB_DATABASE=quenyx (production) or quenyx_dev (local)
 php artisan key:generate   # if new
 php artisan migrate --force
 php artisan config:cache

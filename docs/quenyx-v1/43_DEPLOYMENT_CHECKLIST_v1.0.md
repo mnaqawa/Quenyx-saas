@@ -15,7 +15,10 @@
 
 ## 1. Pre-deployment
 
-- [ ] **Host prerequisites** installed per `DEPLOYMENT.md` (PHP-FPM, Composer, Node 20, MySQL 8, Nginx, git) for your OS (Ubuntu / Debian / RHEL family)
+- [ ] **Host prerequisites** installed per `DEPLOYMENT.md` (PHP-FPM, Composer, Node 20, MySQL 8, Nginx, git) for your OS
+- [ ] `scripts/mysql-quenyx-setup.sql`: both `CHANGE_ME` passwords edited; script applied; `DB_PASSWORD` matches
+- [ ] DNS A record → server public IP; cloud SG + UFW allow **80/443** before Certbot
+- [ ] Nginx site on port 80 tested (`curl -sI http://your-domain/`) **before** `certbot --nginx`
 - [ ] Release tag **`v1.0.0`** (or current GA tag) checked out on the production host.
 - [ ] **Single-node stack** planned: Nginx + PHP-FPM (127.0.0.1:8000) + gateway (4000) + MySQL + cron + `quenyx-queue` (+ QAG on :9444 if agents enabled).
 - [ ] Database snapshot/backup taken (or fresh `scripts/mysql-quenyx-setup.sql` for greenfield).
@@ -27,7 +30,7 @@
 ## 2. Backend deploy
 
 - [ ] `composer install --no-dev --optimize-autoloader`
-- [ ] `.env` from `.env.example`: `APP_ENV=production`, `APP_DEBUG=false`, `GATEWAY_INTERNAL_SECRET`, DB `quenyx_dev` / user `quenyx`, `SEED_ADMIN_PASSWORD` (before seed)
+- [ ] `.env` from `.env.example`: `APP_ENV=production`, `APP_DEBUG=false`, `GATEWAY_INTERNAL_SECRET`, **`DB_DATABASE=quenyx`**, user `quenyx`, `SEED_ADMIN_PASSWORD` (before seed); no `quenyx_dev` / `quenyx_test` on production MySQL
 - [ ] `php artisan migrate --force` (idempotent; no destructive changes in Sprint 25)
 - [ ] `php artisan config:cache && php artisan route:cache && php artisan view:cache`
 - [ ] `php artisan quenyx:config-check --strict` passes
