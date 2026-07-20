@@ -459,18 +459,35 @@ Existing servers with pre-rebrand **database names** (not `_dev` suffix): `docs/
 
 ### 2. Backend
 
+> **Before any `php artisan` command:** run **`composer install`** once so `backend/vendor/` exists.
+> If you see `Failed to open stream: vendor/autoload.php`, Composer dependencies were not installed (see **Troubleshooting** below).
+
+**Prerequisites on the server:** `composer` in PATH (`composer --version`), PHP CLI matching FPM (e.g. `php8.5` or `php`), and extensions from [Host prerequisites](#host-prerequisites--install-by-os).
+
 ```bash
-cd backend
+cd /var/www/quenyx/Quenyx-saas/backend   # adjust to your clone path
+
+# 1) Dependencies (creates vendor/ — required)
 composer install --no-dev --optimize-autoloader
+
+# 2) Environment (first deploy only)
 cp .env.example .env
-# Edit .env: DB_DATABASE=quenyx, DB_USERNAME=quenyx, DB_PASSWORD=..., APP_URL, etc.
+# Edit .env: APP_ENV=production, APP_DEBUG=false, DB_DATABASE=quenyx, DB_USERNAME=quenyx,
+# DB_PASSWORD=..., APP_URL=https://prod.quenyx.com, GATEWAY_INTERNAL_SECRET=..., etc.
+
+# 3) Application bootstrap
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
+
+# 4) Production caches (after .env is final)
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+php artisan quenyx:config-check --strict
 ```
+
+Verify `vendor/autoload.php` exists: `test -f vendor/autoload.php && echo OK`.
 
 **Note:** `view:cache` requires `backend/resources/views/` to exist (a placeholder `welcome.blade.php` is included). If deploy fails with *directory does not exist*, pull latest backend or create the directory before caching.
 
@@ -1068,6 +1085,37 @@ If all pass, the platform is ready for production use.
 1. **Backend:** `git pull`, `composer install --no-dev`, `php artisan migrate --force`, `php artisan config:cache` (and route/view cache as needed), restart app.
 2. **Frontend:** `git pull`, `npm ci`, `npm run build`; refresh static hosting (or CDN).
 3. **Gateway:** `git pull`, `npm ci`, `npm run build`, restart gateway service.
+
+---
+
+## Troubleshooting (deploy)
+
+### `vendor/autoload.php`: No such file or directory
+
+**Cause:** `composer install` was not run in `backend/`, or failed partway (no `vendor/` directory).
+
+**Fix:**
+
+```bash
+cd /var/www/quenyx/Quenyx-saas/backend
+composer --version    # must work; if not, install Composer (Host prerequisites § Ubuntu step 3)
+composer install --no-dev --optimize-autoloader
+test -f vendor/autoload.php && php artisan --version
+```
+
+Then rerun `php artisan config:clear`, `migrate`, etc. **`vendor/` is not in git** — every new clone or server needs `composer install`.
+
+### `composer install` fails (missing ext-*, memory)
+
+Install PHP extensions from Host prerequisites (`php*-mysql`, `mbstring`, `xml`, `curl`, `zip`, `bcmath`). Retry:
+
+```bash
+COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader
+```
+
+### `php artisan` uses wrong PHP binary
+
+If multiple PHP versions are installed, call the same binary as FPM, e.g. `php8.5 artisan config:clear` or `update-alternatives --set php /usr/bin/php8.5`.
 
 ---
 

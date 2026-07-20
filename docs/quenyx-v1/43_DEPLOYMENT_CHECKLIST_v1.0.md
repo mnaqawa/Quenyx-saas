@@ -29,7 +29,7 @@
 
 ## 2. Backend deploy
 
-- [ ] `composer install --no-dev --optimize-autoloader`
+- [ ] `composer install --no-dev --optimize-autoloader` completed; `backend/vendor/autoload.php` exists
 - [ ] `.env` from `.env.example`: `APP_ENV=production`, `APP_DEBUG=false`, `GATEWAY_INTERNAL_SECRET`, **`DB_DATABASE=quenyx`**, user `quenyx`, `SEED_ADMIN_PASSWORD` (before seed); no `quenyx_dev` / `quenyx_test` on production MySQL
 - [ ] `php artisan migrate --force` (idempotent; no destructive changes in Sprint 25)
 - [ ] `php artisan config:cache && php artisan route:cache && php artisan view:cache`
