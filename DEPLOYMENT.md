@@ -973,23 +973,79 @@ sudo systemctl reload nginx
 
 ### 10. Health checks
 
-- Gateway: `curl http://127.0.0.1:4000/health` → `{"status":"ok","service":"gateway"}`
-- Backend **liveness**: `curl http://127.0.0.1:8000/api/health` → `200` lightweight liveness response.
-- Backend **readiness**: `curl http://127.0.0.1:8000/api/health/ready` → `200` when DB/cache are reachable, `503` when not. Use this for load-balancer / orchestrator readiness probes (do **not** route traffic until it returns `200`).
+Run **on the server** after gateway, PHP-FPM backend Nginx (port 8000), and public Nginx are configured:
+
+```bash
+curl -sS http://127.0.0.1:4000/health          # gateway
+curl -sS http://127.0.0.1:8000/api/health      # Laravel via PHP-FPM
+curl -sS http://127.0.0.1:8000/api/health/ready
+curl -sS -o /dev/null -w "public api: %{http_code}\n" https://prod.quenyx.com/api/health
+```
+
+Expected: gateway `{"status":"ok","service":"gateway"}`; backend health `200`; public `/api/health` `200`.
+
+| Check | Command | Expected |
+|-------|---------|----------|
+| Gateway | `curl http://127.0.0.1:4000/health` | `{"status":"ok","service":"gateway"}` |
+| Backend liveness | `curl http://127.0.0.1:8000/api/health` | HTTP 200 |
+| Backend readiness | `curl http://127.0.0.1:8000/api/health/ready` | HTTP 200 when DB OK |
+| Through Nginx | `curl -sS https://<domain>/api/health` | HTTP 200 |
+
+### 10b. Login shows **HTTP 502 Bad Gateway**
+
+The SPA calls **`https://<domain>/api/...`**. Nginx proxies to the **Node gateway (:4000)**, which proxies to **Laravel on 127.0.0.1:8000**. A **502** means Nginx did not get a valid response from the gateway (or the gateway could not reach the backend).
+
+**Diagnose in order:**
+
+```bash
+sudo systemctl status quenyx-gateway php8.5-fpm nginx --no-pager   # use your PHP-FPM unit name
+sudo journalctl -u quenyx-gateway -n 40 --no-pager
+
+curl -sS http://127.0.0.1:4000/health
+curl -sS -o /dev/null -w "backend: %{http_code}\n" http://127.0.0.1:8000/api/health
+curl -sS -o /dev/null -w "via nginx api: %{http_code}\n" https://prod.quenyx.com/api/health
+```
+
+| Symptom | Likely cause | Fix |
+|---------|----------------|-----|
+| `:4000/health` fails / connection refused | Gateway not running or wrong port | `sudo systemctl restart quenyx-gateway`; check `gateway/.env` + systemd `EnvironmentFile` (§6) |
+| `:4000` OK, `:8000/api/health` fails | Backend Nginx + PHP-FPM block missing or FPM down | Add §6 backend `listen 127.0.0.1:8000` site; `sudo systemctl restart php8.5-fpm nginx` |
+| Both OK locally, public `/api/*` 502 | Public Nginx `proxy_pass` wrong | Confirm `location /api/` → `http://127.0.0.1:4000` (§5a) |
+| Gateway logs `ECONNREFUSED 127.0.0.1:8000` | `BACKEND_BASE_URL` wrong or backend not listening | Set `BACKEND_BASE_URL=http://127.0.0.1:8000` in `gateway/.env` |
+
+After fixes:
+
+```bash
+cd /var/www/quenyx/Quenyx-saas/gateway && npm run build
+sudo systemctl restart quenyx-gateway
+sudo systemctl reload nginx
+```
+
+Then retry login. Admin user (if seeded): `admin@quenyx.test` / value of `SEED_ADMIN_PASSWORD` in `.env`.
+
+---
 
 ### 11. Backups, restore verification & disaster recovery
+
+Make scripts executable once after clone (or call with `bash`):
+
+```bash
+cd /var/www/quenyx/Quenyx-saas
+chmod +x scripts/backup-db.sh scripts/restore-db.sh scripts/generate-gateway-internal-secret.sh
+mkdir -p /var/backups/quenyx
+```
 
 Automated, verified logical backups are provided under `scripts/`:
 
 ```bash
 # Create a compressed, checksummed, self-verifying backup (safe for cron).
-scripts/backup-db.sh /var/backups/quenyx
+bash scripts/backup-db.sh /var/backups/quenyx
 
 # Prove a backup is restorable WITHOUT touching the live DB (temp DB, auto-dropped).
-scripts/restore-db.sh /var/backups/quenyx/quenyx-<db>-<timestamp>.sql.gz
+bash scripts/restore-db.sh /var/backups/quenyx/quenyx-<db>-<timestamp>.sql.gz
 
 # Real restore into a target database (interactive confirmation required).
-scripts/restore-db.sh <backup_file.sql.gz> --target quenyx
+bash scripts/restore-db.sh <backup_file.sql.gz> --target quenyx
 ```
 
 Schedule nightly backups + a weekly restore-verification via cron:
@@ -1229,7 +1285,7 @@ APP_URL=https://prod.quenyx.com
 
 GATEWAY_BASE_URL=https://prod.quenyx.com
 GATEWAY_INTERNAL_SECRET=<generate: openssl rand -hex 32>
-# Same value in gateway/.env
+# Same value in gateway/.env — see §4 "Generate GATEWAY_INTERNAL_SECRET"
 
 CORS_ALLOWED_ORIGINS=https://prod.quenyx.com
 CORS_SUPPORTS_CREDENTIALS=false
@@ -1244,6 +1300,17 @@ OPENAI_API_KEY=sk-...
 ```
 
 Match **`GATEWAY_INTERNAL_SECRET`** on the gateway service environment. Re-run `php artisan quenyx:config-check --strict`.
+
+### `scripts/backup-db.sh`: Permission denied
+
+Git may not preserve the executable bit. Run once:
+
+```bash
+chmod +x /var/www/quenyx/Quenyx-saas/scripts/*.sh
+bash /var/www/quenyx/Quenyx-saas/scripts/backup-db.sh /var/backups/quenyx
+```
+
+Ensure `backend/.env` has `DB_DATABASE=quenyx` and credentials; the script reads `DB_*` from that file.
 
 ---
 
