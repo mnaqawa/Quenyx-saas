@@ -1,0 +1,30 @@
+# Laravel backend — Nginx on 127.0.0.1:8000 (copy to /etc/nginx/sites-available/quenyx-backend)
+#
+# Replace REPO_ROOT and PHP_FPM_SOCKET before use:
+#   ls -1 /run/php/*.sock
+#   (Ubuntu 8.3 often: /run/php/php8.3-fpm.sock or /run/php/php-fpm.sock)
+
+server {
+    listen 127.0.0.1:8000;
+    server_name _;
+    root /var/www/quenyx/Quenyx-saas/backend/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_read_timeout 180s;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    client_max_body_size 25m;
+}

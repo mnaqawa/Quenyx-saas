@@ -1,0 +1,30 @@
+# Quenyx API Gateway — systemd unit (copy to /etc/systemd/system/quenyx-gateway.service)
+#
+# BEFORE enabling:
+#   1. Replace REPO_ROOT with your real git clone path (case-sensitive!), e.g.:
+#        /var/www/quenyx/Quenyx-saas
+#   2. Ensure gateway is built: cd REPO_ROOT/gateway && npm ci && npm run build
+#   3. Create REPO_ROOT/gateway/.env from .env.example (GATEWAY_INTERNAL_SECRET, etc.)
+#
+# Install:
+#   sudo cp scripts/systemd/quenyx-gateway.service.example /etc/systemd/system/quenyx-gateway.service
+#   sudo sed -i 's|/var/www/quenyx/Quenyx-saas|YOUR_ACTUAL_PATH|g' /etc/systemd/system/quenyx-gateway.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now quenyx-gateway
+
+[Unit]
+Description=Quenyx API Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/quenyx/Quenyx-saas/gateway
+EnvironmentFile=/var/www/quenyx/Quenyx-saas/gateway/.env
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

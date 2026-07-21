@@ -22,9 +22,9 @@ class EnsureAdminUser extends Command
             return 1;
         }
 
-        $password = env('SEED_ADMIN_PASSWORD');
+        $password = config('auth.seed.admin_password');
         if ($password === null || $password === '') {
-            $this->error('Set SEED_ADMIN_PASSWORD in .env (same as UserSeeder).');
+            $this->error('Set SEED_ADMIN_PASSWORD in .env, then php artisan config:cache (or config:clear for this command).');
             return 1;
         }
 

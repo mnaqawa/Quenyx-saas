@@ -830,18 +830,20 @@ Renewal: Certbot installs a systemd timer or cron; check with `sudo systemctl li
 > **PHP-FPM** behind a dedicated Nginx server block. The Node gateway proxies to
 > this backend (`BACKEND_BASE_URL=http://127.0.0.1:8000`).
 
-1. Install PHP-FPM (e.g. `php8.2-fpm`) and confirm the pool socket
-   (`/run/php/php8.2-fpm.sock`). PHP-FPM is managed by its own systemd unit
-   (`php8.2-fpm.service`) — no custom backend unit is needed.
+1. Install PHP-FPM (e.g. `php8.3-fpm`) and confirm the pool socket:
 
-2. Add a backend Nginx server block listening on `127.0.0.1:8000` with the
-   document root at `backend/public`:
+   ```bash
+   ls -1 /run/php/*.sock
+   # Example: /run/php/php8.3-fpm.sock  or  /run/php/php-fpm.sock
+   ```
+
+2. Add a backend Nginx server block listening on `127.0.0.1:8000` (template: `scripts/nginx/quenyx-backend.conf.example`):
 
    ```nginx
    server {
        listen 127.0.0.1:8000;
        server_name _;
-       root /var/www/quenyx/quenyx-saas/backend/public;
+       root /var/www/quenyx/Quenyx-saas/backend/public;
        index index.php;
 
        location / {
@@ -850,8 +852,9 @@ Renewal: Certbot installs a systemd timer or cron; check with `sudo systemctl li
 
        location ~ \.php$ {
            include snippets/fastcgi-php.conf;
-           fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-           # RHEL/Rocky/Alma (Remi php-fpm): often unix:/run/php-fpm/www.sock
+           fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+           fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+           include fastcgi_params;
            fastcgi_read_timeout 180s;
        }
 
@@ -859,6 +862,18 @@ Renewal: Certbot installs a systemd timer or cron; check with `sudo systemctl li
        client_max_body_size 25m;
    }
    ```
+
+   Enable **both** sites (public SPA + backend) — `sites-enabled` must be a **directory** with symlinks inside, not a single symlink:
+
+   ```bash
+   sudo mkdir -p /etc/nginx/sites-enabled
+   sudo ln -sf /etc/nginx/sites-available/quenyx /etc/nginx/sites-enabled/quenyx
+   sudo ln -sf /etc/nginx/sites-available/quenyx-backend /etc/nginx/sites-enabled/quenyx-backend
+   sudo nginx -t && sudo systemctl reload nginx
+   curl -sS http://127.0.0.1:8000/api/health
+   ```
+
+   **502 on :8000** almost always means **`fastcgi_pass` socket wrong** — use the path from `ls /run/php/*.sock`, not a guess.
 
 3. Validate config and warm caches after deploy:
 
@@ -874,6 +889,23 @@ Renewal: Certbot installs a systemd timer or cron; check with `sudo systemctl li
 
 **Gateway**
 
+Copy the unit template and **set your real clone path** (Linux paths are **case-sensitive** — `Quenyx-saas` ≠ `quenyx-saas`):
+
+```bash
+REPO=/var/www/quenyx/Quenyx-saas   # must match: ls $REPO/gateway/dist/server.js
+sudo cp "$REPO/scripts/systemd/quenyx-gateway.service.example" /etc/systemd/system/quenyx-gateway.service
+sudo sed -i "s|/var/www/quenyx/Quenyx-saas|$REPO|g" /etc/systemd/system/quenyx-gateway.service
+cd "$REPO/gateway" && npm ci && npm run build
+sudo systemctl daemon-reload
+sudo systemctl reset-failed quenyx-gateway
+sudo systemctl enable --now quenyx-gateway
+curl -sS http://127.0.0.1:4000/health
+```
+
+If journal shows **`Failed at step CHDIR`** or **`status=200/CHDIR`**, `WorkingDirectory` in the unit file does not exist — fix the path to `$REPO/gateway`.
+
+Example unit (paths must match your server):
+
 `/etc/systemd/system/quenyx-gateway.service`:
 
 ```ini
@@ -884,17 +916,18 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/var/www/quenyx/quenyx-saas/gateway
+Group=www-data
+WorkingDirectory=/var/www/quenyx/Quenyx-saas/gateway
 EnvironmentFile=/var/www/quenyx/Quenyx-saas/gateway/.env
-Environment="GATEWAY_PORT=4000"
-Environment="BACKEND_BASE_URL=http://127.0.0.1:8000"
-Environment="ENTITLEMENTS_CACHE_TTL_MS=30000"
 ExecStart=/usr/bin/node dist/server.js
-Restart=always
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+Do **not** use `/var/www/quenyx/quenyx-saas/...` unless that is literally your directory name.
 
 ### 7. Laravel scheduler (cron) – required for QynSight
 
@@ -1012,6 +1045,9 @@ curl -sS -o /dev/null -w "via nginx api: %{http_code}\n" https://prod.quenyx.com
 | `:4000` OK, `:8000/api/health` fails | Backend Nginx + PHP-FPM block missing or FPM down | Add §6 backend `listen 127.0.0.1:8000` site; `sudo systemctl restart php8.5-fpm nginx` |
 | Both OK locally, public `/api/*` 502 | Public Nginx `proxy_pass` wrong | Confirm `location /api/` → `http://127.0.0.1:4000` (§5a) |
 | Gateway logs `ECONNREFUSED 127.0.0.1:8000` | `BACKEND_BASE_URL` wrong or backend not listening | Set `BACKEND_BASE_URL=http://127.0.0.1:8000` in `gateway/.env` |
+| **`quenyx-gateway`: `status=200/CHDIR`** | systemd `WorkingDirectory` path wrong (typo or case) | Use exact path: `pwd` in repo → `.../Quenyx-saas/gateway` (see §6 Gateway unit) |
+| **`:8000/api/health` → 502** from Nginx | PHP-FPM socket mismatch | `ls /run/php/*.sock`; set `fastcgi_pass unix:...` in `quenyx-backend` |
+| **`sites-enabled` broken** | `ln -sf site sites-enabled/` replaced the directory | `sudo rm -f /etc/nginx/sites-enabled`; `sudo mkdir sites-enabled`; symlink each site file inside |
 
 After fixes:
 
@@ -1311,6 +1347,32 @@ bash /var/www/quenyx/Quenyx-saas/scripts/backup-db.sh /var/backups/quenyx
 ```
 
 Ensure `backend/.env` has `DB_DATABASE=quenyx` and credentials; the script reads `DB_*` from that file.
+
+### Login returns **Invalid credentials** (API works, no 502)
+
+Check `storage/logs/laravel.log`:
+
+| Log `reason` | Meaning | Fix |
+|--------------|---------|-----|
+| `user_not_found` | No user with that email | Use **`admin@quenyx.test`** (not `hello@quenyx.test`) or create a user |
+| `password_mismatch` | User exists, password wrong | Password is **not** reread from `.env` on each login — it was set when the user was seeded/updated |
+
+**Reset admin password to match `.env`:**
+
+```bash
+cd /var/www/quenyx/Quenyx-saas/backend
+nano .env   # set SEED_ADMIN_PASSWORD=YourNewStrongPassword
+php artisan config:clear
+php artisan user:ensure-admin --email=admin@quenyx.test --force
+php artisan config:cache
+```
+
+Log in with:
+
+- **Email:** `admin@quenyx.test`
+- **Password:** exactly `SEED_ADMIN_PASSWORD` from `.env` (after the command above)
+
+If you seeded **before** setting `SEED_ADMIN_PASSWORD`, or changed it later without re-seeding, the hash in MySQL still matches the **old** value — run `user:ensure-admin --force` as above.
 
 ---
 
