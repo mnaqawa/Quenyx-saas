@@ -118,7 +118,7 @@ return new class extends Migration
                 $table->text('body');
                 $table->json('mentions')->nullable(); // user uuids mentioned
                 $table->timestamps();
-                $table->index(['project_id', 'entity_type', 'entity_uuid']);
+                $table->index(['project_id', 'entity_type', 'entity_uuid'], 'collab_comments_entity_idx');
             });
         }
 
@@ -133,7 +133,7 @@ return new class extends Migration
                 $table->string('role', 16)->default('watcher'); // watcher|assignee|owner
                 $table->timestamps();
                 $table->unique(['project_id', 'entity_type', 'entity_uuid', 'user_id', 'role'], 'collab_participant_unique');
-                $table->index(['project_id', 'entity_type', 'entity_uuid']);
+                $table->index(['project_id', 'entity_type', 'entity_uuid'], 'collab_part_entity_idx');
             });
         }
     }

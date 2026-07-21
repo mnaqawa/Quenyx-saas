@@ -1117,6 +1117,72 @@ COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader
 
 If multiple PHP versions are installed, call the same binary as FPM, e.g. `php8.5 artisan config:clear` or `update-alternatives --set php /usr/bin/php8.5`.
 
+### Migration fails: index name too long (MySQL 1059)
+
+**Cause:** MySQL limits identifier names to **64 characters**. Fixed in `2026_07_05_010000_create_knowledge_collaboration_tables` (short index names) + repair migration `2026_07_21_000001_fix_collaboration_index_names`.
+
+**Fix:** Pull latest code, then:
+
+```bash
+cd backend
+php artisan migrate --force
+php artisan migrate:status   # all rows should show [Ran]
+```
+
+If migrate stops again on Sprint 24 tables left half-created:
+
+```bash
+mysql -u root -p quenyx -e "
+  DROP TABLE IF EXISTS collaboration_participants, collaboration_comments;
+"
+php artisan migrate --force
+```
+
+The repair migration adds missing indexes if tables exist without them.
+
+### `view:cache` — View path not found
+
+**Cause:** `backend/resources/views/` missing on the server (incomplete checkout).
+
+**Fix:**
+
+```bash
+cd /var/www/quenyx/Quenyx-saas
+git pull
+test -d backend/resources/views || mkdir -p backend/resources/views
+test -f backend/resources/views/welcome.blade.php || echo '<!-- placeholder -->' > backend/resources/views/welcome.blade.php
+cd backend && php artisan view:cache
+```
+
+Or skip `view:cache` if you do not serve Blade views (API-only); it is optional for the SPA gateway path.
+
+### `php artisan quenyx:config-check --strict` fails on production
+
+Set **`backend/.env`** before caching config (then `php artisan config:clear && php artisan config:cache`):
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://prod.quenyx.com
+
+GATEWAY_BASE_URL=https://prod.quenyx.com
+GATEWAY_INTERNAL_SECRET=<generate: openssl rand -hex 32>
+# Same value in gateway/.env
+
+CORS_ALLOWED_ORIGINS=https://prod.quenyx.com
+CORS_SUPPORTS_CREDENTIALS=false
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=lax
+SANCTUM_STATEFUL_DOMAINS=prod.quenyx.com
+
+# Required for --strict unless you intentionally run without live AI:
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+# Or omit OPENAI_API_KEY only if you accept strict failure until AI is configured
+```
+
+Match **`GATEWAY_INTERNAL_SECRET`** on the gateway service environment. Re-run `php artisan quenyx:config-check --strict`.
+
 ---
 
 ## License
