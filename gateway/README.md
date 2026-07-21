@@ -19,7 +19,10 @@ Lightweight API gateway service that enforces project entitlements before forwar
 GATEWAY_PORT=4000                    # Port for gateway to listen on
 BACKEND_BASE_URL=http://127.0.0.1:8000  # Laravel backend URL
 ENTITLEMENTS_CACHE_TTL_MS=30000      # Cache TTL in milliseconds (default: 30s)
+GATEWAY_INTERNAL_SECRET=             # openssl rand -hex 32 — must match backend/.env
 ```
+
+Production: copy `.env.example` to `.env`, set `GATEWAY_INTERNAL_SECRET`, and use systemd `EnvironmentFile=/path/to/gateway/.env` (see repo root `DEPLOYMENT.md` §4).
 
 ### Observe (QynSight native monitoring)
 

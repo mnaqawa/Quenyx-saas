@@ -523,12 +523,67 @@ npm run build
 
 **Important:** After any gateway code change, run `npm run build` and restart the gateway service so `dist/` is updated.
 
-**Environment (systemd or .env):**
+#### Generate `GATEWAY_INTERNAL_SECRET` (required for production)
+
+Shared secret between **Laravel** and the **Node gateway** (internal engine routes / hardening). The value must be **identical** in both places. Never commit it to git.
+
+**1. Generate once** (64 hex characters = 256 bits):
+
+```bash
+openssl rand -hex 32
+```
+
+Example output (yours will differ):
+
+```text
+a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+```
+
+**2. Backend** — add to `backend/.env`:
+
+```env
+GATEWAY_INTERNAL_SECRET=paste-the-same-value-here
+```
+
+Then refresh config cache:
+
+```bash
+cd backend
+php artisan config:clear && php artisan config:cache
+```
+
+**3. Gateway** — copy template and set the **same** value:
+
+```bash
+cd ../gateway
+cp .env.example .env
+nano .env   # set GATEWAY_INTERNAL_SECRET= paste-the-same-value-here
+chmod 600 .env
+```
+
+The gateway process does **not** auto-load `.env` unless you use **`EnvironmentFile`** in systemd (see §6 Gateway unit below) or export variables before `npm start`.
+
+**4. Verify**
+
+```bash
+cd ../backend
+php artisan quenyx:config-check --strict
+# GATEWAY_INTERNAL_SECRET should not warn; strict mode should pass (other checks permitting)
+```
+
+Optional helper (prints one line to stdout):
+
+```bash
+./scripts/generate-gateway-internal-secret.sh
+```
+
+**Environment (systemd or shell):**
 
 ```bash
 GATEWAY_PORT=4000
 BACKEND_BASE_URL=http://127.0.0.1:8000
 ENTITLEMENTS_CACHE_TTL_MS=30000
+GATEWAY_INTERNAL_SECRET=<same value as backend/.env>
 ```
 
 **Backend `.env` – Agent install instructions:**
@@ -830,6 +885,7 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/quenyx/quenyx-saas/gateway
+EnvironmentFile=/var/www/quenyx/Quenyx-saas/gateway/.env
 Environment="GATEWAY_PORT=4000"
 Environment="BACKEND_BASE_URL=http://127.0.0.1:8000"
 Environment="ENTITLEMENTS_CACHE_TTL_MS=30000"
