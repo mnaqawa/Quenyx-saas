@@ -470,6 +470,11 @@ cd /var/www/quenyx/Quenyx-saas/backend   # adjust to your clone path
 # 1) Dependencies (creates vendor/ — required)
 composer install --no-dev --optimize-autoloader
 
+# 1b) Writable storage (required for logs, cache, compiled views, uploads)
+mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache
+chmod -R ug+rwx storage bootstrap/cache
+# Production: chown -R www-data:www-data storage bootstrap/cache
+
 # 2) Environment (first deploy only)
 cp .env.example .env
 # Edit .env: APP_ENV=production, APP_DEBUG=false, DB_DATABASE=quenyx, DB_USERNAME=quenyx,
@@ -1142,19 +1147,20 @@ The repair migration adds missing indexes if tables exist without them.
 
 ### `view:cache` — View path not found
 
-**Cause:** `backend/resources/views/` missing on the server (incomplete checkout).
+**Cause:** `storage/framework/views` did not exist. `config/view.php` used `realpath()` on that path; when missing, Laravel treats the compiled view path as invalid and `view:cache` fails.
 
-**Fix:**
+**Fix (immediate on server):**
 
 ```bash
-cd /var/www/quenyx/Quenyx-saas
-git pull
-test -d backend/resources/views || mkdir -p backend/resources/views
-test -f backend/resources/views/welcome.blade.php || echo '<!-- placeholder -->' > backend/resources/views/welcome.blade.php
-cd backend && php artisan view:cache
+cd /var/www/quenyx/Quenyx-saas/backend
+mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache
+chmod -R ug+rwx storage bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache   # production
+php artisan config:clear
+php artisan view:cache
 ```
 
-Or skip `view:cache` if you do not serve Blade views (API-only); it is optional for the SPA gateway path.
+**Fix (repo):** pull latest (includes `storage/framework/views/.gitkeep` and `config/view.php` without `realpath`). `resources/views/welcome.blade.php` alone is not enough — the **compiled** directory under `storage/framework/views` must exist and be writable.
 
 ### `php artisan quenyx:config-check --strict` fails on production
 
